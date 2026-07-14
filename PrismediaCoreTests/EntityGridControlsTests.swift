@@ -57,6 +57,24 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.sort, "title")
     }
 
+    func testPreferencesEncodeUserControlsAsOneNestedValue() throws {
+        var controls = EntityGridControls(baselineQuery: EntityListQuery(kind: .book))
+        controls.sort = .rating
+        controls.sortDescending = false
+        controls.filters.favoriteOnly = true
+        controls.filters.rating = .atLeast(4)
+
+        let preferences = EntityGridPreferences(controls: controls)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(preferences)) as? [String: Any]
+        )
+        let savedControls = try XCTUnwrap(object["controls"] as? [String: Any])
+
+        XCTAssertEqual(savedControls["sort"] as? String, "rating")
+        XCTAssertEqual(savedControls["sortDescending"] as? Bool, false)
+        XCTAssertNil(object["favoriteOnly"], "Filter fields should not be mirrored at the preference root.")
+    }
+
     func testPreferenceStoreKeepsGridSurfacesIndependentAndCanResetOne() throws {
         let suiteName = "EntityGridControlsTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

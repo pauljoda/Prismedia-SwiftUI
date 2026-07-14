@@ -19,7 +19,6 @@ struct ComicReaderChapterEnd: View {
                 systemImage: "chevron.right",
                 variant: .prominent,
                 form: .fill,
-                surface: .embedded,
                 isLoading: isAdvancingChapter,
                 action: action
             )

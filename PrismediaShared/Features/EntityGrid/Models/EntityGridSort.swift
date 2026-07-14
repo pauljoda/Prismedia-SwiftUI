@@ -1,4 +1,4 @@
-public enum EntityGridSort: String, CaseIterable, Hashable, Sendable, Identifiable {
+public enum EntityGridSort: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case title
     case added
     case rating

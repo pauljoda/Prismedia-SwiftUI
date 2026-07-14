@@ -1,7 +1,7 @@
 #if os(iOS)
     import SwiftUI
 
-    /// Reusable collection picker for entity grids, detail pages, and compact actions.
+    /// Collection picker for entity grids, detail pages, and compact actions.
     struct AddToCollectionSheet: View {
         @Environment(\.dismiss) private var dismiss
         @Environment(PrismediaAppEnvironment.self) private var environment

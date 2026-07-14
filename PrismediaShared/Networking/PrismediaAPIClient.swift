@@ -270,46 +270,6 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
-    public func createCollection(_ request: CollectionWriteRequest) async throws -> CollectionDefinition {
-        try await send(
-            CollectionDefinition.self,
-            path: "/api/collections",
-            method: "POST",
-            body: request
-        )
-    }
-
-    public func updateCollection(
-        id: UUID,
-        request: CollectionWriteRequest
-    ) async throws -> CollectionDefinition {
-        try await send(
-            CollectionDefinition.self,
-            path: "/api/collections/\(id.uuidString.lowercased())",
-            method: "PUT",
-            body: request
-        )
-    }
-
-    @discardableResult
-    public func deleteCollection(id: UUID) async throws -> UUID {
-        let response = try await send(
-            CollectionDeleteResponse.self,
-            path: "/api/collections/\(id.uuidString.lowercased())",
-            method: "DELETE"
-        )
-        return response.id
-    }
-
-    public func fetchCollectionMemberships(collectionID: UUID) async throws -> [CollectionMembership] {
-        let response = try await send(
-            CollectionMembershipResponse.self,
-            path: "/api/collections/\(collectionID.uuidString.lowercased())/items",
-            queryItems: [nsfwVisibilityQueryItem]
-        )
-        return response.items
-    }
-
     public func fetchCollectionItems(collectionID: UUID) async throws -> [EntityThumbnail] {
         let response = try await send(
             CollectionItemsResponse.self,
@@ -340,47 +300,11 @@ public struct PrismediaAPIClient: Sendable {
         collectionID: UUID,
         items: [CollectionEntityReference]
     ) async throws -> Int {
-        try await addCollectionMembers(collectionID: collectionID, items: items)
-    }
-
-    @discardableResult
-    public func addCollectionMembers(
-        collectionID: UUID,
-        items: [CollectionEntityReference]
-    ) async throws -> Int {
         let response = try await send(
             CollectionItemMutationResponse.self,
             path: "/api/collections/\(collectionID.uuidString.lowercased())/items",
             method: "POST",
             body: CollectionAddItemsRequest(items: items)
-        )
-        return response.count
-    }
-
-    @discardableResult
-    public func removeCollectionMembers(
-        collectionID: UUID,
-        itemIDs: [UUID]
-    ) async throws -> Int {
-        let response = try await send(
-            CollectionItemMutationResponse.self,
-            path: "/api/collections/\(collectionID.uuidString.lowercased())/items/remove",
-            method: "POST",
-            body: CollectionRemoveItemsRequest(itemIDs: itemIDs)
-        )
-        return response.count
-    }
-
-    @discardableResult
-    public func reorderCollectionMembers(
-        collectionID: UUID,
-        itemIDs: [UUID]
-    ) async throws -> Int {
-        let response = try await send(
-            CollectionItemMutationResponse.self,
-            path: "/api/collections/\(collectionID.uuidString.lowercased())/items/reorder",
-            method: "PATCH",
-            body: CollectionReorderItemsRequest(itemIDs: itemIDs)
         )
         return response.count
     }

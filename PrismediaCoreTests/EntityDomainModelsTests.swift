@@ -163,6 +163,39 @@ final class EntityDomainModelsTests: XCTestCase {
         )
     }
 
+    func testDetailProvidesTypedCapabilityAccessWithoutDiscardingUnknownCapabilities() throws {
+        let data = Data(
+            """
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "kind": "book",
+              "title": "Future Book",
+              "capabilities": [
+                {
+                  "kind": "images",
+                  "supportedKinds": ["cover"],
+                  "items": [{ "kind": "cover", "path": "/assets/cover.jpg" }]
+                },
+                { "kind": "future-reading-mode", "mode": "spatial" },
+                { "kind": "progress", "unit": "page", "index": 3, "total": 10 }
+              ],
+              "childrenByKind": [],
+              "relationships": []
+            }
+            """.utf8)
+
+        let detail = try PrismediaJSON.decoder().decode(EntityDetail.self, from: data)
+
+        XCTAssertEqual(detail.capability(EntityImagesCapability.self)?.items.first?.path, "/assets/cover.jpg")
+        XCTAssertEqual(detail.capability(EntityProgressCapability.self)?.index, 3)
+        XCTAssertNil(detail.capability(EntityItemsCapability<EntityFile>.self))
+        XCTAssertEqual(detail.capabilities.count, 3)
+        guard case .unknown(let unknown) = detail.capabilities[1] else {
+            return XCTFail("Expected the unknown capability to remain in its original position")
+        }
+        XCTAssertEqual(unknown.kind, "future-reading-mode")
+    }
+
     func testMovieOwnedVideoLinksToTheMovieDetail() {
         let movieID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let videoID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!

@@ -1,4 +1,4 @@
-public enum EntityGridOrganizationFilter: String, CaseIterable, Hashable, Sendable, Identifiable {
+public enum EntityGridOrganizationFilter: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case any
     case organized
     case unorganized

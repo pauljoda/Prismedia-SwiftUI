@@ -1,24 +1,30 @@
 import Foundation
 
-/// The user-owned portion of a grid query. Route constraints are intentionally
-/// excluded so restoring one surface cannot turn a Comics grid into Books.
+/// The user-owned portion of a grid query. Route constraints and random state
+/// are intentionally excluded so one surface cannot alter another surface's contract.
 public struct EntityGridPreferences: Codable, Equatable, Sendable {
     public let displayMode: EntityGridDisplayMode
     public let density: EntityGridDensity
     public let pageSize: Int?
-    public let sort: String?
-    public let sortDescending: Bool
-    public let favoriteOnly: Bool
-    public let organization: String
-    public let availability: String
-    public let acquisitionStatus: String?
-    public let engagement: String
-    public let isUnrated: Bool
-    public let minimumRating: Int?
-    public let maximumRating: Int?
-    public let taxonomy: String
-    public let bookTypes: [String]
-    public let bookFormats: [String]
+
+    private let savedControls: EntityGridControls
+
+    public var sort: String? { savedControls.sort?.rawValue }
+    public var sortDescending: Bool { savedControls.sortDescending }
+    public var favoriteOnly: Bool { savedControls.filters.favoriteOnly }
+    public var organization: String { savedControls.filters.organization.rawValue }
+    public var availability: String { savedControls.filters.availability.rawValue }
+    public var acquisitionStatus: String? { savedControls.filters.acquisitionStatus?.rawValue }
+    public var engagement: String { savedControls.filters.engagement.rawValue }
+    public var isUnrated: Bool { savedControls.filters.rating == .unrated }
+    public var minimumRating: Int? {
+        guard case .atLeast(let value) = savedControls.filters.rating else { return nil }
+        return value
+    }
+    public var maximumRating: Int? { savedControls.filters.maximumRating }
+    public var taxonomy: String { savedControls.filters.taxonomy.rawValue }
+    public var bookTypes: [String] { savedControls.filters.bookTypes.sorted() }
+    public var bookFormats: [String] { savedControls.filters.bookFormats.sorted() }
 
     public init(
         controls: EntityGridControls,
@@ -30,28 +36,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         self.displayMode = displayMode
         self.density = density
         self.pageSize = pageSize
-        sort = controls.sort?.rawValue
-        sortDescending = controls.sortDescending
-        favoriteOnly = controls.filters.favoriteOnly
-        organization = controls.filters.organization.rawValue
-        availability = controls.filters.availability.rawValue
-        acquisitionStatus = controls.filters.acquisitionStatus?.rawValue
-        engagement = controls.filters.engagement.rawValue
-        switch controls.filters.rating {
-        case .any:
-            isUnrated = false
-            minimumRating = nil
-        case .unrated:
-            isUnrated = true
-            minimumRating = nil
-        case .atLeast(let value):
-            isUnrated = false
-            minimumRating = value
-        }
-        maximumRating = controls.filters.maximumRating
-        taxonomy = controls.filters.taxonomy.rawValue
-        bookTypes = controls.filters.bookTypes.sorted()
-        bookFormats = controls.filters.bookFormats.sorted()
+        savedControls = Self.normalized(controls)
     }
 
     public init(from decoder: any Decoder) throws {
@@ -59,19 +44,11 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         displayMode = try container.decodeIfPresent(EntityGridDisplayMode.self, forKey: .displayMode) ?? .grid
         density = try container.decodeIfPresent(EntityGridDensity.self, forKey: .density) ?? .standard
         pageSize = try container.decodeIfPresent(Int.self, forKey: .pageSize)
-        sort = try container.decodeIfPresent(String.self, forKey: .sort)
-        sortDescending = try container.decodeIfPresent(Bool.self, forKey: .sortDescending) ?? true
-        favoriteOnly = try container.decodeIfPresent(Bool.self, forKey: .favoriteOnly) ?? false
-        organization = try container.decodeIfPresent(String.self, forKey: .organization) ?? "any"
-        availability = try container.decodeIfPresent(String.self, forKey: .availability) ?? "any"
-        acquisitionStatus = try container.decodeIfPresent(String.self, forKey: .acquisitionStatus)
-        engagement = try container.decodeIfPresent(String.self, forKey: .engagement) ?? "any"
-        isUnrated = try container.decodeIfPresent(Bool.self, forKey: .isUnrated) ?? false
-        minimumRating = try container.decodeIfPresent(Int.self, forKey: .minimumRating)
-        maximumRating = try container.decodeIfPresent(Int.self, forKey: .maximumRating)
-        taxonomy = try container.decodeIfPresent(String.self, forKey: .taxonomy) ?? "any"
-        bookTypes = try container.decodeIfPresent([String].self, forKey: .bookTypes) ?? []
-        bookFormats = try container.decodeIfPresent([String].self, forKey: .bookFormats) ?? []
+        if let controls = try container.decodeIfPresent(EntityGridControls.self, forKey: .controls) {
+            savedControls = Self.normalized(controls)
+        } else {
+            savedControls = Self.normalized(try Self.decodeLegacyControls(from: container))
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -79,41 +56,48 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         try container.encode(displayMode, forKey: .displayMode)
         try container.encode(density, forKey: .density)
         try container.encodeIfPresent(pageSize, forKey: .pageSize)
-        try container.encodeIfPresent(sort, forKey: .sort)
-        try container.encode(sortDescending, forKey: .sortDescending)
-        try container.encode(favoriteOnly, forKey: .favoriteOnly)
-        try container.encode(organization, forKey: .organization)
-        try container.encode(availability, forKey: .availability)
-        try container.encodeIfPresent(acquisitionStatus, forKey: .acquisitionStatus)
-        try container.encode(engagement, forKey: .engagement)
-        try container.encode(isUnrated, forKey: .isUnrated)
-        try container.encodeIfPresent(minimumRating, forKey: .minimumRating)
-        try container.encodeIfPresent(maximumRating, forKey: .maximumRating)
-        try container.encode(taxonomy, forKey: .taxonomy)
-        try container.encode(bookTypes, forKey: .bookTypes)
-        try container.encode(bookFormats, forKey: .bookFormats)
+        try container.encode(savedControls, forKey: .controls)
     }
 
-    public func controls(baselineQuery: EntityListQuery) -> EntityGridControls {
-        var controls = EntityGridControls(baselineQuery: baselineQuery)
-        controls.sort = sort.flatMap(EntityGridSort.init(rawValue:)) ?? controls.sort
-        controls.sortDescending = sortDescending
-        controls.filters.favoriteOnly = favoriteOnly
-        controls.filters.organization = EntityGridOrganizationFilter(rawValue: organization) ?? .any
-        controls.filters.availability = EntityGridAvailabilityFilter(rawValue: availability) ?? .any
-        controls.filters.acquisitionStatus = acquisitionStatus.map(AcquisitionStatus.init(rawValue:))
-        controls.filters.engagement = EntityGridEngagementFilter(rawValue: engagement) ?? .any
-        if isUnrated {
-            controls.filters.rating = .unrated
-        } else if let minimumRating {
-            controls.filters.rating = .atLeast(minimumRating)
-        } else {
-            controls.filters.rating = .any
-        }
-        controls.filters.maximumRating = maximumRating
-        controls.filters.taxonomy = EntityGridTaxonomyFilter(rawValue: taxonomy) ?? .any
-        controls.filters.bookTypes = Set(bookTypes)
-        controls.filters.bookFormats = Set(bookFormats)
+    public func controls(baselineQuery _: EntityListQuery) -> EntityGridControls {
+        var controls = savedControls
+        controls.randomSeed = EntityGridControls.nextRandomSeed()
+        return controls
+    }
+
+    private static func normalized(_ controls: EntityGridControls) -> EntityGridControls {
+        var controls = controls
+        controls.randomSeed = 0
+        return controls
+    }
+
+    private static func decodeLegacyControls(
+        from container: KeyedDecodingContainer<CodingKeys>
+    ) throws -> EntityGridControls {
+        var controls = EntityGridControls(baselineQuery: EntityListQuery())
+        controls.sort = try container.decodeIfPresent(String.self, forKey: .sort).flatMap(EntityGridSort.init)
+        controls.sortDescending = try container.decodeIfPresent(Bool.self, forKey: .sortDescending) ?? true
+        controls.filters.favoriteOnly = try container.decodeIfPresent(Bool.self, forKey: .favoriteOnly) ?? false
+        controls.filters.organization =
+            try container.decodeIfPresent(String.self, forKey: .organization)
+            .flatMap(EntityGridOrganizationFilter.init) ?? .any
+        controls.filters.availability =
+            try container.decodeIfPresent(String.self, forKey: .availability)
+            .flatMap(EntityGridAvailabilityFilter.init) ?? .any
+        controls.filters.acquisitionStatus = try container.decodeIfPresent(String.self, forKey: .acquisitionStatus)
+            .map(AcquisitionStatus.init)
+        controls.filters.engagement =
+            try container.decodeIfPresent(String.self, forKey: .engagement)
+            .flatMap(EntityGridEngagementFilter.init) ?? .any
+        let isUnrated = try container.decodeIfPresent(Bool.self, forKey: .isUnrated) ?? false
+        let minimumRating = try container.decodeIfPresent(Int.self, forKey: .minimumRating)
+        controls.filters.rating = isUnrated ? .unrated : minimumRating.map(EntityGridRatingFilter.atLeast) ?? .any
+        controls.filters.maximumRating = try container.decodeIfPresent(Int.self, forKey: .maximumRating)
+        controls.filters.taxonomy =
+            try container.decodeIfPresent(String.self, forKey: .taxonomy)
+            .flatMap(EntityGridTaxonomyFilter.init) ?? .any
+        controls.filters.bookTypes = Set(try container.decodeIfPresent([String].self, forKey: .bookTypes) ?? [])
+        controls.filters.bookFormats = Set(try container.decodeIfPresent([String].self, forKey: .bookFormats) ?? [])
         return controls
     }
 
@@ -121,6 +105,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         case displayMode
         case density
         case pageSize
+        case controls
         case sort
         case sortDescending
         case favoriteOnly

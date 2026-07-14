@@ -210,8 +210,7 @@ struct EntityAcquisitionPanel: View {
             PrismediaButton(
                 "Start Monitor",
                 systemImage: "eye",
-                variant: .prominent,
-                surface: .embedded
+                variant: .prominent
             ) {
                 Task { await perform(.start(entityID), using: service) }
             }
@@ -219,15 +218,14 @@ struct EntityAcquisitionPanel: View {
 
         if let monitor = snapshot.monitor {
             if monitor.status == .active {
-                PrismediaButton("Pause", systemImage: "pause", surface: .embedded) {
+                PrismediaButton("Pause", systemImage: "pause") {
                     Task { await perform(.pause(monitor.id), using: service) }
                 }
             } else if monitor.status == .paused {
                 PrismediaButton(
                     "Resume",
                     systemImage: "play",
-                    variant: .prominent,
-                    surface: .embedded
+                    variant: .prominent
                 ) {
                     Task { await perform(.resume(monitor.id), using: service) }
                 }
@@ -236,8 +234,7 @@ struct EntityAcquisitionPanel: View {
             PrismediaButton(
                 "Unmonitor",
                 systemImage: "trash",
-                variant: .destructive,
-                surface: .embedded
+                variant: .destructive
             ) {
                 confirmsUnmonitor = true
             }
@@ -245,7 +242,7 @@ struct EntityAcquisitionPanel: View {
         }
 
         if let acquisition = snapshot.latestAcquisition {
-            PrismediaButton("Search Again", systemImage: "arrow.clockwise", surface: .embedded) {
+            PrismediaButton("Search Again", systemImage: "arrow.clockwise") {
                 Task { await perform(.searchAgain(acquisition.id), using: service) }
             }
         }

@@ -8,11 +8,9 @@ public enum ModeCatalog {
         title: "Overview",
         systemImage: "house",
         destinations: [
-            destination(
-                "dashboard", "Dashboard", "rectangle.3.group",
-                "Recent, unfinished, and favorite media will come together here."),
+            destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
             entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
-            destination("stats", "Stats", "chart.line.uptrend.xyaxis", "Playback and library insights will live here."),
+            destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
         ]
     )
 
@@ -140,9 +138,9 @@ public enum ModeCatalog {
         _ id: String,
         _ title: String,
         _ systemImage: String,
-        _ placeholder: String
+        content: AppDestinationContent
     ) -> AppDestination {
-        AppDestination(id: id, title: title, systemImage: systemImage, placeholder: placeholder)
+        AppDestination(id: id, title: title, systemImage: systemImage, content: content)
     }
 
     private static func entityDestination(
@@ -173,8 +171,7 @@ public enum ModeCatalog {
             id: id,
             title: title,
             systemImage: systemImage,
-            placeholder: "",
-            entityList: EntityListDestination(query: query)
+            content: .entityList(EntityListDestination(query: query))
         )
     }
 
@@ -187,8 +184,7 @@ public enum ModeCatalog {
             id: administration.rawValue,
             title: title,
             systemImage: systemImage,
-            placeholder: "",
-            administration: administration
+            content: .administration(administration)
         )
     }
 
@@ -202,8 +198,7 @@ public enum ModeCatalog {
                 id: manage.rawValue,
                 title: title,
                 systemImage: systemImage,
-                placeholder: "",
-                manage: manage
+                content: .manage(manage)
             )
         }
     #endif

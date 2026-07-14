@@ -947,10 +947,7 @@ public struct EntityDetailView: View {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id
             else { return nil }
-            let playback = detail.capabilities.lazy.compactMap { capability -> EntityPlaybackCapability? in
-                guard case .playback(let value) = capability else { return nil }
-                return value
-            }.first
+            let playback = detail.capability(EntityPlaybackCapability.self)
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
@@ -978,10 +975,7 @@ public struct EntityDetailView: View {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id
             else { return }
-            let completed = detail.capabilities.contains { capability in
-                guard case .playback(let playback) = capability else { return false }
-                return playback.completedAt != nil
-            }
+            let completed = detail.capability(EntityPlaybackCapability.self)?.completedAt != nil
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
@@ -993,11 +987,7 @@ public struct EntityDetailView: View {
                 Task { await startListeningOver(detail) }
                 return
             }
-            let savedResume =
-                detail.capabilities.lazy.compactMap { capability -> Double? in
-                    guard case .playback(let playback) = capability else { return nil }
-                    return playback.resumeSeconds
-                }.first ?? 0
+            let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
             play(projection, resumeSeconds: savedResume)
         }
 
@@ -1080,10 +1070,7 @@ public struct EntityDetailView: View {
                     trackOffsetSeconds: musicPlayer.elapsedTime
                 )
             }
-            return detail.capabilities.lazy.compactMap { capability -> Double? in
-                guard case .playback(let playback) = capability else { return nil }
-                return playback.resumeSeconds
-            }.first ?? 0
+            return detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
         }
 
         private func refreshAudiobookDetail() async {

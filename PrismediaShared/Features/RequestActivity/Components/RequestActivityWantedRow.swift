@@ -127,8 +127,7 @@ import SwiftUI
         private var actionButtons: some View {
             PrismediaButton(
                 "Search Now",
-                systemImage: "arrow.clockwise",
-                surface: .embedded
+                systemImage: "arrow.clockwise"
             ) {
                 onSearchNow(item)
             }
@@ -136,8 +135,7 @@ import SwiftUI
             if item.entityID != nil {
                 PrismediaButton(
                     "Open in Library",
-                    systemImage: "arrow.up.right.square",
-                    surface: .embedded
+                    systemImage: "arrow.up.right.square"
                 ) {
                     onOpenEntity(item)
                 }
@@ -146,8 +144,7 @@ import SwiftUI
             PrismediaButton(
                 "Unmonitor",
                 systemImage: "bell.slash",
-                variant: .destructive,
-                surface: .embedded
+                variant: .destructive
             ) {
                 onUnmonitor(item)
             }

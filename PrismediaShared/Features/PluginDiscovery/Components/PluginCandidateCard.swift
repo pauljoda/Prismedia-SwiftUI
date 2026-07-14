@@ -95,7 +95,6 @@ import SwiftUI
                         "Preview artwork for \(candidate.title)",
                         systemImage: "photo.badge.magnifyingglass",
                         form: .compactIcon,
-                        surface: .embedded,
                         action: onPreview
                     )
                     .disabled(isDisabled)

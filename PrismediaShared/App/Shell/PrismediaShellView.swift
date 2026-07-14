@@ -107,44 +107,8 @@ public struct PrismediaShellView: View {
         detailDependencies: EntityDetailDependencies,
         videoPlaybackSession: VideoPlaybackSession
     ) -> some View {
-        #if os(iOS) || os(macOS)
-            if let manage = destination.manage {
-                ManageDestinationView(
-                    destination: manage,
-                    service: AdministrationService(client: client),
-                    client: client,
-                    detailDependencies: detailDependencies,
-                    navigationPath: pathBinding(
-                        for: destination.id,
-                        videoPlaybackSession: videoPlaybackSession
-                    )
-                )
-            } else {
-                standardDestinationContent(
-                    destination,
-                    client: client,
-                    detailDependencies: detailDependencies,
-                    videoPlaybackSession: videoPlaybackSession
-                )
-            }
-        #else
-            standardDestinationContent(
-                destination,
-                client: client,
-                detailDependencies: detailDependencies,
-                videoPlaybackSession: videoPlaybackSession
-            )
-        #endif
-    }
-
-    @ViewBuilder
-    private func standardDestinationContent(
-        _ destination: AppDestination,
-        client: PrismediaAPIClient,
-        detailDependencies: EntityDetailDependencies,
-        videoPlaybackSession: VideoPlaybackSession
-    ) -> some View {
-        if destination.id == "dashboard" {
+        switch destination.content {
+        case .dashboard:
             DashboardView(
                 loader: PrismediaDashboardLoader(client: client),
                 trickplayLoader: PrismediaTrickplayFrameLoader(client: client),
@@ -159,7 +123,8 @@ public struct PrismediaShellView: View {
                     router.selectDashboardSection(section)
                 }
             )
-        } else if destination.id == "stats" {
+
+        case .playbackStatistics:
             PlaybackStatisticsView(
                 loader: PrismediaPlaybackStatisticsLoader(client: client),
                 detailDependencies: detailDependencies,
@@ -168,12 +133,14 @@ public struct PrismediaShellView: View {
                     videoPlaybackSession: videoPlaybackSession
                 )
             )
-        } else if let administration = destination.administration {
+
+        case .administration(let administration):
             AdministrativeDestinationView(
                 destination: administration,
                 service: AdministrationService(client: client)
             )
-        } else if let entityList = destination.entityList {
+
+        case .entityList(let entityList):
             NavigationStack(
                 path: pathBinding(
                     for: destination.id,
@@ -188,8 +155,20 @@ public struct PrismediaShellView: View {
                 )
                 .prismediaEntityDestinations(dependencies: detailDependencies)
             }
-        } else {
-            PlaceholderSectionView(destination: destination)
+
+        #if os(iOS) || os(macOS)
+            case .manage(let manage):
+                ManageDestinationView(
+                    destination: manage,
+                    service: AdministrationService(client: client),
+                    client: client,
+                    detailDependencies: detailDependencies,
+                    navigationPath: pathBinding(
+                        for: destination.id,
+                        videoPlaybackSession: videoPlaybackSession
+                    )
+                )
+        #endif
         }
     }
 

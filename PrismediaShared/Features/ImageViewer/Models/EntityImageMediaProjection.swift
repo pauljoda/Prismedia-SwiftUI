@@ -11,19 +11,9 @@ public struct EntityImageMediaProjection: Hashable, Sendable {
     public let mimeType: String?
 
     public init(detail: EntityDetail) {
-        let files =
-            detail.capabilities.lazy.compactMap { capability -> [EntityFile]? in
-                guard case .files(let value) = capability else { return nil }
-                return value.items
-            }.first ?? []
-        let images = detail.capabilities.lazy.compactMap { capability -> EntityImagesCapability? in
-            guard case .images(let value) = capability else { return nil }
-            return value
-        }.first
-        let technical = detail.capabilities.lazy.compactMap { capability -> EntityTechnicalCapability? in
-            guard case .technical(let value) = capability else { return nil }
-            return value
-        }.first
+        let files = detail.capability(EntityItemsCapability<EntityFile>.self)?.items ?? []
+        let images = detail.capability(EntityImagesCapability.self)
+        let technical = detail.capability(EntityTechnicalCapability.self)
         let sourceFile = files.first { $0.role == "source" }
         let previewFile = files.first { $0.role == "preview" }
         let sourceMimeType = sourceFile?.mimeType?.lowercased()

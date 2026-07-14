@@ -30,11 +30,7 @@ struct EntityDetailReadingState: Hashable, Sendable {
                 chapters: manifest.chapters.map(\.summary)
             )
         case .singleFile(let detail):
-            let progress = detail.capabilities.lazy.compactMap { capability -> EntityProgressCapability? in
-                guard case .progress(let value) = capability else { return nil }
-                return value
-            }.first
-            return ReadingProgressPresentation(singleFileProgress: progress)
+            return ReadingProgressPresentation(singleFileProgress: detail.capability())
         case .idle, .loading, .failure:
             return nil
         }
@@ -183,11 +179,8 @@ struct EntityDetailReadingState: Hashable, Sendable {
     }
 
     private func singleFileManifest(_ detail: EntityDetail) -> BookReaderManifest {
-        let progress = detail.capabilities.lazy.compactMap { capability -> EntityProgressCapability? in
-            guard case .progress(let value) = capability else { return nil }
-            return value
-        }.first
         let defaultMode: ReaderMode = detail.bookFormat == .pdf ? .scrolled : .paged
+        let progress: EntityProgressCapability? = detail.capability()
         return BookReaderManifest(
             bookID: detail.id,
             title: detail.title,

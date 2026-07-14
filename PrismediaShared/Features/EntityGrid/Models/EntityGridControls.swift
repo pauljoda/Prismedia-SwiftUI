@@ -1,6 +1,6 @@
 import Foundation
 
-public struct EntityGridControls: Hashable, Sendable {
+public struct EntityGridControls: Codable, Hashable, Sendable {
     public var sort: EntityGridSort?
     public var sortDescending: Bool
     public var randomSeed: Int
@@ -15,6 +15,21 @@ public struct EntityGridControls: Hashable, Sendable {
 
     public static func nextRandomSeed() -> Int {
         Int.random(in: 1...2_000_000_000)
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sort = try container.decodeIfPresent(EntityGridSort.self, forKey: .sort)
+        sortDescending = try container.decodeIfPresent(Bool.self, forKey: .sortDescending) ?? true
+        randomSeed = Self.nextRandomSeed()
+        filters = try container.decodeIfPresent(EntityGridFilters.self, forKey: .filters) ?? EntityGridFilters()
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(sort, forKey: .sort)
+        try container.encode(sortDescending, forKey: .sortDescending)
+        try container.encode(filters, forKey: .filters)
     }
 
     public func applying(to baseline: EntityListQuery) -> EntityListQuery {
@@ -61,5 +76,11 @@ public struct EntityGridControls: Hashable, Sendable {
     private var minimumRating: Int? {
         guard case .atLeast(let value) = filters.rating else { return nil }
         return value
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case sort
+        case sortDescending
+        case filters
     }
 }

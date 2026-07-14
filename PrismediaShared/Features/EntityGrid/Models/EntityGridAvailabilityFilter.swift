@@ -1,4 +1,4 @@
-public enum EntityGridAvailabilityFilter: String, CaseIterable, Hashable, Sendable, Identifiable {
+public enum EntityGridAvailabilityFilter: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case any
     case onDisk
     case wanted

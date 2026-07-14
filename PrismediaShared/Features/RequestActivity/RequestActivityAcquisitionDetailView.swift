@@ -135,8 +135,7 @@ import UniformTypeIdentifiers
                             }
                             PrismediaButton(
                                 "Allow This Release Again",
-                                systemImage: "arrow.uturn.backward",
-                                surface: .embedded
+                                systemImage: "arrow.uturn.backward"
                             ) {
                                 Task { await removeBlocklistEntry(entry) }
                             }

@@ -93,10 +93,7 @@ struct EntityDetailReadingSection: View {
     }
 
     private func singleFileProgress(in detail: EntityDetail) -> EntityProgressCapability? {
-        detail.capabilities.lazy.compactMap { capability in
-            guard case .progress(let value) = capability else { return nil }
-            return value
-        }.first
+        detail.capability()
     }
 
     private func errorBanner(_ message: String) -> some View {

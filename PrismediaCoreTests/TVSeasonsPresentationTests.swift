@@ -109,17 +109,18 @@ final class TVSeasonsPresentationTests: XCTestCase {
 
     func testEpisodeSelectionCoordinatesCachingAndFullscreenPresentation() {
         let episodeID = UUID()
-        let cases: [(
-            intent: TVEpisodeSelectionIntent,
-            isDetailCached: Bool,
-            shouldPrewarm: Bool,
-            shouldPresentFullscreen: Bool
-        )] = [
-            (.focus, false, true, false),
-            (.focus, true, false, false),
-            (.activate, false, true, true),
-            (.activate, true, false, true),
-        ]
+        let cases:
+            [(
+                intent: TVEpisodeSelectionIntent,
+                isDetailCached: Bool,
+                shouldPrewarm: Bool,
+                shouldPresentFullscreen: Bool
+            )] = [
+                (.focus, false, true, false),
+                (.focus, true, false, false),
+                (.activate, false, true, true),
+                (.activate, true, false, true),
+            ]
 
         for testCase in cases {
             XCTAssertEqual(

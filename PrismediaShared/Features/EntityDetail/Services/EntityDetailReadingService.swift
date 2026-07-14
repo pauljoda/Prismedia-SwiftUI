@@ -198,9 +198,6 @@ struct EntityDetailReadingService {
     }
 
     private func progress(in detail: EntityDetail) -> EntityProgressCapability? {
-        detail.capabilities.lazy.compactMap { capability in
-            guard case .progress(let value) = capability else { return nil }
-            return value
-        }.first
+        detail.capability()
     }
 }

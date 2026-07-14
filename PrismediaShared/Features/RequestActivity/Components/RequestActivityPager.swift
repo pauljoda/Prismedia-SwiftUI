@@ -13,7 +13,6 @@ import SwiftUI
                 PrismediaButton(
                     "Previous",
                     systemImage: "chevron.left",
-                    surface: .embedded,
                     action: onPrevious
                 )
                 .disabled(page <= 1 || isLoading)
@@ -25,7 +24,6 @@ import SwiftUI
                 PrismediaButton(
                     "Next",
                     systemImage: "chevron.right",
-                    surface: .embedded,
                     action: onNext
                 )
                 .disabled(page >= totalPages || isLoading)

@@ -176,7 +176,6 @@ import SwiftUI
                             PrismediaButton(
                                 isRescanning ? "Rescanning" : "Rescan",
                                 systemImage: "arrow.clockwise",
-                                surface: .embedded,
                                 isLoading: isRescanning,
                                 action: onRescan
                             )
@@ -186,7 +185,6 @@ import SwiftUI
                             PrismediaButton(
                                 isSeeking ? "Seeking" : "Seek across providers",
                                 systemImage: "scope",
-                                surface: .embedded,
                                 isLoading: isSeeking,
                                 action: onSeek
                             )
@@ -213,8 +211,7 @@ import SwiftUI
             PrismediaButton(
                 "Clear",
                 systemImage: "xmark",
-                form: .fill,
-                surface: .embedded
+                form: .fill
             ) {
                 values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
                 onClear?()
@@ -226,7 +223,6 @@ import SwiftUI
                 systemImage: "magnifyingglass",
                 variant: .prominent,
                 form: .fill,
-                surface: .embedded,
                 isLoading: isSearching
             ) {
                 onSearch(

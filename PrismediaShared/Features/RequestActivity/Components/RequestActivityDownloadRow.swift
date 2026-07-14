@@ -133,8 +133,7 @@ import SwiftUI
         private var actionButtons: some View {
             PrismediaButton(
                 "Manage",
-                systemImage: "slider.horizontal.3",
-                surface: .embedded
+                systemImage: "slider.horizontal.3"
             ) {
                 onManage(item)
             }
@@ -145,8 +144,7 @@ import SwiftUI
             ) {
                 PrismediaButton(
                     primary.title,
-                    systemImage: primary.systemImage,
-                    surface: .embedded
+                    systemImage: primary.systemImage
                 ) {
                     onPrimaryAction(item)
                 }
@@ -158,8 +156,7 @@ import SwiftUI
             {
                 PrismediaButton(
                     "Open in Library",
-                    systemImage: "arrow.up.right.square",
-                    surface: .embedded
+                    systemImage: "arrow.up.right.square"
                 ) {
                     onOpenEntity(item)
                 }
@@ -168,8 +165,7 @@ import SwiftUI
             PrismediaButton(
                 "Remove",
                 systemImage: "trash",
-                variant: .destructive,
-                surface: .embedded
+                variant: .destructive
             ) {
                 onRemove(item)
             }

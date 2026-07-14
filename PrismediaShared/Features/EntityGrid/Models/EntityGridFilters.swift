@@ -1,4 +1,4 @@
-public struct EntityGridFilters: Hashable, Sendable {
+public struct EntityGridFilters: Codable, Hashable, Sendable {
     public var favoriteOnly = false
     public var organization: EntityGridOrganizationFilter = .any
     public var availability: EntityGridAvailabilityFilter = .any

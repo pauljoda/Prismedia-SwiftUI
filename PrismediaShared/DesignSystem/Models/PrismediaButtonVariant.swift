@@ -5,10 +5,6 @@ enum PrismediaButtonVariant: Hashable, Sendable {
     case prominent
     case destructive
 
-    var isProminent: Bool {
-        self == .prominent
-    }
-
     var isDestructive: Bool {
         self == .destructive
     }

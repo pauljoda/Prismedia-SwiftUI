@@ -5,7 +5,6 @@ struct PrismediaButton: View {
     let systemImage: String?
     let variant: PrismediaButtonVariant
     let form: PrismediaButtonForm
-    let surface: PrismediaControlSurface
     let primaryTint: Color?
     let isLoading: Bool
     let action: () -> Void
@@ -15,7 +14,6 @@ struct PrismediaButton: View {
         systemImage: String? = nil,
         variant: PrismediaButtonVariant = .standard,
         form: PrismediaButtonForm = .automatic,
-        surface: PrismediaControlSurface = .floating,
         primaryTint: Color? = nil,
         isLoading: Bool = false,
         action: @escaping () -> Void
@@ -28,7 +26,6 @@ struct PrismediaButton: View {
         self.systemImage = systemImage
         self.variant = variant
         self.form = form
-        self.surface = surface
         self.primaryTint = primaryTint
         self.isLoading = isLoading
         self.action = action
@@ -143,8 +140,7 @@ struct PrismediaButton: View {
                 PrismediaButton(
                     "Remove",
                     systemImage: "trash",
-                    variant: .destructive,
-                    surface: .embedded
+                    variant: .destructive
                 ) {}
 
                 PrismediaButton(

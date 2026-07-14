@@ -1,4 +1,4 @@
-public enum EntityGridTaxonomyFilter: String, CaseIterable, Hashable, Sendable, Identifiable {
+public enum EntityGridTaxonomyFilter: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case any
     case referenced
     case orphaned

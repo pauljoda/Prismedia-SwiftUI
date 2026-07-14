@@ -285,7 +285,7 @@
                         .font(.callout)
                         .foregroundStyle(.secondary)
 
-                    PrismediaButton("Try Again", surface: .embedded) {
+                    PrismediaButton("Try Again") {
                         Task { await loadNextPage() }
                     }
                 } else if snapshot.hasNextPage {

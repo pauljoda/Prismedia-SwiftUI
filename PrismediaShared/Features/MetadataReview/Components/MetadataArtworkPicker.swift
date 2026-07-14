@@ -16,8 +16,7 @@ import SwiftUI
                                 LazyHStack(spacing: PrismediaSpacing.medium) {
                                     PrismediaButton(
                                         "None",
-                                        systemImage: selectedURL(for: kind) == nil ? "checkmark.circle.fill" : "circle",
-                                        surface: .embedded
+                                        systemImage: selectedURL(for: kind) == nil ? "checkmark.circle.fill" : "circle"
                                     ) {
                                         setSelectedURL(nil, for: kind)
                                     }

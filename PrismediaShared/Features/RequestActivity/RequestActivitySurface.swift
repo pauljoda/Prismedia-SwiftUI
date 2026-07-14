@@ -201,8 +201,7 @@ import SwiftUI
                     PrismediaButton(
                         "Try Again",
                         systemImage: "arrow.clockwise",
-                        variant: .prominent,
-                        surface: .embedded
+                        variant: .prominent
                     ) {
                         Task { await refresh() }
                     }

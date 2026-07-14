@@ -120,7 +120,6 @@ import SwiftUI
                     systemImage: "paperplane",
                     variant: .prominent,
                     form: .fill,
-                    surface: .embedded,
                     isLoading: isSubmitting,
                     action: commit
                 )
@@ -141,8 +140,7 @@ import SwiftUI
                 PrismediaButton(
                     "Reload Review",
                     systemImage: "arrow.clockwise",
-                    variant: .prominent,
-                    surface: .embedded
+                    variant: .prominent
                 ) {
                     Task { await loadReview() }
                 }

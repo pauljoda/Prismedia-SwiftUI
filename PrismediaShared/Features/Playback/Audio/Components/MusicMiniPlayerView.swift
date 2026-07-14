@@ -12,9 +12,9 @@
                     Button(action: showNowPlaying) {
                         HStack(spacing: placement == .inline ? 8 : 12) {
                             MusicNowPlayingArtwork(track: track)
-                            .frame(width: artworkContentSize, height: artworkContentSize)
-                            .padding(artworkInset)
-                            .frame(width: artworkSize, height: artworkSize)
+                                .frame(width: artworkContentSize, height: artworkContentSize)
+                                .padding(artworkInset)
+                                .frame(width: artworkSize, height: artworkSize)
 
                             VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
                                 Text(track.title)

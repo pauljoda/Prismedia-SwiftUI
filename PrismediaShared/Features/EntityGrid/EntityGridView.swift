@@ -762,7 +762,7 @@ public struct EntityGridView<ItemContent: View>: View {
 
             Spacer(minLength: 8)
 
-            PrismediaButton("Try Again", surface: .embedded) {
+            PrismediaButton("Try Again") {
                 Task { await refresh() }
             }
         }
@@ -789,23 +789,6 @@ extension EntityGridView where ItemContent == EntityThumbnailCardView {
             preferencesStore: preferencesStore
         ) { item, layout in
             EntityThumbnailCardView(item: item, layout: layout)
-        }
-    }
-}
-
-extension EntityGridView {
-    public init(
-        configuration: EntityGridConfiguration,
-        loader: any EntityGridLoading,
-        preferencesStore: EntityGridPreferencesStore = .standard,
-        @ViewBuilder itemContent: @escaping (EntityThumbnail) -> ItemContent
-    ) {
-        self.init(
-            configuration: configuration,
-            loader: loader,
-            preferencesStore: preferencesStore
-        ) { item, _ in
-            itemContent(item)
         }
     }
 }

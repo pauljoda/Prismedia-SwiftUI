@@ -1,8 +1,8 @@
 #if DEBUG
     import Foundation
 
-        struct DashboardHeroPreviewTrickplayLoader: TrickplayFrameLoading {
-            func loadFrames(playlistPath: String) async -> [TrickplayPlaylist.Frame] {
+    struct DashboardHeroPreviewTrickplayLoader: TrickplayFrameLoading {
+        func loadFrames(playlistPath: String) async -> [TrickplayPlaylist.Frame] {
             []
         }
     }

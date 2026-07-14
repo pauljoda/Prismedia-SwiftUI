@@ -1,4 +1,4 @@
-public enum EntityGridEngagementFilter: String, CaseIterable, Hashable, Sendable, Identifiable {
+public enum EntityGridEngagementFilter: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case any
     case watched
     case unwatched

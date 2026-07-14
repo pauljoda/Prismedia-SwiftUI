@@ -51,39 +51,25 @@ struct EntityDetailPresentation {
     }
 
     var images: EntityImagesCapability? {
-        capability {
-            if case .images(let value) = $0 { return value }
-            return nil
-        }
+        detail.capability()
     }
 
     var description: String? {
-        capability {
-            guard case .description(let value) = $0 else { return nil }
-            let text = value.value.trimmingCharacters(in: .whitespacesAndNewlines)
-            return text.isEmpty ? nil : text
-        }
+        let capability: EntityDescriptionCapability? = detail.capability()
+        let text = capability?.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text?.isEmpty == false ? text : nil
     }
 
     var rating: Int? {
-        capability {
-            if case .rating(let value) = $0 { return value.value }
-            return nil
-        }
+        detail.capability(EntityRatingCapability.self)?.value
     }
 
     var hasRatingCapability: Bool {
-        detail.capabilities.contains { capability in
-            if case .rating = capability { return true }
-            return false
-        }
+        detail.capability(EntityRatingCapability.self) != nil
     }
 
     var flagCapability: EntityFlagsCapability? {
-        capability {
-            if case .flags(let value) = $0 { return value }
-            return nil
-        }
+        detail.capability()
     }
 
     var flagItems: [EntityDetailFlagItem] {
@@ -99,17 +85,11 @@ struct EntityDetailPresentation {
     }
 
     var markers: [EntityMarker] {
-        capability {
-            if case .markers(let value) = $0 { return value.items }
-            return nil
-        } ?? []
+        detail.capability(EntityItemsCapability<EntityMarker>.self)?.items ?? []
     }
 
     var subtitles: [EntitySubtitle] {
-        capability {
-            if case .subtitles(let value) = $0 { return value.items }
-            return nil
-        } ?? []
+        detail.capability(EntityItemsCapability<EntitySubtitle>.self)?.items ?? []
     }
 
     var heroPath: String? {
@@ -232,11 +212,7 @@ struct EntityDetailPresentation {
     }
 
     private var primaryAction: EntityDetailAction? {
-        let progress = capability {
-            if case .progress(let value) = $0 { return value }
-            return nil
-        }
-        let hasProgress = progress?.currentEntityID != nil
+        let hasProgress = detail.capability(EntityProgressCapability.self)?.currentEntityID != nil
         switch detail.kind {
         case .book:
             switch BookReaderFormatPolicy.route(for: detail.bookFormat) {
@@ -255,10 +231,6 @@ struct EntityDetailPresentation {
         default:
             return nil
         }
-    }
-
-    private func capability<Value>(_ transform: (EntityCapability) -> Value?) -> Value? {
-        detail.capabilities.lazy.compactMap(transform).first
     }
 
     private func section(_ id: EntityDetailSectionID, _ title: String, _ image: String, count: Int? = nil)

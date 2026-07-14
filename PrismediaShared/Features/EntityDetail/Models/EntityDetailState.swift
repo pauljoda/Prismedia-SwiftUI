@@ -108,10 +108,7 @@ struct EntityDetailState: Sendable {
     }
 
     private var currentFlags: EntityFlagsCapability? {
-        detail?.capabilities.lazy.compactMap { capability in
-            guard case .flags(let flags) = capability else { return nil }
-            return flags
-        }.first
+        detail?.capability()
     }
 
     private mutating func nextRequest() -> EntityDetailRequest {

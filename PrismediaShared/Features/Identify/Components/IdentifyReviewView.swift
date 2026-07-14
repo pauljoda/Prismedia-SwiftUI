@@ -74,30 +74,26 @@ import SwiftUI
             PrismediaButton(
                 "Back to Search",
                 systemImage: "arrow.left",
-                surface: .embedded,
                 action: session.returnToSearch
             )
             PrismediaButton(
                 "Reject",
                 systemImage: "xmark",
-                variant: .destructive,
-                surface: .embedded
+                variant: .destructive
             ) {
                 Task { await session.reject(advance: false) }
             }
             PrismediaButton(
                 "Reject & Next",
                 systemImage: "xmark",
-                variant: .destructive,
-                surface: .embedded
+                variant: .destructive
             ) {
                 Task { await session.reject(advance: true) }
             }
             PrismediaButton(
                 "Accept",
                 systemImage: "checkmark",
-                variant: .prominent,
-                surface: .embedded
+                variant: .prominent
             ) {
                 Task { await session.apply(advance: false) }
             }
@@ -105,8 +101,7 @@ import SwiftUI
             PrismediaButton(
                 "Accept & Next",
                 systemImage: "checkmark",
-                variant: .prominent,
-                surface: .embedded
+                variant: .prominent
             ) {
                 Task { await session.apply(advance: true) }
             }

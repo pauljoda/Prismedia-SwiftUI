@@ -27,8 +27,7 @@ import SwiftUI
                     PrismediaButton(
                         "Queue",
                         systemImage: "arrow.down.circle",
-                        variant: .prominent,
-                        surface: .embedded
+                        variant: .prominent
                     ) {
                         onQueue(candidate)
                     }
@@ -36,8 +35,7 @@ import SwiftUI
                     PrismediaButton(
                         "Blocklist",
                         systemImage: "hand.raised",
-                        variant: .destructive,
-                        surface: .embedded
+                        variant: .destructive
                     ) {
                         onBlocklist(candidate)
                     }

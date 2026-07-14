@@ -5,14 +5,6 @@ enum PrismediaButtonForm: Hashable, Sendable {
     case fill
     case compactIcon
 
-    var fillsAvailableWidth: Bool {
-        self == .fill
-    }
-
-    var isCompactIcon: Bool {
-        self == .compactIcon
-    }
-
     var buttonBorderShape: ButtonBorderShape {
         switch self {
         case .automatic:
