@@ -92,26 +92,6 @@ final class EntityMediaFeedPreparationServiceTests: XCTestCase {
         XCTAssertTrue(sourceRequestIDs.isEmpty)
     }
 
-    func testFailedPreparationPublishesOneImmutableFallbackInOriginalOrder() async {
-        let first = makeItem(id: 3)
-        let second = makeItem(id: 4)
-        let loader = EntityMediaFeedPreparationLoaderSpy(details: [:])
-        let contentLoader = EntityImageViewerContentLoader(
-            detailLoader: loader,
-            sourceLoader: loader,
-            retainedItems: [first, second]
-        )
-
-        let prepared = await EntityMediaFeedPreparationService().prepare(
-            [first, second],
-            contentLoader: contentLoader
-        )
-
-        XCTAssertEqual(prepared.map(\.id), [first.id, second.id])
-        XCTAssertEqual(prepared.map(\.aspectRatio), [1, 1])
-        XCTAssertTrue(prepared.allSatisfy { $0.projection == nil })
-    }
-
     func testSourceMetadataFailureKeepsPreparedProjectionWithFallbackRatio() async throws {
         let item = makeItem(id: 5)
         let detail = try makeDetail(item: item, technicalWidth: nil, technicalHeight: nil)

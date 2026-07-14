@@ -10,6 +10,7 @@
         @State private var remoteCommands: MusicRemoteCommandCoordinator?
         @State private var miniPlayerVisibility = MusicMiniPlayerVisibility()
         @State private var nowPlayingPresented = false
+        @Namespace private var nowPlayingTransitionNamespace
 
         private let client: PrismediaAPIClient
         private let content: Content
@@ -26,15 +27,18 @@
         var body: some View {
             playbackContent
                 .environment(\.musicMiniPlayerVisibility, miniPlayerVisibility)
-                .sheet(isPresented: $nowPlayingPresented) {
+                .fullScreenCover(isPresented: $nowPlayingPresented) {
                     MusicNowPlayingView(
                         engine: engine,
                         artworkPalette: artworkPaletteBinding
                     )
                     .environment(controller)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-                    .presentationContentInteraction(.scrolls)
+                    .navigationTransition(
+                        .zoom(
+                            sourceID: nowPlayingTransitionID,
+                            in: nowPlayingTransitionNamespace
+                        )
+                    )
                 }
                 .onAppear(perform: connectPlaybackSystem)
                 .task(id: controller.currentTrack?.id) {
@@ -73,6 +77,10 @@
                 nowPlayingPresented = true
             }
             .environment(controller)
+            .matchedTransitionSource(
+                id: nowPlayingTransitionID,
+                in: nowPlayingTransitionNamespace
+            )
         }
 
         private func connectPlaybackSystem() {
@@ -90,6 +98,7 @@
         }
 
         private var engine: AVPlayerAudioPlaybackEngine { playback.engine }
+        private var nowPlayingTransitionID: String { "music.now-playing.presentation" }
         private var controller: MusicPlayerController { playback.controller }
         private var artworkPaletteBinding: Binding<ArtworkPalette?> {
             Binding(

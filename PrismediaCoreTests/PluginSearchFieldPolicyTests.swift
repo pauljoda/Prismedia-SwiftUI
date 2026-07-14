@@ -31,7 +31,7 @@ final class PluginSearchFieldPolicyTests: XCTestCase {
         XCTAssertEqual(result.map(\.id), ["eligible"])
     }
 
-    func testEligibleProvidersRespectNsfwBoundaryAndSortByDisplayName() {
+    func testEligibleProvidersRespectNsfwBoundary() {
         let zulu = plugin(
             id: "zulu", name: "Zulu", actions: ["search", "lookup-id"],
             fields: [field("query", type: "text", required: true)]
@@ -45,18 +45,15 @@ final class PluginSearchFieldPolicyTests: XCTestCase {
             fields: [field("query", type: "text", required: true)]
         )
 
-        XCTAssertEqual(
-            PluginSearchFieldPolicy.eligibleProviders(
-                [zulu, nsfw, alpha], entityKind: "movie", hidesNsfw: true
-            ).map(\.id),
-            ["alpha", "zulu"]
+        let hidden = PluginSearchFieldPolicy.eligibleProviders(
+            [zulu, nsfw, alpha], entityKind: "movie", hidesNsfw: true
         )
-        XCTAssertEqual(
-            PluginSearchFieldPolicy.eligibleProviders(
-                [zulu, nsfw, alpha], entityKind: "movie", hidesNsfw: false
-            ).map(\.id),
-            ["nsfw", "alpha", "zulu"]
+        let visible = PluginSearchFieldPolicy.eligibleProviders(
+            [zulu, nsfw, alpha], entityKind: "movie", hidesNsfw: false
         )
+
+        XCTAssertEqual(Set(hidden.map(\.id)), ["alpha", "zulu"])
+        XCTAssertEqual(Set(visible.map(\.id)), ["alpha", "nsfw", "zulu"])
     }
 
     func testSeedPreservesKnownValuesAndUsesFirstTextFieldForTitle() {

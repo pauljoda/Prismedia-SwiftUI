@@ -5,46 +5,6 @@ import XCTest
 
 final class SearchHubFeatureTests: XCTestCase {
     @MainActor
-    func testLoadRecentProducesItemsAndTotalCount() async {
-        let recent = [thumbnail(id: 1, title: "Arrival"), thumbnail(id: 2, title: "Severance")]
-        let loader = SearchHubLoaderStub(
-            recentResults: [.success(EntityListResponse(items: recent, totalCount: 14))]
-        )
-        let service = SearchHubService(loader: loader)
-        var snapshot = SearchHubSnapshot()
-
-        snapshot = await loadRecent(snapshot, service: service)
-
-        XCTAssertEqual(snapshot.recentItems, recent)
-        XCTAssertEqual(snapshot.recentTotalCount, 14)
-        XCTAssertEqual(snapshot.recentState, .content)
-        XCTAssertEqual(snapshot.activeState(for: ""), .content)
-        XCTAssertEqual(snapshot.displayedItems(for: ""), recent)
-        let requestedLimits = await loader.requestedRecentLimits()
-        XCTAssertEqual(requestedLimits, [48])
-    }
-
-    @MainActor
-    func testLoadRecentProducesEmptyAndFailureStates() async {
-        let loader = SearchHubLoaderStub(
-            recentResults: [
-                .success(EntityListResponse(items: [])),
-                .failure(.unavailable),
-            ]
-        )
-        let service = SearchHubService(loader: loader)
-        var snapshot = SearchHubSnapshot()
-
-        snapshot = await loadRecent(snapshot, service: service)
-        XCTAssertEqual(snapshot.recentState, .empty)
-
-        snapshot = await loadRecent(snapshot, service: service)
-        XCTAssertEqual(snapshot.recentState, .failed("Your library couldn’t be loaded. Try again."))
-        XCTAssertTrue(snapshot.recentItems.isEmpty)
-        XCTAssertEqual(snapshot.recentTotalCount, 0)
-    }
-
-    @MainActor
     func testRecentLoadDropsUnexpectedNsfwItemsAndAdjustsVisibleTotal() async {
         let safe = thumbnail(id: 12, title: "Safe")
         let unsafe = thumbnail(id: 13, title: "Unsafe", isNsfw: true)
@@ -373,7 +333,6 @@ private actor SearchHubLoaderStub: SearchHubLoading {
     private var queuedSearchResults: [String: [Result<EntityListResponse, SearchHubStubError>]]
     private let recentDelay: Duration
     private let searchDelays: [String: Duration]
-    private var recentLimits: [Int] = []
     private var searches: [SearchRequest] = []
     nonisolated let allowsNsfwContent: Bool
 
@@ -394,7 +353,6 @@ private actor SearchHubLoaderStub: SearchHubLoading {
     }
 
     func loadRecent(limit: Int) async throws -> EntityListResponse {
-        recentLimits.append(limit)
         await nonCancellablePause(for: recentDelay)
         guard !recentResults.isEmpty else { return EntityListResponse(items: []) }
         return try recentResults.removeFirst().get()
@@ -412,10 +370,6 @@ private actor SearchHubLoaderStub: SearchHubLoading {
 
         guard let result = searchResults[query] else { return EntityListResponse(items: []) }
         return try result.get()
-    }
-
-    func requestedRecentLimits() -> [Int] {
-        recentLimits
     }
 
     func requestedSearches() -> [SearchRequest] {

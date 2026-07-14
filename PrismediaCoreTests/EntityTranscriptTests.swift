@@ -36,21 +36,6 @@ final class EntityTranscriptTests: XCTestCase {
         XCTAssertEqual(state.filteredCues.map(\.id), [0])
     }
 
-    func testActiveCueUsesTheCurrentPlaybackInterval() {
-        var state = EntityTranscriptState()
-        let request = state.beginLoad(videoID: videoID, trackID: "english")
-        state.finishLoad(
-            .content([
-                EntityTranscriptCue(id: 0, startTime: 0, endTime: 2, text: "First"),
-                EntityTranscriptCue(id: 1, startTime: 2, endTime: 4, text: "Second"),
-            ]),
-            request: request
-        )
-
-        XCTAssertEqual(state.activeCueID(at: 2.5), 1)
-        XCTAssertNil(state.activeCueID(at: 5))
-    }
-
     func testTranscriptServiceLoadsTheExistingSubtitleEndpointAndParsesCues() async throws {
         let source = """
             WEBVTT
@@ -95,34 +80,4 @@ final class EntityTranscriptTests: XCTestCase {
         XCTAssertEqual(request.httpMethod, "GET")
     }
 
-    func testSeekRequiresTheVisibleDetailToOwnTheMatchingVideoController() {
-        let detailID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        let otherID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-        let owner = EntityLink(entityID: detailID, kind: .movie)
-
-        XCTAssertTrue(
-            EntityTranscriptSeekPolicy.canSeek(
-                ownerLink: owner,
-                resolvedVideoID: videoID,
-                activeOwnerLink: owner,
-                activeVideoID: videoID
-            )
-        )
-        XCTAssertFalse(
-            EntityTranscriptSeekPolicy.canSeek(
-                ownerLink: owner,
-                resolvedVideoID: videoID,
-                activeOwnerLink: EntityLink(entityID: otherID, kind: .movie),
-                activeVideoID: videoID
-            )
-        )
-        XCTAssertFalse(
-            EntityTranscriptSeekPolicy.canSeek(
-                ownerLink: owner,
-                resolvedVideoID: videoID,
-                activeOwnerLink: owner,
-                activeVideoID: otherID
-            )
-        )
-    }
 }

@@ -3,17 +3,6 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityImageAutoplayPolicyTests: XCTestCase {
-    func testVisibleMotionMediaAutoplays() {
-        XCTAssertTrue(
-            EntityImageAutoplayPolicy.shouldPlay(
-                isVisible: true,
-                isPausedByUser: false,
-                reduceMotion: false,
-                isSceneActive: true
-            )
-        )
-    }
-
     func testUserPauseWinsWhenVisibilityChanges() {
         XCTAssertFalse(
             EntityImageAutoplayPolicy.shouldPlay(

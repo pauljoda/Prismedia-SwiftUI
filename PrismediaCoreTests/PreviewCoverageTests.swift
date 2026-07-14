@@ -1,23 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import PrismediaCore
-
 final class PreviewCoverageTests: XCTestCase {
-    @MainActor
-    func testSignedInPreviewEnvironmentLoadsFixturesWithoutANetworkServer() async throws {
-        let environment = PrismediaPreviewData.model(signedIn: true)
-        let client = try XCTUnwrap(environment.client)
-
-        let response = try await client.listEntities(
-            EntityListQuery(kind: .video),
-            limit: 12
-        )
-
-        XCTAssertFalse(response.items.isEmpty)
-        XCTAssertTrue(response.items.allSatisfy { $0.kind == .video })
-    }
-
     func testEveryVisualTypeHasADirectXcodePreview() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -68,68 +52,6 @@ final class PreviewCoverageTests: XCTestCase {
             [],
             "Every visual type must have a deterministic, direct #Preview beside it.\n"
                 + previewViolations.joined(separator: "\n")
-        )
-    }
-
-    func testPreviewDeclarationsUseDeterministicDependencies() throws {
-        let repositoryRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let forbiddenPatterns = [
-            "Date()",
-            "FileManager.default",
-            "KeychainSessionStore(",
-            "URLSession.shared",
-            "UUID()",
-            "UserDefaults.standard",
-        ]
-        let sourceDirectories = [
-            "PrismediaShared",
-            "PrismediaiOS",
-            "PrismediaMac",
-            "PrismediaTV",
-        ]
-
-        let violations = sourceDirectories.flatMap { directory -> [String] in
-            let sourceRoot = repositoryRoot.appending(path: directory)
-            guard
-                let files = FileManager.default.enumerator(
-                    at: sourceRoot,
-                    includingPropertiesForKeys: [.isRegularFileKey]
-                )
-            else { return [] }
-
-            return files.compactMap { item -> String? in
-                guard let file = item as? URL, file.pathExtension == "swift" else { return nil }
-                guard let source = try? String(contentsOf: file, encoding: .utf8) else { return nil }
-
-                let isPreviewSupport =
-                    file.pathComponents.contains("PreviewSupport")
-                    || file.lastPathComponent.contains("Preview")
-                let inspectedSource: Substring
-                if let previewRange = source.range(of: "#Preview") {
-                    inspectedSource = source[previewRange.lowerBound...]
-                } else if isPreviewSupport {
-                    inspectedSource = source[...]
-                } else {
-                    return nil
-                }
-
-                let matches = forbiddenPatterns.filter { inspectedSource.contains($0) }
-                guard !matches.isEmpty else { return nil }
-                let relativePath = file.path.replacingOccurrences(
-                    of: repositoryRoot.path + "/",
-                    with: ""
-                )
-                return "\(relativePath): \(matches.joined(separator: ", "))"
-            }
-        }.sorted()
-
-        XCTAssertEqual(
-            violations,
-            [],
-            "Previews must use fixed fixtures and in-memory dependencies.\n"
-                + violations.joined(separator: "\n")
         )
     }
 

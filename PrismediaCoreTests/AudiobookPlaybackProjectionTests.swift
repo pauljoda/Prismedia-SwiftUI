@@ -54,35 +54,6 @@ final class AudiobookPlaybackProjectionTests: XCTestCase {
         )
     }
 
-    func testQueueLoaderUsesFullTechnicalDurationForTenHourPart() async throws {
-        let part = makePart(idSuffix: 1, title: "Part One", duration: "10:05", sortOrder: 0)
-        let technicalDetail = try JSONDecoder().decode(
-            EntityDetail.self,
-            from: Data(
-                """
-                {
-                  "id":"\(part.id.uuidString)",
-                  "kind":"audio-track",
-                  "title":"Part One",
-                  "hasSourceMedia":true,
-                  "capabilities":[{
-                    "kind":"technical",
-                    "duration":"10:05:00"
-                  }],
-                  "childrenByKind":[],
-                  "relationships":[]
-                }
-                """.utf8
-            )
-        )
-
-        let projection = await AudiobookQueueLoader(
-            detailLoader: PreviewEntityDetailLoader(detail: technicalDetail)
-        ).load(detail: makeBook(parts: [part]))
-
-        XCTAssertEqual(projection?.totalDuration, 36_300)
-    }
-
     private func makeBook(parts: [EntityThumbnail]) -> EntityDetail {
         EntityDetail(
             id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,

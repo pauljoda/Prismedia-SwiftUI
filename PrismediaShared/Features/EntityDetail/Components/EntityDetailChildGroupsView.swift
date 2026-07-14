@@ -47,10 +47,12 @@ struct EntityDetailChildGroupsView: View {
                 items: group.entities,
                 minimumColumnWidth: minimumColumnWidth
             ) { item in
-                EntityThumbnailNavigationSurface(item: item)
-                    .accessibilityIdentifier("entity-detail.child.\(item.id.uuidString)")
+                EntityThumbnailNavigationSurface(
+                    item: item,
+                    onPrimaryAction: onPrimaryAction
+                )
+                .accessibilityIdentifier("entity-detail.child.\(item.id.uuidString)")
             }
-            .environment(\.entityThumbnailPrimaryAction, onPrimaryAction)
             .padding(.horizontal, horizontalPadding)
             .padding(.bottom, PrismediaSpacing.medium)
             .accessibilityIdentifier("entity-detail.children.\(group.kind.rawValue)")

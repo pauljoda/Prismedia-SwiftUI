@@ -8,8 +8,8 @@ import SwiftUI
         let episodeDetail: EntityDetail?
         let loader: any EntityDetailLoading
         let playbackService: (any VideoPlaybackServicing)?
-        let autoPlayEpisodeID: UUID?
-        let autoPlayRequestID: UUID?
+        let fullscreenEpisodeID: UUID?
+        let fullscreenRequestID: UUID?
         let onAdvance: (EntityLink) -> Void
 
         @ViewBuilder
@@ -22,10 +22,10 @@ import SwiftUI
                     playbackService: playbackService,
                     preparation: preparation,
                     tvLayout: .compact,
-                    autoPlayOnTV: autoPlayEpisodeID == episodeDetail.id,
+                    presentsFullscreenOnTV: fullscreenEpisodeID == episodeDetail.id,
                     onAdvance: onAdvance
                 )
-                .id(episodeDetail.id.uuidString + "-" + (autoPlayRequestID?.uuidString ?? "manual"))
+                .id(episodeDetail.id.uuidString + "-" + (fullscreenRequestID?.uuidString ?? "manual"))
                 .frame(minHeight: 80)
             } else if episode != nil {
                 HStack(spacing: PrismediaSpacing.extraLarge) {
@@ -54,8 +54,8 @@ import SwiftUI
                 episodeDetail: TVSeasonsPreviewData.episode,
                 loader: TVSeasonsPreviewData.loader,
                 playbackService: VideoPlaybackPreviewService(),
-                autoPlayEpisodeID: nil,
-                autoPlayRequestID: nil,
+                fullscreenEpisodeID: nil,
+                fullscreenRequestID: nil,
                 onAdvance: { _ in }
             )
         }
@@ -68,8 +68,8 @@ import SwiftUI
                 episodeDetail: nil,
                 loader: TVSeasonsPreviewData.loader,
                 playbackService: nil,
-                autoPlayEpisodeID: nil,
-                autoPlayRequestID: nil,
+                fullscreenEpisodeID: nil,
+                fullscreenRequestID: nil,
                 onAdvance: { _ in }
             )
         }

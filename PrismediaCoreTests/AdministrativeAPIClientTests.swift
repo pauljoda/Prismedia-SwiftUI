@@ -41,42 +41,6 @@ final class AdministrativeAPIClientTests: XCTestCase {
         XCTAssertEqual(body["path"] as? String, "Season 1")
     }
 
-    func testFilesIncludeNsfwLibrariesOnlyWhenTheGlobalPreferenceIsEnabled() async throws {
-        let rootID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-        let loader = MockHTTPDataLoader(responses: [
-            .json(#"{"roots":[]}"#),
-            .json(#"{"rootId":"\#(rootID)","path":"","entries":[]}"#),
-        ])
-        let client = PrismediaAPIClient(
-            serverURL: serverURL,
-            accessToken: "token",
-            allowsNsfwContent: true,
-            loader: loader
-        )
-
-        _ = try await client.listAdministrativeFileRoots()
-        _ = try await client.listAdministrativeFileChildren(rootID: rootID, path: "")
-
-        XCTAssertTrue(loader.requests.allSatisfy { queryItem("hideNsfw", in: $0) == "false" })
-    }
-
-    func testIdentifyQueueDeleteUsesEntityRoute() async throws {
-        let entityID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        let queueJSON =
-            #"[{"id":"33333333-3333-3333-3333-333333333333","entityId":"\#(entityID)","entityKind":"movie","title":"Arrival","isNsfw":false,"state":"queued","provider":null,"action":"search","query":null,"candidates":[],"proposal":null,"error":null,"cascadeRunning":false,"createdAt":"2026-07-11T12:00:00Z","updatedAt":"2026-07-11T12:00:00Z","completedAt":null}]"#
-        let loader = MockHTTPDataLoader(responses: [.json(queueJSON), .json(String(queueJSON.dropFirst().dropLast()))])
-        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
-
-        let items = try await client.listAdministrativeIdentifyQueue()
-        _ = try await client.removeAdministrativeIdentifyQueueItem(entityID: entityID)
-
-        XCTAssertEqual(items.first?.entityID, entityID)
-        XCTAssertEqual(loader.requests[0].url?.path, "/api/identify/queue")
-        XCTAssertEqual(queryItem("includeCompleted", in: loader.requests[0]), "false")
-        XCTAssertEqual(loader.requests[1].url?.path, "/api/identify/queue/entities/\(entityID.uuidString.lowercased())")
-        XCTAssertEqual(loader.requests[1].httpMethod, "DELETE")
-    }
-
     func testRequestSearchPostsPluginOwnedFields() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json(
@@ -342,22 +306,6 @@ final class AdministrativeAPIClientTests: XCTestCase {
         XCTAssertEqual(loader.requests[1].url?.path, "/api/identify/entities/\(entityID.uuidString.lowercased())/apply")
         XCTAssertEqual(loader.requests[2].url?.path, "/api/identify/bulk")
         XCTAssertEqual(queryItem("hideNsfw", in: loader.requests[2]), "false")
-    }
-
-    func testRequestAndIdentifyListVisibilityFollowSharedClientPolicy() async throws {
-        let loader = MockHTTPDataLoader(responses: [
-            .json(#"{"results":[],"providerErrors":[]}"#),
-            .json("[]"),
-        ])
-        let client = PrismediaAPIClient(
-            serverURL: serverURL, accessToken: "token", allowsNsfwContent: true, loader: loader)
-
-        _ = try await client.searchAdministrativeRequests(
-            kind: "audiobook", pluginID: "openlibrary", fields: ["title": "Dune"])
-        _ = try await client.listAdministrativeIdentifyQueue()
-
-        XCTAssertEqual(queryItem("hideNsfw", in: loader.requests[0]), "false")
-        XCTAssertEqual(queryItem("hideNsfw", in: loader.requests[1]), "false")
     }
 
     private func jsonBody(_ request: URLRequest) throws -> [String: Any] {

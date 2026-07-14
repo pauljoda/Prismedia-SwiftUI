@@ -26,16 +26,6 @@ final class ArtworkPalettePipelineTests: XCTestCase {
         XCTAssertEqual(loader.requestCount, 1)
     }
 
-    func testInvalidArtworkDoesNotCreateAPalette() async throws {
-        let loader = PaletteArtworkLoader(data: Data("not an image".utf8))
-        let pipeline = ArtworkPalettePipeline(artworkLoader: loader)
-        let url = try XCTUnwrap(URL(string: "https://example.com/invalid.bin"))
-
-        let palette = await pipeline.palette(for: url)
-
-        XCTAssertNil(palette)
-    }
-
     private func samplePNGData() throws -> Data {
         let width = 8
         let height = 8

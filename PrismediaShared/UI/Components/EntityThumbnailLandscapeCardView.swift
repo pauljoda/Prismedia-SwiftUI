@@ -11,26 +11,18 @@ struct EntityThumbnailLandscapeCardView: View {
     let onPreviewHoldChanged: (Bool) -> Void
 
     var body: some View {
-        Color.clear
-            .aspectRatio(presentation.cardAspectRatio, contentMode: .fit)
-            .overlay {
-                GeometryReader { geometry in
-                    ZStack(alignment: .top) {
-                        PrismediaColor.groupedContentBackground
-
-                        artwork(
-                            width: geometry.size.width,
-                            cardHeight: geometry.size.height
-                        )
-
-                        metadata
-
-                        if let progress = item.progress, progress > 0 {
-                            progressMeter(progress)
-                        }
-                    }
+        artwork
+            .backgroundExtensionEffect(isEnabled: !reduceTransparency)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                metadata
+            }
+            .overlay(alignment: .bottom) {
+                if let progress = item.progress, progress > 0 {
+                    progressMeter(progress)
                 }
             }
+            .aspectRatio(presentation.cardAspectRatio, contentMode: .fit)
+            .background(PrismediaColor.groupedContentBackground)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .prismediaCard(cornerRadius: layout == .wall ? 8 : 6)
             .prismediaArtworkPalette(
@@ -44,73 +36,22 @@ struct EntityThumbnailLandscapeCardView: View {
         EntityThumbnailCardPresentation(item: item, layout: layout)
     }
 
-    @ViewBuilder
-    private func artwork(width: CGFloat, cardHeight: CGFloat) -> some View {
-        #if os(tvOS)
-            RemotePosterImage(
-                path: item.bestCoverPath,
-                fallbackSeed: item.title,
-                systemImage: item.kind.thumbnailFallbackSystemImage,
-                contentMode: .fill,
-                maxPixelSize: 512
-            )
-            .frame(width: width, height: cardHeight)
-            .overlay(legibilityGradient)
-            .overlay(accessibilityScrim)
-            .clipped()
-            .accessibilityIdentifier("entity.thumbnail.media.\(item.id.uuidString)")
-        #else
-            continuationArtwork(width: width, cardHeight: cardHeight)
-            sharpArtwork(width: width)
-        #endif
+    private var artwork: some View {
+        RemotePosterImage(
+            path: item.bestCoverPath,
+            fallbackSeed: item.title,
+            systemImage: item.kind.thumbnailFallbackSystemImage,
+            contentMode: item.thumbnailArtworkPresentation.contentMode,
+            maxPixelSize: 512
+        )
+        .frame(
+            minWidth: 0,
+            maxWidth: .infinity,
+            minHeight: 0,
+            maxHeight: .infinity
+        )
+        .accessibilityIdentifier("entity.thumbnail.media.\(item.id.uuidString)")
     }
-
-    #if !os(tvOS)
-        private func continuationArtwork(width: CGFloat, cardHeight: CGFloat) -> some View {
-            RemotePosterImage(
-                path: item.bestCoverPath,
-                fallbackSeed: item.title,
-                systemImage: item.kind.thumbnailFallbackSystemImage,
-                contentMode: .fill,
-                maxPixelSize: 384
-            )
-            .frame(width: width, height: cardHeight)
-            .scaleEffect(1.08)
-            .blur(radius: reduceTransparency ? 0 : 16)
-            .overlay(legibilityGradient)
-            .overlay(accessibilityScrim)
-            .clipped()
-            .accessibilityHidden(true)
-        }
-
-        private var artworkFade: some View {
-            LinearGradient(
-                stops: [
-                    .init(color: .black, location: 0),
-                    .init(color: .black, location: 0.56),
-                    .init(color: .black.opacity(0.9), location: 0.72),
-                    .init(color: .black.opacity(0.48), location: 0.9),
-                    .init(color: .clear, location: 1),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-
-        private func sharpArtwork(width: CGFloat) -> some View {
-            RemotePosterImage(
-                path: item.bestCoverPath,
-                fallbackSeed: item.title,
-                systemImage: item.kind.thumbnailFallbackSystemImage,
-                contentMode: item.thumbnailArtworkPresentation.contentMode,
-                maxPixelSize: 512
-            )
-            .frame(width: width, height: artworkHeight(for: width))
-            .clipped()
-            .mask(artworkFade)
-            .accessibilityIdentifier("entity.thumbnail.media.\(item.id.uuidString)")
-        }
-    #endif
 
     private var legibilityGradient: some View {
         LinearGradient(
@@ -143,7 +84,14 @@ struct EntityThumbnailLandscapeCardView: View {
         .padding(.trailing, PrismediaSpacing.small)
         .padding(.top, PrismediaSpacing.extraSmall)
         .padding(.bottom, metadataBottomPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack {
+                legibilityGradient
+                accessibilityScrim
+            }
+            .ignoresSafeArea()
+        }
         .shadow(color: PrismediaColor.background.opacity(0.7), radius: 2, y: 1)
     }
 
@@ -269,26 +217,19 @@ struct EntityThumbnailLandscapeCardView: View {
         artworkPalette?.primary.color ?? PrismediaColor.accent
     }
 
-    private func artworkHeight(for width: CGFloat) -> CGFloat {
-        width / item.thumbnailArtworkPresentation.aspectRatio
-    }
-
     private func progressMeter(_ value: Double) -> some View {
-        VStack {
-            Spacer()
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(PrismediaColor.background.opacity(0.54))
-                Rectangle()
-                    .fill(progressTint)
-                    .scaleEffect(
-                        x: CGFloat(min(1, max(0, value))),
-                        y: 1,
-                        anchor: .leading
-                    )
-            }
-            .frame(height: 3)
+        ZStack(alignment: .leading) {
+            Rectangle()
+                .fill(PrismediaColor.background.opacity(0.54))
+            Rectangle()
+                .fill(progressTint)
+                .scaleEffect(
+                    x: CGFloat(min(1, max(0, value))),
+                    y: 1,
+                    anchor: .leading
+                )
         }
+        .frame(height: 3)
     }
 }
 

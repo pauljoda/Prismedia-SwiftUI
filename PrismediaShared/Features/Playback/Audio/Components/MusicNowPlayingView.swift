@@ -34,6 +34,10 @@
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(PrismediaColor.background)
                 .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        dismissHandle
+                    }
+
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Close Player", systemImage: "xmark", action: closePlayer)
                             .labelStyle(.iconOnly)
@@ -93,6 +97,7 @@
                     selectedTint: artworkPalette?.primary.color ?? PrismediaColor.accent,
                     onToggleQueue: toggleQueue
                 )
+                .padding(.top, PrismediaSpacing.small)
                 .padding(.horizontal, PrismediaSpacing.extraLarge)
                 .padding(.bottom, PrismediaSpacing.medium)
             }
@@ -118,8 +123,33 @@
         }
 
         private func closePlayer() {
-            controller.clearPlayback()
             dismiss()
+        }
+
+        private var dismissHandle: some View {
+            Capsule()
+                .fill(PrismediaColor.onMedia.opacity(0.45))
+                .frame(width: 38, height: 5)
+                .frame(width: 80, height: PrismediaLayout.minimumHitTarget)
+                .contentShape(Rectangle())
+                .gesture(dismissGesture)
+                .accessibilityElement()
+                .accessibilityLabel("Dismiss Now Playing")
+                .accessibilityAction {
+                    closePlayer()
+                }
+        }
+
+        private var dismissGesture: some Gesture {
+            DragGesture(minimumDistance: 12)
+                .onEnded { value in
+                    let distance = max(
+                        value.translation.height,
+                        value.predictedEndTranslation.height
+                    )
+                    guard distance > 64 else { return }
+                    closePlayer()
+                }
         }
     }
 

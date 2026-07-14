@@ -3,14 +3,6 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoSubtitleAppearanceTests: XCTestCase {
-    func testDefaultsMatchTheWebPlayer() {
-        XCTAssertEqual(VideoSubtitleAppearance.default.style, .stylized)
-        XCTAssertEqual(VideoSubtitleAppearance.default.fontScale, 1)
-        XCTAssertEqual(VideoSubtitleAppearance.default.positionPercent, 88)
-        XCTAssertEqual(VideoSubtitleAppearance.default.opacity, 1)
-        XCTAssertEqual(VideoSubtitleAppearance.default.bottomInsetFraction, 0.12, accuracy: 0.0001)
-    }
-
     func testAppearanceClampsValuesToTheSharedPlaybackContract() {
         let appearance = VideoSubtitleAppearance(
             style: .outline,

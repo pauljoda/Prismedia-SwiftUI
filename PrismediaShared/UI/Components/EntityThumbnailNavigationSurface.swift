@@ -3,7 +3,6 @@ import SwiftUI
 public struct EntityThumbnailNavigationSurface: View {
     @Environment(PrismediaAppRouter.self) private var router
     @Environment(\.entityMediaSequence) private var mediaSequence
-    @Environment(\.entityThumbnailPrimaryAction) private var customPrimaryAction
     @State private var preventsNavigation = false
     @State private var previewReleaseID = UUID()
 
@@ -12,19 +11,22 @@ public struct EntityThumbnailNavigationSurface: View {
     private let preferredWidth: CGFloat?
     private let previewSubtitle: String?
     private let intent: EntityNavigationIntent
+    private let onPrimaryAction: ((EntityThumbnail) -> Void)?
 
     public init(
         item: EntityThumbnail,
         layout: EntityThumbnailLayout = .grid,
         preferredWidth: CGFloat? = nil,
         previewSubtitle: String? = nil,
-        intent: EntityNavigationIntent = .detail
+        intent: EntityNavigationIntent = .detail,
+        onPrimaryAction: ((EntityThumbnail) -> Void)? = nil
     ) {
         self.item = item
         self.layout = layout
         self.preferredWidth = preferredWidth
         self.previewSubtitle = previewSubtitle
         self.intent = intent
+        self.onPrimaryAction = onPrimaryAction
     }
 
     public var body: some View {
@@ -92,8 +94,8 @@ public struct EntityThumbnailNavigationSurface: View {
 
     private func openPrimaryAction() {
         guard !preventsNavigation else { return }
-        if let customPrimaryAction {
-            customPrimaryAction(item)
+        if let onPrimaryAction {
+            onPrimaryAction(item)
             return
         }
         open(intent: primaryIntent)

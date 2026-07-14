@@ -3,14 +3,11 @@ import XCTest
 @testable import PrismediaCore
 
 final class PDFReaderLayoutModeTests: XCTestCase {
-    func testReaderModesRoundTripThroughPDFLayoutChoices() {
+    func testReaderModesRoundTripAndUnknownModesUseTheContinuousDefault() {
         XCTAssertEqual(PDFReaderLayoutMode(readerMode: .paged), .paged)
         XCTAssertEqual(PDFReaderLayoutMode(readerMode: .scrolled), .continuous)
         XCTAssertEqual(PDFReaderLayoutMode.paged.readerMode, .paged)
         XCTAssertEqual(PDFReaderLayoutMode.continuous.readerMode, .scrolled)
-    }
-
-    func testUnknownOrMissingReaderModeUsesTheNativeContinuousDefault() {
         XCTAssertEqual(PDFReaderLayoutMode(readerMode: nil), .continuous)
         XCTAssertEqual(PDFReaderLayoutMode(readerMode: .webtoon), .continuous)
     }

@@ -2,9 +2,11 @@ import SwiftUI
 
 struct VideoFullscreenPresentationModifier: ViewModifier {
     @Binding var isPresented: Bool
-    let controller: VideoPlaybackController
+    let controller: VideoPlaybackController?
     let title: String
     let isInteractive: Bool
+    var playRequested = false
+    var onPlay: () -> Void = {}
     @State private var usesRotatedLandscapeFallback = false
 
     func body(content: Content) -> some View {
@@ -52,15 +54,26 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     }
 
     private var expandedPlayerContent: some View {
-        PrismediaVideoPlayerView(
-            controller: controller,
-            title: title,
-            isInteractive: isInteractive,
-            isExpanded: true,
-            badges: controller.badges,
-            onFullscreen: { isPresented = false },
-            onDismiss: { isPresented = false }
-        )
+        Group {
+            if let controller {
+                PrismediaVideoPlayerView(
+                    controller: controller,
+                    title: title,
+                    isInteractive: isInteractive,
+                    isExpanded: true,
+                    badges: controller.badges,
+                    onFullscreen: { isPresented = false },
+                    onDismiss: { isPresented = false }
+                )
+            } else {
+                VideoFullscreenPreparationView(
+                    title: title,
+                    playRequested: playRequested,
+                    onPlay: onPlay,
+                    onDismiss: { isPresented = false }
+                )
+            }
+        }
         .padding(PrismediaSpacing.small)
     }
 }
@@ -79,7 +92,9 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                     isPresented: $isPresented,
                     controller: controller,
                     title: "Signal in the Static",
-                    isInteractive: true
+                    isInteractive: true,
+                    playRequested: false,
+                    onPlay: {}
                 )
             )
     }

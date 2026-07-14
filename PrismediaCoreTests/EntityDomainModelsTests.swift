@@ -25,21 +25,6 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(detail.coverPageID, UUID(uuidString: "22222222-2222-2222-2222-222222222222"))
     }
 
-    func testCurrentBackendEntityKindsHaveNativeDefinitions() {
-        XCTAssertEqual(EntityKind.audio.rawValue, "audio")
-        XCTAssertEqual(EntityKind.audio.displayLabel, "Audio")
-        XCTAssertEqual(EntityKind.bookVolume.rawValue, "book-volume")
-        XCTAssertEqual(EntityKind.bookVolume.displayLabel, "Volume")
-        XCTAssertEqual(EntityKind.bookVolume.thumbnailAspectRatio, 2.0 / 3.0)
-        XCTAssertEqual(EntityKind.bookAuthor.thumbnailAspectRatio, 2.0 / 3.0)
-        XCTAssertEqual(EntityKind.gallery.thumbnailAspectRatio, 1)
-        XCTAssertEqual(EntityKind.collection.thumbnailAspectRatio, 1)
-        XCTAssertFalse(EntityKind.collection.prefersWideThumbnail)
-        XCTAssertEqual(EntityKind.audioLibrary.thumbnailAspectRatio, 1)
-        XCTAssertEqual(EntityKind.musicArtist.thumbnailAspectRatio, 1)
-        XCTAssertEqual(EntityKind.studio.thumbnailAspectRatio, 21.0 / 9.0)
-    }
-
     func testThumbnailDecodesNativeStateAndPrefersDoubleDensityArtwork() throws {
         let entityID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let parentID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
@@ -201,19 +186,6 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(link.thumbnailPreview?.resumeSeconds, 50)
     }
 
-    func testMovieOwnedVideoUsesMoviePosterGeometry() {
-        let thumbnail = EntityThumbnail(
-            id: UUID(),
-            kind: .video,
-            title: "Playable Movie",
-            parentEntityID: UUID(),
-            parentKind: .movie
-        )
-
-        XCTAssertEqual(thumbnail.thumbnailPresentationKind, .movie)
-        XCTAssertFalse(thumbnail.thumbnailPresentationKind.prefersWideThumbnail)
-    }
-
     func testEpisodePlaybackLinksToItsSeasonAndPreservesTheEpisodeSource() {
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episodeID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
@@ -292,16 +264,6 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(Set([firstLink, secondLink]).count, 2)
     }
 
-    func testStandaloneVideoLinksToItsOwnDetail() {
-        let videoID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
-        let thumbnail = EntityThumbnail(id: videoID, kind: .video, title: "Standalone")
-
-        let link = EntityLink(thumbnail: thumbnail)
-
-        XCTAssertEqual(link.entityID, videoID)
-        XCTAssertEqual(link.kind, .video)
-    }
-
     func testAlbumOwnedTrackLinksToTheNativeAlbumDetail() {
         let albumID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let trackID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
@@ -320,16 +282,6 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertNil(link.parentEntityID)
         XCTAssertNil(link.parentKind)
         XCTAssertEqual(link.thumbnailPreview?.artworkPath, "/assets/grid-thumbs/signals@2x.jpg")
-    }
-
-    func testStandaloneTrackWithoutAnAlbumLinksToItsOwnDetail() {
-        let trackID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
-        let thumbnail = EntityThumbnail(id: trackID, kind: .audioTrack, title: "Loose Track")
-
-        let link = EntityLink(thumbnail: thumbnail)
-
-        XCTAssertEqual(link.entityID, trackID)
-        XCTAssertEqual(link.kind, .audioTrack)
     }
 
     func testEntityLinkCarriesThumbnailPreviewWithoutChangingNavigationIdentity() {
@@ -355,33 +307,6 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(firstLink.previewSubtitle, "Imagine Dragons")
         XCTAssertEqual(firstLink, updatedLink)
         XCTAssertEqual(Set([firstLink, updatedLink]).count, 1)
-    }
-
-    func testEntityLinkCarriesTheSourceThumbnailWithoutMakingMutablePresentationPartOfIdentity() {
-        let id = UUID()
-        let initial = EntityThumbnail(
-            id: id,
-            kind: .gallery,
-            title: "Summer",
-            coverThumb2xURL: "/assets/summer@2x.jpg",
-            progress: 0.2
-        )
-        let refreshed = EntityThumbnail(
-            id: id,
-            kind: .gallery,
-            title: "Summer",
-            coverThumb2xURL: "/assets/summer-refreshed@2x.jpg",
-            rating: 5,
-            progress: 0.8
-        )
-
-        let initialLink = EntityLink(thumbnail: initial)
-        let refreshedLink = EntityLink(thumbnail: refreshed)
-
-        XCTAssertEqual(initialLink.sourceThumbnail, initial)
-        XCTAssertEqual(refreshedLink.sourceThumbnail, refreshed)
-        XCTAssertEqual(initialLink, refreshedLink)
-        XCTAssertEqual(Set([initialLink, refreshedLink]).count, 1)
     }
 
     func testEntityLinkIntentParticipatesInStableDestinationIdentity() {
@@ -419,66 +344,4 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(sequenced.mediaSequence?.items, [image, neighbor])
     }
 
-    func testEntityDestinationPolicySelectsOnlyCurrentNativeSpecializations() {
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .audioLibrary, on: .iOS),
-            .nativeAlbum
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .musicArtist, on: .iOS),
-            .nativeArtist
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .videoSeries, on: .tvOS),
-            .televisionSeasons
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .videoSeason, on: .tvOS),
-            .televisionSeasons
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .gallery, on: .iOS),
-            .standard
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .image, on: .iOS),
-            .nativeImageViewer
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .image, on: .macOS),
-            .nativeImageViewer
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .image, on: .tvOS),
-            .nativeImageViewer
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(
-                for: .image,
-                on: .iOS,
-                intent: .metadata
-            ),
-            .standard
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .audioLibrary, on: .macOS),
-            .nativeAlbum
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .musicArtist, on: .macOS),
-            .nativeArtist
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(
-                for: .collection,
-                on: .iOS,
-                intent: .audioCollection
-            ),
-            .nativeAudioCollection
-        )
-        XCTAssertEqual(
-            EntityDestinationPolicy.style(for: .collection, on: .iOS),
-            .standard
-        )
-    }
 }

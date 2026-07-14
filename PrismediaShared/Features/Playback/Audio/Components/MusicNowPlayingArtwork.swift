@@ -8,10 +8,11 @@
             RemotePosterImage(
                 path: track.artworkPath,
                 fallbackSeed: track.album ?? track.title,
-                systemImage: "music.note"
+                systemImage: "music.note",
+                contentMode: .fit,
+                imageCornerRadius: PrismediaRadius.control
             )
-            .aspectRatio(1, contentMode: .fill)
-            .clipShape(.rect(cornerRadius: PrismediaRadius.control, style: .continuous))
+            .aspectRatio(1, contentMode: .fit)
         }
     }
 

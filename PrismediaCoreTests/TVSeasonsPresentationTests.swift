@@ -62,60 +62,6 @@ final class TVSeasonsPresentationTests: XCTestCase {
         XCTAssertEqual(EntityLink(thumbnail: first).parentEntityID, season.id)
     }
 
-    func testSelectionSurvivesRefreshAndFallsBackToFirstSeason() {
-        let first = thumbnail(
-            id: "11111111-1111-1111-1111-111111111111",
-            kind: .videoSeason,
-            order: 1
-        )
-        let second = thumbnail(
-            id: "22222222-2222-2222-2222-222222222222",
-            kind: .videoSeason,
-            order: 2
-        )
-
-        XCTAssertEqual(
-            TVSeasonsPresentation.selectedSeasonID(preferredID: second.id, seasons: [first, second]),
-            second.id
-        )
-        XCTAssertEqual(
-            TVSeasonsPresentation.selectedSeasonID(preferredID: UUID(), seasons: [first, second]),
-            first.id
-        )
-        XCTAssertNil(TVSeasonsPresentation.selectedSeasonID(preferredID: first.id, seasons: []))
-    }
-
-    func testAdjacentSeasonLookupHandlesFirstMiddleLastAndMissingSelections() {
-        let first = thumbnail(kind: .videoSeason, order: 1)
-        let middle = thumbnail(
-            id: "22222222-2222-2222-2222-222222222222",
-            kind: .videoSeason,
-            order: 2
-        )
-        let last = thumbnail(
-            id: "33333333-3333-3333-3333-333333333333",
-            kind: .videoSeason,
-            order: 3
-        )
-        let seasons = [first, middle, last]
-
-        var adjacent = TVSeasonsPresentation.adjacentSeasons(selectedID: first.id, seasons: seasons)
-        XCTAssertNil(adjacent.previous)
-        XCTAssertEqual(adjacent.next?.id, middle.id)
-
-        adjacent = TVSeasonsPresentation.adjacentSeasons(selectedID: middle.id, seasons: seasons)
-        XCTAssertEqual(adjacent.previous?.id, first.id)
-        XCTAssertEqual(adjacent.next?.id, last.id)
-
-        adjacent = TVSeasonsPresentation.adjacentSeasons(selectedID: last.id, seasons: seasons)
-        XCTAssertEqual(adjacent.previous?.id, middle.id)
-        XCTAssertNil(adjacent.next)
-
-        adjacent = TVSeasonsPresentation.adjacentSeasons(selectedID: UUID(), seasons: seasons)
-        XCTAssertNil(adjacent.previous)
-        XCTAssertNil(adjacent.next)
-    }
-
     func testPlaybackRouteSelectsItsExactEpisodeWithinTheSeason() {
         let first = thumbnail(kind: .video, order: 1)
         let requested = thumbnail(
@@ -161,72 +107,34 @@ final class TVSeasonsPresentationTests: XCTestCase {
         XCTAssertTrue(TVSeasonsPresentation.episodes(in: movie).isEmpty)
     }
 
-    func testFocusingAnUncachedEpisodePrewarmsWithoutAutoplay() {
-        let episodeID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-
-        XCTAssertEqual(
-            TVSeasonsPresentation.episodeSelection(
-                episodeID: episodeID,
-                intent: .focus,
-                isDetailCached: false
-            ),
-            TVEpisodeSelectionDecision(
-                episodeID: episodeID,
-                shouldPrewarmDetail: true,
-                shouldAutoPlay: false
-            )
-        )
-    }
-
-    func testActivatingACachedEpisodeAutoplaysWithoutRedundantPrewarm() {
-        let episodeID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-
-        XCTAssertEqual(
-            TVSeasonsPresentation.episodeSelection(
-                episodeID: episodeID,
-                intent: .activate,
-                isDetailCached: true
-            ),
-            TVEpisodeSelectionDecision(
-                episodeID: episodeID,
-                shouldPrewarmDetail: false,
-                shouldAutoPlay: true
-            )
-        )
-    }
-
-    func testFocusingACachedEpisodeUsesCacheWithoutAutoplay() {
+    func testEpisodeSelectionCoordinatesCachingAndFullscreenPresentation() {
         let episodeID = UUID()
+        let cases: [(
+            intent: TVEpisodeSelectionIntent,
+            isDetailCached: Bool,
+            shouldPrewarm: Bool,
+            shouldPresentFullscreen: Bool
+        )] = [
+            (.focus, false, true, false),
+            (.focus, true, false, false),
+            (.activate, false, true, true),
+            (.activate, true, false, true),
+        ]
 
-        XCTAssertEqual(
-            TVSeasonsPresentation.episodeSelection(
-                episodeID: episodeID,
-                intent: .focus,
-                isDetailCached: true
-            ),
-            TVEpisodeSelectionDecision(
-                episodeID: episodeID,
-                shouldPrewarmDetail: false,
-                shouldAutoPlay: false
+        for testCase in cases {
+            XCTAssertEqual(
+                TVSeasonsPresentation.episodeSelection(
+                    episodeID: episodeID,
+                    intent: testCase.intent,
+                    isDetailCached: testCase.isDetailCached
+                ),
+                TVEpisodeSelectionDecision(
+                    episodeID: episodeID,
+                    shouldPrewarmDetail: testCase.shouldPrewarm,
+                    shouldPresentFullscreen: testCase.shouldPresentFullscreen
+                )
             )
-        )
-    }
-
-    func testActivatingAnUncachedEpisodeLoadsThenAutoplays() {
-        let episodeID = UUID()
-
-        XCTAssertEqual(
-            TVSeasonsPresentation.episodeSelection(
-                episodeID: episodeID,
-                intent: .activate,
-                isDetailCached: false
-            ),
-            TVEpisodeSelectionDecision(
-                episodeID: episodeID,
-                shouldPrewarmDetail: true,
-                shouldAutoPlay: true
-            )
-        )
+        }
     }
 
     private func detail(

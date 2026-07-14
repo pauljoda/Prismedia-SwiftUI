@@ -6,13 +6,8 @@
 
         var body: some View {
             HStack(spacing: PrismediaSpacing.medium) {
-                RemotePosterImage(
-                    path: track.artworkPath,
-                    fallbackSeed: track.album ?? track.title,
-                    systemImage: "music.note"
-                )
+                MusicNowPlayingArtwork(track: track)
                 .frame(width: 44, height: 44)
-                .clipShape(.rect(cornerRadius: PrismediaRadius.badge, style: .continuous))
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
                     Text(track.title)

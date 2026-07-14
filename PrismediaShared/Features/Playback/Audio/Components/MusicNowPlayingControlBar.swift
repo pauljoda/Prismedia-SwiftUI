@@ -15,7 +15,7 @@
                         .glassEffect(.regular.interactive(), in: .circle)
                         .accessibilityLabel("Choose Audio Output")
 
-                    HStack(spacing: PrismediaSpacing.small) {
+                    HStack(spacing: PrismediaSpacing.large) {
                         shuffleButton
                         repeatButton
                     }

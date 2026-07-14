@@ -3,22 +3,13 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoPlaybackLaunchPolicyTests: XCTestCase {
-    func testPlaybackIntentStartsAutomatically() {
-        XCTAssertTrue(
-            VideoPlaybackLaunchPolicy.shouldStartAutomatically(for: .playback)
-        )
+    func testOnlyPlaybackIntentPreparesAutomatically() {
+        XCTAssertTrue(VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(for: .playback))
+        XCTAssertFalse(VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(for: .detail))
+        XCTAssertFalse(VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(for: .metadata))
     }
 
-    func testDetailAndMetadataIntentsWaitForAnExplicitPlayAction() {
-        XCTAssertFalse(
-            VideoPlaybackLaunchPolicy.shouldStartAutomatically(for: .detail)
-        )
-        XCTAssertFalse(
-            VideoPlaybackLaunchPolicy.shouldStartAutomatically(for: .metadata)
-        )
-    }
-
-    func testEpisodeThumbnailPlaybackUsesFullscreenOnlySeasonPresentation() {
+    func testSeasonEpisodePlaybackTransfersToFullscreenWithoutChangingOtherOwnership() {
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episode = EntityThumbnail(
             id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
@@ -28,40 +19,16 @@ final class VideoPlaybackLaunchPolicyTests: XCTestCase {
             parentKind: .videoSeason,
             hasSourceMedia: true
         )
-
-        let ownerLink = EntityLink(thumbnail: episode, intent: .playback)
-
-        XCTAssertEqual(
-            VideoPlaybackLaunchPolicy.presentationMode(for: ownerLink),
-            .fullscreenOnly
-        )
-    }
-
-    func testEpisodeDetailAndStandalonePlaybackKeepInlinePlayerPresentation() {
-        let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
-        let episode = EntityThumbnail(
-            id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
-            kind: .video,
-            title: "Episode Seven",
-            parentEntityID: seasonID,
-            parentKind: .videoSeason,
-            hasSourceMedia: true
-        )
+        let playback = EntityLink(thumbnail: episode, intent: .playback)
+        let detail = EntityLink(thumbnail: episode, intent: .detail)
         let standalone = EntityLink(
             entityID: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
             kind: .video,
             intent: .playback
         )
 
-        XCTAssertEqual(
-            VideoPlaybackLaunchPolicy.presentationMode(
-                for: EntityLink(thumbnail: episode, intent: .detail)
-            ),
-            .inline
-        )
-        XCTAssertEqual(
-            VideoPlaybackLaunchPolicy.presentationMode(for: standalone),
-            .inline
-        )
+        XCTAssertEqual(VideoPlaybackLaunchPolicy.presentationMode(for: playback), .fullscreenOnly)
+        XCTAssertEqual(VideoPlaybackLaunchPolicy.presentationMode(for: detail), .inline)
+        XCTAssertEqual(VideoPlaybackLaunchPolicy.presentationMode(for: standalone), .inline)
     }
 }

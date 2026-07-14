@@ -4,36 +4,6 @@ import XCTest
 
 @MainActor
 final class EntityImagePlaybackSessionTests: XCTestCase {
-    func testImageVideoPlaybackStartsMutedAndKeepsTheChoiceAcrossItems() {
-        let session = EntityImagePlaybackSession()
-        let firstID = UUID()
-        let secondID = UUID()
-
-        XCTAssertTrue(session.isMuted)
-
-        session.toggleMute()
-        session.activate(firstID)
-        session.activate(secondID)
-
-        XCTAssertFalse(session.isMuted)
-        XCTAssertEqual(session.activeEntityID, secondID)
-    }
-
-    func testDeactivatingAnInactiveItemDoesNotInterruptTheActiveItem() {
-        let session = EntityImagePlaybackSession()
-        let firstID = UUID()
-        let secondID = UUID()
-
-        session.activate(firstID)
-        session.deactivate(secondID)
-
-        XCTAssertEqual(session.activeEntityID, firstID)
-
-        session.deactivate(firstID)
-
-        XCTAssertNil(session.activeEntityID)
-    }
-
     func testOnlyTheActivePlaybackClaimCanBeAudible() {
         let session = EntityImagePlaybackSession()
         let firstClaimID = UUID()

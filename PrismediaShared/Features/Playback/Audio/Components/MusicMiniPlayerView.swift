@@ -11,13 +11,8 @@
                 HStack(spacing: placement == .inline ? 8 : 12) {
                     Button(action: showNowPlaying) {
                         HStack(spacing: placement == .inline ? 8 : 12) {
-                            RemotePosterImage(
-                                path: track.artworkPath,
-                                fallbackSeed: track.album ?? track.title,
-                                systemImage: "music.note"
-                            )
+                            MusicNowPlayingArtwork(track: track)
                             .frame(width: artworkContentSize, height: artworkContentSize)
-                            .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.compact, style: .continuous))
                             .padding(artworkInset)
                             .frame(width: artworkSize, height: artworkSize)
 

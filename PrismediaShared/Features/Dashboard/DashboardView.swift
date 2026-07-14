@@ -43,6 +43,7 @@ struct DashboardView: View {
                                     DashboardHeroCarouselView(
                                         items: snapshot.featuredItems,
                                         viewportWidth: viewport.size.width,
+                                        topSafeAreaHeight: viewport.safeAreaInsets.top,
                                         trickplayLoader: trickplayLoader,
                                         allowsAutomaticAdvance: allowsHeroAutomaticAdvance,
                                         onNavigate: navigate
@@ -83,6 +84,10 @@ struct DashboardView: View {
                             .padding(.bottom, PrismediaSpacing.section)
                             .frame(width: viewport.size.width, alignment: .leading)
                         }
+                        .ignoresSafeArea(
+                            .container,
+                            edges: snapshot.featuredItems.isEmpty ? [] : .top
+                        )
                     }
                 }
             }

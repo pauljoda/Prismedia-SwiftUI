@@ -17,26 +17,10 @@ struct DashboardHeroArtworkView: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .compositingGroup()
             .clipped()
-            .mask(artworkFade)
             .frame(maxWidth: .infinity)
-            .backgroundExtensionEffect()
             .accessibilityHidden(true)
             .allowsHitTesting(false)
-    }
-
-    private var artworkFade: some View {
-        LinearGradient(
-            stops: [
-                .init(color: .black, location: 0),
-                .init(color: .black, location: 0.78),
-                .init(color: .black.opacity(0.78), location: 0.9),
-                .init(color: .clear, location: 1),
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
     }
 }
 

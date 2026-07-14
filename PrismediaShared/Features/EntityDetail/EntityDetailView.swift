@@ -267,173 +267,208 @@ public struct EntityDetailView: View {
         presentation: EntityDetailPresentation,
         showsHeroArtwork: Bool = true
     ) -> some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
-                    let playbackOwnerLink = activePlaybackOwnerLink
-                    #if os(tvOS)
-                        if !showsHeroArtwork {
-                            Color.clear
-                                .frame(height: 120)
-                                .accessibilityHidden(true)
+        let playbackOwnerLink = activePlaybackOwnerLink
+
+        return ZStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                        #if os(tvOS)
+                            if !showsHeroArtwork {
+                                Color.clear
+                                    .frame(height: 120)
+                                    .accessibilityHidden(true)
+                            }
+
+                            EntityDetailHeroInformationView(
+                                presentation: presentation,
+                                previewPath: link.thumbnailPreview?.artworkPath,
+                                showsArtwork: showsHeroArtwork,
+                                actions: primaryActions(for: detail, fallback: presentation.primaryActions),
+                                isMutating: state.isMutating,
+                                canMutate: service.canMutate,
+                                isActionEnabled: isEnabled,
+                                actionHint: accessibilityHint,
+                                onRatingChange: ratingDidChange,
+                                onAction: perform
+                            )
+                        #endif
+
+                        if let playbackOwnerLink,
+                            VideoPlaybackLaunchPolicy.presentationMode(
+                                for: playbackOwnerLink
+                            ) == .inline,
+                            PlayableVideoResolver.videoID(
+                                in: detail,
+                                sourceThumbnail: playbackOwnerLink.sourceThumbnail
+                            ) != nil,
+                            let playbackService = dependencies.videoPlaybackService
+                        {
+                            VideoEntityPlaybackView(
+                                detail: detail,
+                                ownerLink: playbackOwnerLink,
+                                detailLoader: dependencies.detailLoader,
+                                playbackService: playbackService,
+                                preparation: videoPlaybackPreparation,
+                                presentationMode: VideoPlaybackLaunchPolicy.presentationMode(
+                                    for: playbackOwnerLink
+                                ),
+                                presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
+                                    for: playbackOwnerLink.intent
+                                ),
+                                onFullscreenDismiss: {
+                                    guard
+                                        VideoPlaybackLaunchPolicy.presentationMode(
+                                            for: playbackOwnerLink
+                                        ) == .fullscreenOnly
+                                    else { return }
+                                    suppressesRoutePlayback = true
+                                    thumbnailPlaybackLink = nil
+                                },
+                                onAdvance: { destination in
+                                    guard playbackOwnerLink.kind != .videoSeason else { return }
+                                    advancedEntityLink = destination
+                                }
+                            )
+                            .id(playbackOwnerLink)
                         }
 
-                        EntityDetailHeroInformationView(
-                            presentation: presentation,
-                            previewPath: link.thumbnailPreview?.artworkPath,
-                            showsArtwork: showsHeroArtwork,
-                            actions: primaryActions(for: detail, fallback: presentation.primaryActions),
-                            isMutating: state.isMutating,
-                            canMutate: service.canMutate,
-                            isActionEnabled: isEnabled,
-                            actionHint: accessibilityHint,
-                            onRatingChange: ratingDidChange,
-                            onAction: perform
-                        )
-                    #endif
+                        #if !os(tvOS)
+                            EntityDetailHeroInformationView(
+                                presentation: presentation,
+                                previewPath: link.thumbnailPreview?.artworkPath,
+                                showsArtwork: true,
+                                actions: primaryActions(for: detail, fallback: presentation.primaryActions),
+                                isMutating: state.isMutating,
+                                canMutate: service.canMutate,
+                                isActionEnabled: isEnabled,
+                                actionHint: accessibilityHint,
+                                onRatingChange: ratingDidChange,
+                                onAction: perform
+                            )
+                        #endif
 
-                    if let playbackOwnerLink,
-                        PlayableVideoResolver.videoID(
-                            in: detail,
-                            sourceThumbnail: playbackOwnerLink.sourceThumbnail
-                        ) != nil,
-                        let playbackService = dependencies.videoPlaybackService
-                    {
-                        VideoEntityPlaybackView(
-                            detail: detail,
-                            ownerLink: playbackOwnerLink,
-                            detailLoader: dependencies.detailLoader,
-                            playbackService: playbackService,
-                            preparation: videoPlaybackPreparation,
-                            presentationMode: VideoPlaybackLaunchPolicy.presentationMode(
-                                for: playbackOwnerLink
-                            ),
-                            autoPlayOnTV: VideoPlaybackLaunchPolicy.shouldStartAutomatically(
-                                for: playbackOwnerLink.intent
-                            ),
-                            onFullscreenDismiss: {
-                                guard
-                                    VideoPlaybackLaunchPolicy.presentationMode(
-                                        for: playbackOwnerLink
-                                    ) == .fullscreenOnly
-                                else { return }
-                                suppressesRoutePlayback = true
-                                thumbnailPlaybackLink = nil
+                        EntityDetailReadingSection(
+                            state: readingState,
+                            horizontalPadding: detailHorizontalPadding,
+                            onResume: { openReader(command: .resume) },
+                            onStartOver: { Task { await startReadingOver() } },
+                            onToggleCompletion: { status in
+                                Task { await toggleReadingCompletion(status) }
                             },
-                            onAdvance: { destination in
-                                guard playbackOwnerLink.kind != .videoSeason else { return }
-                                advancedEntityLink = destination
-                            }
+                            onRetry: {
+                                Task { await loadReadingState(for: detail) }
+                            },
+                            onDismissError: { readingState.dismissError() }
                         )
-                        .id(playbackOwnerLink)
-                    }
 
-                    #if !os(tvOS)
-                        EntityDetailHeroInformationView(
+                        #if os(iOS) || os(macOS)
+                            AudiobookDetailPlaybackSection(
+                                presentation: audiobookPresentation(for: detail),
+                                errorMessage: audiobookErrorMessage,
+                                horizontalPadding: detailHorizontalPadding,
+                                onResume: { beginListening(to: detail) },
+                                onStartOver: { Task { await startListeningOver(detail) } },
+                                onToggleCompletion: { Task { await toggleListeningCompletion(detail) } },
+                                onDismissError: { audiobookErrorMessage = nil }
+                            )
+                        #endif
+
+                        #if os(tvOS)
+                            ratingControl(presentation)
+                        #endif
+
+                        #if os(tvOS) || os(macOS)
+                            modificationActionRow(presentation.modificationActions)
+                        #endif
+
+                        EntityDetailSectionContentView(
                             presentation: presentation,
-                            previewPath: link.thumbnailPreview?.artworkPath,
-                            showsArtwork: true,
-                            actions: primaryActions(for: detail, fallback: presentation.primaryActions),
-                            isMutating: state.isMutating,
-                            canMutate: service.canMutate,
-                            isActionEnabled: isEnabled,
-                            actionHint: accessibilityHint,
-                            onRatingChange: ratingDidChange,
-                            onAction: perform
-                        )
-                    #endif
-
-                    EntityDetailReadingSection(
-                        state: readingState,
-                        horizontalPadding: detailHorizontalPadding,
-                        onResume: { openReader(command: .resume) },
-                        onStartOver: { Task { await startReadingOver() } },
-                        onToggleCompletion: { status in
-                            Task { await toggleReadingCompletion(status) }
-                        },
-                        onRetry: {
-                            Task { await loadReadingState(for: detail) }
-                        },
-                        onDismissError: { readingState.dismissError() }
-                    )
-
-                    #if os(iOS) || os(macOS)
-                        AudiobookDetailPlaybackSection(
-                            presentation: audiobookPresentation(for: detail),
-                            errorMessage: audiobookErrorMessage,
+                            selection: $selectedSection,
                             horizontalPadding: detailHorizontalPadding,
-                            onResume: { beginListening(to: detail) },
-                            onStartOver: { Task { await startListeningOver(detail) } },
-                            onToggleCompletion: { Task { await toggleListeningCompletion(detail) } },
-                            onDismissError: { audiobookErrorMessage = nil }
+                            ownerLink: link,
+                            acquisitionService: dependencies.acquisitionService,
+                            transcriptSourceLoader: dependencies.transcriptSourceLoader,
+                            onAcquisitionMutated: refreshAfterAcquisitionMutation,
+                            onEntityPruned: handlePrunedEntity
                         )
-                    #endif
 
-                    #if os(tvOS)
-                        ratingControl(presentation)
-                    #endif
+                        if detail.kind == .collection {
+                            CollectionMembersView(
+                                phase: collectionMembersState.phase,
+                                horizontalPadding: detailHorizontalPadding,
+                                retry: {
+                                    Task { await reloadCollectionMembers() }
+                                }
+                            )
+                        } else {
+                            childGroupsView(for: detail)
+                        }
 
-                    #if os(tvOS) || os(macOS)
-                        modificationActionRow(presentation.modificationActions)
-                    #endif
-
-                    EntityDetailSectionContentView(
-                        presentation: presentation,
-                        selection: $selectedSection,
-                        horizontalPadding: detailHorizontalPadding,
-                        ownerLink: link,
-                        acquisitionService: dependencies.acquisitionService,
-                        transcriptSourceLoader: dependencies.transcriptSourceLoader,
-                        onAcquisitionMutated: refreshAfterAcquisitionMutation,
-                        onEntityPruned: handlePrunedEntity
-                    )
-
-                    if detail.kind == .collection {
-                        CollectionMembersView(
-                            phase: collectionMembersState.phase,
-                            horizontalPadding: detailHorizontalPadding,
-                            retry: {
-                                Task { await reloadCollectionMembers() }
-                            }
-                        )
-                    } else {
-                        childGroupsView(for: detail)
+                        Color.clear
+                            .frame(height: 1)
+                            .id("entity-detail.bottom")
+                            .accessibilityHidden(true)
                     }
-
-                    Color.clear
-                        .frame(height: 1)
-                        .id("entity-detail.bottom")
-                        .accessibilityHidden(true)
+                    .padding(.bottom, PrismediaSpacing.section)
                 }
-                .padding(.bottom, PrismediaSpacing.section)
-            }
-            .frame(
-                maxWidth: .infinity,
-                maxHeight: .infinity,
-                alignment: .topLeading
-            )
-            .refreshable {
-                await loadDetail()
-                if case .content(let refreshedDetail) = state.phase {
-                    await loadReadingState(for: refreshedDetail)
-                    await loadCollectionMembers(for: refreshedDetail, force: true)
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .topLeading
+                )
+                .refreshable {
+                    await loadDetail()
+                    if case .content(let refreshedDetail) = state.phase {
+                        await loadReadingState(for: refreshedDetail)
+                        await loadCollectionMembers(for: refreshedDetail, force: true)
+                    }
                 }
-            }
-            .task(id: detail.id) {
-                await loadReadingState(for: detail)
-                await loadCollectionMembers(for: detail)
-                await loadAudiobook(for: detail)
-            }
-            #if DEBUG
                 .task(id: detail.id) {
-                    guard PrismediaUITestBootstrap.startsEntityDetailAtBottom() else {
-                        return
-                    }
-                    try? await Task.sleep(for: .seconds(1))
-                    proxy.scrollTo("entity-detail.bottom", anchor: .bottom)
+                    await loadReadingState(for: detail)
+                    await loadCollectionMembers(for: detail)
+                    await loadAudiobook(for: detail)
                 }
-            #endif
-            .accessibilityIdentifier("entity-detail.content")
+                #if DEBUG
+                    .task(id: detail.id) {
+                        guard PrismediaUITestBootstrap.startsEntityDetailAtBottom() else {
+                            return
+                        }
+                        try? await Task.sleep(for: .seconds(1))
+                        proxy.scrollTo("entity-detail.bottom", anchor: .bottom)
+                    }
+                #endif
+                .accessibilityIdentifier("entity-detail.content")
+            }
+
+            if let playbackOwnerLink,
+                VideoPlaybackLaunchPolicy.presentationMode(
+                    for: playbackOwnerLink
+                ) == .fullscreenOnly,
+                PlayableVideoResolver.videoID(
+                    in: detail,
+                    sourceThumbnail: playbackOwnerLink.sourceThumbnail
+                ) != nil,
+                let playbackService = dependencies.videoPlaybackService
+            {
+                VideoEntityPlaybackView(
+                    detail: detail,
+                    ownerLink: playbackOwnerLink,
+                    detailLoader: dependencies.detailLoader,
+                    playbackService: playbackService,
+                    preparation: videoPlaybackPreparation,
+                    presentationMode: .fullscreenOnly,
+                    presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
+                        for: playbackOwnerLink.intent
+                    ),
+                    onFullscreenDismiss: {
+                        suppressesRoutePlayback = true
+                        thumbnailPlaybackLink = nil
+                    },
+                    onAdvance: { _ in }
+                )
+                .id(playbackOwnerLink)
+            }
         }
     }
 

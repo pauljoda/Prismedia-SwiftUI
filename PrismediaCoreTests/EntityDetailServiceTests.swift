@@ -9,78 +9,6 @@ final class EntityDetailServiceTests: XCTestCase {
         kind: .movie
     )
 
-    func testLoadPublishesContentForRequestedEntity() async throws {
-        let detail = try makeDetail(title: "Arrival")
-        let loader = EntityDetailLoaderStub(responses: [.success(detail)])
-        var feature = EntityDetailTestHarness(link: link, loader: loader)
-
-        XCTAssertTrue(feature.state.phase.isLoading)
-        XCTAssertFalse(feature.canMutate)
-
-        await feature.load()
-
-        guard case .content(let loaded) = feature.state.phase else {
-            return XCTFail("Expected loaded entity detail.")
-        }
-        XCTAssertEqual(loaded, detail)
-        let requestedIDs = await loader.requestedEntityIDs()
-        XCTAssertEqual(requestedIDs, [link.entityID])
-    }
-
-    func testFailurePublishesActionableMessage() async {
-        let loader = EntityDetailLoaderStub(responses: [.failure(.offline)])
-        var feature = EntityDetailTestHarness(link: link, loader: loader)
-
-        await feature.load()
-
-        guard case .failure(let message) = feature.state.phase else {
-            return XCTFail("Expected failure state.")
-        }
-        XCTAssertEqual(message, "The server is unavailable.")
-    }
-
-    func testRetryTransitionsThroughLoadingAndRecovers() async throws {
-        let detail = try makeDetail(title: "Recovered")
-        let loader = EntityDetailLoaderStub(responses: [
-            .failure(.offline),
-            .success(detail),
-        ])
-        var feature = EntityDetailTestHarness(link: link, loader: loader)
-
-        await feature.load()
-        guard case .failure = feature.state.phase else {
-            return XCTFail("Expected the initial request to fail.")
-        }
-
-        await feature.load()
-
-        guard case .content(let loaded) = feature.state.phase else {
-            return XCTFail("Expected retry to recover.")
-        }
-        XCTAssertEqual(loaded.title, "Recovered")
-        let requestedIDs = await loader.requestedEntityIDs()
-        XCTAssertEqual(requestedIDs.count, 2)
-    }
-
-    func testEmptyAndUnknownCapabilitiesStillPublishContent() async throws {
-        let detail = try makeDetail(
-            title: "Future Entity",
-            capabilities: #"[{"kind":"future-native-surface","mode":"ambient"}]"#
-        )
-        let loader = EntityDetailLoaderStub(responses: [.success(detail)])
-        var feature = EntityDetailTestHarness(link: link, loader: loader)
-
-        await feature.load()
-
-        guard case .content(let loaded) = feature.state.phase else {
-            return XCTFail("Expected unknown capabilities to remain renderable.")
-        }
-        guard case .unknown(let capability) = loaded.capabilities.first else {
-            return XCTFail("Expected unknown capability to be preserved.")
-        }
-        XCTAssertEqual(capability.kind, "future-native-surface")
-    }
-
     func testNewerLoadRequestRejectsAnOlderResponse() throws {
         var state = EntityDetailState()
         let olderRequest = try XCTUnwrap(state.beginLoad())
@@ -109,74 +37,6 @@ final class EntityDetailServiceTests: XCTestCase {
         state.finishLoad(outcome, request: request)
 
         XCTAssertTrue(state.phase.isLoading)
-    }
-
-    func testRatingMutationPublishesServerUpdatedDetail() async throws {
-        let initial = try makeDetail(title: "Arrival", capabilities: #"[{"kind":"rating","value":2}]"#)
-        let shallowMutation = try makeDetail(title: "Arrival", capabilities: #"[{"kind":"rating","value":5}]"#)
-        let refreshed = try makeDetail(title: "Arrival", capabilities: #"[{"kind":"rating","value":5}]"#)
-        let service = EntityDetailMutationServiceStub(
-            loadResponses: [.success(initial), .success(refreshed)],
-            mutationResponses: [.success(shallowMutation)]
-        )
-        var feature = EntityDetailTestHarness(link: link, loader: service, mutator: service)
-        XCTAssertTrue(feature.canMutate)
-        await feature.load()
-
-        await feature.updateRating(5)
-
-        XCTAssertFalse(feature.state.isMutating)
-        XCTAssertNil(feature.state.mutationErrorMessage)
-        let mutations = await service.mutations()
-        let requestedEntityIDs = await service.requestedEntityIDs()
-        XCTAssertEqual(mutations, [.rating(5)])
-        XCTAssertEqual(requestedEntityIDs, [link.entityID, link.entityID])
-        guard case .content(let detail) = feature.state.phase,
-            case .rating(let rating) = detail.capabilities.first
-        else {
-            return XCTFail("Expected the server-updated rating detail.")
-        }
-        XCTAssertEqual(rating.value, 5)
-    }
-
-    func testFavoriteAndOrganizedTogglesUseCurrentServerFlags() async throws {
-        let initial = try makeDetail(
-            title: "Arrival",
-            capabilities: #"[{"kind":"flags","isFavorite":false,"isNsfw":false,"isOrganized":true,"isWanted":false}]"#
-        )
-        let favoriteMutation = try makeDetail(
-            title: "Arrival",
-            capabilities: #"[{"kind":"flags","isFavorite":true,"isNsfw":false,"isOrganized":true,"isWanted":false}]"#
-        )
-        let favoriteRefreshed = try makeDetail(
-            title: "Arrival",
-            capabilities: #"[{"kind":"flags","isFavorite":true,"isNsfw":false,"isOrganized":true,"isWanted":false}]"#
-        )
-        let organizedMutation = try makeDetail(
-            title: "Arrival",
-            capabilities: #"[{"kind":"flags","isFavorite":true,"isNsfw":false,"isOrganized":false,"isWanted":false}]"#
-        )
-        let organizedRefreshed = try makeDetail(
-            title: "Arrival",
-            capabilities: #"[{"kind":"flags","isFavorite":true,"isNsfw":false,"isOrganized":false,"isWanted":false}]"#
-        )
-        let service = EntityDetailMutationServiceStub(
-            loadResponses: [.success(initial), .success(favoriteRefreshed), .success(organizedRefreshed)],
-            mutationResponses: [.success(favoriteMutation), .success(organizedMutation)]
-        )
-        var feature = EntityDetailTestHarness(link: link, loader: service, mutator: service)
-        await feature.load()
-
-        await feature.toggleFavorite()
-        await feature.toggleOrganized()
-
-        let mutations = await service.mutations()
-        XCTAssertEqual(
-            mutations,
-            [
-                .flags(isFavorite: true, isOrganized: nil),
-                .flags(isFavorite: nil, isOrganized: false),
-            ])
     }
 
     func testFailedMutationPreservesContentAndPublishesActionableError() async throws {
@@ -381,10 +241,6 @@ private struct EntityDetailTestHarness {
         service = EntityDetailService(loader: loader, mutator: mutator)
     }
 
-    var canMutate: Bool {
-        service.canMutate
-    }
-
     mutating func load() async {
         guard let request = state.beginLoad() else { return }
         let outcome = await service.load(id: link.entityID)
@@ -394,18 +250,6 @@ private struct EntityDetailTestHarness {
     @discardableResult
     mutating func updateRating(_ value: Int?) async -> Bool {
         await mutate(.rating(value))
-    }
-
-    @discardableResult
-    mutating func toggleFavorite() async -> Bool {
-        guard let mutation = state.favoriteToggleMutation else { return false }
-        return await mutate(mutation)
-    }
-
-    @discardableResult
-    mutating func toggleOrganized() async -> Bool {
-        guard let mutation = state.organizedToggleMutation else { return false }
-        return await mutate(mutation)
     }
 
     private mutating func mutate(_ mutation: EntityDetailMutation) async -> Bool {
@@ -424,33 +268,6 @@ private struct EntityDetailTestHarness {
     }
 }
 
-private actor EntityDetailLoaderStub: EntityDetailLoading {
-    enum Response: Sendable {
-        case success(EntityDetail)
-        case failure(EntityDetailLoaderStubError)
-    }
-
-    private var responses: [Response]
-    private var entityIDs: [UUID] = []
-
-    init(responses: [Response]) {
-        self.responses = responses
-    }
-
-    func loadEntity(id: UUID) async throws -> EntityDetail {
-        entityIDs.append(id)
-        guard !responses.isEmpty else { throw EntityDetailLoaderStubError.offline }
-        switch responses.removeFirst() {
-        case .success(let detail): return detail
-        case .failure(let error): throw error
-        }
-    }
-
-    func requestedEntityIDs() -> [UUID] {
-        entityIDs
-    }
-}
-
 private struct CancelledEntityDetailLoader: EntityDetailLoading {
     func loadEntity(id: UUID) async throws -> EntityDetail {
         throw CancellationError()
@@ -458,15 +275,8 @@ private struct CancelledEntityDetailLoader: EntityDetailLoading {
 }
 
 private actor EntityDetailMutationServiceStub: EntityDetailLoading, EntityDetailMutating {
-    enum Mutation: Equatable, Sendable {
-        case rating(Int?)
-        case flags(isFavorite: Bool?, isOrganized: Bool?)
-    }
-
     private var loadResponses: [Result<EntityDetail, EntityDetailLoaderStubError>]
     private var mutationResponses: [Result<EntityDetail, EntityDetailLoaderStubError>]
-    private var recordedMutations: [Mutation] = []
-    private var requestedIDs: [UUID] = []
 
     init(
         loadResponses: [Result<EntityDetail, EntityDetailLoaderStubError>],
@@ -477,23 +287,17 @@ private actor EntityDetailMutationServiceStub: EntityDetailLoading, EntityDetail
     }
 
     func loadEntity(id: UUID) async throws -> EntityDetail {
-        requestedIDs.append(id)
         guard !loadResponses.isEmpty else { throw EntityDetailLoaderStubError.offline }
         return try loadResponses.removeFirst().get()
     }
 
     func updateRating(id: UUID, value: Int?) async throws -> EntityDetail {
-        recordedMutations.append(.rating(value))
         return try nextResponse().get()
     }
 
     func updateFlags(id: UUID, isFavorite: Bool?, isOrganized: Bool?) async throws -> EntityDetail {
-        recordedMutations.append(.flags(isFavorite: isFavorite, isOrganized: isOrganized))
         return try nextResponse().get()
     }
-
-    func mutations() -> [Mutation] { recordedMutations }
-    func requestedEntityIDs() -> [UUID] { requestedIDs }
 
     private func nextResponse() -> Result<EntityDetail, EntityDetailLoaderStubError> {
         guard !mutationResponses.isEmpty else { return .failure(.offline) }

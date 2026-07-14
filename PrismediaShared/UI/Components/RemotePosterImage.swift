@@ -9,6 +9,7 @@ public struct RemotePosterImage: View {
     let fallbackSeed: String
     let systemImage: String
     let contentMode: ContentMode
+    let imageCornerRadius: CGFloat
     let retainsCurrentImageWhileLoading: Bool
     let maxPixelSize: Int
 
@@ -18,6 +19,7 @@ public struct RemotePosterImage: View {
         fallbackSeed: String = "Prismedia",
         systemImage: String = "photo",
         contentMode: ContentMode = .fill,
+        imageCornerRadius: CGFloat = 0,
         retainsCurrentImageWhileLoading: Bool = false,
         maxPixelSize: Int = 2_048
     ) {
@@ -26,6 +28,7 @@ public struct RemotePosterImage: View {
         self.fallbackSeed = fallbackSeed
         self.systemImage = systemImage
         self.contentMode = contentMode
+        self.imageCornerRadius = imageCornerRadius
         self.retainsCurrentImageWhileLoading = retainsCurrentImageWhileLoading
         self.maxPixelSize = max(1, maxPixelSize)
     }
@@ -90,10 +93,12 @@ public struct RemotePosterImage: View {
             image
                 .resizable()
                 .scaledToFit()
+                .clipShape(.rect(cornerRadius: imageCornerRadius, style: .continuous))
         } else {
             image
                 .resizable()
                 .scaledToFill()
+                .clipShape(.rect(cornerRadius: imageCornerRadius, style: .continuous))
         }
     }
 
@@ -141,6 +146,7 @@ public struct RemotePosterImage: View {
                 .foregroundStyle(PrismediaColor.onMedia.opacity(0.7))
                 .symbolRenderingMode(.hierarchical)
         }
+        .clipShape(.rect(cornerRadius: imageCornerRadius, style: .continuous))
     }
 
     private var fallbackColors: [Color] {

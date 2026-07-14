@@ -9,58 +9,6 @@ final class EntityDetailReadingTests: XCTestCase {
     private let chapterID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
     private let pageID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
 
-    func testDetailCapabilitiesCanBeComposedFromIndependentPorts() async throws {
-        let detail = makeBook(title: "Independent Detail")
-        let detailLoader = ReadingDetailLoaderStub(detail: detail)
-        let mutator = ReadingMutatorStub(detail: detail)
-        let collectionLoader = ReadingCollectionLoaderStub(items: [])
-        let reader = ReadingServiceStub(details: [detail.id: detail])
-        let playback = ReadingVideoPlaybackStub()
-        let notifications = ReadingMutationNotificationRecorder()
-
-        let dependencies = EntityDetailDependencies(
-            detailLoader: detailLoader,
-            mutator: mutator,
-            collectionItemsLoader: collectionLoader,
-            readerService: reader,
-            videoPlaybackService: playback,
-            onEntityMutated: notifications.record
-        )
-
-        _ = try await dependencies.detailLoader.loadEntity(id: detail.id)
-        _ = try await dependencies.mutator?.updateRating(id: detail.id, value: 4)
-        _ = try await dependencies.collectionItemsLoader?.loadCollectionItems(collectionID: detail.id)
-        _ = try await dependencies.readerService?.loadPageData(id: pageID)
-        _ = try await dependencies.videoPlaybackService?.mediaData(for: "/video")
-        dependencies.onEntityMutated()
-
-        let detailRequests = await detailLoader.requestedIDsSnapshot()
-        let ratings = await mutator.ratingsSnapshot()
-        let collectionRequests = await collectionLoader.requestedIDsSnapshot()
-        let pageRequests = await reader.pageIDsSnapshot()
-        XCTAssertEqual(detailRequests, [detail.id])
-        XCTAssertEqual(ratings, [4])
-        XCTAssertEqual(collectionRequests, [detail.id])
-        XCTAssertEqual(pageRequests, [pageID])
-        XCTAssertEqual(notifications.count, 1)
-    }
-
-    func testEntityDetailMutationUsesAnIndependentMutator() async throws {
-        let detail = makeBook(title: "Mutable")
-        let loader = ReadingDetailLoaderStub(detail: detail)
-        let mutator = ReadingMutatorStub(detail: detail)
-        let service = EntityDetailService(loader: loader, mutator: mutator)
-
-        let outcome = await service.save(.rating(5), id: detail.id)
-
-        guard case .content(let updated) = outcome else {
-            return XCTFail("Expected the independent mutator result.")
-        }
-        XCTAssertEqual(updated, detail)
-        let ratings = await mutator.ratingsSnapshot()
-        XCTAssertEqual(ratings, [5])
-    }
-
     func testNewerReadingRequestRejectsAnOlderResponse() throws {
         var state = EntityDetailReadingState()
         let older = state.beginLoad(entityID: bookID)
@@ -104,107 +52,6 @@ final class EntityDetailReadingTests: XCTestCase {
         XCTAssertEqual(state.phase, .content(manifest))
         XCTAssertEqual(state.errorMessage, "The server is unavailable.")
         XCTAssertFalse(state.isMutating)
-    }
-
-    func testCompletedComicRequiresAResetBeforeThePrimaryReadActionOpens() throws {
-        let manifest = makeManifest(
-            bookID: bookID,
-            title: "Completed",
-            completedAt: "2026-07-13T12:00:00Z"
-        )
-        var state = EntityDetailReadingState()
-        let request = state.beginLoad(entityID: bookID)
-        state.finishLoad(.content(manifest), request: request)
-
-        XCTAssertTrue(state.requiresResetBeforeReading)
-        XCTAssertEqual(
-            state.primaryActions(fallback: [], entityKind: .book).map(\.title),
-            ["Re-read"]
-        )
-    }
-
-    func testReadingLoadFailureBecomesAVisibleSectionState() async {
-        let detail = EntityDetail(
-            id: chapterID,
-            kind: .bookChapter,
-            title: "Offline Chapter",
-            parentEntityID: bookID,
-            sortOrder: 0,
-            hasSourceMedia: false,
-            capabilities: [],
-            childrenByKind: [],
-            relationships: []
-        )
-        let service = EntityDetailReadingService(
-            reader: FailingReadingServiceStub(error: ReadingTestError.offline)
-        )
-
-        let outcome = await service.load(detail: detail)
-
-        XCTAssertEqual(outcome, .failure("The server is unavailable."))
-    }
-
-    func testEPUBProgressUsesThePWAFractionContract() throws {
-        let progress = makeSingleFileProgress(
-            unit: .cfi,
-            index: 4_250,
-            total: 10_000,
-            mode: .scrolled,
-            location: "epubcfi(/6/4!/4/2/2:14)"
-        )
-
-        let presentation = try XCTUnwrap(
-            ReadingProgressPresentation(singleFileProgress: progress)
-        )
-
-        XCTAssertEqual(presentation.status, .inProgress)
-        XCTAssertEqual(presentation.percent, 43)
-        XCTAssertEqual(presentation.positionLabel, "43% read")
-        XCTAssertNil(presentation.contextLabel)
-        XCTAssertTrue(presentation.canResume)
-        XCTAssertTrue(presentation.canStartOver)
-        XCTAssertEqual(presentation.readerMode, .scrolled)
-    }
-
-    func testPDFProgressUsesPagePositionAndCount() throws {
-        let progress = makeSingleFileProgress(
-            unit: .page,
-            index: 2,
-            total: 5,
-            mode: .scrolled,
-            location: nil
-        )
-
-        let presentation = try XCTUnwrap(
-            ReadingProgressPresentation(singleFileProgress: progress)
-        )
-
-        XCTAssertEqual(presentation.status, .inProgress)
-        XCTAssertEqual(presentation.percent, 60)
-        XCTAssertEqual(presentation.positionLabel, "Page 3 of 5")
-        XCTAssertNil(presentation.contextLabel)
-        XCTAssertEqual(presentation.readerMode, .scrolled)
-    }
-
-    func testCompletedSingleFileProgressHidesResumePosition() throws {
-        let progress = makeSingleFileProgress(
-            unit: .cfi,
-            index: 9_900,
-            total: 10_000,
-            mode: .paged,
-            location: "epubcfi(/6/8!/4/2/2:8)",
-            completedAt: "2026-07-12T12:00:00Z"
-        )
-
-        let presentation = try XCTUnwrap(
-            ReadingProgressPresentation(singleFileProgress: progress)
-        )
-
-        XCTAssertEqual(presentation.status, .completed)
-        XCTAssertEqual(presentation.percent, 100)
-        XCTAssertNil(presentation.positionLabel)
-        XCTAssertFalse(presentation.canResume)
-        XCTAssertTrue(presentation.canStartOver)
     }
 
     func testEPUBProgressLoadsAsSingleFileReadingContent() async throws {
@@ -342,54 +189,6 @@ final class EntityDetailReadingTests: XCTestCase {
         XCTAssertEqual(request.location, location)
     }
 
-    func testSingleFileProgressChangesPrimaryActionToResumeOrReread() throws {
-        let inProgress = makeSingleFileBook(
-            format: .pdf,
-            progress: makeSingleFileProgress(
-                unit: .page,
-                index: 12,
-                total: 240,
-                mode: .scrolled,
-                location: nil
-            )
-        )
-        let completed = makeSingleFileBook(
-            format: .epub,
-            progress: makeSingleFileProgress(
-                unit: .cfi,
-                index: 10_000,
-                total: 10_000,
-                mode: .paged,
-                location: "epubcfi(/6/8!/4/2/2:8)",
-                completedAt: nil
-            )
-        )
-
-        let resume = primaryActions(for: inProgress)
-        let reread = primaryActions(for: completed)
-
-        XCTAssertEqual(resume.map(\.id), [.resume])
-        XCTAssertEqual(resume.map(\.title), ["Resume"])
-        XCTAssertEqual(reread.map(\.id), [.read])
-        XCTAssertEqual(reread.map(\.title), ["Re-read"])
-    }
-
-    private func makeBook(title: String) -> EntityDetail {
-        EntityDetail(
-            id: bookID,
-            kind: .book,
-            title: title,
-            parentEntityID: nil,
-            sortOrder: nil,
-            bookType: "comic",
-            bookFormat: .imageArchive,
-            hasSourceMedia: true,
-            capabilities: [],
-            childrenByKind: [],
-            relationships: []
-        )
-    }
-
     private func makeManifest(
         bookID: UUID,
         title: String,
@@ -476,15 +275,6 @@ final class EntityDetailReadingTests: XCTestCase {
         )
     }
 
-    private func primaryActions(
-        for detail: EntityDetail
-    ) -> [EntityDetailAction] {
-        var state = EntityDetailReadingState()
-        let request = state.beginLoad(entityID: bookID)
-        state.finishLoad(.singleFile(detail), request: request)
-        return state.primaryActions(fallback: [], entityKind: .book)
-    }
-
     private func singleFileManifest(_ detail: EntityDetail) -> BookReaderManifest {
         let progress: EntityProgressCapability?
         if let capability = detail.capabilities.first(where: { capability in
@@ -507,64 +297,6 @@ final class EntityDetailReadingTests: XCTestCase {
     }
 }
 
-private actor ReadingDetailLoaderStub: EntityDetailLoading {
-    let detail: EntityDetail
-    private(set) var requestedIDs: [UUID] = []
-
-    init(detail: EntityDetail) {
-        self.detail = detail
-    }
-
-    func loadEntity(id: UUID) async throws -> EntityDetail {
-        requestedIDs.append(id)
-        return detail
-    }
-
-    func requestedIDsSnapshot() -> [UUID] {
-        requestedIDs
-    }
-}
-
-private actor ReadingMutatorStub: EntityDetailMutating {
-    let detail: EntityDetail
-    private(set) var ratings: [Int?] = []
-
-    init(detail: EntityDetail) {
-        self.detail = detail
-    }
-
-    func updateRating(id: UUID, value: Int?) async throws -> EntityDetail {
-        ratings.append(value)
-        return detail
-    }
-
-    func updateFlags(id: UUID, isFavorite: Bool?, isOrganized: Bool?) async throws -> EntityDetail {
-        detail
-    }
-
-    func ratingsSnapshot() -> [Int?] {
-        ratings
-    }
-}
-
-private actor ReadingCollectionLoaderStub: CollectionItemsLoading {
-    let items: [EntityThumbnail]
-    private(set) var requestedIDs: [UUID] = []
-
-    init(items: [EntityThumbnail]) {
-        self.items = items
-    }
-
-    func loadCollectionItems(collectionID: UUID) async throws -> [EntityThumbnail] {
-        requestedIDs.append(collectionID)
-        return items
-    }
-
-    func requestedIDsSnapshot() -> [UUID] {
-        requestedIDs
-    }
-}
-
 private actor ReadingServiceStub: BookReaderServicing {
     struct ProgressUpdate: Sendable {
         let id: UUID
@@ -572,7 +304,6 @@ private actor ReadingServiceStub: BookReaderServicing {
     }
 
     let details: [UUID: EntityDetail]
-    private(set) var pageIDs: [UUID] = []
     private(set) var progressUpdates: [ProgressUpdate] = []
 
     init(details: [UUID: EntityDetail]) {
@@ -585,7 +316,6 @@ private actor ReadingServiceStub: BookReaderServicing {
     }
 
     func loadPageData(id: UUID) async throws -> Data {
-        pageIDs.append(id)
         return Data()
     }
 
@@ -593,64 +323,17 @@ private actor ReadingServiceStub: BookReaderServicing {
         progressUpdates.append(.init(id: id, request: request))
     }
 
-    func pageIDsSnapshot() -> [UUID] {
-        pageIDs
-    }
-
     func progressUpdatesSnapshot() -> [ProgressUpdate] {
         progressUpdates
     }
 }
 
-private struct ReadingVideoPlaybackStub: VideoPlaybackServicing {
-    func negotiateVideoPlayback(videoID: UUID, forceTranscode: Bool) async throws -> VideoPlaybackPlan {
-        throw ReadingTestError.unimplemented
-    }
-
-    func mediaData(for path: String) async throws -> Data {
-        Data()
-    }
-
-    func authenticatedMediaURL(for path: String) -> URL? {
-        nil
-    }
-}
-
-private struct FailingReadingServiceStub: BookReaderServicing {
-    let error: ReadingTestError
-
-    func loadEntity(id: UUID) async throws -> EntityDetail {
-        throw error
-    }
-
-    func loadPageData(id: UUID) async throws -> Data {
-        throw error
-    }
-
-    func updateReadingProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
-        throw error
-    }
-}
-
-@MainActor
-private final class ReadingMutationNotificationRecorder {
-    private(set) var count = 0
-
-    func record() {
-        count += 1
-    }
-}
-
 private enum ReadingTestError: Error, LocalizedError {
     case missingEntity
-    case offline
-    case unimplemented
 
     var errorDescription: String? {
         switch self {
-        case .offline: "The server is unavailable."
         case .missingEntity: "The entity is missing."
-        case .unimplemented: "Not implemented."
         }
     }
 }

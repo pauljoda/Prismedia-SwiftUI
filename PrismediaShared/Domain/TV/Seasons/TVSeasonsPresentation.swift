@@ -57,7 +57,7 @@ enum TVSeasonsPresentation {
         TVEpisodeSelectionDecision(
             episodeID: episodeID,
             shouldPrewarmDetail: !isDetailCached,
-            shouldAutoPlay: intent == .activate
+            shouldPresentFullscreen: intent == .activate
         )
     }
 

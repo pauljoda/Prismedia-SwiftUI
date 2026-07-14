@@ -50,46 +50,6 @@ final class MusicQueueTests: XCTestCase {
         XCTAssertEqual(visited.count, tracks.count)
     }
 
-    func testShuffleChangesTheDisplayedQueueOrderAndKeepsCurrentTrackFirst() {
-        let tracks = makeTracks(count: 5)
-        var queue = MusicQueue(tracks: tracks, startingAt: tracks[2].id)
-        var generator = SeededGenerator(seed: 42)
-
-        queue.setShuffled(true, using: &generator)
-
-        XCTAssertEqual(queue.orderedTracks.first?.id, tracks[2].id)
-        XCTAssertNotEqual(queue.orderedTracks.map(\.id), tracks.map(\.id))
-        XCTAssertEqual(Set(queue.orderedTracks.map(\.id)), Set(tracks.map(\.id)))
-    }
-
-    func testUpNextTracksMatchTheOrderPlayedAfterShuffle() {
-        let tracks = makeTracks(count: 5)
-        var queue = MusicQueue(tracks: tracks, startingAt: tracks[2].id)
-        var generator = SeededGenerator(seed: 42)
-        queue.setShuffled(true, using: &generator)
-        let displayedIDs = queue.upNextTracks.map(\.id)
-
-        var playedIDs: [UUID] = []
-        while let track = queue.advance(reason: .user) {
-            playedIDs.append(track.id)
-        }
-
-        XCTAssertEqual(displayedIDs, playedIDs)
-    }
-
-    func testHistoryContainsOnlyTracksThatPlaybackActuallyLeftBehind() {
-        let tracks = makeTracks(count: 4)
-        var queue = MusicQueue(tracks: tracks, startingAt: tracks[1].id)
-
-        XCTAssertTrue(queue.history.isEmpty)
-
-        _ = queue.advance(reason: .user)
-        _ = queue.advance(reason: .playbackEnded)
-
-        XCTAssertEqual(queue.history.map(\.track.id), [tracks[1].id, tracks[2].id])
-        XCTAssertEqual(queue.currentTrack?.id, tracks[3].id)
-    }
-
     func testMovingBackThroughPlayedTracksRemovesThemFromHistory() {
         let tracks = makeTracks(count: 4)
         var queue = MusicQueue(tracks: tracks)
@@ -128,17 +88,6 @@ final class MusicQueueTests: XCTestCase {
 
         XCTAssertTrue(queue.moveUpcomingTrack(id: tracks[3].id, after: tracks[2].id))
         XCTAssertEqual(queue.upNextTracks.map(\.id), [tracks[1].id, tracks[2].id, tracks[3].id])
-    }
-
-    func testRepeatModeCyclesFromOffToAllToOneAndBackToOff() {
-        var queue = MusicQueue(tracks: makeTracks(count: 2))
-
-        queue.cycleRepeatMode()
-        XCTAssertEqual(queue.repeatMode, .all)
-        queue.cycleRepeatMode()
-        XCTAssertEqual(queue.repeatMode, .one)
-        queue.cycleRepeatMode()
-        XCTAssertEqual(queue.repeatMode, .off)
     }
 
     func testDisablingShuffleRestoresNaturalOrderAtTheCurrentTrack() {

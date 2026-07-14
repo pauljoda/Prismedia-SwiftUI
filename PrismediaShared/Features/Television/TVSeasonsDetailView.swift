@@ -9,8 +9,8 @@ import SwiftUI
         @State private var episodeLoadTask: Task<Void, Never>?
         @State private var hasLoaded = false
         @State private var hasAppliedRouteEpisode = false
-        @State private var autoPlayEpisodeID: UUID?
-        @State private var autoPlayRequestID: UUID?
+        @State private var fullscreenEpisodeID: UUID?
+        @State private var fullscreenRequestID: UUID?
 
         private let useCase: TVSeasonsUseCase
         private let routeLink: EntityLink?
@@ -47,8 +47,8 @@ import SwiftUI
                     episodeDetail: snapshot.selectedEpisodeDetail,
                     loader: loader,
                     playbackService: playbackService,
-                    autoPlayEpisodeID: autoPlayEpisodeID,
-                    autoPlayRequestID: autoPlayRequestID,
+                    fullscreenEpisodeID: fullscreenEpisodeID,
+                    fullscreenRequestID: fullscreenRequestID,
                     onAdvance: handleAdvancedEpisode
                 )
                 TVSeasonPicker(
@@ -168,9 +168,9 @@ import SwiftUI
                 isDetailCached: episodeCache[episode.id] != nil
             )
             focusEpisode(episode, shouldPrewarmDetail: decision.shouldPrewarmDetail)
-            if decision.shouldAutoPlay {
-                autoPlayEpisodeID = decision.episodeID
-                autoPlayRequestID = UUID()
+            if decision.shouldPresentFullscreen {
+                fullscreenEpisodeID = decision.episodeID
+                fullscreenRequestID = UUID()
             }
         }
 
@@ -190,8 +190,8 @@ import SwiftUI
             guard let source = link.sourceThumbnail,
                 let episode = snapshot.episodes.first(where: { $0.id == source.id })
             else { return }
-            autoPlayEpisodeID = nil
-            autoPlayRequestID = nil
+            fullscreenEpisodeID = nil
+            fullscreenRequestID = nil
             applyEpisodeSelection(episode, intent: .focus)
         }
 

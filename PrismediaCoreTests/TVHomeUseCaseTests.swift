@@ -22,22 +22,11 @@ final class TVHomeUseCaseTests: XCTestCase {
         XCTAssertEqual(result.snapshot.items(for: "movies").map(\.id), [movie.id])
         XCTAssertEqual(result.failedShelfIDs, ["recently-watched"])
     }
-
-    func testLoadRequestsEveryWebsiteParityShelf() async {
-        let loader = TVHomeLoaderStub()
-        let useCase = TVHomeUseCase(loader: loader)
-
-        _ = await useCase.load()
-
-        let requestedIDs = await loader.requestedShelfIDs()
-        XCTAssertEqual(Set(requestedIDs), Set(TVAppCatalog.homeShelves.map(\.id)))
-    }
 }
 
 private actor TVHomeLoaderStub: TVHomeLoading {
     private let itemsByShelfID: [String: [EntityThumbnail]]
     private let failedShelfIDs: Set<String>
-    private var requestedIDs: [String] = []
 
     init(
         itemsByShelfID: [String: [EntityThumbnail]] = [:],
@@ -48,13 +37,8 @@ private actor TVHomeLoaderStub: TVHomeLoading {
     }
 
     func load(shelf: TVHomeShelf) async throws -> [EntityThumbnail] {
-        requestedIDs.append(shelf.id)
         if failedShelfIDs.contains(shelf.id) { throw TVHomeLoaderStubError.failed }
         return itemsByShelfID[shelf.id] ?? []
-    }
-
-    func requestedShelfIDs() -> [String] {
-        requestedIDs
     }
 }
 

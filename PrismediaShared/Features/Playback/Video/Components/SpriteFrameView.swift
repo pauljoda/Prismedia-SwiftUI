@@ -8,18 +8,18 @@ struct SpriteFrameView: View {
     var body: some View {
         GeometryReader { geometry in
             if let spriteImage {
-                let scale = geometry.size.height / CGFloat(frame.crop.height)
+                let layout = TrickplaySpriteFrameLayout(
+                    containerSize: geometry.size,
+                    frame: frame
+                )
                 spriteImage
                     .resizable()
                     .frame(
-                        width: CGFloat(frame.imageWidth) * scale,
-                        height: CGFloat(frame.imageHeight) * scale,
+                        width: layout.spriteSize.width,
+                        height: layout.spriteSize.height,
                         alignment: .topLeading
                     )
-                    .offset(
-                        x: -CGFloat(frame.crop.x) * scale,
-                        y: -CGFloat(frame.crop.y) * scale
-                    )
+                    .offset(layout.offset)
             } else {
                 Color(white: 0.08)
             }

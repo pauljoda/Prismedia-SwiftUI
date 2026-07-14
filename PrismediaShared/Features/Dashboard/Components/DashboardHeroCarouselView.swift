@@ -9,6 +9,7 @@ struct DashboardHeroCarouselView: View {
 
     let items: [EntityThumbnail]
     let viewportWidth: CGFloat
+    let topSafeAreaHeight: CGFloat
     let trickplayLoader: any TrickplayFrameLoading
     let allowsAutomaticAdvance: Bool
     let onNavigate: (EntityLink) -> Void
@@ -16,12 +17,14 @@ struct DashboardHeroCarouselView: View {
     init(
         items: [EntityThumbnail],
         viewportWidth: CGFloat,
+        topSafeAreaHeight: CGFloat = 0,
         trickplayLoader: any TrickplayFrameLoading,
         allowsAutomaticAdvance: Bool = true,
         onNavigate: @escaping (EntityLink) -> Void
     ) {
         self.items = items
         self.viewportWidth = viewportWidth
+        self.topSafeAreaHeight = topSafeAreaHeight
         self.trickplayLoader = trickplayLoader
         self.allowsAutomaticAdvance = allowsAutomaticAdvance
         self.onNavigate = onNavigate
@@ -41,6 +44,7 @@ struct DashboardHeroCarouselView: View {
                                 presentation
                             ),
                             viewportWidth: viewportWidth,
+                            topSafeAreaHeight: topSafeAreaHeight,
                             reservesProgressIndicatorSpace: showsProgressIndicator,
                             onNavigate: onNavigate
                         )
@@ -57,6 +61,7 @@ struct DashboardHeroCarouselView: View {
             .scrollPosition(id: $selectedItemID)
             .scrollDisabled(presentations.count < 2)
             .frame(width: viewportWidth)
+            .clipped()
             .overlay(alignment: .bottomLeading) {
                 if showsProgressIndicator {
                     DashboardHeroProgressIndicator(

@@ -49,6 +49,11 @@
 
 ## Validation
 
+- Keep the persistent automated suite lean. Add tests for durable data and serialization contracts, network and persistence behavior, nontrivial algorithms or state machines, playback invariants, shared cross-feature policies, and broad architecture or preview guardrails.
+- Tests created while implementing or fixing something are temporary validation tools by default. Use them to prove the change, then remove them once the work is verified unless the case meets the durable-suite criteria above.
+- Do not add permanent tests for SwiftUI modifier sequences, exact labels, colors, spacing, layout metrics, page-specific composition, or source snippets that merely restate one implementation. Verify those changes with previews, focused builds, and manual UI review while doing the work.
+- Add a regression test for a fixed bug only when the failure can affect multiple surfaces, corrupt or lose state, break an external contract, or is otherwise expensive and plausible to repeat. Prefer extending an existing seam-level test over creating a new test file for a small tweak.
+- Keep UI automation to a small set of broad, high-value user journeys. Do not use UI tests as layout or design contracts.
 - Run `swift test` after shared behavior or architecture changes.
 - Build all shared app schemes with code signing disabled:
   - `PrismediaiOS` for a generic iOS Simulator

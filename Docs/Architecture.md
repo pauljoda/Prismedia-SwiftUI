@@ -110,6 +110,8 @@ Every visual type keeps a direct preview beside the component. The preview must 
 
 ## Validation contract
 
+The committed automated suite protects durable seams rather than visual implementation details. Tests written to prove an implementation or bug fix are temporary by default and should be removed after verification unless they protect a durable seam or serious recurring failure. The persistent suite covers data and serialization contracts, networking and persistence, nontrivial algorithms and state transitions, playback invariants, shared cross-feature policies, plus broad architecture and preview coverage. Exact labels, modifier order, colors, spacing, layout metrics, and page-specific composition are preview and manual-review concerns, not source-level regression contracts. UI automation stays limited to a few broad user journeys.
+
 For shared architecture changes:
 
 1. Run `swift test`, including architecture and preview coverage guards.

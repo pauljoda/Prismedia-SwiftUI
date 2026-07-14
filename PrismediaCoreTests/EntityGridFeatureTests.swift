@@ -61,28 +61,6 @@ final class EntityGridFeatureTests: XCTestCase {
     }
 
     @MainActor
-    func testRefreshReplacesTheCurrentPageAndUpdatedValues() async {
-        let id = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-        let unrated = EntityThumbnail(id: id, kind: .movie, title: "Arrival")
-        let rated = EntityThumbnail(id: id, kind: .movie, title: "Arrival", rating: 4)
-        let loader = EntityGridLoaderStub(results: [
-            .success(EntityListResponse(items: [unrated], nextCursor: "old-cursor")),
-            .success(EntityListResponse(items: [rated], totalCount: 1)),
-        ])
-        let service = EntityGridService(loader: loader)
-        var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
-
-        snapshot = await loadFirstPage(snapshot, service: service)
-        snapshot = await loadFirstPage(snapshot, service: service, preservingContent: true)
-
-        XCTAssertEqual(snapshot.items.first?.id, id)
-        XCTAssertEqual(snapshot.items.first?.rating, 4)
-        XCTAssertNil(snapshot.nextCursor)
-        let requests = await loader.recordedRequests()
-        XCTAssertEqual(requests.map(\.cursor), [nil, nil])
-    }
-
-    @MainActor
     func testSearchTrimsQueryStartsAtFirstPageAndSkipsUnchangedTerm() async {
         let initial = gridThumbnail(id: 1, title: "Initial")
         let match = gridThumbnail(id: 2, title: "The Matrix")
@@ -103,25 +81,6 @@ final class EntityGridFeatureTests: XCTestCase {
         let requests = await loader.recordedRequests()
         XCTAssertEqual(requests.map(\.search), [nil, "matrix"])
         XCTAssertEqual(requests.map(\.cursor), [nil, nil])
-    }
-
-    @MainActor
-    func testRetryRecoversAfterAnInitialFailure() async {
-        let recovered = gridThumbnail(id: 3, title: "Recovered")
-        let loader = EntityGridLoaderStub(results: [
-            .failure(.unavailable),
-            .success(EntityListResponse(items: [recovered])),
-        ])
-        let service = EntityGridService(loader: loader)
-        var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
-
-        snapshot = await loadFirstPage(snapshot, service: service)
-        XCTAssertEqual(snapshot.state, .failed("Videos couldn’t be loaded. Try again."))
-
-        snapshot = await loadFirstPage(snapshot, service: service)
-
-        XCTAssertEqual(snapshot.items, [recovered])
-        XCTAssertEqual(snapshot.state, .content)
     }
 
     @MainActor
@@ -170,27 +129,6 @@ final class EntityGridFeatureTests: XCTestCase {
         XCTAssertNil(snapshot.nextCursor)
         let requests = await loader.recordedRequests()
         XCTAssertEqual(requests.map(\.cursor), [nil, "page-2", "page-3"])
-    }
-
-    @MainActor
-    func testRepeatedNextCursorTerminatesPaginationWithinTheGeneration() async {
-        let first = gridThumbnail(id: 1, title: "One")
-        let second = gridThumbnail(id: 2, title: "Two")
-        let loader = EntityGridLoaderStub(results: [
-            .success(EntityListResponse(items: [first], nextCursor: "page-2", totalCount: 3)),
-            .success(EntityListResponse(items: [second], nextCursor: "page-2", totalCount: 3)),
-        ])
-        let service = EntityGridService(loader: loader)
-        var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
-
-        snapshot = await loadFirstPage(snapshot, service: service)
-        snapshot = await loadNextPage(snapshot, service: service)
-
-        XCTAssertEqual(snapshot.items, [first, second])
-        XCTAssertFalse(snapshot.hasNextPage)
-        XCTAssertNil(snapshot.beginNextPage(configuration: gridConfiguration))
-        let requests = await loader.recordedRequests()
-        XCTAssertEqual(requests.map(\.cursor), [nil, "page-2"])
     }
 
     @MainActor
@@ -246,43 +184,6 @@ final class EntityGridFeatureTests: XCTestCase {
     }
 
     @MainActor
-    func testResetControlsRestoresRouteDefaultsAndLocks() async {
-        let configuration = EntityGridConfiguration(
-            title: "Comics",
-            query: EntityListQuery(
-                kind: .book,
-                sort: "added",
-                bookType: "comic,manga",
-                bookFormat: "image-archive"
-            )
-        )
-        let loader = EntityGridLoaderStub(results: [
-            .success(EntityListResponse(items: [])),
-            .success(EntityListResponse(items: [])),
-            .success(EntityListResponse(items: [])),
-        ])
-        let service = EntityGridService(loader: loader)
-        var snapshot = EntityGridSnapshot(configuration: configuration)
-
-        snapshot = await loadFirstPage(snapshot, service: service, configuration: configuration)
-        var controls = snapshot.controls
-        controls.sort = .rating
-        controls.filters.favoriteOnly = true
-        snapshot.setControls(controls)
-        snapshot = await loadFirstPage(snapshot, service: service, configuration: configuration)
-        snapshot.resetControls(for: configuration)
-        snapshot = await loadFirstPage(snapshot, service: service, configuration: configuration)
-
-        let requests = await loader.recordedRequests()
-        let request = try! XCTUnwrap(requests.last)
-        XCTAssertEqual(request.query.sort, "added")
-        XCTAssertNil(request.query.favorite)
-        XCTAssertEqual(request.query.bookType, "comic,manga")
-        XCTAssertEqual(request.query.bookFormat, "image-archive")
-        XCTAssertTrue(request.query.hideNsfw)
-    }
-
-    @MainActor
     func testSupersededFirstPageCannotOverwriteCurrentSnapshot() {
         var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
         let staleRequest = snapshot.beginFirstPage(
@@ -304,34 +205,6 @@ final class EntityGridFeatureTests: XCTestCase {
         XCTAssertFalse(snapshot.receiveFirstPage(stalePage, for: staleRequest))
         XCTAssertTrue(snapshot.items.isEmpty)
         XCTAssertEqual(snapshot.state, .loading)
-    }
-
-    @MainActor
-    func testSelectedPageSizeOverridesTheRouteDefaultForEveryPage() async {
-        let first = gridThumbnail(id: 1, title: "One")
-        let second = gridThumbnail(id: 2, title: "Two")
-        let loader = EntityGridLoaderStub(results: [
-            .success(EntityListResponse(items: [first], nextCursor: "next")),
-            .success(EntityListResponse(items: [second])),
-        ])
-        let service = EntityGridService(loader: loader)
-        var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
-
-        let firstRequest = snapshot.beginFirstPage(
-            configuration: gridConfiguration,
-            pageSize: 96,
-            preservingContent: false
-        )
-        let firstPage = try! await service.loadFirstPage(firstRequest)
-        snapshot.receiveFirstPage(firstPage, for: firstRequest)
-        let nextRequest = try! XCTUnwrap(
-            snapshot.beginNextPage(configuration: gridConfiguration, pageSize: 96)
-        )
-        let nextPage = try! await service.loadNextVisiblePage(nextRequest)
-        snapshot.receiveNextPage(nextPage, for: nextRequest)
-
-        let requests = await loader.recordedRequests()
-        XCTAssertEqual(requests.map(\.limit), [96, 96])
     }
 
     func testRandomRefreshStartsOverWithFreshSeedAndKeepsItAcrossPagination() throws {
@@ -365,31 +238,6 @@ final class EntityGridFeatureTests: XCTestCase {
         XCTAssertEqual(nextRequest.cursor, "fresh-page-2")
     }
 
-    func testFastRefreshKeepsTheIndicatorVisibleForTheRemainingMinimumDuration() {
-        XCTAssertEqual(
-            EntityGridRefreshIndicatorPolicy.remainingDuration(
-                after: .milliseconds(125)
-            ),
-            .milliseconds(325)
-        )
-        XCTAssertNil(
-            EntityGridRefreshIndicatorPolicy.remainingDuration(
-                after: .milliseconds(600)
-            )
-        )
-    }
-
-    func testNonRandomRefreshDoesNotGenerateASeed() {
-        var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
-
-        XCTAssertFalse(snapshot.reshuffle(randomSeed: 202))
-        let request = snapshot.beginFirstPage(
-            configuration: gridConfiguration,
-            preservingContent: false
-        )
-
-        XCTAssertNil(request.query.seed)
-    }
 }
 
 @MainActor

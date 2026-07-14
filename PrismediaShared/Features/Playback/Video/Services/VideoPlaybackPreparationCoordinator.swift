@@ -2,9 +2,9 @@
 import Foundation
 import Observation
 
-/// Page-view-owned presentation coordinator. Construction is deliberately inert:
-/// resolving a movie child, negotiating media, and creating AVPlayer state all
-/// remain behind the explicit `start` command.
+/// Page-view-owned presentation coordinator. Construction is deliberately inert.
+/// Preparation and the user's request to begin playback are separate so a video
+/// can warm in the background without autoplaying.
 @Observable
 @MainActor
 final class VideoPlaybackPreparationCoordinator {
@@ -16,6 +16,7 @@ final class VideoPlaybackPreparationCoordinator {
     private(set) var videoDetail: EntityDetail?
     private(set) var controller: VideoPlaybackController?
     private(set) var requestedResumeSeconds: Double?
+    private(set) var playRequested = false
 
     @ObservationIgnored
     private let controllerFactory: VideoPlaybackControllerFactory
@@ -47,6 +48,12 @@ final class VideoPlaybackPreparationCoordinator {
         }
     }
 
+    func requestPlayback() {
+        playRequested = true
+        guard phase == .ready else { return }
+        controller?.play()
+    }
+
     func restoreActivePlaybackIfNeeded(
         session: VideoPlaybackSession?,
         ownerLink: EntityLink,
@@ -64,7 +71,6 @@ final class VideoPlaybackPreparationCoordinator {
             await settle(
                 detail: active.detail,
                 controller: active.controller,
-                startsPlayback: false,
                 onPlaybackCompleted: onPlaybackCompleted,
                 generation: generation
             )
@@ -91,6 +97,7 @@ final class VideoPlaybackPreparationCoordinator {
         videoDetail = nil
         controller = nil
         requestedResumeSeconds = nil
+        playRequested = false
     }
 
     private func beginLoading() -> Int {
@@ -132,7 +139,6 @@ final class VideoPlaybackPreparationCoordinator {
             await settle(
                 detail: resolved,
                 controller: controller,
-                startsPlayback: true,
                 onPlaybackCompleted: request.onPlaybackCompleted,
                 generation: generation
             )
@@ -171,7 +177,6 @@ final class VideoPlaybackPreparationCoordinator {
     private func settle(
         detail: EntityDetail,
         controller: VideoPlaybackController,
-        startsPlayback: Bool,
         onPlaybackCompleted: @escaping @MainActor (UUID) -> Void,
         generation: Int
     ) async {
@@ -188,7 +193,7 @@ final class VideoPlaybackPreparationCoordinator {
             videoDetail = detail
             self.controller = controller
             phase = .ready
-            if startsPlayback { controller.play() }
+            if playRequested { controller.play() }
         } catch is CancellationError {
             guard generation == preparationGeneration else { return }
             phase = .idle

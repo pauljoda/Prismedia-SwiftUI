@@ -1,5 +1,5 @@
 public enum VideoPlaybackLaunchPolicy {
-    public static func shouldStartAutomatically(
+    public static func shouldPrepareAutomatically(
         for intent: EntityNavigationIntent
     ) -> Bool {
         intent == .playback

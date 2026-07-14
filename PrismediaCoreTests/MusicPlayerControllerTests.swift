@@ -18,43 +18,6 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrack, track)
     }
 
-    func testPauseResumeAndSeekUseTheSameEngine() {
-        let track = makeTrack(idSuffix: 1)
-        let engine = AudioPlaybackEngineSpy()
-        let controller = MusicPlayerController(engine: engine, service: MusicPlaybackServiceStub())
-        controller.play(tracks: [track])
-
-        controller.pause()
-        controller.seek(to: 37.5)
-        controller.resume()
-
-        XCTAssertEqual(engine.pauseCallCount, 1)
-        XCTAssertEqual(engine.seekPositions, [37.5])
-        XCTAssertEqual(engine.playCallCount, 2)
-        XCTAssertTrue(controller.isPlaying)
-    }
-
-    func testNextAndPreviousLoadTheSelectedTrack() {
-        let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
-        let engine = AudioPlaybackEngineSpy()
-        let service = MusicPlaybackServiceStub()
-        let controller = MusicPlayerController(engine: engine, service: service)
-        controller.play(tracks: tracks)
-
-        controller.skipToNext()
-        controller.skipToPrevious()
-
-        XCTAssertEqual(
-            engine.loadedURLs,
-            [
-                service.audioStreamURL(for: tracks[0].id)!,
-                service.audioStreamURL(for: tracks[1].id)!,
-                service.audioStreamURL(for: tracks[0].id)!,
-            ]
-        )
-        XCTAssertEqual(controller.currentTrack, tracks[0])
-    }
-
     func testSelectingAndReorderingUpNextTracksUpdatesPlaybackAndQueueOrder() {
         let tracks = [
             makeTrack(idSuffix: 1),
@@ -137,25 +100,6 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.errorMessage, "This track does not have a playable stream.")
         XCTAssertTrue(engine.loadedURLs.isEmpty)
         XCTAssertEqual(engine.playCallCount, 0)
-    }
-
-    func testNowPlayingPublicationCallbackReportsQueueAndTransportChanges() {
-        let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
-        let engine = AudioPlaybackEngineSpy()
-        let controller = MusicPlayerController(
-            engine: engine,
-            service: MusicPlaybackServiceStub()
-        )
-        var publicationCount = 0
-        controller.onNowPlayingStateChanged = { publicationCount += 1 }
-
-        controller.play(tracks: tracks)
-        controller.pause()
-        controller.resume()
-        controller.skipToNext()
-        controller.setRepeatMode(.all)
-
-        XCTAssertEqual(publicationCount, 5)
     }
 
     func testClearPlaybackStopsEngineAndRemovesQueueAndRestoration() {

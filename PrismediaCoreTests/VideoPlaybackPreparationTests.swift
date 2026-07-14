@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class VideoPlaybackPreparationTests: XCTestCase {
-    func testOpeningDirectVideoDoesNoPlaybackWorkUntilPlayAndPreparesExactlyOnce() async throws {
+    func testWarmDirectVideoStaysPausedUntilPlaybackIsRequested() async throws {
         let videoID = UUID(uuidString: "10101010-1010-1010-1010-101010101010")!
         let detail = try videoDetail(id: videoID, resumeSeconds: 42)
         let loader = DeferredPlaybackDetailLoader(result: detail)
@@ -50,9 +50,16 @@ final class VideoPlaybackPreparationTests: XCTestCase {
         XCTAssertEqual(settledNegotiationCount, 1)
         XCTAssertEqual(preparation.videoDetail?.id, videoID)
         XCTAssertNotNil(preparation.controller)
+        XCTAssertFalse(preparation.playRequested)
+        XCTAssertEqual(preparation.controller?.player.rate, 0)
+
+        preparation.requestPlayback()
+
+        XCTAssertTrue(preparation.playRequested)
+        XCTAssertNotEqual(preparation.controller?.player.timeControlStatus, .paused)
     }
 
-    func testPageOwnedSessionRemainsEmptyUntilPlayThenActivatesOneController() async throws {
+    func testPageOwnedSessionWarmActivatesOneControllerWithoutRequestingPlayback() async throws {
         let videoID = UUID(uuidString: "11111111-1212-1212-1212-111111111111")!
         let detail = try videoDetail(id: videoID)
         let service = DeferredPlaybackService(videoID: videoID)
@@ -88,6 +95,42 @@ final class VideoPlaybackPreparationTests: XCTestCase {
         await preparation.waitUntilSettled()
         XCTAssertEqual(preparation.phase, .ready)
         XCTAssertTrue(preparation.controller === session.activeController)
+        XCTAssertFalse(preparation.playRequested)
+        XCTAssertEqual(preparation.controller?.player.rate, 0)
+    }
+
+    func testPlaybackRequestedDuringWarmStartsWhenPreparationSettles() async throws {
+        let videoID = UUID(uuidString: "12121212-1212-1212-1212-121212121212")!
+        let detail = try videoDetail(id: videoID)
+        let service = DeferredPlaybackService(videoID: videoID)
+        let factory = DeferredPlaybackControllerFactorySpy()
+        let readiness = DeferredPlaybackReadinessGate()
+        let preparation = VideoPlaybackPreparationCoordinator(
+            controllerFactory: factory.factory,
+            readinessWaiter: .init { _ in await readiness.wait() }
+        )
+        let request = VideoPlaybackPreparationRequest(
+            detail: detail,
+            ownerLink: EntityLink(entityID: videoID, kind: .video),
+            detailLoader: DeferredPlaybackDetailLoader(result: detail),
+            playbackService: service,
+            session: nil,
+            onPlaybackCompleted: { _ in }
+        )
+
+        preparation.start(request)
+        await waitUntil { await service.directNegotiationCount == 1 }
+        preparation.requestPlayback()
+
+        XCTAssertTrue(preparation.playRequested)
+        XCTAssertEqual(preparation.phase, .loading)
+
+        await readiness.open()
+        await preparation.waitUntilSettled()
+
+        XCTAssertEqual(preparation.phase, .ready)
+        XCTAssertTrue(preparation.playRequested)
+        XCTAssertNotEqual(preparation.controller?.player.timeControlStatus, .paused)
     }
 
     func testPreparationFailureIsObservableAndRetryStartsOneNewNegotiation() async throws {
@@ -202,6 +245,7 @@ final class VideoPlaybackPreparationTests: XCTestCase {
         XCTAssertNil(preparation.videoDetail)
         XCTAssertNil(preparation.controller)
         XCTAssertNil(preparation.requestedResumeSeconds)
+        XCTAssertFalse(preparation.playRequested)
     }
 
     private func videoDetail(id: UUID, resumeSeconds: Double? = nil) throws -> EntityDetail {

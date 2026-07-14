@@ -123,7 +123,9 @@ struct ResolvedVideoPlaybackView: View {
         VideoPlaybackReadiness.isInteractive(
             playerReady: controller.isReadyToPlay,
             optionsReady: controller.arePlaybackOptionsReady,
-            filmstripReady: trickplayPath == nil || filmstripFinishedPreparing
+            filmstripReady: presentationMode == .fullscreenOnly
+                || trickplayPath == nil
+                || filmstripFinishedPreparing
         )
     }
 

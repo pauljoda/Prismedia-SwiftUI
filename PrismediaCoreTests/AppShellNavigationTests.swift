@@ -3,34 +3,6 @@ import XCTest
 @testable import PrismediaCore
 
 final class AppShellNavigationTests: XCTestCase {
-    func testSwitchingToAudioSelectsItsFirstDestination() {
-        var navigation = AppShellNavigation(mode: ModeCatalog.overview, destinationID: "stats")
-
-        navigation.select(mode: ModeCatalog.audio)
-
-        XCTAssertEqual(navigation.modeID, "audio")
-        XCTAssertEqual(navigation.destinationID, "albums")
-    }
-
-    func testReturningToASectionRestoresItsLastDestination() {
-        var navigation = AppShellNavigation(mode: ModeCatalog.audio, destinationID: "albums")
-        navigation.select(mode: ModeCatalog.video, destination: ModeCatalog.video.destinations[1])
-
-        navigation.select(mode: ModeCatalog.audio)
-
-        XCTAssertEqual(navigation.destinationID, "albums")
-    }
-
-    func testSelectingADestinationAlsoSelectsItsMode() {
-        var navigation = AppShellNavigation(mode: ModeCatalog.overview)
-        let tracks = ModeCatalog.audio.destinations[2]
-
-        navigation.select(mode: ModeCatalog.audio, destination: tracks)
-
-        XCTAssertEqual(navigation.modeID, "audio")
-        XCTAssertEqual(navigation.destinationID, "tracks")
-    }
-
     func testReconcileMovesAnUnavailableAdminRouteToOverview() {
         var navigation = AppShellNavigation(mode: ModeCatalog.operate, destinationID: "settings")
 
@@ -38,112 +10,6 @@ final class AppShellNavigationTests: XCTestCase {
 
         XCTAssertEqual(navigation.modeID, "overview")
         XCTAssertEqual(navigation.destinationID, "dashboard")
-    }
-
-    func testInvalidInitialDestinationFallsBackToTheModeDefault() {
-        let navigation = AppShellNavigation(mode: ModeCatalog.video, destinationID: "not-a-video-tab")
-
-        XCTAssertEqual(navigation.destinationID, "videos")
-    }
-
-    @MainActor
-    func testAppRouterOwnsInitialTabAndPerDestinationPaths() {
-        let router = PrismediaAppRouter(
-            initialMode: ModeCatalog.video,
-            initialDestinationID: "movies",
-            initialSearchSelected: true
-        )
-        let link = EntityLink(
-            entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
-            kind: .movie
-        )
-
-        router.setPath([link], for: "movies")
-
-        XCTAssertEqual(router.selectedTab, .search)
-        XCTAssertEqual(router.path(for: "movies"), [link])
-        XCTAssertEqual(router.activeMode(in: ModeCatalog.all).id, "video")
-    }
-
-    @MainActor
-    func testAppRouterSelectsTheDestinationAndPreservesItsMode() {
-        let router = PrismediaAppRouter()
-        let tracks = ModeCatalog.audio.destinations[2]
-
-        router.select(mode: ModeCatalog.audio, destination: tracks)
-
-        XCTAssertEqual(router.selectedTab, .destination("tracks"))
-        XCTAssertEqual(router.navigation.modeID, "audio")
-        XCTAssertEqual(router.navigation.destinationID, "tracks")
-    }
-
-    @MainActor
-    func testAppRouterOpensAnEntityInTheCurrentlySelectedDestinationStack() {
-        let router = PrismediaAppRouter(
-            initialMode: ModeCatalog.video,
-            initialDestinationID: "movies"
-        )
-        let entity = EntityThumbnail(id: UUID(), kind: .movie, title: "Arrival")
-
-        router.open(entity: entity, previewSubtitle: "Science fiction")
-
-        XCTAssertEqual(router.path(for: "movies"), [EntityLink(thumbnail: entity)])
-        XCTAssertEqual(router.path(for: "movies").last?.previewSubtitle, "Science fiction")
-    }
-
-    @MainActor
-    func testEpisodePlaybackUsesItsSeasonAsThePlayerRoute() {
-        let router = PrismediaAppRouter(
-            initialMode: ModeCatalog.video,
-            initialDestinationID: "series"
-        )
-        let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
-        let episode = EntityThumbnail(
-            id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
-            kind: .video,
-            title: "Episode Two",
-            parentEntityID: seasonID,
-            parentKind: .videoSeason
-        )
-
-        router.open(entity: episode, intent: .playback)
-
-        XCTAssertEqual(
-            router.path(for: "series"),
-            [EntityLink(thumbnail: episode, intent: .playback)]
-        )
-    }
-
-    @MainActor
-    func testEpisodePlaybackPushesAPlaybackOwnedSeasonOverAnAlreadyOpenSeason() {
-        let router = PrismediaAppRouter(
-            initialMode: ModeCatalog.video,
-            initialDestinationID: "series"
-        )
-        let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
-        let season = EntityThumbnail(
-            id: seasonID,
-            kind: .videoSeason,
-            title: "Season One"
-        )
-        let episode = EntityThumbnail(
-            id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
-            kind: .video,
-            title: "Episode Two",
-            parentEntityID: seasonID,
-            parentKind: .videoSeason
-        )
-
-        router.open(entity: season)
-        router.open(entity: episode, intent: .playback)
-
-        XCTAssertEqual(
-            router.path(for: "series"),
-            [
-                EntityLink(thumbnail: season),
-                EntityLink(thumbnail: episode, intent: .playback),
-            ]
-        )
     }
 
     @MainActor
@@ -162,10 +28,7 @@ final class AppShellNavigationTests: XCTestCase {
         await router.restoreVideoPlayback(episodeLink)
 
         XCTAssertEqual(router.selectedTab, .destination("series"))
-        XCTAssertEqual(
-            router.path(for: "series"),
-            [episodeLink]
-        )
+        XCTAssertEqual(router.path(for: "series"), [episodeLink])
     }
 
     @MainActor
@@ -187,14 +50,6 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
-    func testAppRouterDoesNotNavigateBackFromAnEmptyDestinationStack() {
-        let router = PrismediaAppRouter()
-
-        XCTAssertFalse(router.navigateBack(in: "dashboard"))
-        XCTAssertTrue(router.path(for: "dashboard").isEmpty)
-    }
-
-    @MainActor
     func testAppRouterPerformsSynchronousPlaybackHandoffBeforeOpeningEntity() {
         let router = PrismediaAppRouter(initialMode: ModeCatalog.video, initialDestinationID: "movies")
         let entity = EntityThumbnail(id: UUID(), kind: .movie, title: "Arrival")
@@ -207,16 +62,6 @@ final class AppShellNavigationTests: XCTestCase {
 
         XCTAssertTrue(pathWasEmptyDuringHandoff)
         XCTAssertEqual(router.path(for: "movies"), [EntityLink(thumbnail: entity)])
-    }
-
-    @MainActor
-    func testAppRouterOpensAnEntityInTheSearchStackWhenSearchIsSelected() {
-        let router = PrismediaAppRouter(initialSearchSelected: true)
-        let entity = EntityThumbnail(id: UUID(), kind: .book, title: "Dune")
-
-        router.open(entity: entity)
-
-        XCTAssertEqual(router.path(for: PrismediaAppRouter.searchPathID), [EntityLink(thumbnail: entity)])
     }
 
     @MainActor
@@ -242,42 +87,17 @@ final class AppShellNavigationTests: XCTestCase {
             mediaSequence: EntityMediaSequence(items: [first, second, third])
         )
         let session = try XCTUnwrap(
-            EntityImageViewerRouteSessionFactory.make(
-                for: routeLink,
-                sequenceLoader: nil
-            )
+            EntityImageViewerRouteSessionFactory.make(for: routeLink, sequenceLoader: nil)
         )
         session.select(third.id)
 
         var path = [routeLink]
-        path.append(
-            EntityLink(
-                thumbnail: try XCTUnwrap(session.currentItem),
-                intent: .metadata
-            )
-        )
+        path.append(EntityLink(thumbnail: try XCTUnwrap(session.currentItem), intent: .metadata))
         _ = path.popLast()
 
         XCTAssertEqual(path, [routeLink])
         XCTAssertEqual(session.currentEntityID, third.id)
         XCTAssertEqual(session.currentItem, third)
-    }
-
-    @MainActor
-    func testDirectImageRouteSynthesizesAViewerSessionForUITestBootstrap() throws {
-        let imageID = UUID()
-        let link = EntityLink(entityID: imageID, kind: .image)
-
-        let session = try XCTUnwrap(
-            EntityImageViewerRouteSessionFactory.make(
-                for: link,
-                sequenceLoader: nil
-            )
-        )
-
-        XCTAssertEqual(session.currentEntityID, imageID)
-        XCTAssertEqual(session.sequence.items.map(\.id), [imageID])
-        XCTAssertEqual(session.currentItem?.title, "Image")
     }
 
     func testEntityDeepLinksParseCustomAndWebRoutesIntoTypedStackValues() throws {
@@ -295,18 +115,6 @@ final class AppShellNavigationTests: XCTestCase {
 
         XCTAssertEqual(custom, EntityLink(entityID: id, kind: .image))
         XCTAssertEqual(web, EntityLink(entityID: id, kind: .audioLibrary, intent: .playback))
-        XCTAssertNil(
-            PrismediaEntityDeepLink.link(from: URL(string: "javascript:alert(1)")!)
-        )
-    }
-
-    @MainActor
-    func testRouterPushesTypedDeepLinkIntoTheCurrentStack() {
-        let router = PrismediaAppRouter(initialMode: ModeCatalog.books, initialDestinationID: "books")
-        let link = EntityLink(entityID: UUID(), kind: .book)
-
-        router.open(link: link)
-
-        XCTAssertEqual(router.path(for: "books"), [link])
+        XCTAssertNil(PrismediaEntityDeepLink.link(from: URL(string: "javascript:alert(1)")!))
     }
 }

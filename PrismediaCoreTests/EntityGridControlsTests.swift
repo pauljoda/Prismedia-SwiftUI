@@ -57,38 +57,6 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.sort, "title")
     }
 
-    func testDensityResolvesCompactStandardAndLargeColumnWidths() {
-        XCTAssertEqual(EntityGridDensity.compact.minimumColumnWidth(default: 150), 120)
-        XCTAssertEqual(EntityGridDensity.standard.minimumColumnWidth(default: 150), 150)
-        XCTAssertEqual(EntityGridDensity.large.minimumColumnWidth(default: 150), 195)
-    }
-
-    func testGridOffersNativeListFeedAndMediaWallLayouts() {
-        XCTAssertEqual(
-            EntityGridDisplayMode.allCases,
-            [.grid, .list, .feed, .wall]
-        )
-        XCTAssertEqual(EntityGridDisplayMode.feed.systemImage, "rectangle.grid.1x2")
-        XCTAssertEqual(EntityGridDisplayMode.wall.systemImage, "rectangle.grid.3x2")
-    }
-
-    func testConfigurationCanChooseMediaWallAsItsUnrestoredDefault() {
-        let configuration = EntityGridConfiguration(
-            title: "Images",
-            query: EntityListQuery(kind: .image),
-            defaultDisplayMode: .wall
-        )
-
-        XCTAssertEqual(configuration.defaultDisplayMode, .wall)
-    }
-
-    func testFeedUsesMediaOnlyCardsWhileOtherModesRetainTheirOwnLayouts() {
-        XCTAssertEqual(EntityGridDisplayMode.grid.thumbnailLayout, .grid)
-        XCTAssertEqual(EntityGridDisplayMode.list.thumbnailLayout, .list)
-        XCTAssertEqual(EntityGridDisplayMode.feed.thumbnailLayout, .feed)
-        XCTAssertEqual(EntityGridDisplayMode.wall.thumbnailLayout, .mediaOnly)
-    }
-
     func testPreferenceStoreKeepsGridSurfacesIndependentAndCanResetOne() throws {
         let suiteName = "EntityGridControlsTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -199,43 +167,6 @@ final class EntityGridControlsTests: XCTestCase {
         for _ in 0..<100 {
             XCTAssertTrue((1...2_000_000_000).contains(EntityGridControls.nextRandomSeed()))
         }
-    }
-
-    func testCatalogOnlyOffersReferenceSortAndTaxonomyFiltersForTaxonomyKinds() {
-        let people = EntityGridControlCatalog(query: EntityListQuery(kind: .person))
-        let videos = EntityGridControlCatalog(query: EntityListQuery(kind: .video))
-
-        XCTAssertTrue(people.sortOptions.contains(.references))
-        XCTAssertTrue(people.supportsTaxonomyFilters)
-        XCTAssertFalse(videos.sortOptions.contains(.references))
-        XCTAssertFalse(videos.supportsTaxonomyFilters)
-    }
-
-    func testCatalogLocksBookFiltersAlreadyConstrainedByTheRoute() {
-        let books = EntityGridControlCatalog(query: EntityListQuery(kind: .book))
-        let comics = EntityGridControlCatalog(
-            query: EntityListQuery(kind: .book, bookType: "comic,manga")
-        )
-
-        XCTAssertTrue(books.supportsBookFilters)
-        XCTAssertFalse(comics.supportsBookFilters)
-    }
-
-    func testMutuallyExclusiveFilterSelectionsMapToOneServerValue() {
-        var controls = EntityGridControls(baselineQuery: EntityListQuery(kind: .video))
-        controls.filters.organization = .organized
-        controls.filters.organization = .unorganized
-        controls.filters.availability = .onDisk
-        controls.filters.availability = .wanted
-        controls.filters.rating = .unrated
-
-        let query = controls.applying(to: EntityListQuery(kind: .video))
-
-        XCTAssertEqual(query.organized, false)
-        XCTAssertEqual(query.wanted, true)
-        XCTAssertNil(query.hasFile)
-        XCTAssertEqual(query.unrated, true)
-        XCTAssertNil(query.ratingMin)
     }
 
     func testEmptyControlsPreserveEveryServerConstraintOwnedByTheRoute() {

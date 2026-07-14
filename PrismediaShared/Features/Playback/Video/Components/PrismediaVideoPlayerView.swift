@@ -130,6 +130,14 @@ import SwiftUI
                     prominent: true,
                     action: controller.togglePlayback
                 )
+                .accessibilityLabel(
+                    controller.isPlaying || controller.isWaiting ? "Pause" : "Play"
+                )
+                .accessibilityIdentifier(
+                    controller.isPlaying || controller.isWaiting
+                        ? "video-detail.pause"
+                        : "video-detail.play"
+                )
                 transportButton(systemImage: "goforward.10", size: showsExpandedChrome ? 44 : 36) {
                     controller.skip(by: 10)
                 }

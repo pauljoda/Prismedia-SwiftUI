@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct DashboardHeroContentView: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+
     let presentation: DashboardHeroPresentation
     let viewportWidth: CGFloat
     let accent: Color
@@ -37,6 +40,33 @@ struct DashboardHeroContentView: View {
             alignment: .leading
         )
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack {
+                legibilityGradient
+                accessibilityScrim
+            }
+            .ignoresSafeArea()
+        }
+    }
+
+    private var legibilityGradient: some View {
+        LinearGradient(
+            colors: [
+                .clear,
+                PrismediaColor.background.opacity(0.34),
+                PrismediaColor.background.opacity(0.72),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var accessibilityScrim: some View {
+        PrismediaColor.background.opacity(
+            reduceTransparency
+                ? 0.66
+                : colorSchemeContrast == .increased ? 0.34 : 0
+        )
     }
 
     private var bottomPadding: CGFloat {

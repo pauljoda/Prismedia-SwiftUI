@@ -4,20 +4,6 @@ import XCTest
 
 @MainActor
 final class EntityImageViewerSessionTests: XCTestCase {
-    func testRouteSessionKeepsTheLastSelectedImage() {
-        let first = image(id: 1)
-        let second = image(id: 2)
-        let session = EntityImageViewerSession(
-            selected: first,
-            sequence: EntityMediaSequence(items: [first, second])
-        )
-
-        session.select(second.id)
-
-        XCTAssertEqual(session.currentEntityID, second.id)
-        XCTAssertEqual(session.currentItem, second)
-    }
-
     func testContinuationWaitsUntilTheSelectionIsNearTheTail() async {
         let items = (1...5).map(image)
         let loader = EntityMediaSequenceLoaderStub(results: [

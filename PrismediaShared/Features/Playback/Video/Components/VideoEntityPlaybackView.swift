@@ -8,7 +8,7 @@ struct VideoEntityPlaybackView: View {
     let preparation: VideoPlaybackPreparationCoordinator
     let presentationMode: VideoPlaybackPresentationMode
     let tvLayout: TVVideoPlaybackLayout
-    let autoPlayOnTV: Bool
+    let presentsFullscreenOnTV: Bool
     let onFullscreenDismiss: () -> Void
     let onAdvance: (EntityLink) -> Void
 
@@ -20,7 +20,7 @@ struct VideoEntityPlaybackView: View {
         preparation: VideoPlaybackPreparationCoordinator,
         presentationMode: VideoPlaybackPresentationMode = .inline,
         tvLayout: TVVideoPlaybackLayout = .standard,
-        autoPlayOnTV: Bool = false,
+        presentsFullscreenOnTV: Bool = false,
         onFullscreenDismiss: @escaping () -> Void = {},
         onAdvance: @escaping (EntityLink) -> Void
     ) {
@@ -31,7 +31,7 @@ struct VideoEntityPlaybackView: View {
         self.preparation = preparation
         self.presentationMode = presentationMode
         self.tvLayout = tvLayout
-        self.autoPlayOnTV = autoPlayOnTV
+        self.presentsFullscreenOnTV = presentsFullscreenOnTV
         self.onFullscreenDismiss = onFullscreenDismiss
         self.onAdvance = onAdvance
     }
@@ -52,7 +52,24 @@ struct VideoEntityPlaybackView: View {
             tvBody
         #else
             Group {
-                if preparation.phase == .ready,
+                if presentationMode == .fullscreenOnly {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .accessibilityHidden(true)
+                        .modifier(
+                            VideoFullscreenPresentationModifier(
+                                isPresented: $isFullscreenPresented,
+                                controller: presentedPlaybackController,
+                                title: presentedVideoDetail?.title ?? playbackTitle,
+                                isInteractive: fullscreenPlayerIsInteractive,
+                                playRequested: preparation.playRequested,
+                                onPlay: startPlayback
+                            )
+                        )
+                        .onChange(of: isFullscreenPresented) { _, isPresented in
+                            fullscreenPresentationDidChange(isPresented)
+                        }
+                } else if preparation.phase == .ready,
                     let videoDetail = presentedVideoDetail,
                     let playbackController = presentedPlaybackController
                 {
@@ -64,14 +81,12 @@ struct VideoEntityPlaybackView: View {
                         onFullscreenChange: fullscreenPresentationDidChange
                     )
                 } else {
-                    if presentationMode == .inline {
-                        VideoPlaybackPosterView(
-                            detail: detail,
-                            ownerLink: ownerLink,
-                            phase: preparation.phase,
-                            onPlay: startPlayback
-                        )
-                    }
+                    VideoPlaybackPosterView(
+                        detail: detail,
+                        ownerLink: ownerLink,
+                        phase: preparation.phase,
+                        onPlay: startPlayback
+                    )
                 }
             }
             .task(id: detail.id) {
@@ -80,15 +95,20 @@ struct VideoEntityPlaybackView: View {
                     ownerLink: ownerLink,
                     onPlaybackCompleted: playbackDidComplete
                 )
+                if presentationMode == .fullscreenOnly {
+                    isFullscreenPresented = true
+                }
                 #if DEBUG
-                    if VideoPlaybackLaunchPolicy.shouldStartAutomatically(for: ownerLink.intent)
-                        || PrismediaUITestBootstrap.startsVideoAutomatically()
-                    {
+                    if PrismediaUITestBootstrap.startsVideoAutomatically() {
                         startPlayback()
+                    } else if VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
+                        for: ownerLink.intent
+                    ) {
+                        warmPlayback()
                     }
                 #else
-                    if VideoPlaybackLaunchPolicy.shouldStartAutomatically(for: ownerLink.intent) {
-                        startPlayback()
+                    if VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(for: ownerLink.intent) {
+                        warmPlayback()
                     }
                 #endif
             }
@@ -98,7 +118,7 @@ struct VideoEntityPlaybackView: View {
                 playbackController = nil
             }
             .alert("Couldn’t Play Video", isPresented: fullscreenPreparationErrorPresented) {
-                Button("Try Again") { startPlayback() }
+                Button("Try Again") { warmPlayback() }
                 Button("Cancel", role: .cancel) { preparation.reset() }
             } message: {
                 Text(fullscreenPreparationErrorMessage ?? "Please try again.")
@@ -149,7 +169,7 @@ struct VideoEntityPlaybackView: View {
             }
             .task(id: detail.id) {
                 await resolveVideo()
-                guard autoPlayOnTV, let videoDetail else { return }
+                guard presentsFullscreenOnTV, let videoDetail else { return }
                 let action = TVPlaybackOptions(
                     resumeSeconds: initialResumeSeconds(in: videoDetail)
                 ).automaticAction
@@ -166,37 +186,19 @@ struct VideoEntityPlaybackView: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
-                .task(id: ObjectIdentifier(controller)) {
-                    await playTVControllerWhenReady(controller)
-                }
             }
             .accessibilityIdentifier("video-detail.playback-actions")
         }
 
         private func startTVPlayback(_ resolved: EntityDetail, action: TVPlaybackAction) {
-            // Keep detail browsing lightweight. Playback negotiation begins only
-            // after an explicit selection, and audio starts once fullscreen
-            // presentation has completed.
+            // Enter fullscreen and begin warming immediately. The native player
+            // remains paused until the user presses Play.
             prepareController(for: resolved, resumeAt: action.startSeconds)
             guard let playbackController else { return }
             isFullscreenPresented = true
             tvFullscreenPresentation = TVFullscreenPlaybackPresentation(
                 controller: playbackController
             )
-        }
-
-        private func playTVControllerWhenReady(_ controller: VideoPlaybackController) async {
-            while !Task.isCancelled,
-                !controller.isReadyToPlay,
-                controller.errorMessage == nil
-            {
-                try? await Task.sleep(for: .milliseconds(50))
-            }
-            guard !Task.isCancelled,
-                controller.isReadyToPlay,
-                tvFullscreenPresentation?.controller === controller
-            else { return }
-            controller.play()
         }
 
         private func stopTVPlayback() {
@@ -266,6 +268,11 @@ struct VideoEntityPlaybackView: View {
 
     #if !os(tvOS)
         private func startPlayback() {
+            warmPlayback()
+            preparation.requestPlayback()
+        }
+
+        private func warmPlayback() {
             preparation.start(
                 VideoPlaybackPreparationRequest(
                     detail: detail,
@@ -275,6 +282,15 @@ struct VideoEntityPlaybackView: View {
                     session: playbackSession,
                     onPlaybackCompleted: playbackDidComplete
                 ))
+        }
+
+        private var playbackTitle: String {
+            ownerLink.thumbnailPreview?.title ?? detail.title
+        }
+
+        private var fullscreenPlayerIsInteractive: Bool {
+            guard let controller = presentedPlaybackController else { return false }
+            return controller.isReadyToPlay
         }
 
         private var presentedVideoDetail: EntityDetail? {

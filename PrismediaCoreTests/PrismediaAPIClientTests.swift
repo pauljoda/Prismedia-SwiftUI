@@ -792,34 +792,6 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(queryItem("api_key", in: URLRequest(url: plan.url)), "opaque-token")
     }
 
-    func testVideoPlanBuildsPwaStyleMediaBadgesFromNegotiatedStreams() async throws {
-        let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-        let loader = MockHTTPDataLoader(responses: [
-            .json(
-                """
-                {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","Path":"/media/movie.mp4","Protocol":"File","Container":"mp4",
-                    "RunTimeTicks":900000000,"SupportsDirectPlay":true,"SupportsDirectStream":true,
-                    "SupportsTranscoding":true,"TranscodingUrl":null,
-                    "MediaStreams":[
-                      {"Index":0,"Type":"Video","Codec":"hevc","Width":3840,"Height":2160,"VideoRangeType":"DOVI"},
-                      {"Index":1,"Type":"Audio","Codec":"eac3","Channels":6,"IsDefault":true}
-                    ],
-                    "TranscodingInfo":null
-                  }]
-                }
-                """)
-        ])
-        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
-
-        let plan = try await client.negotiateVideoPlayback(videoID: videoID)
-
-        XCTAssertEqual(plan.badges.map(\.label), ["Direct Play", "4K", "HEVC", "Dolby Vision", "E-AC-3 5.1"])
-        XCTAssertEqual(plan.audioStreams, [.init(index: 1, title: "EAC3", isSelected: true)])
-    }
-
     func testSelectingAudioStreamIsSentToNegotiationAndDirectStreamURL() async throws {
         let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let loader = MockHTTPDataLoader(responses: [
@@ -854,33 +826,6 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(body?["EnableDirectStream"] as? Bool, true)
         XCTAssertEqual(plan.delivery, .remux)
         XCTAssertEqual(queryItem("AudioStreamIndex", in: URLRequest(url: plan.url)), "3")
-    }
-
-    func testTranscodedVideoBadgesDescribeOutputInsteadOfSource() async throws {
-        let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-        let loader = MockHTTPDataLoader(responses: [
-            .json(
-                """
-                {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","RunTimeTicks":900000000,"SupportsDirectPlay":false,
-                    "SupportsTranscoding":true,"TranscodingUrl":"/Videos/output/master.m3u8",
-                    "MediaStreams":[
-                      {"Type":"Video","Codec":"hevc","Width":3840,"Height":2160,"VideoRangeType":"DOVI"},
-                      {"Type":"Audio","Codec":"truehd","Channels":8,"IsDefault":true}
-                    ],
-                    "TranscodingInfo":{"IsVideoDirect":false,"VideoCodec":"h264","AudioCodec":"aac"}
-                  }]
-                }
-                """)
-        ])
-        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
-
-        let plan = try await client.negotiateVideoPlayback(videoID: videoID)
-
-        XCTAssertEqual(plan.badges.map(\.label), ["Transcoding", "H.264", "AAC"])
-        XCTAssertEqual(plan.badges.map(\.tone), [.transcode, .neutral, .neutral])
     }
 
     func testRecordAudioTrackPlayPostsToCompletionEndpoint() async throws {

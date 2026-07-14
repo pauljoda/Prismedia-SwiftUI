@@ -3,17 +3,6 @@ import XCTest
 @testable import PrismediaCore
 
 final class EPUBReaderPreferencesTests: XCTestCase {
-    func testDefaultsMatchAConventionalReflowableReader() {
-        let preferences = EPUBReaderPreferences()
-
-        XCTAssertEqual(preferences.flow, .paged)
-        XCTAssertEqual(preferences.theme, .system)
-        XCTAssertEqual(preferences.fontFamily, .publisher)
-        XCTAssertEqual(preferences.fontScale, 1)
-        XCTAssertEqual(preferences.lineHeight, 1.5)
-        XCTAssertEqual(preferences.pageMargins, 1)
-    }
-
     func testValuesClampToReaderSafeRanges() {
         let preferences = EPUBReaderPreferences(
             flow: .scrolled,

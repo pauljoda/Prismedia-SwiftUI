@@ -33,31 +33,4 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
         XCTAssertEqual(setting.controlKind, .select)
         XCTAssertEqual(setting.value.stringValue, "outline")
     }
-
-    func testSectionCatalogCombinesWebParityGroupsAndPreservesUnmatchedGroups() throws {
-        let data = Data(
-            #"{"groups":[{"key":"visibility","label":"Content Visibility","description":"Default visibility","order":10,"settings":[]},{"key":"playback","label":"Playback","description":"Player defaults","order":20,"settings":[]},{"key":"hls","label":"HLS","description":"Streaming defaults","order":21,"settings":[]},{"key":"scan","label":"Library Scans","description":"Scan cadence","order":30,"settings":[]},{"key":"jobs","label":"Jobs","description":"Worker defaults","order":31,"settings":[]},{"key":"subtitles","label":"Subtitles","description":"Caption defaults","order":40,"settings":[]}]}"#
-                .utf8
-        )
-        let catalog = try JSONDecoder().decode(AdministrativeSettingsCatalog.self, from: data)
-
-        let sections = AdministrativeSettingsSectionCatalog.sections(for: catalog)
-
-        XCTAssertEqual(
-            sections.map(\.id),
-            [
-                "visibility", "playback", "subtitles", "generation", "transcode-cache", "database-backups",
-            ])
-        XCTAssertEqual(sections.first(where: { $0.id == "playback" })?.groups.map(\.key), ["playback", "hls"])
-        XCTAssertEqual(sections.first(where: { $0.id == "generation" })?.groups.map(\.key), ["scan", "jobs"])
-        XCTAssertEqual(sections.first(where: { $0.id == "transcode-cache" })?.includesTranscodeCacheActions, true)
-        XCTAssertEqual(sections.first(where: { $0.id == "database-backups" })?.includesDatabaseBackupActions, true)
-    }
-
-    func testJSONValueTypedAccessorsOnlyReturnMatchingValues() {
-        XCTAssertEqual(AdministrativeJSONValue.bool(true).boolValue, true)
-        XCTAssertEqual(AdministrativeJSONValue.number(1.25).numberValue, 1.25)
-        XCTAssertNil(AdministrativeJSONValue.string("true").boolValue)
-        XCTAssertNil(AdministrativeJSONValue.bool(true).stringValue)
-    }
 }

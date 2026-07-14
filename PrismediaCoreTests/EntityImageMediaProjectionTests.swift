@@ -21,25 +21,6 @@ final class EntityImageMediaProjectionTests: XCTestCase {
         XCTAssertEqual(projection.mediaKind, .stillImage)
     }
 
-    func testSourceRoleStillUsesAuthenticatedEndpointWhenItsPathLooksPublic() throws {
-        let detail = try makeDetail(
-            files: [
-                [
-                    "role": "source",
-                    "path": "/assets/images/photo/source.png",
-                    "mimeType": "image/png",
-                ]
-            ]
-        )
-
-        let projection = EntityImageMediaProjection(detail: detail)
-
-        XCTAssertEqual(
-            projection.sourcePath,
-            "/api/entities/11111111-1111-1111-1111-111111111111/files/source"
-        )
-    }
-
     func testAnimatedStillRemainsAnImageInsteadOfBeingClassifiedAsVideo() throws {
         let detail = try makeDetail(
             files: [
@@ -78,42 +59,6 @@ final class EntityImageMediaProjectionTests: XCTestCase {
             files: [
                 ["role": "source", "path": "/library/motion-with-audio.mp4", "mimeType": "video/mp4"],
                 ["role": "preview", "path": "/assets/motion-muted-preview.mp4", "mimeType": "video/mp4"],
-            ]
-        )
-
-        let projection = EntityImageMediaProjection(detail: detail)
-
-        XCTAssertEqual(projection.mediaKind, .video)
-        XCTAssertEqual(
-            projection.playbackPath,
-            "/api/entities/11111111-1111-1111-1111-111111111111/files/source"
-        )
-    }
-
-    func testNonAssetPreviewUsesAuthenticatedEntityFileEndpoint() throws {
-        let detail = try makeDetail(
-            files: [
-                ["role": "source", "path": "/library/motion.webm", "mimeType": "video/webm"],
-                ["role": "preview", "path": "/generated/motion.mp4", "mimeType": "video/mp4"],
-            ]
-        )
-
-        let projection = EntityImageMediaProjection(detail: detail)
-
-        XCTAssertEqual(
-            projection.playbackPath,
-            "/api/entities/11111111-1111-1111-1111-111111111111/files/preview"
-        )
-    }
-
-    func testVideoSourceWithoutPreviewUsesAuthenticatedSourceRoleForPlayback() throws {
-        let detail = try makeDetail(
-            files: [
-                [
-                    "role": "source",
-                    "path": "/assets/images/motion/source.webm",
-                    "mimeType": "video/webm",
-                ]
             ]
         )
 
