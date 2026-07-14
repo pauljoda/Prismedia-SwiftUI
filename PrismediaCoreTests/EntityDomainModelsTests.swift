@@ -1,0 +1,406 @@
+import XCTest
+
+@testable import PrismediaCore
+
+final class EntityDomainModelsTests: XCTestCase {
+    func testBookDetailKeepsReaderDispatchFields() throws {
+        let json = """
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "kind": "book",
+              "title": "Native Book",
+              "bookType": "comic",
+              "format": "image-archive",
+              "coverPageId": "22222222-2222-2222-2222-222222222222",
+              "capabilities": [],
+              "childrenByKind": [],
+              "relationships": []
+            }
+            """
+
+        let detail = try PrismediaJSON.decoder().decode(EntityDetail.self, from: Data(json.utf8))
+
+        XCTAssertEqual(detail.bookType, "comic")
+        XCTAssertEqual(detail.bookFormat, .imageArchive)
+        XCTAssertEqual(detail.coverPageID, UUID(uuidString: "22222222-2222-2222-2222-222222222222"))
+    }
+
+    func testCurrentBackendEntityKindsHaveNativeDefinitions() {
+        XCTAssertEqual(EntityKind.audio.rawValue, "audio")
+        XCTAssertEqual(EntityKind.audio.displayLabel, "Audio")
+        XCTAssertEqual(EntityKind.bookVolume.rawValue, "book-volume")
+        XCTAssertEqual(EntityKind.bookVolume.displayLabel, "Volume")
+        XCTAssertEqual(EntityKind.bookVolume.thumbnailAspectRatio, 2.0 / 3.0)
+        XCTAssertEqual(EntityKind.bookAuthor.thumbnailAspectRatio, 2.0 / 3.0)
+        XCTAssertEqual(EntityKind.gallery.thumbnailAspectRatio, 1)
+        XCTAssertEqual(EntityKind.collection.thumbnailAspectRatio, 1)
+        XCTAssertFalse(EntityKind.collection.prefersWideThumbnail)
+        XCTAssertEqual(EntityKind.audioLibrary.thumbnailAspectRatio, 1)
+        XCTAssertEqual(EntityKind.musicArtist.thumbnailAspectRatio, 1)
+        XCTAssertEqual(EntityKind.studio.thumbnailAspectRatio, 21.0 / 9.0)
+    }
+
+    func testThumbnailDecodesNativeStateAndPrefersDoubleDensityArtwork() throws {
+        let entityID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let parentID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let data = Data(
+            """
+            {
+              "id": "\(entityID.uuidString)",
+              "kind": "book-volume",
+              "title": "Volume Two",
+              "parentEntityId": "\(parentID.uuidString)",
+              "parentKind": "book",
+              "coverUrl": "/assets/original.jpg",
+              "coverThumbUrl": "/assets/480.jpg",
+              "coverThumb2xUrl": "/assets/960.jpg",
+              "isWanted": true,
+              "hasSourceMedia": false,
+              "latestAcquisitionStatus": "downloading",
+              "acquisitionStatuses": ["searching", "downloading"],
+              "wantedStatus": "downloading",
+              "rating": "4",
+              "progress": "0.5",
+              "resumeSeconds": "125.5",
+              "playCount": "2"
+            }
+            """.utf8)
+
+        let thumbnail = try PrismediaJSON.decoder().decode(EntityThumbnail.self, from: data)
+
+        XCTAssertEqual(thumbnail.bestCoverPath, "/assets/960.jpg")
+        XCTAssertTrue(thumbnail.isWanted)
+        XCTAssertFalse(thumbnail.hasSourceMedia)
+        XCTAssertEqual(thumbnail.latestAcquisitionStatus?.rawValue, "downloading")
+        XCTAssertEqual(thumbnail.acquisitionStatuses.map(\.rawValue), ["searching", "downloading"])
+        XCTAssertEqual(thumbnail.wantedStatus?.rawValue, "downloading")
+        XCTAssertEqual(thumbnail.rating, 4)
+        XCTAssertEqual(thumbnail.progress, 0.5)
+        XCTAssertEqual(thumbnail.resumeSeconds, 125.5)
+        XCTAssertEqual(thumbnail.playCount, 2)
+
+        let link = EntityLink(thumbnail: thumbnail)
+        XCTAssertEqual(link.entityID, entityID)
+        XCTAssertEqual(link.kind, .bookVolume)
+        XCTAssertEqual(link.parentEntityID, parentID)
+        XCTAssertEqual(link.parentKind, .book)
+    }
+
+    func testDetailDecodesKnownGroupsAndCapabilities() throws {
+        let data = Data(
+            """
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "kind": "video",
+              "title": "Pilot",
+              "parentEntityId": null,
+              "sortOrder": "1",
+              "hasSourceMedia": true,
+              "capabilities": [
+                { "kind": "description", "value": "The beginning." },
+                {
+                  "kind": "images",
+                  "supportedKinds": ["poster", "backdrop"],
+                  "items": [{ "kind": "poster", "path": "/assets/poster.jpg", "mimeType": "image/jpeg" }],
+                  "thumbnailUrl": "/assets/480.jpg",
+                  "thumbnail2xUrl": "/assets/960.jpg",
+                  "coverUrl": "/assets/poster.jpg"
+                },
+                { "kind": "rating", "value": "4" }
+              ],
+              "childrenByKind": [
+                {
+                  "kind": "video",
+                  "label": "Episodes",
+                  "entities": [{
+                    "id": "22222222-2222-2222-2222-222222222222",
+                    "kind": "video",
+                    "title": "Episode Two"
+                  }]
+                }
+              ],
+              "relationships": []
+            }
+            """.utf8)
+
+        let detail = try PrismediaJSON.decoder().decode(EntityDetail.self, from: data)
+
+        XCTAssertEqual(detail.sortOrder, 1)
+        XCTAssertTrue(detail.hasSourceMedia)
+        XCTAssertEqual(detail.childrenByKind.first?.entities.first?.title, "Episode Two")
+
+        guard case .description(let description) = detail.capabilities[0] else {
+            return XCTFail("Expected a description capability")
+        }
+        XCTAssertEqual(description.value, "The beginning.")
+
+        guard case .images(let images) = detail.capabilities[1] else {
+            return XCTFail("Expected an images capability")
+        }
+        XCTAssertEqual(images.thumbnail2xURL, "/assets/960.jpg")
+        XCTAssertEqual(images.items.first?.kind, "poster")
+
+        guard case .rating(let rating) = detail.capabilities[2] else {
+            return XCTFail("Expected a rating capability")
+        }
+        XCTAssertEqual(rating.value, 4)
+    }
+
+    func testDetailRetainsUnknownCapabilityPayloads() throws {
+        let data = Data(
+            """
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "kind": "video",
+              "title": "Future Video",
+              "parentEntityId": null,
+              "sortOrder": null,
+              "capabilities": [{
+                "kind": "future-vision",
+                "enabled": true,
+                "profile": { "name": "cinema", "level": 3 }
+              }],
+              "childrenByKind": [],
+              "relationships": []
+            }
+            """.utf8)
+
+        let detail = try PrismediaJSON.decoder().decode(EntityDetail.self, from: data)
+
+        guard case .unknown(let capability) = detail.capabilities.first else {
+            return XCTFail("Expected an unknown capability")
+        }
+        XCTAssertEqual(capability.kind, "future-vision")
+        XCTAssertEqual(capability.fields["enabled"], .bool(true))
+        XCTAssertEqual(
+            capability.fields["profile"],
+            .object(["name": .string("cinema"), "level": .integer(3)])
+        )
+    }
+
+    func testMovieOwnedVideoLinksToTheMovieDetail() {
+        let movieID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let videoID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let thumbnail = EntityThumbnail(
+            id: videoID,
+            kind: .video,
+            title: "Movie File",
+            parentEntityID: movieID,
+            parentKind: .movie,
+            progress: 0.25,
+            resumeSeconds: 50
+        )
+
+        let link = EntityLink(thumbnail: thumbnail)
+
+        XCTAssertEqual(link.entityID, movieID)
+        XCTAssertEqual(link.kind, .movie)
+        XCTAssertNil(link.parentEntityID)
+        XCTAssertNil(link.parentKind)
+        XCTAssertEqual(link.thumbnailPreview?.progress, 0.25)
+        XCTAssertEqual(link.thumbnailPreview?.resumeSeconds, 50)
+    }
+
+    func testMovieOwnedVideoUsesMoviePosterGeometry() {
+        let thumbnail = EntityThumbnail(
+            id: UUID(),
+            kind: .video,
+            title: "Playable Movie",
+            parentEntityID: UUID(),
+            parentKind: .movie
+        )
+
+        XCTAssertEqual(thumbnail.thumbnailPresentationKind, .movie)
+        XCTAssertFalse(thumbnail.thumbnailPresentationKind.prefersWideThumbnail)
+    }
+
+    func testStandaloneVideoLinksToItsOwnDetail() {
+        let videoID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let thumbnail = EntityThumbnail(id: videoID, kind: .video, title: "Standalone")
+
+        let link = EntityLink(thumbnail: thumbnail)
+
+        XCTAssertEqual(link.entityID, videoID)
+        XCTAssertEqual(link.kind, .video)
+    }
+
+    func testAlbumOwnedTrackLinksToTheNativeAlbumDetail() {
+        let albumID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let trackID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let thumbnail = EntityThumbnail(
+            id: trackID,
+            kind: .audioTrack,
+            title: "Signals",
+            parentEntityID: albumID,
+            coverThumb2xURL: "/assets/grid-thumbs/signals@2x.jpg"
+        )
+
+        let link = EntityLink(thumbnail: thumbnail)
+
+        XCTAssertEqual(link.entityID, albumID)
+        XCTAssertEqual(link.kind, .audioLibrary)
+        XCTAssertNil(link.parentEntityID)
+        XCTAssertNil(link.parentKind)
+        XCTAssertEqual(link.thumbnailPreview?.artworkPath, "/assets/grid-thumbs/signals@2x.jpg")
+    }
+
+    func testStandaloneTrackWithoutAnAlbumLinksToItsOwnDetail() {
+        let trackID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let thumbnail = EntityThumbnail(id: trackID, kind: .audioTrack, title: "Loose Track")
+
+        let link = EntityLink(thumbnail: thumbnail)
+
+        XCTAssertEqual(link.entityID, trackID)
+        XCTAssertEqual(link.kind, .audioTrack)
+    }
+
+    func testEntityLinkCarriesThumbnailPreviewWithoutChangingNavigationIdentity() {
+        let id = UUID()
+        let first = EntityThumbnail(
+            id: id,
+            kind: .audioLibrary,
+            title: "Smoke + Mirrors",
+            coverThumb2xURL: "/assets/grid-thumbs/smoke@2x.jpg"
+        )
+        let updated = EntityThumbnail(
+            id: id,
+            kind: .audioLibrary,
+            title: "Smoke + Mirrors",
+            coverThumb2xURL: "/assets/grid-thumbs/smoke-new@2x.jpg",
+            rating: 5
+        )
+
+        let firstLink = EntityLink(thumbnail: first, previewSubtitle: "Imagine Dragons")
+        let updatedLink = EntityLink(thumbnail: updated, previewSubtitle: "Imagine Dragons")
+
+        XCTAssertEqual(firstLink.thumbnailPreview?.artworkPath, "/assets/grid-thumbs/smoke@2x.jpg")
+        XCTAssertEqual(firstLink.previewSubtitle, "Imagine Dragons")
+        XCTAssertEqual(firstLink, updatedLink)
+        XCTAssertEqual(Set([firstLink, updatedLink]).count, 1)
+    }
+
+    func testEntityLinkCarriesTheSourceThumbnailWithoutMakingMutablePresentationPartOfIdentity() {
+        let id = UUID()
+        let initial = EntityThumbnail(
+            id: id,
+            kind: .gallery,
+            title: "Summer",
+            coverThumb2xURL: "/assets/summer@2x.jpg",
+            progress: 0.2
+        )
+        let refreshed = EntityThumbnail(
+            id: id,
+            kind: .gallery,
+            title: "Summer",
+            coverThumb2xURL: "/assets/summer-refreshed@2x.jpg",
+            rating: 5,
+            progress: 0.8
+        )
+
+        let initialLink = EntityLink(thumbnail: initial)
+        let refreshedLink = EntityLink(thumbnail: refreshed)
+
+        XCTAssertEqual(initialLink.sourceThumbnail, initial)
+        XCTAssertEqual(refreshedLink.sourceThumbnail, refreshed)
+        XCTAssertEqual(initialLink, refreshedLink)
+        XCTAssertEqual(Set([initialLink, refreshedLink]).count, 1)
+    }
+
+    func testEntityLinkIntentParticipatesInStableDestinationIdentity() {
+        let id = UUID()
+
+        let detail = EntityLink(entityID: id, kind: .video, intent: .detail)
+        let playback = EntityLink(entityID: id, kind: .video, intent: .playback)
+
+        XCTAssertNotEqual(detail, playback)
+    }
+
+    func testImageMediaSequencePreservesOrderAndUsesFiniteBoundaries() {
+        let first = EntityThumbnail(id: UUID(), kind: .image, title: "First")
+        let second = EntityThumbnail(id: UUID(), kind: .image, title: "Second")
+        let ignored = EntityThumbnail(id: UUID(), kind: .gallery, title: "Gallery")
+        let sequence = EntityMediaSequence(items: [first, ignored, second, first])
+
+        XCTAssertEqual(sequence.items, [first, second])
+        XCTAssertNil(sequence.previous(to: first.id))
+        XCTAssertEqual(sequence.next(to: first.id), second)
+        XCTAssertEqual(sequence.previous(to: second.id), first)
+        XCTAssertNil(sequence.next(to: second.id))
+    }
+
+    func testImageMediaSequenceDoesNotChangeEntityLinkNavigationIdentity() {
+        let image = EntityThumbnail(id: UUID(), kind: .image, title: "Photo")
+        let neighbor = EntityThumbnail(id: UUID(), kind: .image, title: "Neighbor")
+        let first = EntityLink(thumbnail: image)
+        let sequenced = EntityLink(
+            thumbnail: image,
+            mediaSequence: EntityMediaSequence(items: [image, neighbor])
+        )
+
+        XCTAssertEqual(first, sequenced)
+        XCTAssertEqual(sequenced.mediaSequence?.items, [image, neighbor])
+    }
+
+    func testEntityDestinationPolicySelectsOnlyCurrentNativeSpecializations() {
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .audioLibrary, on: .iOS),
+            .nativeAlbum
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .musicArtist, on: .iOS),
+            .nativeArtist
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .videoSeries, on: .tvOS),
+            .televisionSeasons
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .videoSeason, on: .tvOS),
+            .televisionSeasons
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .gallery, on: .iOS),
+            .standard
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .image, on: .iOS),
+            .nativeImageViewer
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .image, on: .macOS),
+            .nativeImageViewer
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .image, on: .tvOS),
+            .nativeImageViewer
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(
+                for: .image,
+                on: .iOS,
+                intent: .metadata
+            ),
+            .standard
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .audioLibrary, on: .macOS),
+            .nativeAlbum
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .musicArtist, on: .macOS),
+            .nativeArtist
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(
+                for: .collection,
+                on: .iOS,
+                intent: .audioCollection
+            ),
+            .nativeAudioCollection
+        )
+        XCTAssertEqual(
+            EntityDestinationPolicy.style(for: .collection, on: .iOS),
+            .standard
+        )
+    }
+}
