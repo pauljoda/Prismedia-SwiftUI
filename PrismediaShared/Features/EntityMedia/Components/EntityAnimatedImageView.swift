@@ -149,7 +149,7 @@ struct EntityAnimatedImageView: View {
 #if DEBUG
     #Preview("Animated Image") {
         if let sequence = AnimatedImageSequence.decode(
-            data: EntityImageViewerPreviewData.pngData
+            data: EntityMediaPreviewData.pngData
         ) {
             EntityAnimatedImageView(sequence: sequence, title: "Animated Preview")
                 .background(PrismediaColor.background)

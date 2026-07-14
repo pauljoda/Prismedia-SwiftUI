@@ -329,10 +329,6 @@ public struct PrismediaShellView: View {
         ModeCatalog.modes(for: environment.session?.user)
     }
 
-    private var activeMode: AppMode {
-        router.activeMode(in: availableModes)
-    }
-
     private var activeTabDestinations: [AppDestination] {
         router.activeTabDestinations(in: availableModes)
     }

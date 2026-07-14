@@ -8,7 +8,7 @@ struct EntityMediaFeedItemView: View {
 
     private let preparedItem: EntityMediaFeedPreparedItem
     private let mediaSequence: EntityMediaSequence
-    private let contentLoader: EntityImageViewerContentLoader
+    private let contentLoader: EntityMediaContentLoader
     private let isPlaybackActive: Bool
     private let isPrewarmEligible: Bool
     private let onOpen: (EntityThumbnail, EntityMediaSequence) -> Void
@@ -17,7 +17,7 @@ struct EntityMediaFeedItemView: View {
     init(
         preparedItem: EntityMediaFeedPreparedItem,
         mediaSequence: EntityMediaSequence,
-        contentLoader: EntityImageViewerContentLoader,
+        contentLoader: EntityMediaContentLoader,
         isPlaybackActive: Bool,
         isPrewarmEligible: Bool,
         onOpen: @escaping (EntityThumbnail, EntityMediaSequence) -> Void,
@@ -204,11 +204,11 @@ struct EntityMediaFeedItemView: View {
 
 #if DEBUG
     #Preview("Portrait and Landscape Image Feed") {
-        let loader = EntityImageViewerPreviewLoader(
+        let loader = EntityMediaPreviewLoader(
             details: EntityMediaFeedPreviewData.details
         )
         let items = EntityMediaFeedPreviewData.items
-        let contentLoader = EntityImageViewerContentLoader(
+        let contentLoader = EntityMediaContentLoader(
             detailLoader: loader,
             sourceLoader: loader,
             retainedItems: items

@@ -35,7 +35,7 @@ The image timings are fixture-specific isolated microbenchmarks, not Instruments
 - ImageIO downsampling remains off the main actor and applies embedded orientation.
 - Grid thumbnails request 512 px instead of 2,048 px.
 - The iOS and tvOS thumbnail paths no longer create an unused `GeometryReader`.
-- `EntityImageViewerContentLoader` retains the complete feed identity but bounds resident source bytes with a 64 MiB LRU.
+- `EntityMediaContentLoader` retains the complete feed identity but bounds resident source bytes with a 64 MiB LRU.
 
 ### Comic reader
 

@@ -134,6 +134,37 @@ public enum ModeCatalog {
         all.first { $0.destination(id: destinationID) != nil }
     }
 
+    public static func canonicalDestination(
+        for entityKind: EntityKind
+    ) -> (mode: AppMode, destination: AppDestination)? {
+        let destinationID: String
+        switch entityKind {
+        case .video: destinationID = "videos"
+        case .movie: destinationID = "movies"
+        case .videoSeries, .videoSeason: destinationID = "series"
+        case .image: destinationID = "images"
+        case .gallery: destinationID = "galleries"
+        case .audioLibrary: destinationID = "albums"
+        case .musicArtist: destinationID = "artists"
+        case .audioTrack: destinationID = "tracks"
+        case .book, .bookChapter, .bookPage: destinationID = "books"
+        case .bookAuthor: destinationID = "authors"
+        case .collection: destinationID = "collections"
+        case .person: destinationID = "people"
+        case .studio: destinationID = "studios"
+        case .tag: destinationID = "tags"
+        default: return nil
+        }
+
+        guard
+            let mode = mode(containing: destinationID),
+            let destination = mode.destination(id: destinationID)
+        else {
+            return nil
+        }
+        return (mode, destination)
+    }
+
     private static func destination(
         _ id: String,
         _ title: String,

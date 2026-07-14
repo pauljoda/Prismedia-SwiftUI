@@ -15,7 +15,7 @@ final class EntityMediaFeedPreparationServiceTests: XCTestCase {
             technicalHeight: 1_620
         )
         let loader = EntityMediaFeedPreparationLoaderSpy(details: [item.id: detail])
-        let contentLoader = EntityImageViewerContentLoader(
+        let contentLoader = EntityMediaContentLoader(
             detailLoader: loader,
             sourceLoader: loader,
             retainedItems: [item]
@@ -41,7 +41,7 @@ final class EntityMediaFeedPreparationServiceTests: XCTestCase {
             details: [item.id: detail],
             sources: [item.id: source]
         )
-        let contentLoader = EntityImageViewerContentLoader(
+        let contentLoader = EntityMediaContentLoader(
             detailLoader: loader,
             sourceLoader: loader,
             retainedItems: [item]
@@ -72,7 +72,7 @@ final class EntityMediaFeedPreparationServiceTests: XCTestCase {
         let aspectRatioLoader = EntityImageVideoAspectRatioLoaderSpy(
             aspectRatiosByPath: [playbackPath: 9.0 / 16.0]
         )
-        let contentLoader = EntityImageViewerContentLoader(
+        let contentLoader = EntityMediaContentLoader(
             detailLoader: loader,
             sourceLoader: loader,
             retainedItems: [item]
@@ -96,7 +96,7 @@ final class EntityMediaFeedPreparationServiceTests: XCTestCase {
         let item = makeItem(id: 5)
         let detail = try makeDetail(item: item, technicalWidth: nil, technicalHeight: nil)
         let loader = EntityMediaFeedPreparationLoaderSpy(details: [item.id: detail])
-        let contentLoader = EntityImageViewerContentLoader(
+        let contentLoader = EntityMediaContentLoader(
             detailLoader: loader,
             sourceLoader: loader,
             retainedItems: [item]

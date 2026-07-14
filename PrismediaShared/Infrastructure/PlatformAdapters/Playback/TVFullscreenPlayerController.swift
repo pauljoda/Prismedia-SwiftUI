@@ -184,6 +184,7 @@
                 guard let overlay = playerController.contentOverlayView else { return }
 
                 let host = UIHostingController(rootView: rootView)
+                overlay.clipsToBounds = false
                 host.view.backgroundColor = .clear
                 host.view.isOpaque = false
                 host.view.isUserInteractionEnabled = false
@@ -249,14 +250,18 @@
             private func layoutSubtitleOverlay(in playerController: AVPlayerViewController) {
                 guard let overlay = playerController.contentOverlayView,
                     let hostView = subtitleHost?.view,
-                    !overlay.bounds.isEmpty
+                    !playerController.view.bounds.isEmpty
                 else { return }
 
                 let presentationSize = playerController.player?.currentItem?.presentationSize ?? .zero
+                let playerBounds = overlay.convert(
+                    playerController.view.bounds,
+                    from: playerController.view
+                )
                 let frame =
                     presentationSize.width <= 0 || presentationSize.height <= 0
-                    ? overlay.bounds
-                    : AVMakeRect(aspectRatio: presentationSize, insideRect: overlay.bounds)
+                    ? playerBounds
+                    : AVMakeRect(aspectRatio: presentationSize, insideRect: playerBounds)
                 hostView.frame = frame.integral
             }
 

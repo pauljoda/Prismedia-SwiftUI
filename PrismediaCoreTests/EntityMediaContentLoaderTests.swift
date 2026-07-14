@@ -3,11 +3,11 @@ import XCTest
 
 @testable import PrismediaCore
 
-final class EntityImageViewerContentLoaderTests: XCTestCase {
+final class EntityMediaContentLoaderTests: XCTestCase {
     func testPrepareLoadsOnlyTheActiveImageAndItsImmediateNeighbors() async throws {
         let items = makeItems(count: 5)
         let service = ImageViewerLoadingSpy(details: makeDetails(for: items))
-        let loader = EntityImageViewerContentLoader(
+        let loader = EntityMediaContentLoader(
             detailLoader: service,
             sourceLoader: service,
             retainedItems: EntityMediaSequence(items: items).preloadItems(around: items[2].id)
@@ -32,7 +32,7 @@ final class EntityImageViewerContentLoaderTests: XCTestCase {
             delay: .milliseconds(30)
         )
         let sequence = EntityMediaSequence(items: items)
-        let loader = EntityImageViewerContentLoader(
+        let loader = EntityMediaContentLoader(
             detailLoader: service,
             sourceLoader: service,
             retainedItems: sequence.preloadItems(around: items[1].id)
@@ -59,7 +59,7 @@ final class EntityImageViewerContentLoaderTests: XCTestCase {
             delay: .milliseconds(250)
         )
         let sequence = EntityMediaSequence(items: items)
-        let loader = EntityImageViewerContentLoader(
+        let loader = EntityMediaContentLoader(
             detailLoader: service,
             sourceLoader: service,
             retainedItems: sequence.preloadItems(around: items[1].id)
@@ -89,7 +89,7 @@ final class EntityImageViewerContentLoaderTests: XCTestCase {
             details: makeDetails(for: [item]),
             delay: .seconds(1)
         )
-        let loader = EntityImageViewerContentLoader(
+        let loader = EntityMediaContentLoader(
             detailLoader: service,
             sourceLoader: service,
             retainedItems: [item]
@@ -117,7 +117,7 @@ final class EntityImageViewerContentLoaderTests: XCTestCase {
             details: makeDetails(for: [item]),
             delay: .milliseconds(100)
         )
-        let loader = EntityImageViewerContentLoader(
+        let loader = EntityMediaContentLoader(
             detailLoader: service,
             sourceLoader: service,
             retainedItems: [item]
@@ -148,7 +148,7 @@ final class EntityImageViewerContentLoaderTests: XCTestCase {
         let items = makeItems(count: 3)
         let service = ImageViewerLoadingSpy(details: makeDetails(for: items))
         let sourceByteCount = items[0].id.uuidString.utf8.count
-        let loader = EntityImageViewerContentLoader(
+        let loader = EntityMediaContentLoader(
             detailLoader: service,
             sourceLoader: service,
             retainedItems: items,

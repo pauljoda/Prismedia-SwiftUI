@@ -2,7 +2,7 @@ import SwiftUI
 
 public struct EntityImageViewerView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var contentLoader: EntityImageViewerContentLoader
+    @State private var contentLoader: EntityMediaContentLoader
     @State private var exportStore: EntityImageExportStore
     @State private var chrome = EntityImageViewerChromeState()
     @State private var chromeTask: Task<Void, Never>?
@@ -36,7 +36,7 @@ public struct EntityImageViewerView: View {
         self.initialDetail = initialDetail
         self.dependencies = dependencies
         _contentLoader = State(
-            initialValue: EntityImageViewerContentLoader(
+            initialValue: EntityMediaContentLoader(
                 detailLoader: dependencies.detailLoader,
                 sourceLoader: dependencies.imageSourceLoader,
                 retainedItems: session.currentEntityID.map {
@@ -285,7 +285,7 @@ public struct EntityImageViewerView: View {
             selected: EntityImageViewerPreviewData.items[0],
             sequence: EntityMediaSequence(items: EntityImageViewerPreviewData.items)
         )
-        let loader = EntityImageViewerPreviewLoader(
+        let loader = EntityMediaPreviewLoader(
             details: EntityImageViewerPreviewData.details
         )
         PreviewShell(signedIn: true) {
@@ -309,7 +309,7 @@ public struct EntityImageViewerView: View {
         @Previewable @State var session = EntityImageViewerSession(
             selected: EntityImageViewerPreviewData.items[0]
         )
-        let loader = EntityImageViewerPreviewLoader(
+        let loader = EntityMediaPreviewLoader(
             details: EntityImageViewerPreviewData.details,
             delayMilliseconds: 10_000
         )
@@ -333,7 +333,7 @@ public struct EntityImageViewerView: View {
         @Previewable @State var session = EntityImageViewerSession(
             selected: EntityImageViewerPreviewData.items[0]
         )
-        let loader = EntityImageViewerPreviewLoader(
+        let loader = EntityMediaPreviewLoader(
             details: [:],
             failure: URLError(.notConnectedToInternet)
         )
@@ -358,7 +358,7 @@ public struct EntityImageViewerView: View {
             selected: EntityImageViewerPreviewData.items[0],
             sequence: EntityMediaSequence(items: EntityImageViewerPreviewData.items)
         )
-        let loader = EntityImageViewerPreviewLoader(
+        let loader = EntityMediaPreviewLoader(
             details: EntityImageViewerPreviewData.details
         )
         PreviewShell(signedIn: true) {

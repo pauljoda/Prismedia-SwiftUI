@@ -1,28 +1,15 @@
 import SwiftUI
 
-/// A reusable watch/read/listen progress surface. All behavior is injected by its
-/// caller; the card owns only presentation and accessibility concerns.
-public struct MediaProgressCard: View {
+/// Reading and audiobook progress for an entity detail page.
+struct MediaProgressCard: View {
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
-    private let presentation: MediaProgressCardPresentation
-    private let actions: MediaProgressCardActions
+    let presentation: MediaProgressCardPresentation
+    let onResume: () -> Void
+    let onStartOver: () -> Void
+    let onToggleCompletion: () -> Void
 
-    public init(
-        presentation: MediaProgressCardPresentation,
-        onResume: @escaping () -> Void,
-        onStartOver: @escaping () -> Void,
-        onToggleCompletion: @escaping () -> Void
-    ) {
-        self.presentation = presentation
-        actions = MediaProgressCardActions(
-            resume: onResume,
-            startOver: onStartOver,
-            toggleCompletion: onToggleCompletion
-        )
-    }
-
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
             progressSummary
             progressBar
@@ -114,38 +101,42 @@ public struct MediaProgressCard: View {
 
     @ViewBuilder
     private var primaryAction: some View {
-        if let resumeAction = presentation.resumeAction {
+        if presentation.showsResume {
             PrismediaButton(
-                resumeAction.title,
-                systemImage: resumeAction.systemImage,
+                presentation.resumeTitle,
+                systemImage: presentation.resumeSystemImage,
                 variant: .prominent,
                 form: .fill,
                 primaryTint: artworkPrimaryAccent,
                 isLoading: presentation.isBusy,
-                action: actions.resume
+                action: onResume
             )
-            .accessibilityHint(resumeAction.accessibilityHint)
+            .accessibilityHint(presentation.resumeAccessibilityHint)
             .accessibilityIdentifier("media-progress.resume")
         }
     }
 
     @ViewBuilder
     private var secondaryActions: some View {
-        if presentation.startOverAction != nil || presentation.completionAction != nil {
+        if presentation.showsStartOver || presentation.showsCompletionToggle {
             HStack(spacing: PrismediaSpacing.small) {
-                if let startOverAction = presentation.startOverAction {
+                if presentation.showsStartOver {
                     compactActionButton(
-                        startOverAction,
+                        title: "Start Over",
+                        systemImage: "arrow.counterclockwise",
+                        accessibilityHint: presentation.startOverAccessibilityHint,
                         identifier: "media-progress.start-over",
-                        action: actions.startOver
+                        action: onStartOver
                     )
                 }
 
-                if let completionAction = presentation.completionAction {
+                if presentation.showsCompletionToggle {
                     compactActionButton(
-                        completionAction,
+                        title: presentation.completionTitle,
+                        systemImage: presentation.status == .completed ? "circle" : "checkmark.circle",
+                        accessibilityHint: presentation.completionAccessibilityHint,
                         identifier: "media-progress.completion",
-                        action: actions.toggleCompletion
+                        action: onToggleCompletion
                     )
                 }
 
@@ -155,12 +146,14 @@ public struct MediaProgressCard: View {
     }
 
     private func compactActionButton(
-        _ actionPresentation: MediaProgressCardActionPresentation,
+        title: String,
+        systemImage: String,
+        accessibilityHint: String,
         identifier: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label(actionPresentation.title, systemImage: actionPresentation.systemImage)
+            Label(title, systemImage: systemImage)
                 .labelStyle(.iconOnly)
         }
         .buttonStyle(.glass(.clear))
@@ -170,8 +163,8 @@ public struct MediaProgressCard: View {
             minHeight: PrismediaLayout.minimumHitTarget
         )
         .contentShape(.rect)
-        .accessibilityLabel(actionPresentation.title)
-        .accessibilityHint(actionPresentation.accessibilityHint)
+        .accessibilityLabel(title)
+        .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier(identifier)
     }
 
@@ -208,30 +201,6 @@ public struct MediaProgressCard: View {
         .preferredColorScheme(.dark)
     }
 
-    #Preview("Media Progress · Watched") {
-        ZStack {
-            PrismediaBackdrop()
-
-            MediaProgressCard(
-                presentation: MediaProgressCardPresentation(
-                    kind: .watch,
-                    status: .completed,
-                    percent: 100,
-                    contextLabel: "Episode 8",
-                    showsResume: false,
-                    showsStartOver: true,
-                    showsCompletionToggle: true
-                ),
-                onResume: {},
-                onStartOver: {},
-                onToggleCompletion: {}
-            )
-            .padding(PrismediaSpacing.extraExtraLarge)
-        }
-        .environment(\.artworkPrimaryAccent, PrismediaColor.spectrumMagenta)
-        .preferredColorScheme(.dark)
-    }
-
     #Preview("Media Progress · Listening · Accessibility") {
         ZStack {
             PrismediaBackdrop()
@@ -245,8 +214,7 @@ public struct MediaProgressCard: View {
                     contextLabel: "Part 9 of 14",
                     showsResume: true,
                     showsStartOver: true,
-                    showsCompletionToggle: true,
-                    isBusy: false
+                    showsCompletionToggle: true
                 ),
                 onResume: {},
                 onStartOver: {},

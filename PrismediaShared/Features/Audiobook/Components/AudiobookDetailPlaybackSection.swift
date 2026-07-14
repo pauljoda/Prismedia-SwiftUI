@@ -14,7 +14,12 @@ struct AudiobookDetailPlaybackSection: View {
         if presentation != nil || errorMessage != nil {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                 if let errorMessage {
-                    errorBanner(errorMessage)
+                    MediaProgressErrorBanner(
+                        message: errorMessage,
+                        textColor: PrismediaColor.textSecondary,
+                        accessibilityIdentifier: "entity-detail.audiobook-progress.error",
+                        onDismiss: onDismissError
+                    )
                 }
 
                 if let presentation {
@@ -31,25 +36,6 @@ struct AudiobookDetailPlaybackSection: View {
         }
     }
 
-    private func errorBanner(_ message: String) -> some View {
-        HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(PrismediaColor.warning)
-                .accessibilityHidden(true)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(PrismediaColor.textSecondary)
-            Spacer(minLength: 8)
-            Button("Dismiss", systemImage: "xmark", action: onDismissError)
-                .labelStyle(.iconOnly)
-                .buttonStyle(.plain)
-        }
-        .padding(PrismediaSpacing.large)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .prismediaPanel()
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("entity-detail.audiobook-progress.error")
-    }
 }
 
 #if DEBUG

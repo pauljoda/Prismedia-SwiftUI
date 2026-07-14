@@ -10,7 +10,7 @@ struct EntityImageViewerPage: View {
 
     let item: EntityThumbnail
     let initialDetail: EntityDetail?
-    let contentLoader: EntityImageViewerContentLoader
+    let contentLoader: EntityMediaContentLoader
     let exportStore: EntityImageExportStore
     let isActive: Bool
     let showsControls: Bool
@@ -275,10 +275,10 @@ struct EntityImageViewerPage: View {
 
 #if DEBUG
     #Preview("Image Viewer Page") {
-        let loader = EntityImageViewerPreviewLoader(
+        let loader = EntityMediaPreviewLoader(
             details: EntityImageViewerPreviewData.details
         )
-        let contentLoader = EntityImageViewerContentLoader(
+        let contentLoader = EntityMediaContentLoader(
             detailLoader: loader,
             sourceLoader: loader,
             retainedItems: EntityImageViewerPreviewData.items

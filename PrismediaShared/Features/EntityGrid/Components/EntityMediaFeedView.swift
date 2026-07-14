@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct EntityMediaFeedView: View {
-    @State private var contentLoader: EntityImageViewerContentLoader
+    @State private var contentLoader: EntityMediaContentLoader
     @State private var visibleItemIDs = Set<UUID>()
     @State private var preparedItemsByID: [UUID: EntityMediaFeedPreparedItem] = [:]
     @State private var requestedPreparedCount: Int
@@ -25,7 +25,7 @@ struct EntityMediaFeedView: View {
         self.onOpen = onOpen
         self.onItemAppear = onItemAppear
         _contentLoader = State(
-            initialValue: EntityImageViewerContentLoader(
+            initialValue: EntityMediaContentLoader(
                 detailLoader: dependencies.detailLoader,
                 sourceLoader: dependencies.sourceLoader,
                 retainedItems: items
@@ -178,7 +178,7 @@ struct EntityMediaFeedView: View {
 
 #if DEBUG
     #Preview("Image Media Feed") {
-        let loader = EntityImageViewerPreviewLoader(
+        let loader = EntityMediaPreviewLoader(
             details: EntityMediaFeedPreviewData.details
         )
         PreviewShell(signedIn: true) {

@@ -72,7 +72,12 @@ struct EntityDetailReadingSection: View {
         if progress != nil || state.errorMessage != nil {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                 if let errorMessage = state.errorMessage {
-                    errorBanner(errorMessage)
+                    MediaProgressErrorBanner(
+                        message: errorMessage,
+                        textColor: artworkSecondaryText,
+                        accessibilityIdentifier: "entity-detail.reading-progress.error",
+                        onDismiss: onDismissError
+                    )
                 }
 
                 if let progress {
@@ -94,29 +99,6 @@ struct EntityDetailReadingSection: View {
 
     private func singleFileProgress(in detail: EntityDetail) -> EntityProgressCapability? {
         detail.capability()
-    }
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(PrismediaColor.warning)
-                .accessibilityHidden(true)
-
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(artworkSecondaryText)
-
-            Spacer(minLength: 8)
-
-            Button("Dismiss", systemImage: "xmark", action: onDismissError)
-                .labelStyle(.iconOnly)
-                .buttonStyle(.plain)
-        }
-        .padding(PrismediaSpacing.large)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .prismediaPanel()
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("entity-detail.reading-progress.error")
     }
 
     #if DEBUG

@@ -1,6 +1,6 @@
 import Foundation
 
-public actor EntityImageViewerContentLoader {
+public actor EntityMediaContentLoader {
     private let detailLoader: any EntityDetailLoading
     private let sourceLoader: (any EntityImageSourceLoading)?
     private var retainedIDs: Set<UUID>

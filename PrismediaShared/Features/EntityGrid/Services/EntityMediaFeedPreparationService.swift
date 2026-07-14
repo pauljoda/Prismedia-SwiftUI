@@ -3,7 +3,7 @@ import Foundation
 struct EntityMediaFeedPreparationService: Sendable {
     func prepare(
         _ items: [EntityThumbnail],
-        contentLoader: EntityImageViewerContentLoader,
+        contentLoader: EntityMediaContentLoader,
         videoAspectRatioLoader: (any EntityImageVideoAspectRatioLoading)? = nil
     ) async -> [EntityMediaFeedPreparedItem] {
         await withTaskGroup(
@@ -32,7 +32,7 @@ struct EntityMediaFeedPreparationService: Sendable {
 
     private func prepare(
         _ item: EntityThumbnail,
-        contentLoader: EntityImageViewerContentLoader,
+        contentLoader: EntityMediaContentLoader,
         videoAspectRatioLoader: (any EntityImageVideoAspectRatioLoading)?
     ) async -> EntityMediaFeedPreparedItem {
         let fallbackAspectRatio = EntityMediaFeedLayout.rowAspectRatio(

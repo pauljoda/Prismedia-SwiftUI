@@ -3,6 +3,46 @@ import XCTest
 @testable import PrismediaCore
 
 final class AppShellNavigationTests: XCTestCase {
+    func testCanonicalEntityDestinationsDriveSearchAndDashboardPresentation() throws {
+        let expectedDestinationIDs: [EntityKind: String] = [
+            .video: "videos",
+            .movie: "movies",
+            .videoSeries: "series",
+            .videoSeason: "series",
+            .image: "images",
+            .gallery: "galleries",
+            .audioLibrary: "albums",
+            .musicArtist: "artists",
+            .audioTrack: "tracks",
+            .book: "books",
+            .bookAuthor: "authors",
+            .bookChapter: "books",
+            .bookPage: "books",
+            .collection: "collections",
+            .person: "people",
+            .studio: "studios",
+            .tag: "tags",
+        ]
+
+        for (kind, expectedDestinationID) in expectedDestinationIDs {
+            let canonical = try XCTUnwrap(ModeCatalog.canonicalDestination(for: kind))
+            let search = try XCTUnwrap(SearchHubCatalog.navigationTarget(for: kind))
+
+            XCTAssertEqual(canonical.destination.id, expectedDestinationID)
+            XCTAssertEqual(search.mode.id, canonical.mode.id)
+            XCTAssertEqual(search.destination, canonical.destination)
+
+            if let dashboard = DashboardCatalog.section(for: kind) {
+                XCTAssertEqual(dashboard.title, canonical.destination.title)
+                XCTAssertEqual(
+                    dashboard.systemImage,
+                    kind == .audioLibrary ? "waveform" : canonical.destination.systemImage
+                )
+                XCTAssertEqual(dashboard.destinationID, canonical.destination.id)
+            }
+        }
+    }
+
     func testReconcileMovesAnUnavailableAdminRouteToOverview() {
         var navigation = AppShellNavigation(mode: ModeCatalog.operate, destinationID: "settings")
 

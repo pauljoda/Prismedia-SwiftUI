@@ -2,11 +2,6 @@ import Foundation
 
 /// Pure catalog and ranking rules shared by the search landing and results UI.
 public enum SearchHubCatalog {
-    private struct Route: Sendable {
-        let modeID: String
-        let destinationID: String
-    }
-
     private static let artworkKindsByModeID: [String: [EntityKind]] = [
         "overview": [.movie, .videoSeries, .gallery, .audioLibrary, .book],
         "video": [.video, .movie, .videoSeries],
@@ -14,26 +9,6 @@ public enum SearchHubCatalog {
         "audio": [.audioLibrary, .musicArtist, .audioTrack],
         "books": [.book, .bookAuthor],
         "browse": [.collection, .person, .studio, .tag],
-    ]
-
-    private static let routeByEntityKind: [EntityKind: Route] = [
-        .movie: Route(modeID: "video", destinationID: "movies"),
-        .videoSeries: Route(modeID: "video", destinationID: "series"),
-        .videoSeason: Route(modeID: "video", destinationID: "series"),
-        .video: Route(modeID: "video", destinationID: "videos"),
-        .gallery: Route(modeID: "images", destinationID: "galleries"),
-        .image: Route(modeID: "images", destinationID: "images"),
-        .musicArtist: Route(modeID: "audio", destinationID: "artists"),
-        .audioLibrary: Route(modeID: "audio", destinationID: "albums"),
-        .audioTrack: Route(modeID: "audio", destinationID: "tracks"),
-        .bookAuthor: Route(modeID: "books", destinationID: "authors"),
-        .book: Route(modeID: "books", destinationID: "books"),
-        .bookChapter: Route(modeID: "books", destinationID: "books"),
-        .bookPage: Route(modeID: "books", destinationID: "books"),
-        .person: Route(modeID: "browse", destinationID: "people"),
-        .studio: Route(modeID: "browse", destinationID: "studios"),
-        .tag: Route(modeID: "browse", destinationID: "tags"),
-        .collection: Route(modeID: "browse", destinationID: "collections"),
     ]
 
     public static let previewKinds: [EntityKind] = [
@@ -49,8 +24,6 @@ public enum SearchHubCatalog {
         .video, .audioTrack, .image, .bookChapter, .bookPage,
     ]
 
-    public static let modeCards = cards(for: ModeCatalog.all)
-
     public static func cards(for modes: [AppMode]) -> [SearchHubModeCard] {
         modes.map(card(for:))
     }
@@ -64,10 +37,6 @@ public enum SearchHubCatalog {
 
     public static func preferredArtworkKinds(for mode: AppMode) -> [EntityKind] {
         artworkKindsByModeID[mode.id] ?? []
-    }
-
-    public static func navigationMatch(for query: String) -> SearchHubNavigationTarget? {
-        navigationMatches(for: query).first
     }
 
     public static func navigationMatches(for query: String) -> [SearchHubNavigationTarget] {
@@ -87,8 +56,8 @@ public enum SearchHubCatalog {
     }
 
     public static func navigationTarget(for entityKind: EntityKind) -> SearchHubNavigationTarget? {
-        guard let route = route(for: entityKind) else { return nil }
-        return navigationTarget(modeID: route.modeID, destinationID: route.destinationID)
+        guard let target = ModeCatalog.canonicalDestination(for: entityKind) else { return nil }
+        return SearchHubNavigationTarget(mode: target.mode, destination: target.destination)
     }
 
     public static func rankedResults<Item>(
@@ -128,43 +97,12 @@ public enum SearchHubCatalog {
 
     public static func sectionTitle(for kind: EntityKind) -> String {
         switch kind {
-        case .video: return "Videos"
-        case .videoSeries: return "Series"
         case .videoSeason: return "Seasons"
-        case .movie: return "Movies"
-        case .audioLibrary: return "Albums"
-        case .audioTrack: return "Tracks"
-        case .musicArtist: return "Artists"
-        case .gallery: return "Galleries"
-        case .image: return "Images"
-        case .book: return "Books"
-        case .bookAuthor: return "Authors"
         case .bookChapter: return "Chapters"
         case .bookPage: return "Pages"
-        case .collection: return "Collections"
-        case .person: return "People"
-        case .studio: return "Studios"
-        case .tag: return "Tags"
-        default: return kind.displayLabel
+        default:
+            return ModeCatalog.canonicalDestination(for: kind)?.destination.title ?? kind.displayLabel
         }
-    }
-
-    private static func navigationTarget(
-        modeID: String,
-        destinationID: String
-    ) -> SearchHubNavigationTarget? {
-        guard
-            let mode = ModeCatalog.all.first(where: { $0.id == modeID }),
-            let destination = mode.destination(id: destinationID)
-        else {
-            return nil
-        }
-
-        return SearchHubNavigationTarget(mode: mode, destination: destination)
-    }
-
-    private static func route(for entityKind: EntityKind) -> Route? {
-        routeByEntityKind[entityKind]
     }
 
     private static func matchRank(for title: String, query: String) -> Int {

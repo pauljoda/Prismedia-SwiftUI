@@ -141,7 +141,7 @@
                     }
                 } header: {
                     if !section.title.isEmpty {
-                        PrismediaPinnedSectionHeader(title: section.title)
+                        MusicPinnedSectionHeader(title: section.title)
                     }
                 }
             }

@@ -6,6 +6,7 @@ final class ModernArchitectureGuardTests: XCTestCase {
         let sourceFiles = try swiftFiles(in: [
             "PrismediaShared/App",
             "PrismediaShared/Features",
+            "PrismediaShared/Presentation",
         ])
         let forbiddenPatterns = [
             "ObservableObject",
@@ -37,7 +38,7 @@ final class ModernArchitectureGuardTests: XCTestCase {
         let sourceFiles = try swiftFiles(in: [
             "PrismediaShared/App",
             "PrismediaShared/Features",
-            "PrismediaShared/UI",
+            "PrismediaShared/Presentation",
         ])
         let forbiddenImports = ["import UIKit", "import AppKit"]
         let violations = sourceFiles.flatMap { file -> [String] in

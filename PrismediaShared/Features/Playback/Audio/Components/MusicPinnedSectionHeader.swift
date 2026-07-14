@@ -3,10 +3,10 @@ import SwiftUI
 /// A content-layer header for pinned list sections. Its opaque semantic fill
 /// keeps rows from bleeding through while following system appearance and
 /// increased-contrast color variants without turning content into glass.
-public struct PrismediaPinnedSectionHeader: View {
+struct MusicPinnedSectionHeader: View {
     private let title: String
 
-    public init(title: String) {
+    init(title: String) {
         self.title = title
     }
 
@@ -26,14 +26,14 @@ public struct PrismediaPinnedSectionHeader: View {
 
 #if DEBUG
     #Preview("Pinned Section Header · Dark") {
-        PrismediaPinnedSectionHeader(title: "A")
+        MusicPinnedSectionHeader(title: "A")
             .padding(.horizontal, PrismediaSpacing.large)
             .background(PrismediaBackdrop())
             .preferredColorScheme(.dark)
     }
 
     #Preview("Pinned Section Header · Accessibility Type") {
-        PrismediaPinnedSectionHeader(title: "Recently Added")
+        MusicPinnedSectionHeader(title: "Recently Added")
             .padding(.horizontal, PrismediaSpacing.large)
             .background(PrismediaBackdrop())
             .environment(\.dynamicTypeSize, .accessibility3)
