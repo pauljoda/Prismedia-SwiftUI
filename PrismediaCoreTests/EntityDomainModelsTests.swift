@@ -214,6 +214,84 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertFalse(thumbnail.thumbnailPresentationKind.prefersWideThumbnail)
     }
 
+    func testEpisodePlaybackLinksToItsSeasonAndPreservesTheEpisodeSource() {
+        let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let episodeID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let thumbnail = EntityThumbnail(
+            id: episodeID,
+            kind: .video,
+            title: "Episode Seven",
+            parentEntityID: seasonID,
+            parentKind: .videoSeason,
+            coverThumb2xURL: "/episodes/seven@2x.jpg",
+            resumeSeconds: 420
+        )
+
+        let link = EntityLink(thumbnail: thumbnail, intent: .playback)
+
+        XCTAssertEqual(link.entityID, seasonID)
+        XCTAssertEqual(link.kind, .videoSeason)
+        XCTAssertEqual(link.intent, .playback)
+        XCTAssertEqual(link.sourceThumbnail, thumbnail)
+        XCTAssertEqual(link.thumbnailPreview?.artworkPath, "/episodes/seven@2x.jpg")
+        XCTAssertEqual(link.thumbnailPreview?.resumeSeconds, 420)
+    }
+
+    func testEpisodeDetailLinkRemainsOnTheEpisode() {
+        let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let episodeID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let thumbnail = EntityThumbnail(
+            id: episodeID,
+            kind: .video,
+            title: "Episode Seven",
+            parentEntityID: seasonID,
+            parentKind: .videoSeason
+        )
+
+        let link = EntityLink(thumbnail: thumbnail, intent: .detail)
+
+        XCTAssertEqual(link.entityID, episodeID)
+        XCTAssertEqual(link.kind, .video)
+        XCTAssertEqual(link.parentEntityID, seasonID)
+        XCTAssertEqual(link.parentKind, .videoSeason)
+    }
+
+    func testEpisodePlaybackIdentityDistinguishesEpisodesWithinOneSeason() {
+        let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let firstID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let secondID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
+        let first = EntityThumbnail(
+            id: firstID,
+            kind: .video,
+            title: "Episode One",
+            parentEntityID: seasonID,
+            parentKind: .videoSeason
+        )
+        let refreshedFirst = EntityThumbnail(
+            id: firstID,
+            kind: .video,
+            title: "Episode One (Refreshed)",
+            parentEntityID: seasonID,
+            parentKind: .videoSeason,
+            resumeSeconds: 120
+        )
+        let second = EntityThumbnail(
+            id: secondID,
+            kind: .video,
+            title: "Episode Two",
+            parentEntityID: seasonID,
+            parentKind: .videoSeason
+        )
+
+        let firstLink = EntityLink(thumbnail: first, intent: .playback)
+        let refreshedFirstLink = EntityLink(thumbnail: refreshedFirst, intent: .playback)
+        let secondLink = EntityLink(thumbnail: second, intent: .playback)
+
+        XCTAssertEqual(firstLink, refreshedFirstLink)
+        XCTAssertNotEqual(firstLink, secondLink)
+        XCTAssertEqual(Set([firstLink, secondLink]).count, 2)
+    }
+
     func testStandaloneVideoLinksToItsOwnDetail() {
         let videoID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
         let thumbnail = EntityThumbnail(id: videoID, kind: .video, title: "Standalone")

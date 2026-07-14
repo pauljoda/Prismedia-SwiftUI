@@ -1,0 +1,210 @@
+import Foundation
+
+/// Native app-shell catalog. This mirrors the web app's broad navigation while
+/// allowing the compact iOS rail to adapt to the active section.
+public enum ModeCatalog {
+    public static let overview = AppMode(
+        id: "overview",
+        title: "Overview",
+        systemImage: "house",
+        destinations: [
+            destination(
+                "dashboard", "Dashboard", "rectangle.3.group",
+                "Recent, unfinished, and favorite media will come together here."),
+            entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
+            destination("stats", "Stats", "chart.line.uptrend.xyaxis", "Playback and library insights will live here."),
+        ]
+    )
+
+    public static let video = AppMode(
+        id: "video",
+        title: "Video",
+        systemImage: "play.rectangle",
+        destinations: [
+            entityDestination("videos", "Videos", "film", kind: .video),
+            entityDestination("movies", "Movies", "movieclapper", kind: .movie),
+            entityDestination("series", "Series", "rectangle.stack", kind: .videoSeries),
+        ]
+    )
+
+    public static let images = AppMode(
+        id: "images",
+        title: "Images",
+        systemImage: "photo.stack",
+        destinations: [
+            entityDestination("images", "Images", "photo", kind: .image),
+            entityDestination("galleries", "Galleries", "photo.on.rectangle.angled", kind: .gallery),
+        ]
+    )
+
+    public static let audio = AppMode(
+        id: "audio",
+        title: "Audio",
+        systemImage: "waveform",
+        destinations: [
+            entityDestination("albums", "Albums", "square.stack", kind: .audioLibrary),
+            entityDestination("artists", "Artists", "music.mic", kind: .musicArtist),
+            entityDestination("tracks", "Tracks", "music.note.list", kind: .audioTrack),
+            entityDestination(
+                "audio-collections", "Collections", "rectangle.stack.badge.play", kind: .collection),
+        ]
+    )
+
+    public static let books = AppMode(
+        id: "books",
+        title: "Books",
+        systemImage: "books.vertical",
+        destinations: [
+            entityDestination("books", "Books", "book", kind: .book),
+            entityDestination("authors", "Authors", "signature", kind: .bookAuthor),
+            entityDestination(
+                "comics",
+                "Comics",
+                "book.pages",
+                query: EntityListQuery(kind: .book, sort: "added", bookType: "comic,manga")
+            ),
+            entityDestination(
+                "ebooks",
+                "eBooks",
+                "book.closed",
+                query: EntityListQuery(
+                    kind: .book,
+                    sort: "added",
+                    bookType: "book,novel",
+                    bookFormat: "epub,pdf"
+                )
+            ),
+        ]
+    )
+
+    public static let browse = AppMode(
+        id: "browse",
+        title: "Browse",
+        systemImage: "square.grid.2x2",
+        destinations: [
+            entityDestination(
+                "collections",
+                "Collections",
+                "square.stack.3d.up",
+                query: EntityListQuery(kind: .collection, sort: "added")
+            ),
+            entityDestination("people", "People", "person.2", kind: .person),
+            entityDestination("studios", "Studios", "building.2", kind: .studio),
+            entityDestination("tags", "Tags", "tag", kind: .tag),
+        ]
+    )
+
+    #if os(iOS) || os(macOS)
+        public static let manage = AppMode(
+            id: "manage",
+            title: "Manage",
+            systemImage: "square.and.pencil",
+            requiresAdmin: true,
+            destinations: [
+                manageDestination(.files, "Files", "folder.badge.gearshape"),
+                manageDestination(.identify, "Identify", "doc.viewfinder"),
+                manageDestination(.request, "Request", "paperplane"),
+            ],
+            preferredTabDestinationIDs: ["files", "identify", "request"]
+        )
+    #endif
+
+    public static let operate = AppMode(
+        id: "operate",
+        title: "Operate",
+        systemImage: "wrench.and.screwdriver",
+        requiresAdmin: true,
+        destinations: [
+            administrativeDestination(.plugins, "Plugins", "puzzlepiece.extension"),
+            administrativeDestination(.jobs, "Jobs", "waveform.path.ecg"),
+            administrativeDestination(.settings, "Settings", "gearshape"),
+        ],
+        preferredTabDestinationIDs: ["plugins", "jobs", "settings"]
+    )
+
+    #if os(tvOS)
+        public static let all: [AppMode] = [overview, video, images, audio, books, browse, operate]
+    #else
+        public static let all: [AppMode] = [overview, video, images, audio, books, browse, manage, operate]
+    #endif
+
+    public static func modes(for user: UserAccount?) -> [AppMode] {
+        all.filter { !$0.requiresAdmin || user?.isAdmin == true }
+    }
+
+    public static func mode(containing destinationID: String) -> AppMode? {
+        all.first { $0.destination(id: destinationID) != nil }
+    }
+
+    private static func destination(
+        _ id: String,
+        _ title: String,
+        _ systemImage: String,
+        _ placeholder: String
+    ) -> AppDestination {
+        AppDestination(id: id, title: title, systemImage: systemImage, placeholder: placeholder)
+    }
+
+    private static func entityDestination(
+        _ id: String,
+        _ title: String,
+        _ systemImage: String,
+        kind: EntityKind
+    ) -> AppDestination {
+        let sort =
+            kind == .person || kind == .studio || kind == .tag
+            ? "references"
+            : "added"
+        return entityDestination(
+            id,
+            title,
+            systemImage,
+            query: EntityListQuery(kind: kind, sort: sort)
+        )
+    }
+
+    private static func entityDestination(
+        _ id: String,
+        _ title: String,
+        _ systemImage: String,
+        query: EntityListQuery
+    ) -> AppDestination {
+        AppDestination(
+            id: id,
+            title: title,
+            systemImage: systemImage,
+            placeholder: "",
+            entityList: EntityListDestination(query: query)
+        )
+    }
+
+    private static func administrativeDestination(
+        _ administration: AdministrativeDestination,
+        _ title: String,
+        _ systemImage: String
+    ) -> AppDestination {
+        AppDestination(
+            id: administration.rawValue,
+            title: title,
+            systemImage: systemImage,
+            placeholder: "",
+            administration: administration
+        )
+    }
+
+    #if os(iOS) || os(macOS)
+        private static func manageDestination(
+            _ manage: ManageDestination,
+            _ title: String,
+            _ systemImage: String
+        ) -> AppDestination {
+            AppDestination(
+                id: manage.rawValue,
+                title: title,
+                systemImage: systemImage,
+                placeholder: "",
+                manage: manage
+            )
+        }
+    #endif
+}
