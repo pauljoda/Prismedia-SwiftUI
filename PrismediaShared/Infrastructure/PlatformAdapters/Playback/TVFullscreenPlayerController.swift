@@ -8,7 +8,9 @@
     struct TVFullscreenPlayerController: UIViewControllerRepresentable {
         let controller: VideoPlaybackController
         let transportMenuSignature: String
+        let assSubtitleContents: String?
         let subtitleContent: VideoSubtitleText?
+        let subtitleAppearance: VideoSubtitleAppearance
         let onRequestDismiss: () -> Void
 
         func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
@@ -22,7 +24,9 @@
                 playerController,
                 controller: controller,
                 transportMenuSignature: transportMenuSignature,
-                subtitleContent: subtitleContent
+                assSubtitleContents: assSubtitleContents,
+                subtitleContent: subtitleContent,
+                subtitleAppearance: subtitleAppearance
             )
             return playerController
         }
@@ -39,7 +43,9 @@
                 playerController,
                 controller: controller,
                 transportMenuSignature: transportMenuSignature,
-                subtitleContent: subtitleContent
+                assSubtitleContents: assSubtitleContents,
+                subtitleContent: subtitleContent,
+                subtitleAppearance: subtitleAppearance
             )
         }
 
@@ -55,7 +61,10 @@
         @MainActor
         final class Coordinator: NSObject, AVPlayerViewControllerDelegate {
             var parent: TVFullscreenPlayerController
-            private weak var subtitleLabel: UILabel?
+            private var subtitleHost: UIHostingController<VideoSubtitlePlaybackOverlay>?
+            private var overlayBoundsObservation: NSKeyValueObservation?
+            private var playerItemObservation: NSKeyValueObservation?
+            private var presentationSizeObservation: NSKeyValueObservation?
             private var transportMenuSignature: String?
 
             init(parent: TVFullscreenPlayerController) {
@@ -67,13 +76,21 @@
                 _ playerController: AVPlayerViewController,
                 controller: VideoPlaybackController,
                 transportMenuSignature: String,
-                subtitleContent: VideoSubtitleText?
+                assSubtitleContents: String?,
+                subtitleContent: VideoSubtitleText?,
+                subtitleAppearance: VideoSubtitleAppearance
             ) {
                 if self.transportMenuSignature != transportMenuSignature {
                     self.transportMenuSignature = transportMenuSignature
                     playerController.transportBarCustomMenuItems = transportMenus(for: controller)
                 }
-                configureSubtitleOverlay(in: playerController, content: subtitleContent)
+                configureSubtitleOverlay(
+                    in: playerController,
+                    controller: controller,
+                    assContents: assSubtitleContents,
+                    content: subtitleContent,
+                    appearance: subtitleAppearance
+                )
             }
 
             func playerViewControllerShouldDismiss(
@@ -145,65 +162,102 @@
 
             private func configureSubtitleOverlay(
                 in playerController: AVPlayerViewController,
-                content: VideoSubtitleText?
+                controller: VideoPlaybackController,
+                assContents: String?,
+                content: VideoSubtitleText?,
+                appearance: VideoSubtitleAppearance
             ) {
-                guard let overlay = playerController.contentOverlayView else { return }
-                let label: UILabel
-                if let subtitleLabel, subtitleLabel.superview === overlay {
-                    label = subtitleLabel
-                } else {
-                    subtitleLabel?.removeFromSuperview()
-                    label = UILabel()
-                    label.translatesAutoresizingMaskIntoConstraints = false
-                    label.numberOfLines = 0
-                    label.textAlignment = .center
-                    label.font = .preferredFont(forTextStyle: .title3)
-                    label.textColor = .white
-                    label.backgroundColor = UIColor.black.withAlphaComponent(0.72)
-                    label.layer.cornerRadius = 8
-                    label.layer.masksToBounds = true
-                    overlay.addSubview(label)
-                    let unobscured = playerController.unobscuredContentGuide
-                    NSLayoutConstraint.activate([
-                        label.centerXAnchor.constraint(equalTo: unobscured.centerXAnchor),
-                        label.bottomAnchor.constraint(equalTo: unobscured.bottomAnchor, constant: -28),
-                        label.widthAnchor.constraint(
-                            lessThanOrEqualTo: unobscured.widthAnchor,
-                            multiplier: 0.86
-                        ),
-                    ])
-                    self.subtitleLabel = label
+                let rootView = VideoSubtitlePlaybackOverlay(
+                    assContents: assContents,
+                    content: content,
+                    appearance: appearance,
+                    player: controller.player
+                )
+
+                if let subtitleHost {
+                    subtitleHost.rootView = rootView
+                    layoutSubtitleOverlay(in: playerController)
+                    return
                 }
-                label.attributedText = content.map(attributedSubtitle)
-                label.isHidden = content?.plainText.isEmpty != false
+
+                playerController.loadViewIfNeeded()
+                guard let overlay = playerController.contentOverlayView else { return }
+
+                let host = UIHostingController(rootView: rootView)
+                host.view.backgroundColor = .clear
+                host.view.isOpaque = false
+                host.view.isUserInteractionEnabled = false
+                playerController.addChild(host)
+                overlay.addSubview(host.view)
+                host.didMove(toParent: playerController)
+                subtitleHost = host
+
+                observeLayout(in: playerController, player: controller.player, overlay: overlay)
+                layoutSubtitleOverlay(in: playerController)
             }
 
             fileprivate func tearDownSubtitleOverlay() {
-                subtitleLabel?.removeFromSuperview()
-                subtitleLabel = nil
+                overlayBoundsObservation = nil
+                playerItemObservation = nil
+                presentationSizeObservation = nil
+                subtitleHost?.willMove(toParent: nil)
+                subtitleHost?.view.removeFromSuperview()
+                subtitleHost?.removeFromParent()
+                subtitleHost = nil
             }
 
-            private func attributedSubtitle(_ content: VideoSubtitleText) -> NSAttributedString {
-                let result = NSMutableAttributedString(string: "  ")
-                let baseFont = UIFont.preferredFont(forTextStyle: .title3)
-                for run in content.runs {
-                    var traits: UIFontDescriptor.SymbolicTraits = []
-                    if run.style.contains(.bold) { traits.insert(.traitBold) }
-                    if run.style.contains(.italic) { traits.insert(.traitItalic) }
-                    let descriptor =
-                        baseFont.fontDescriptor.withSymbolicTraits(traits)
-                        ?? baseFont.fontDescriptor
-                    var attributes: [NSAttributedString.Key: Any] = [
-                        .font: UIFont(descriptor: descriptor, size: baseFont.pointSize),
-                        .foregroundColor: UIColor.white,
-                    ]
-                    if run.style.contains(.underline) {
-                        attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
+            private func observeLayout(
+                in playerController: AVPlayerViewController,
+                player: AVPlayer,
+                overlay: UIView
+            ) {
+                overlayBoundsObservation = overlay.observe(\.bounds, options: [.initial, .new]) {
+                    [weak self, weak playerController] _, _ in
+                    Task { @MainActor in
+                        guard let self, let playerController else { return }
+                        self.layoutSubtitleOverlay(in: playerController)
                     }
-                    result.append(NSAttributedString(string: run.text, attributes: attributes))
                 }
-                result.append(NSAttributedString(string: "  "))
-                return result
+                playerItemObservation = player.observe(\.currentItem, options: [.initial, .new]) {
+                    [weak self, weak playerController] player, _ in
+                    Task { @MainActor in
+                        guard let self, let playerController else { return }
+                        self.observePresentationSize(
+                            of: player.currentItem,
+                            in: playerController
+                        )
+                    }
+                }
+            }
+
+            private func observePresentationSize(
+                of item: AVPlayerItem?,
+                in playerController: AVPlayerViewController
+            ) {
+                presentationSizeObservation = item?.observe(
+                    \.presentationSize,
+                    options: [.initial, .new]
+                ) { [weak self, weak playerController] _, _ in
+                    Task { @MainActor in
+                        guard let self, let playerController else { return }
+                        self.layoutSubtitleOverlay(in: playerController)
+                    }
+                }
+                layoutSubtitleOverlay(in: playerController)
+            }
+
+            private func layoutSubtitleOverlay(in playerController: AVPlayerViewController) {
+                guard let overlay = playerController.contentOverlayView,
+                    let hostView = subtitleHost?.view,
+                    !overlay.bounds.isEmpty
+                else { return }
+
+                let presentationSize = playerController.player?.currentItem?.presentationSize ?? .zero
+                let frame =
+                    presentationSize.width <= 0 || presentationSize.height <= 0
+                    ? overlay.bounds
+                    : AVMakeRect(aspectRatio: presentationSize, insideRect: overlay.bounds)
+                hostView.frame = frame.integral
             }
 
         }
@@ -219,7 +273,9 @@
             TVFullscreenPlayerController(
                 controller: controller,
                 transportMenuSignature: "preview",
+                assSubtitleContents: nil,
                 subtitleContent: nil,
+                subtitleAppearance: .default,
                 onRequestDismiss: {}
             )
         }

@@ -1,50 +1,49 @@
-#if !os(tvOS)
-    import AVFoundation
-    import SwiftAssRenderer
-    import SwiftUI
+import AVFoundation
+import SwiftAssRenderer
+import SwiftUI
 
-    struct VideoAssSubtitleOverlay: View {
-        let contents: String
-        let player: AVPlayer
+struct VideoAssSubtitleOverlay: View {
+    let contents: String
+    let player: AVPlayer
 
-        @State private var renderer: AssSubtitlesRenderer
+    @State private var renderer: AssSubtitlesRenderer
 
-        init(contents: String, player: AVPlayer) {
-            self.contents = contents
-            self.player = player
-            let fontsPath = Bundle.main.resourceURL ?? URL(fileURLWithPath: "/")
-            _renderer = State(
-                initialValue: AssSubtitlesRenderer(
-                    fontConfig: FontConfig(
-                        fontsPath: fontsPath,
-                        fontProvider: .coreText
-                    )
+    init(contents: String, player: AVPlayer) {
+        self.contents = contents
+        self.player = player
+        let fontsPath = Bundle.main.resourceURL ?? URL(fileURLWithPath: "/")
+        _renderer = State(
+            initialValue: AssSubtitlesRenderer(
+                fontConfig: FontConfig(
+                    fontsPath: fontsPath,
+                    fontProvider: .coreText
                 )
             )
-        }
-
-        var body: some View {
-            AssSubtitles(renderer: renderer)
-                .attach(
-                    player: player,
-                    updateInterval: CMTime(value: 1, timescale: 10)
-                )
-                .allowsHitTesting(false)
-                .onAppear { renderer.loadTrack(content: contents) }
-                .onChange(of: contents) { _, contents in
-                    renderer.reloadTrack(content: contents)
-                }
-                .onDisappear { renderer.freeTrack() }
-                .accessibilityHidden(true)
-        }
+        )
     }
 
-    #if DEBUG
-        #Preview("ASS Subtitle Overlay") {
-            ZStack {
-                Color.black
-                VideoAssSubtitleOverlay(
-                    contents: """
+    var body: some View {
+        AssSubtitles(renderer: renderer)
+            .attach(
+                player: player,
+                updateInterval: CMTime(value: 1, timescale: 10)
+            )
+            .allowsHitTesting(false)
+            .onAppear { renderer.loadTrack(content: contents) }
+            .onChange(of: contents) { _, contents in
+                renderer.reloadTrack(content: contents)
+            }
+            .onDisappear { renderer.freeTrack() }
+            .accessibilityHidden(true)
+    }
+}
+
+#if DEBUG
+    #Preview("ASS Subtitle Overlay") {
+        ZStack {
+            Color.black
+            VideoAssSubtitleOverlay(
+                contents: """
                         [Script Info]
                         ScriptType: v4.00+
                         PlayResX: 1920
@@ -57,10 +56,9 @@
                         [Events]
                         Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         Dialogue: 0,0:00:00.00,0:01:00.00,Default,,0,0,0,,Styled subtitle preview
-                        """,
-                    player: AVPlayer()
-                )
-            }
+                    """,
+                player: AVPlayer()
+            )
         }
-    #endif
+    }
 #endif

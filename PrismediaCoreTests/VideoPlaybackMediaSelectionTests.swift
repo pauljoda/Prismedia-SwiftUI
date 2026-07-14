@@ -111,11 +111,42 @@ final class VideoPlaybackMediaSelectionTests: XCTestCase {
         )
     }
 
-    func testTVSidecarPolicyUsesNormalizedWebVTTForEveryManagedFormat() {
+    func testASSSelectionFallsBackToNormalizedWebVTTWhenPreservedSourceIsUnavailable() async {
+        let subtitle = subtitleTrack(id: "english", language: "eng", sourceFormat: "ass")
+        let contents = "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nFallback caption"
+        let service = MediaSelectionVideoService(
+            videoID: videoID,
+            mediaContents: contents,
+            failingMediaPathSuffix: "/source"
+        )
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: service,
+            audioSession: MediaSelectionAudioSession(),
+            sidecarSubtitles: [subtitle]
+        )
+        await controller.load()
+
+        await controller.selectSubtitle(id: "sidecar-english")
+
+        let requestedMediaPaths = await service.requestedMediaPaths
+        XCTAssertNil(controller.activeAssSubtitleContents)
+        XCTAssertEqual(controller.activeSubtitleText, "Fallback caption")
+        XCTAssertEqual(
+            requestedMediaPaths,
+            [
+                "/api/videos/91919191-9191-9191-9191-919191919191/subtitles/english/source",
+                "/api/videos/91919191-9191-9191-9191-919191919191/subtitles/english",
+            ]
+        )
+    }
+
+    func testPlatformsWithoutASSRenderingUseNormalizedWebVTTForEveryManagedFormat() {
         for sourceFormat in ["ass", "ssa", "srt", "vtt"] {
             XCTAssertFalse(
                 VideoSidecarSubtitlePolicy.usesPreservedSource(
                     sourceFormat: sourceFormat,
+                    sourcePath: "subtitles/english.\(sourceFormat)",
                     supportsAssRenderer: false
                 )
             )
@@ -126,24 +157,35 @@ final class VideoPlaybackMediaSelectionTests: XCTestCase {
         XCTAssertTrue(
             VideoSidecarSubtitlePolicy.usesPreservedSource(
                 sourceFormat: "ass",
+                sourcePath: "subtitles/english.ass",
                 supportsAssRenderer: true
             )
         )
         XCTAssertTrue(
             VideoSidecarSubtitlePolicy.usesPreservedSource(
                 sourceFormat: "SSA",
+                sourcePath: "subtitles/english.ssa",
                 supportsAssRenderer: true
             )
         )
         XCTAssertFalse(
             VideoSidecarSubtitlePolicy.usesPreservedSource(
                 sourceFormat: "srt",
+                sourcePath: "subtitles/english.srt",
                 supportsAssRenderer: true
             )
         )
         XCTAssertFalse(
             VideoSidecarSubtitlePolicy.usesPreservedSource(
                 sourceFormat: "vtt",
+                sourcePath: "subtitles/english.vtt",
+                supportsAssRenderer: true
+            )
+        )
+        XCTAssertFalse(
+            VideoSidecarSubtitlePolicy.usesPreservedSource(
+                sourceFormat: "ass",
+                sourcePath: nil,
                 supportsAssRenderer: true
             )
         )
@@ -201,15 +243,18 @@ private actor MediaSelectionVideoService: VideoPlaybackServicing {
     private let videoID: UUID
     private let settings: VideoSubtitleSettings
     private let mediaContents: String
+    private let failingMediaPathSuffix: String?
 
     init(
         videoID: UUID,
         settings: VideoSubtitleSettings = .default,
-        mediaContents: String = ""
+        mediaContents: String = "",
+        failingMediaPathSuffix: String? = nil
     ) {
         self.videoID = videoID
         self.settings = settings
         self.mediaContents = mediaContents
+        self.failingMediaPathSuffix = failingMediaPathSuffix
     }
 
     func negotiateVideoPlayback(
@@ -246,6 +291,9 @@ private actor MediaSelectionVideoService: VideoPlaybackServicing {
 
     func mediaData(for path: String) async throws -> Data {
         requestedMediaPaths.append(path)
+        if let failingMediaPathSuffix, path.hasSuffix(failingMediaPathSuffix) {
+            throw URLError(.fileDoesNotExist)
+        }
         return Data(mediaContents.utf8)
     }
 

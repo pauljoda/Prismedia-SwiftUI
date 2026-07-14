@@ -60,6 +60,10 @@ import SwiftUI
         private func tabContent(_ tab: TVAppTab) -> some View {
             if tab.id == "home" {
                 TVHomeView(client: client) { selectedTabID = $0 }
+            } else if tab.id == "account" {
+                TVAccountView(user: user) {
+                    Task { await environment.signOut() }
+                }
             } else if let query = tab.query {
                 let isSearch = tab.id == "search"
                 let dependencies = detailDependencies
@@ -117,6 +121,8 @@ import SwiftUI
         }
 
         private func selectRouterTab(_ tabID: String) {
+            if tabID == "account" { return }
+
             if tabID == "search" {
                 router.select(
                     tab: .search,
@@ -134,6 +140,9 @@ import SwiftUI
         }
 
         private var initialTabIDFromRouter: String {
+            #if DEBUG
+                if let tabID = PrismediaUITestBootstrap.tvTabID() { return tabID }
+            #endif
             let destinationID = router.navigation.destinationID
             if destinationID == "dashboard" { return "home" }
             return TVAppCatalog.tabs.contains(where: { $0.id == destinationID })

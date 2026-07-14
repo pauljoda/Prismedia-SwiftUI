@@ -14,11 +14,19 @@ import SwiftUI
         var onDismiss: (() -> Void)?
 
         var body: some View {
-            VideoPlayer(player: controller.player)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black)
-                .ignoresSafeArea()
-                .accessibilityIdentifier("video-player.surface")
+            ZStack {
+                VideoPlayer(player: controller.player)
+                VideoSubtitlePlaybackOverlay(
+                    assContents: controller.activeAssSubtitleContents,
+                    content: controller.activeSubtitleContent,
+                    appearance: controller.subtitleAppearance,
+                    player: controller.player
+                )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
+            .ignoresSafeArea()
+            .accessibilityIdentifier("video-player.surface")
         }
     }
 
@@ -49,17 +57,12 @@ import SwiftUI
 
                 gestureLayer
 
-                if let assContents = controller.activeAssSubtitleContents {
-                    VideoAssSubtitleOverlay(
-                        contents: assContents,
-                        player: controller.player
-                    )
-                } else if let subtitle = controller.activeSubtitleContent {
-                    VideoSubtitleOverlay(
-                        content: subtitle,
-                        appearance: controller.subtitleAppearance
-                    )
-                }
+                VideoSubtitlePlaybackOverlay(
+                    assContents: controller.activeAssSubtitleContents,
+                    content: controller.activeSubtitleContent,
+                    appearance: controller.subtitleAppearance,
+                    player: controller.player
+                )
 
                 chrome
                     .opacity(controlsVisible || !isInteractive ? 1 : 0)

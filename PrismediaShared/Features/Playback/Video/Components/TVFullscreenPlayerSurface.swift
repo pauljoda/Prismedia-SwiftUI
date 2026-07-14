@@ -9,7 +9,9 @@
             TVFullscreenPlayerController(
                 controller: controller,
                 transportMenuSignature: transportMenuSignature,
+                assSubtitleContents: controller.activeAssSubtitleContents,
                 subtitleContent: controller.activeSubtitleContent,
+                subtitleAppearance: controller.subtitleAppearance,
                 onRequestDismiss: onRequestDismiss
             )
         }
@@ -24,6 +26,9 @@
             return [
                 audio,
                 subtitles,
+                controller.selectedAudioChoiceID ?? "",
+                controller.selectedSubtitleChoiceID,
+                String(controller.playbackRate),
             ].joined(separator: "#")
         }
     }

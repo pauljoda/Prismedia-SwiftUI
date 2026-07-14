@@ -11,6 +11,7 @@
 		AA0000000000000000000803 /* PrismediaAppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000801 /* PrismediaAppIcon.icon */; };
 		AA0000000000000000000901 /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000921 /* SwiftAssRenderer */; };
 		AA0000000000000000000902 /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000922 /* SwiftAssRenderer */; };
+		AA0000000000000000000903 /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000923 /* SwiftAssRenderer */; };
 		AA0000000000000000000904 /* ReadiumShared in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000931 /* ReadiumShared */; };
 		AA0000000000000000000905 /* ReadiumStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000932 /* ReadiumStreamer */; };
 		AA0000000000000000000906 /* ReadiumNavigator in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000933 /* ReadiumNavigator */; };
@@ -119,6 +120,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0000000000000000000903 /* SwiftAssRenderer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,6 +230,7 @@
 			);
 			name = PrismediaTV;
 			packageProductDependencies = (
+				AA0000000000000000000923 /* SwiftAssRenderer */,
 			);
 			productName = Prismedia;
 			productReference = AA0000000000000000000003 /* Prismedia.app */;
@@ -788,6 +791,11 @@
 			productName = SwiftAssRenderer;
 		};
 		AA0000000000000000000922 /* SwiftAssRenderer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000910 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */;
+			productName = SwiftAssRenderer;
+		};
+		AA0000000000000000000923 /* SwiftAssRenderer */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000000000000000000910 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */;
 			productName = SwiftAssRenderer;

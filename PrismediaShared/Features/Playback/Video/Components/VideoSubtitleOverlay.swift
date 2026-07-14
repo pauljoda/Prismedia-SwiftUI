@@ -61,7 +61,7 @@ struct VideoSubtitleOverlay: View {
         content.runs.reduce(into: AttributedString()) { result, run in
             var fragment = AttributedString(run.text)
             var font = Font.system(
-                size: 17 * appearance.fontScale,
+                size: baseFontSize * appearance.fontScale,
                 weight: run.style.contains(.bold) ? .bold : .medium
             )
             if run.style.contains(.italic) { font = font.italic() }
@@ -69,6 +69,14 @@ struct VideoSubtitleOverlay: View {
             if run.style.contains(.underline) { fragment.underlineStyle = .single }
             result.append(fragment)
         }
+    }
+
+    private var baseFontSize: CGFloat {
+        #if os(tvOS)
+            42
+        #else
+            17
+        #endif
     }
 }
 

@@ -32,7 +32,7 @@ let package = Package(
                 .product(
                     name: "SwiftAssRenderer",
                     package: "swift-ass-renderer",
-                    condition: .when(platforms: [.iOS, .macOS])
+                    condition: .when(platforms: [.iOS, .macOS, .tvOS])
                 ),
                 .product(
                     name: "ReadiumShared",

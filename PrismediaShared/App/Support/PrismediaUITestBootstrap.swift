@@ -83,8 +83,12 @@
                 initialMode: mode,
                 initialDestinationID: destinationID
             )
+            let intent: EntityNavigationIntent =
+                environment["PRISMEDIA_UI_TEST_START_VIDEO"] == "1"
+                ? .playback
+                : .detail
             router.setPath(
-                [EntityLink(entityID: entityID, kind: kind)],
+                [EntityLink(entityID: entityID, kind: kind, intent: intent)],
                 for: destinationID
             )
             return router
@@ -104,6 +108,43 @@
         ) -> Bool {
             arguments.contains("-prismedia-ui-testing")
                 && environment["PRISMEDIA_UI_TEST_START_FULLSCREEN"] == "1"
+        }
+
+        static func videoSubtitleChoiceID(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> String? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let subtitleID = environment["PRISMEDIA_UI_TEST_SUBTITLE_ID"],
+                !subtitleID.isEmpty
+            else { return nil }
+
+            return "sidecar-\(subtitleID)"
+        }
+
+        static func videoResumeSeconds(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Double? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let value = environment["PRISMEDIA_UI_TEST_VIDEO_RESUME_SECONDS"],
+                let seconds = Double(value),
+                seconds >= 0
+            else { return nil }
+
+            return seconds
+        }
+
+        static func tvTabID(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> String? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let tabID = environment["PRISMEDIA_UI_TEST_TV_TAB_ID"],
+                TVAppCatalog.tabs.contains(where: { $0.id == tabID })
+            else { return nil }
+
+            return tabID
         }
 
         static func startsEntityDetailAtBottom(

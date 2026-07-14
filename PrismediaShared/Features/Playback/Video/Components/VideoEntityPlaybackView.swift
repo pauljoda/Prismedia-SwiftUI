@@ -191,9 +191,21 @@ struct VideoEntityPlaybackView: View {
         }
 
         private func startTVPlayback(_ resolved: EntityDetail, action: TVPlaybackAction) {
-            // Enter fullscreen and begin warming immediately. The native player
-            // remains paused until the user presses Play.
-            prepareController(for: resolved, resumeAt: action.startSeconds)
+            // Enter fullscreen and begin warming immediately. Production playback
+            // remains paused until the user presses Play; automated validation can
+            // opt into playback once the item is ready.
+            #if DEBUG
+                let autoPlay = PrismediaUITestBootstrap.startsVideoAutomatically()
+                let resumeAt = PrismediaUITestBootstrap.videoResumeSeconds() ?? action.startSeconds
+            #else
+                let autoPlay = false
+                let resumeAt = action.startSeconds
+            #endif
+            prepareController(
+                for: resolved,
+                resumeAt: resumeAt,
+                autoPlay: autoPlay
+            )
             guard let playbackController else { return }
             isFullscreenPresented = true
             tvFullscreenPresentation = TVFullscreenPlaybackPresentation(

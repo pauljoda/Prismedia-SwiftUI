@@ -30,6 +30,11 @@ public enum TVAppCatalog {
                 sort: "added"
             )
         ),
+        TVAppTab(
+            id: "account",
+            title: "Account",
+            systemImage: "person.crop.circle"
+        ),
     ]
 
     public static let homeShelves = [

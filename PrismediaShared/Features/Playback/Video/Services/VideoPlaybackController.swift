@@ -129,7 +129,20 @@ public final class VideoPlaybackController {
             subtitleAppearance = subtitleSettings.appearance
             install(plan, resumeAt: resumeAt)
             #if os(tvOS)
-                scheduleTVSubtitleDefaults(subtitleSettings)
+                #if DEBUG
+                    if let subtitleChoiceID = PrismediaUITestBootstrap.videoSubtitleChoiceID() {
+                        tvSubtitleSelectionGeneration += 1
+                        await selectSubtitle(
+                            id: subtitleChoiceID,
+                            isExplicit: true,
+                            tvGeneration: tvSubtitleSelectionGeneration
+                        )
+                    } else {
+                        scheduleTVSubtitleDefaults(subtitleSettings)
+                    }
+                #else
+                    scheduleTVSubtitleDefaults(subtitleSettings)
+                #endif
             #else
                 await applySubtitleDefaults(subtitleSettings)
             #endif
@@ -268,16 +281,20 @@ public final class VideoPlaybackController {
             )
         else { return }
         do {
-            let usesPreservedSource = VideoSidecarSubtitlePolicy.usesPreservedSource(
+            var usesPreservedSource = VideoSidecarSubtitlePolicy.usesPreservedSource(
                 sourceFormat: sidecar.sourceFormat,
+                sourcePath: sidecar.sourcePath,
                 supportsAssRenderer: Self.supportsAssRenderer
             )
+            let subtitlePath =
+                "/api/videos/\(videoID.uuidString.lowercased())/subtitles/\(encodedID)"
             let sourceSuffix = usesPreservedSource ? "/source" : ""
-            let data = try await service.mediaData(
-                for: "/api/videos/\(videoID.uuidString.lowercased())/subtitles/\(encodedID)\(sourceSuffix)"
-            )
-            guard let contents = String(data: data, encoding: .utf8) else {
-                throw URLError(.cannotDecodeContentData)
+            let contents: String
+            do {
+                contents = try await subtitleContents(for: subtitlePath + sourceSuffix)
+            } catch  where usesPreservedSource {
+                usesPreservedSource = false
+                contents = try await subtitleContents(for: subtitlePath)
             }
             guard isCurrentTVSubtitleSelection(tvGeneration) else { return }
             selectedSubtitleChoiceID = id
@@ -307,6 +324,14 @@ public final class VideoPlaybackController {
             guard isCurrentTVSubtitleSelection(tvGeneration) else { return }
             errorMessage = "The selected subtitle track could not be loaded."
         }
+    }
+
+    private func subtitleContents(for path: String) async throws -> String {
+        let data = try await service.mediaData(for: path)
+        guard let contents = String(data: data, encoding: .utf8) else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        return contents
     }
 
     public func startPictureInPicture() { pictureInPicture.start() }
@@ -615,13 +640,7 @@ public final class VideoPlaybackController {
         #endif
     }
 
-    private static var supportsAssRenderer: Bool {
-        #if os(tvOS)
-            false
-        #else
-            true
-        #endif
-    }
+    private static var supportsAssRenderer: Bool { true }
 
     private func applyNativeSubtitleDefaultIfNeeded(
         _ pairs: [(String, AVMediaSelectionOption)],
