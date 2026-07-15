@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct PrismediaRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(PrismediaAppEnvironment.self) private var environment
     @Environment(PrismediaAppRouter.self) private var router
 
@@ -41,6 +42,10 @@ public struct PrismediaRootView: View {
         .onOpenURL { url in
             guard let link = PrismediaEntityDeepLink.link(from: url) else { return }
             router.open(link: link)
+        }
+        .task(id: scenePhase) {
+            guard scenePhase == .active, environment.isRestoringSession else { return }
+            await environment.restoreSession()
         }
     }
 

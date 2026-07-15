@@ -24,6 +24,7 @@ public final class PrismediaAppEnvironment {
     private let serverPreferenceStore: ServerPreferenceStoring
     private let nsfwPreferenceStore: NsfwPreferenceStoring
     private let clientFactory: (URL) -> PrismediaAPIClient
+    @ObservationIgnored private var isSessionRestoreInFlight = false
 
     public convenience init() {
         #if DEBUG
@@ -196,18 +197,27 @@ public final class PrismediaAppEnvironment {
     }
 
     public func restoreSession() async {
+        guard !isSessionRestoreInFlight else { return }
+        isSessionRestoreInFlight = true
+        defer { isSessionRestoreInFlight = false }
         isRestoringSession = true
-        defer { isRestoringSession = false }
 
         do {
             let stored = try await sessionStore.load()
             session = stored
             allowsNsfwContent = stored.map { storedPreference(for: $0.user) } ?? false
             client = stored.map(configuredClient(for:))
+            isRestoringSession = false
+        } catch SessionStoreError.temporarilyUnavailable {
+            // A locked-device cold launch can make a foreground-only Keychain
+            // item temporarily unreadable. Keep the app in restoration instead
+            // of misrepresenting that condition as a signed-out session. The
+            // root retries after protected data becomes available/scene activation.
         } catch {
             session = nil
             client = nil
             allowsNsfwContent = false
+            isRestoringSession = false
         }
     }
 

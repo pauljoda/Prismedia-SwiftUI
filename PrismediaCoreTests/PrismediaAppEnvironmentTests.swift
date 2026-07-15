@@ -311,6 +311,29 @@ final class PrismediaAppEnvironmentTests: XCTestCase {
         XCTAssertFalse(model.isRestoringSession)
     }
 
+    func testRestoreSessionRetriesTemporarySecureStoreUnavailabilityWithoutSigningOut() async {
+        let store = RecordingSessionStore(
+            savedSession: storedSession,
+            loadErrors: [SessionStoreError.temporarilyUnavailable]
+        )
+        let model = makeModel(store: store, loader: MockHTTPDataLoader(responses: []))
+
+        await model.restoreSession()
+
+        XCTAssertTrue(model.isRestoringSession)
+        XCTAssertNil(model.session)
+        XCTAssertNil(model.client)
+        XCTAssertEqual(store.clearCount, 0)
+
+        await model.restoreSession()
+
+        XCTAssertEqual(model.session, storedSession)
+        XCTAssertNotNil(model.client)
+        XCTAssertFalse(model.isRestoringSession)
+        XCTAssertEqual(store.loadCount, 2)
+        XCTAssertEqual(store.clearCount, 0)
+    }
+
     func testSignOutClearsStoreAndCallsLogout() async {
         let store = RecordingSessionStore(savedSession: storedSession)
         let loader = MockHTTPDataLoader(responses: [.json("", statusCode: 204)])
@@ -330,15 +353,26 @@ private final class RecordingSessionStore: SessionStoring {
     var savedSession: AuthSession?
     private(set) var saveCount = 0
     private(set) var clearCount = 0
+    private(set) var loadCount = 0
     private let saveError: Error?
+    private var loadErrors: [Error]
 
-    init(savedSession: AuthSession? = nil, saveError: Error? = nil) {
+    init(
+        savedSession: AuthSession? = nil,
+        saveError: Error? = nil,
+        loadErrors: [Error] = []
+    ) {
         self.savedSession = savedSession
         self.saveError = saveError
+        self.loadErrors = loadErrors
     }
 
     func load() async throws -> AuthSession? {
-        savedSession
+        loadCount += 1
+        if !loadErrors.isEmpty {
+            throw loadErrors.removeFirst()
+        }
+        return savedSession
     }
 
     func save(_ session: AuthSession) async throws {

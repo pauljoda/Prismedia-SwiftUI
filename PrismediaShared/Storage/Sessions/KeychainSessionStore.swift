@@ -25,6 +25,10 @@ public final class KeychainSessionStore: SessionStoring {
             return nil
         }
 
+        if status == errSecInteractionNotAllowed {
+            throw SessionStoreError.temporarilyUnavailable
+        }
+
         guard status == errSecSuccess else {
             throw KeychainSessionStoreError.unhandledStatus(status)
         }
@@ -33,13 +37,16 @@ public final class KeychainSessionStore: SessionStoring {
             throw KeychainSessionStoreError.invalidData
         }
 
-        return try PrismediaJSON.decoder().decode(AuthSession.self, from: data)
+        let session = try PrismediaJSON.decoder().decode(AuthSession.self, from: data)
+        migrateAccessibilityForBackgroundPlayback()
+        return session
     }
 
     public func save(_ session: AuthSession) async throws {
         let data = try PrismediaJSON.encoder().encode(session)
         var query = baseQuery()
-        let attributes = [kSecValueData as String: data]
+        var attributes: [String: Any] = [kSecValueData as String: data]
+        addBackgroundAccessibility(to: &attributes)
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
 
         if status == errSecSuccess {
@@ -51,6 +58,7 @@ public final class KeychainSessionStore: SessionStoring {
         }
 
         query[kSecValueData as String] = data
+        addBackgroundAccessibility(to: &query)
         let addStatus = SecItemAdd(query as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
             throw KeychainSessionStoreError.unhandledStatus(addStatus)
@@ -70,5 +78,26 @@ public final class KeychainSessionStore: SessionStoring {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ]
+    }
+
+    private func migrateAccessibilityForBackgroundPlayback() {
+        #if os(iOS) || os(tvOS)
+            let attributes = [
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            ]
+            let status = SecItemUpdate(baseQuery() as CFDictionary, attributes as CFDictionary)
+            #if DEBUG
+                if status != errSecSuccess {
+                    print("Prismedia session accessibility migration returned status \(status).")
+                }
+            #endif
+        #endif
+    }
+
+    private func addBackgroundAccessibility(to attributes: inout [String: Any]) {
+        #if os(iOS) || os(tvOS)
+            attributes[kSecAttrAccessible as String] =
+                kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        #endif
     }
 }
