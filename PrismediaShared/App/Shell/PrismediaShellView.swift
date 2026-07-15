@@ -1,10 +1,13 @@
 import SwiftUI
 
-/// One system-owned, section-adaptive app shell. Feature tabs change with the
-/// active mode while Browse remains a permanent destination across the app.
+/// One system-owned adaptive app shell. Compact iOS uses feature tabs, while
+/// regular-width iOS and macOS expose the full sectioned destination sidebar.
 public struct PrismediaShellView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
     @Environment(PrismediaAppRouter.self) private var router
+    #if os(iOS)
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
 
     public init() {}
 
@@ -31,7 +34,6 @@ public struct PrismediaShellView: View {
         client: PrismediaAPIClient,
         videoPlaybackSession: VideoPlaybackSession
     ) -> some View {
-        @Bindable var router = router
         let detailDependencies = PrismediaEntityDetailComposition.dependencies(
             client: client,
             userID: user.id,
@@ -61,31 +63,12 @@ public struct PrismediaShellView: View {
                 value: PrismediaTabSelection.search,
                 role: .search
             ) {
-                SearchHubView(
-                    loader: PrismediaSearchHubLoader(client: client),
-                    detailDependencies: detailDependencies,
-                    searchText: $router.searchText,
-                    navigationPath: pathBinding(
-                        for: PrismediaAppRouter.searchPathID,
-                        videoPlaybackSession: videoPlaybackSession
-                    ),
+                searchContent(
                     user: user,
-                    modes: availableModes,
-                    allowsNsfwContent: environment.allowsNsfwContent,
-                    onSelectMode: { mode in
-                        videoPlaybackSession.inlinePlaybackWillNavigate()
-                        router.select(mode: mode)
-                    },
-                    onSelectDestination: { mode, destination in
-                        videoPlaybackSession.inlinePlaybackWillNavigate()
-                        router.select(mode: mode, destination: destination)
-                    },
-                    onSetAllowsNsfwContent: environment.setAllowsNsfwContent,
-                    onSignOut: {
-                        Task { await environment.signOut() }
-                    }
+                    client: client,
+                    detailDependencies: detailDependencies,
+                    videoPlaybackSession: videoPlaybackSession
                 )
-                .id("search-\(environment.allowsNsfwContent)")
             }
         }
         .id("content-visibility-\(environment.allowsNsfwContent)")
@@ -98,6 +81,108 @@ public struct PrismediaShellView: View {
         .onDisappear {
             router.onWillOpenEntity = nil
         }
+    }
+
+    private func wideShell(
+        user: UserAccount,
+        client: PrismediaAPIClient,
+        videoPlaybackSession: VideoPlaybackSession
+    ) -> some View {
+        let detailDependencies = PrismediaEntityDetailComposition.dependencies(
+            client: client,
+            userID: user.id,
+            isAdministrator: user.isAdmin,
+            onEntityMutated: { environment.entityDidMutate() }
+        )
+
+        return NavigationSplitView {
+            PrismediaSidebarView(
+                sections: AppSidebarCatalog.sections(for: user),
+                selection: sidebarSelection(videoPlaybackSession: videoPlaybackSession)
+            )
+        } detail: {
+            wideDetail(
+                user: user,
+                client: client,
+                detailDependencies: detailDependencies,
+                videoPlaybackSession: videoPlaybackSession
+            )
+        }
+        .navigationSplitViewStyle(.balanced)
+        .id("content-visibility-\(environment.allowsNsfwContent)")
+        .onAppear {
+            router.onWillOpenEntity = {
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+            }
+        }
+        .onDisappear {
+            router.onWillOpenEntity = nil
+        }
+    }
+
+    @ViewBuilder
+    private func wideDetail(
+        user: UserAccount,
+        client: PrismediaAPIClient,
+        detailDependencies: EntityDetailDependencies,
+        videoPlaybackSession: VideoPlaybackSession
+    ) -> some View {
+        switch router.selectedTab {
+        case .search:
+            searchContent(
+                user: user,
+                client: client,
+                detailDependencies: detailDependencies,
+                videoPlaybackSession: videoPlaybackSession
+            )
+
+        case .destination(let destinationID):
+            if let destination = selectedDestination(id: destinationID) {
+                destinationContent(
+                    destination,
+                    client: client,
+                    detailDependencies: detailDependencies,
+                    videoPlaybackSession: videoPlaybackSession
+                )
+            } else {
+                ContentUnavailableView("Page Unavailable", systemImage: "rectangle.slash")
+            }
+        }
+    }
+
+    private func searchContent(
+        user: UserAccount,
+        client: PrismediaAPIClient,
+        detailDependencies: EntityDetailDependencies,
+        videoPlaybackSession: VideoPlaybackSession
+    ) -> some View {
+        @Bindable var router = router
+
+        return SearchHubView(
+            loader: PrismediaSearchHubLoader(client: client),
+            detailDependencies: detailDependencies,
+            searchText: $router.searchText,
+            navigationPath: pathBinding(
+                for: PrismediaAppRouter.searchPathID,
+                videoPlaybackSession: videoPlaybackSession
+            ),
+            user: user,
+            modes: availableModes,
+            allowsNsfwContent: environment.allowsNsfwContent,
+            onSelectMode: { mode in
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+                router.select(mode: mode)
+            },
+            onSelectDestination: { mode, destination in
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+                router.select(mode: mode, destination: destination)
+            },
+            onSetAllowsNsfwContent: environment.setAllowsNsfwContent,
+            onSignOut: {
+                Task { await environment.signOut() }
+            }
+        )
+        .id("search-\(environment.allowsNsfwContent)")
     }
 
     @ViewBuilder
@@ -262,12 +347,20 @@ public struct PrismediaShellView: View {
                 VideoPlaybackHost(
                     client: client, onRestore: restoreVideoPlayback,
                     content: { session in
-                        tabView(
-                            user: user,
-                            client: client,
-                            videoPlaybackSession: session
-                        )
-                        .tabBarMinimizeBehavior(.onScrollDown)
+                        if horizontalSizeClass == .regular {
+                            wideShell(
+                                user: user,
+                                client: client,
+                                videoPlaybackSession: session
+                            )
+                        } else {
+                            tabView(
+                                user: user,
+                                client: client,
+                                videoPlaybackSession: session
+                            )
+                            .tabBarMinimizeBehavior(.onScrollDown)
+                        }
                     })
             }
         }
@@ -282,7 +375,7 @@ public struct PrismediaShellView: View {
                 VideoPlaybackHost(
                     client: client, onRestore: restoreVideoPlayback,
                     content: { session in
-                        tabView(
+                        wideShell(
                             user: user,
                             client: client,
                             videoPlaybackSession: session
@@ -325,12 +418,51 @@ public struct PrismediaShellView: View {
         }
     }
 
+    private func sidebarSelection(
+        videoPlaybackSession: VideoPlaybackSession
+    ) -> Binding<AppSidebarSelection?> {
+        Binding(
+            get: {
+                switch router.selectedTab {
+                case .search:
+                    return .search
+                case .destination(let destinationID):
+                    guard
+                        let mode = availableModes.first(where: {
+                            $0.destination(id: destinationID) != nil
+                        })
+                    else { return nil }
+                    return .destination(modeID: mode.id, destinationID: destinationID)
+                }
+            },
+            set: { newSelection in
+                guard let newSelection else { return }
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+
+                switch newSelection {
+                case .search:
+                    router.select(tab: .search, availableModes: availableModes)
+                case .destination(let modeID, let destinationID):
+                    guard
+                        let mode = availableModes.first(where: { $0.id == modeID }),
+                        let destination = mode.destination(id: destinationID)
+                    else { return }
+                    router.select(mode: mode, destination: destination)
+                }
+            }
+        )
+    }
+
     private var availableModes: [AppMode] {
         ModeCatalog.modes(for: environment.session?.user)
     }
 
     private var activeTabDestinations: [AppDestination] {
         router.activeTabDestinations(in: availableModes)
+    }
+
+    private func selectedDestination(id destinationID: String) -> AppDestination? {
+        availableModes.lazy.compactMap { $0.destination(id: destinationID) }.first
     }
 
     private var allowsDashboardHeroAutomaticAdvance: Bool {

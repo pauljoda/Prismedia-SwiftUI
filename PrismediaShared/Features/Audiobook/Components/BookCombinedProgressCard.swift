@@ -53,27 +53,19 @@ struct BookCombinedProgressCard: View {
     }
 
     private var progressRows: some View {
-        GlassEffectContainer(spacing: PrismediaSpacing.small) {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                progressRow(
-                    title: "Reading",
-                    systemImage: "book.fill",
-                    percent: presentation.readingPercent,
-                    position: presentation.readingPositionLabel,
-                    actionTitle: "Continue Reading",
-                    actionIdentifier: "combined-book-progress.continue-reading",
-                    action: onContinueReading
-                )
-                progressRow(
-                    title: "Listening",
-                    systemImage: "headphones",
-                    percent: presentation.listeningPercent,
-                    position: presentation.listeningPositionLabel,
-                    actionTitle: "Continue Listening",
-                    actionIdentifier: "combined-book-progress.continue-listening",
-                    action: onContinueListening
-                )
-            }
+        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+            progressRow(
+                title: "Reading",
+                systemImage: "book.fill",
+                percent: presentation.readingPercent,
+                position: presentation.readingPositionLabel
+            )
+            progressRow(
+                title: "Listening",
+                systemImage: "headphones",
+                percent: presentation.listeningPercent,
+                position: presentation.listeningPositionLabel
+            )
         }
     }
 
@@ -81,68 +73,86 @@ struct BookCombinedProgressCard: View {
         title: String,
         systemImage: String,
         percent: Int,
-        position: String?,
-        actionTitle: String,
-        actionIdentifier: String,
-        action: @escaping () -> Void
+        position: String?
     ) -> some View {
-        HStack(spacing: PrismediaSpacing.medium) {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                HStack {
-                    Label(title, systemImage: systemImage)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                    Spacer(minLength: PrismediaSpacing.large)
-                    Text("\(percent)%")
-                        .font(.headline.monospacedDigit())
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                }
-                ProgressView(value: Double(percent), total: 100)
-                    .tint(artworkPrimaryAccent)
-                if let position {
-                    Text(position)
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                        .lineLimit(2)
-                }
+        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+            HStack {
+                Label(title, systemImage: systemImage)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PrismediaColor.textPrimary)
+                Spacer(minLength: PrismediaSpacing.large)
+                Text("\(percent)%")
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(PrismediaColor.textPrimary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-            .accessibilityValue("\(percent) percent")
-
-            Button(action: action) {
-                Image(systemName: systemImage)
-                    .font(.body.weight(.semibold))
-                    .frame(
-                        width: PrismediaLayout.minimumHitTarget,
-                        height: PrismediaLayout.minimumHitTarget
-                    )
-                    .contentShape(.circle)
+            ProgressView(value: Double(percent), total: 100)
+                .tint(artworkPrimaryAccent)
+            if let position {
+                Text(position)
+                    .font(.caption)
+                    .foregroundStyle(PrismediaColor.textSecondary)
+                    .lineLimit(2)
             }
-            .buttonStyle(.glass(.clear))
-            .buttonBorderShape(.circle)
-            .accessibilityLabel(actionTitle)
-            .accessibilityIdentifier(actionIdentifier)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityValue("\(percent) percent")
     }
 
     private var actions: some View {
         GlassEffectContainer(spacing: PrismediaSpacing.small) {
-            PrismediaButton(
-                "Continue Combined",
-                systemImage: "book.pages",
-                variant: .prominent,
-                form: .fill,
-                primaryTint: artworkPrimaryAccent,
-                action: onContinueCombined
-            )
-            .accessibilityHint(
-                "Opens the reader and starts the audiobook near the furthest saved position"
-            )
-            .accessibilityIdentifier("combined-book-progress.continue-combined")
+            VStack(spacing: PrismediaSpacing.small) {
+                HStack(spacing: PrismediaSpacing.medium) {
+                    individualContinueButton(
+                        title: "Continue Reading",
+                        systemImage: "book.fill",
+                        identifier: "combined-book-progress.continue-reading",
+                        action: onContinueReading
+                    )
+                    individualContinueButton(
+                        title: "Continue Listening",
+                        systemImage: "headphones",
+                        identifier: "combined-book-progress.continue-listening",
+                        action: onContinueListening
+                    )
+                }
+
+                PrismediaButton(
+                    "Continue Combined",
+                    systemImage: "book.pages",
+                    variant: .prominent,
+                    form: .fill,
+                    primaryTint: artworkPrimaryAccent,
+                    action: onContinueCombined
+                )
+                .accessibilityHint(
+                    "Opens the reader and starts the audiobook near the furthest saved position"
+                )
+                .accessibilityIdentifier("combined-book-progress.continue-combined")
+            }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func individualContinueButton(
+        title: String,
+        systemImage: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: PrismediaLayout.minimumHitTarget
+                )
+                .contentShape(.rect)
+        }
+        .buttonStyle(.glass(.clear))
+        .buttonBorderShape(.capsule)
+        .accessibilityLabel(title)
+        .accessibilityIdentifier(identifier)
     }
 
     private var progressOptions: some View {

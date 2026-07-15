@@ -3,6 +3,42 @@ import XCTest
 @testable import PrismediaCore
 
 final class AppShellNavigationTests: XCTestCase {
+    func testSidebarCatalogMatchesTheWebNavigationHierarchy() {
+        let sections = AppSidebarCatalog.sections(for: PrismediaPreviewData.user)
+
+        XCTAssertEqual(
+            sections.map(\.title),
+            ["Overview", "Video", "Images", "Audio", "Books", "Browse", "Operate"]
+        )
+        XCTAssertEqual(sections[0].items.map(\.title), ["Dashboard", "Search", "Stats"])
+        XCTAssertEqual(sections[1].items.map(\.title), ["Movies", "Series", "Videos"])
+        XCTAssertEqual(sections[2].items.map(\.title), ["Galleries", "Images"])
+        XCTAssertEqual(sections[3].items.map(\.title), ["Artists", "Audio"])
+        XCTAssertEqual(sections[4].items.map(\.title), ["Authors", "Books", "Comics", "eBooks"])
+        XCTAssertEqual(
+            sections[5].items.map(\.title),
+            ["People", "Studios", "Tags", "Collections"]
+        )
+        XCTAssertEqual(
+            sections[6].items.map(\.title),
+            ["Files", "Identify", "Request", "Plugins", "Jobs", "Settings"]
+        )
+    }
+
+    func testSidebarCatalogHidesOperateFromNonAdministrators() {
+        let user = UserAccount(
+            id: UUID(),
+            username: "viewer",
+            displayName: "Viewer",
+            role: .member
+        )
+
+        XCTAssertEqual(
+            AppSidebarCatalog.sections(for: user).map(\.title),
+            ["Overview", "Video", "Images", "Audio", "Books", "Browse"]
+        )
+    }
+
     func testCanonicalEntityDestinationsDriveSearchAndDashboardPresentation() throws {
         let expectedDestinationIDs: [EntityKind: String] = [
             .video: "videos",
