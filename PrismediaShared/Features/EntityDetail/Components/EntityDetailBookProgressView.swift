@@ -11,7 +11,21 @@ struct EntityDetailBookProgressView: Equatable, View {
     let readingChapterProgressLabel: String?
     let listeningChapterProgressLabel: String?
     let horizontalPadding: CGFloat
-    let onAction: (EntityDetailBookProgressAction) -> Void
+    let onContinueReading: () -> Void
+    let onResumeReading: () -> Void
+    let onContinueListening: () -> Void
+    let onContinueCombined: () -> Void
+    let onStartReadingOver: () -> Void
+    let onStartListeningOver: () -> Void
+    let onToggleReadingCompletion: () -> Void
+    let onToggleListeningCompletion: () -> Void
+    let onDismissReadingError: () -> Void
+    let onDismissListeningError: () -> Void
+    let onRetryReading: () -> Void
+    let onReadChapter: (BookChapterMapping) -> Void
+    let onListenToChapter: (BookChapterMapping) -> Void
+    let onCombineChapter: (BookChapterMapping) -> Void
+    let onRetryChapters: () -> Void
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.combinedProgress == rhs.combinedProgress
@@ -34,35 +48,35 @@ struct EntityDetailBookProgressView: Equatable, View {
                     readingErrorMessage: readingState.errorMessage,
                     listeningErrorMessage: listeningErrorMessage,
                     horizontalPadding: horizontalPadding,
-                    onContinueReading: { onAction(.continueReading) },
-                    onContinueListening: { onAction(.continueListening) },
-                    onContinueCombined: { onAction(.continueCombined) },
-                    onStartReadingOver: { onAction(.startReadingOver) },
-                    onStartListeningOver: { onAction(.startListeningOver) },
-                    onToggleReadingCompletion: { onAction(.toggleReadingCompletion) },
-                    onToggleListeningCompletion: { onAction(.toggleListeningCompletion) },
-                    onDismissReadingError: { onAction(.dismissReadingError) },
-                    onDismissListeningError: { onAction(.dismissListeningError) }
+                    onContinueReading: onContinueReading,
+                    onContinueListening: onContinueListening,
+                    onContinueCombined: onContinueCombined,
+                    onStartReadingOver: onStartReadingOver,
+                    onStartListeningOver: onStartListeningOver,
+                    onToggleReadingCompletion: onToggleReadingCompletion,
+                    onToggleListeningCompletion: onToggleListeningCompletion,
+                    onDismissReadingError: onDismissReadingError,
+                    onDismissListeningError: onDismissListeningError
                 )
             } else {
                 EntityDetailReadingSection(
                     state: readingState,
                     horizontalPadding: horizontalPadding,
-                    onResume: { onAction(.resumeReading) },
-                    onStartOver: { onAction(.startReadingOver) },
-                    onToggleCompletion: { _ in onAction(.toggleReadingCompletion) },
-                    onRetry: { onAction(.retryReading) },
-                    onDismissError: { onAction(.dismissReadingError) }
+                    onResume: onResumeReading,
+                    onStartOver: onStartReadingOver,
+                    onToggleCompletion: { _ in onToggleReadingCompletion() },
+                    onRetry: onRetryReading,
+                    onDismissError: onDismissReadingError
                 )
 
                 AudiobookDetailPlaybackSection(
                     presentation: audiobookPresentation,
                     errorMessage: listeningErrorMessage,
                     horizontalPadding: horizontalPadding,
-                    onResume: { onAction(.continueListening) },
-                    onStartOver: { onAction(.startListeningOver) },
-                    onToggleCompletion: { onAction(.toggleListeningCompletion) },
-                    onDismissError: { onAction(.dismissListeningError) }
+                    onResume: onContinueListening,
+                    onStartOver: onStartListeningOver,
+                    onToggleCompletion: onToggleListeningCompletion,
+                    onDismissError: onDismissListeningError
                 )
             }
 
@@ -73,10 +87,10 @@ struct EntityDetailBookProgressView: Equatable, View {
                 readingProgressLabel: readingChapterProgressLabel,
                 listeningProgressLabel: listeningChapterProgressLabel,
                 horizontalPadding: horizontalPadding,
-                onRead: { onAction(.readChapter($0)) },
-                onListen: { onAction(.listenToChapter($0)) },
-                onCombined: { onAction(.combineChapter($0)) },
-                onRetry: { onAction(.retryChapters) }
+                onRead: onReadChapter,
+                onListen: onListenToChapter,
+                onCombined: onCombineChapter,
+                onRetry: onRetryChapters
             )
         }
     }
@@ -117,7 +131,21 @@ struct EntityDetailBookProgressView: Equatable, View {
                 readingChapterProgressLabel: "42% read",
                 listeningChapterProgressLabel: "1:12:08 of 8:43:19",
                 horizontalPadding: PrismediaSpacing.extraLarge,
-                onAction: { _ in }
+                onContinueReading: {},
+                onResumeReading: {},
+                onContinueListening: {},
+                onContinueCombined: {},
+                onStartReadingOver: {},
+                onStartListeningOver: {},
+                onToggleReadingCompletion: {},
+                onToggleListeningCompletion: {},
+                onDismissReadingError: {},
+                onDismissListeningError: {},
+                onRetryReading: {},
+                onReadChapter: { _ in },
+                onListenToChapter: { _ in },
+                onCombineChapter: { _ in },
+                onRetryChapters: {}
             )
             .padding(.vertical, PrismediaSpacing.extraLarge)
         }

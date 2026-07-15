@@ -435,7 +435,32 @@ public struct EntityDetailView: View {
                                     readingChapterProgressLabel: readingChapterProgressLabel,
                                     listeningChapterProgressLabel: listeningChapterProgressLabel(for: detail),
                                     horizontalPadding: detailHorizontalPadding,
-                                    onAction: performBookProgressAction
+                                    onContinueReading: {
+                                        if readingState.requiresResetBeforeReading {
+                                            Task { await startReadingOver(openReaderWhenReady: true) }
+                                        } else {
+                                            openReader(command: .resume)
+                                        }
+                                    },
+                                    onResumeReading: { openReader(command: .resume) },
+                                    onContinueListening: { beginListening(to: detail) },
+                                    onContinueCombined: { openCombinedReader(for: detail) },
+                                    onStartReadingOver: { Task { await startReadingOver() } },
+                                    onStartListeningOver: { Task { await startListeningOver(detail) } },
+                                    onToggleReadingCompletion: {
+                                        let status = readingState.progressPresentation?.status ?? .notStarted
+                                        Task { await toggleReadingCompletion(status) }
+                                    },
+                                    onToggleListeningCompletion: {
+                                        Task { await toggleListeningCompletion(detail) }
+                                    },
+                                    onDismissReadingError: { readingState.dismissError() },
+                                    onDismissListeningError: { audiobookErrorMessage = nil },
+                                    onRetryReading: { Task { await loadReadingState(for: detail) } },
+                                    onReadChapter: { openBookChapter($0, combined: false) },
+                                    onListenToChapter: playBookChapter,
+                                    onCombineChapter: { openBookChapter($0, combined: true) },
+                                    onRetryChapters: { Task { await loadBookChapters(for: detail) } }
                                 )
                                 .equatable()
                             #endif
@@ -1171,48 +1196,6 @@ public struct EntityDetailView: View {
     }
 
     #if os(iOS) || os(macOS)
-        private func performBookProgressAction(_ action: EntityDetailBookProgressAction) {
-            guard case .content(let detail) = state.phase else { return }
-
-            switch action {
-            case .continueReading:
-                if readingState.requiresResetBeforeReading {
-                    Task { await startReadingOver(openReaderWhenReady: true) }
-                } else {
-                    openReader(command: .resume)
-                }
-            case .resumeReading:
-                openReader(command: .resume)
-            case .continueListening:
-                beginListening(to: detail)
-            case .continueCombined:
-                openCombinedReader(for: detail)
-            case .startReadingOver:
-                Task { await startReadingOver() }
-            case .startListeningOver:
-                Task { await startListeningOver(detail) }
-            case .toggleReadingCompletion:
-                let status = readingState.progressPresentation?.status ?? .notStarted
-                Task { await toggleReadingCompletion(status) }
-            case .toggleListeningCompletion:
-                Task { await toggleListeningCompletion(detail) }
-            case .dismissReadingError:
-                readingState.dismissError()
-            case .dismissListeningError:
-                audiobookErrorMessage = nil
-            case .retryReading:
-                Task { await loadReadingState(for: detail) }
-            case .readChapter(let chapter):
-                openBookChapter(chapter, combined: false)
-            case .listenToChapter(let chapter):
-                playBookChapter(chapter)
-            case .combineChapter(let chapter):
-                openBookChapter(chapter, combined: true)
-            case .retryChapters:
-                Task { await loadBookChapters(for: detail) }
-            }
-        }
-
         private func refreshBookChapterMappings(for detail: EntityDetail) {
             guard detail.kind == .book, detail.bookFormat == .epub else {
                 mappedBookChapters = []
