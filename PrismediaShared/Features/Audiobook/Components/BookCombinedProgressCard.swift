@@ -100,21 +100,24 @@ struct BookCombinedProgressCard: View {
     }
 
     private var actions: some View {
-        GlassEffectContainer(spacing: PrismediaSpacing.small) {
-            VStack(spacing: PrismediaSpacing.small) {
+        GlassEffectContainer(spacing: PrismediaSpacing.medium) {
+            VStack(spacing: PrismediaSpacing.medium) {
                 HStack(spacing: PrismediaSpacing.medium) {
-                    individualContinueButton(
-                        title: "Continue Reading",
+                    PrismediaButton(
+                        "Continue Reading",
                         systemImage: "book.fill",
-                        identifier: "combined-book-progress.continue-reading",
+                        form: .fillIcon,
                         action: onContinueReading
                     )
-                    individualContinueButton(
-                        title: "Continue Listening",
+                    .accessibilityIdentifier("combined-book-progress.continue-reading")
+
+                    PrismediaButton(
+                        "Continue Listening",
                         systemImage: "headphones",
-                        identifier: "combined-book-progress.continue-listening",
+                        form: .fillIcon,
                         action: onContinueListening
                     )
+                    .accessibilityIdentifier("combined-book-progress.continue-listening")
                 }
 
                 PrismediaButton(
@@ -132,27 +135,6 @@ struct BookCombinedProgressCard: View {
             }
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func individualContinueButton(
-        title: String,
-        systemImage: String,
-        identifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-                .frame(
-                    maxWidth: .infinity,
-                    minHeight: PrismediaLayout.minimumHitTarget
-                )
-                .contentShape(.rect)
-        }
-        .buttonStyle(.glass(.clear))
-        .buttonBorderShape(.capsule)
-        .accessibilityLabel(title)
-        .accessibilityIdentifier(identifier)
     }
 
     private var progressOptions: some View {

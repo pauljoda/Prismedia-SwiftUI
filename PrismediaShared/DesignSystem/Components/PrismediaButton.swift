@@ -19,8 +19,8 @@ struct PrismediaButton: View {
         action: @escaping () -> Void
     ) {
         precondition(
-            form != .compactIcon || systemImage != nil,
-            "A compact icon button requires a system image."
+            !form.requiresSystemImage || systemImage != nil,
+            "An icon-only button requires a system image."
         )
         self.title = title
         self.systemImage = systemImage
@@ -87,6 +87,11 @@ struct PrismediaButton: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, PrismediaSpacing.large)
                 .frame(maxWidth: .infinity)
+        case .fillIcon:
+            compactIconLabel
+                .font(.headline.weight(.bold))
+                .padding(.horizontal, PrismediaSpacing.large)
+                .frame(maxWidth: .infinity)
         case .compactIcon:
             compactIconLabel
         }
@@ -147,6 +152,12 @@ struct PrismediaButton: View {
                     "Reader settings",
                     systemImage: "ellipsis",
                     form: .compactIcon
+                ) {}
+
+                PrismediaButton(
+                    "Continue Reading",
+                    systemImage: "book.fill",
+                    form: .fillIcon
                 ) {}
 
                 PrismediaButton(
