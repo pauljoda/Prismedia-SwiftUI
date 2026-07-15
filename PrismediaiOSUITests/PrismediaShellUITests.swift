@@ -10,7 +10,7 @@ final class PrismediaShellUITests: XCTestCase {
         )
         XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 10))
 
-        let listen = element("entity-detail.action.listen", in: app)
+        let listen = element("media-progress.resume", in: app)
         XCTAssertTrue(listen.waitForExistence(timeout: 10))
         XCTAssertTrue(waitForHittable(listen))
         listen.tap()
@@ -129,10 +129,17 @@ final class PrismediaShellUITests: XCTestCase {
     @MainActor
     func testSignInSearchesAndOpensAnEntity() throws {
         let app = launchedApplication()
+        addUIInterruptionMonitor(withDescription: "Password save prompt") { alert in
+            let notNow = alert.buttons["Not Now"]
+            guard notNow.exists else { return false }
+            notNow.tap()
+            return true
+        }
 
         XCTAssertTrue(element("auth.brand.logo", in: app).waitForExistence(timeout: 10))
         advanceToLogin(serverURL: "localhost:8899", in: app)
         submitCredentials(username: "test", password: "test1234", in: app)
+        app.tap()
 
         let tabBar = app.tabBars.firstMatch
         XCTAssertTrue(tabBar.waitForExistence(timeout: 10))
@@ -293,15 +300,13 @@ final class PrismediaShellUITests: XCTestCase {
         screen: XCUIElement,
         tabBar: XCUIElement
     ) {
-        button.tap()
+        if button.isHittable {
+            button.tap()
+        } else {
+            tabBar.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+        }
         if !screen.waitForExistence(timeout: 2) {
-            let tabFrame = tabBar.frame
-            let buttonFrame = button.frame
-            let normalizedPoint = CGVector(
-                dx: (buttonFrame.midX - tabFrame.minX) / tabFrame.width,
-                dy: (buttonFrame.midY - tabFrame.minY) / tabFrame.height
-            )
-            tabBar.coordinate(withNormalizedOffset: normalizedPoint).tap()
+            tabBar.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
         }
         XCTAssertTrue(screen.waitForExistence(timeout: 5))
     }

@@ -16,6 +16,7 @@ struct SearchHubView: View {
     private let user: UserAccount
     private let modes: [AppMode]
     private let allowsNsfwContent: Bool
+    private let reloadRevision: Int
     private let onSetAllowsNsfwContent: @MainActor @Sendable (Bool) -> Void
     private let onSelectMode: (AppMode) -> Void
     private let onSelectDestination: (AppMode, AppDestination) -> Void
@@ -29,6 +30,7 @@ struct SearchHubView: View {
         user: UserAccount,
         modes: [AppMode],
         allowsNsfwContent: Bool,
+        reloadRevision: Int = 0,
         debounce: Duration = .milliseconds(300),
         onSelectMode: @escaping (AppMode) -> Void,
         onSelectDestination: @escaping (AppMode, AppDestination) -> Void,
@@ -43,6 +45,7 @@ struct SearchHubView: View {
         self.user = user
         self.modes = modes
         self.allowsNsfwContent = allowsNsfwContent
+        self.reloadRevision = reloadRevision
         self.onSelectMode = onSelectMode
         self.onSelectDestination = onSelectDestination
         self.onSetAllowsNsfwContent = onSetAllowsNsfwContent
@@ -98,11 +101,10 @@ struct SearchHubView: View {
                 prompt: "Movies, music, books, and more"
             )
         #endif
-        .task {
-            guard snapshot.recentState == .idle else { return }
+        .task(id: reloadRevision) {
             await loadRecent()
         }
-        .task(id: normalizedSearchText) {
+        .task(id: SearchHubTaskID(query: normalizedSearchText, revision: reloadRevision)) {
             await updateSearch(for: normalizedSearchText, debounce: debounce)
         }
     }

@@ -4,10 +4,12 @@ import XCTest
 
 final class EPUBProgressLocationTests: XCTestCase {
     func testReadiumLocatorExposesChapterAndBothProgressFractions() throws {
+        let serialized = """
+            {"href":"Text/chapter-4.xhtml","type":"application/xhtml+xml",\
+            "locations":{"progression":0.5,"totalProgression":0.42}}
+            """
         let location = try XCTUnwrap(
-            EPUBProgressLocation(
-                serialized: #"{"href":"Text/chapter-4.xhtml","type":"application/xhtml+xml","locations":{"progression":0.5,"totalProgression":0.42}}"#
-            )
+            EPUBProgressLocation(serialized: serialized)
         )
 
         XCTAssertEqual(location.href, "Text/chapter-4.xhtml")

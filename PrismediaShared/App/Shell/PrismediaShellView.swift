@@ -72,7 +72,6 @@ public struct PrismediaShellView: View {
                 )
             }
         }
-        .id("content-visibility-\(environment.allowsNsfwContent)")
         .prismediaAdaptiveAppTabStyle()
         .onAppear {
             router.onWillOpenEntity = {
@@ -110,7 +109,6 @@ public struct PrismediaShellView: View {
             )
         }
         .navigationSplitViewStyle(.balanced)
-        .id("content-visibility-\(environment.allowsNsfwContent)")
         .onAppear {
             router.onWillOpenEntity = {
                 videoPlaybackSession.inlinePlaybackWillNavigate()
@@ -170,6 +168,7 @@ public struct PrismediaShellView: View {
             user: user,
             modes: availableModes,
             allowsNsfwContent: environment.allowsNsfwContent,
+            reloadRevision: environment.contentRevision,
             onSelectMode: { mode in
                 videoPlaybackSession.inlinePlaybackWillNavigate()
                 router.select(mode: mode)
@@ -183,7 +182,6 @@ public struct PrismediaShellView: View {
                 Task { await environment.signOut() }
             }
         )
-        .id("search-\(environment.allowsNsfwContent)")
     }
 
     @ViewBuilder
@@ -203,6 +201,7 @@ public struct PrismediaShellView: View {
                     videoPlaybackSession: videoPlaybackSession
                 ),
                 allowsHeroAutomaticAdvance: allowsDashboardHeroAutomaticAdvance,
+                reloadRevision: environment.contentRevision,
                 onSelectSection: { section in
                     videoPlaybackSession.inlinePlaybackWillNavigate()
                     router.selectDashboardSection(section)

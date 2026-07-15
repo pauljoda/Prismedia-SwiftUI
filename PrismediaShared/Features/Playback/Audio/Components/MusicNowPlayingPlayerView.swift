@@ -10,39 +10,41 @@
 
         var body: some View {
             VStack(spacing: PrismediaSpacing.extraExtraLarge) {
-                Color.clear
-                    .aspectRatio(1, contentMode: .fit)
-                    .containerRelativeFrame(.horizontal) { width, _ in
-                        max(min(width - (PrismediaSpacing.section * 2), 520), 1)
-                    }
-                    .overlay {
-                        if isActive {
-                            MusicNowPlayingArtwork(track: track)
-                                .matchedGeometryEffect(
-                                    id: "music.now-playing.artwork.\(track.id.uuidString)",
-                                    in: artworkNamespace,
-                                    properties: .frame,
-                                    anchor: .center
-                                )
-                                .zIndex(1)
-                                .shadow(color: .black.opacity(0.4), radius: 24, y: 16)
-                                .contentShape(Rectangle())
-                                .onTapGesture(perform: onShowQueue)
-                                .highPriorityGesture(queueRevealGesture)
-                                .accessibilityAddTraits(.isButton)
-                                .accessibilityHint("Shows the playing queue")
+                Button(action: onShowQueue) {
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fit)
+                        .containerRelativeFrame(.horizontal) { width, _ in
+                            max(min(width - (PrismediaSpacing.section * 2), 520), 1)
                         }
-                    }
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .layoutPriority(1)
+                        .overlay {
+                            if isActive {
+                                MusicNowPlayingArtwork(track: track)
+                                    .matchedGeometryEffect(
+                                        id: "music.now-playing.artwork.\(track.id.uuidString)",
+                                        in: artworkNamespace,
+                                        properties: .frame,
+                                        anchor: .center
+                                    )
+                                    .zIndex(1)
+                                    .shadow(color: .black.opacity(0.4), radius: 24, y: 16)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!isActive)
+                .accessibilityHidden(!isActive)
+                .accessibilityLabel("Show Queue")
+                .accessibilityHint("Shows the playing queue")
+                .simultaneousGesture(queueRevealGesture)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .layoutPriority(1)
 
                 metadata
                     .opacity(isActive ? 1 : 0)
                     .padding(.bottom, PrismediaSpacing.small)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            .accessibilityAction(named: "Show Queue", onShowQueue)
         }
 
         private var metadata: some View {

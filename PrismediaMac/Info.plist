@@ -33,8 +33,10 @@
 	<string>public.app-category.entertainment</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Prismedia connects to your local media server.</string>
 </dict>
 </plist>

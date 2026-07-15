@@ -31,27 +31,31 @@
                 .accessibilityHidden(!showsContent)
 
                 HStack(spacing: PrismediaSpacing.medium) {
-                    Color.clear
-                        .frame(width: 78, height: 78)
-                        .overlay {
-                            if showsContent {
-                                MusicNowPlayingArtwork(
-                                    track: track,
-                                    cornerRadius: PrismediaRadius.badge
-                                )
-                                .matchedGeometryEffect(
-                                    id: "music.now-playing.artwork.\(track.id.uuidString)",
-                                    in: artworkNamespace,
-                                    properties: .frame,
-                                    anchor: .center
-                                )
-                                .zIndex(1)
+                    Button(action: onShowPlayer) {
+                        Color.clear
+                            .frame(width: 78, height: 78)
+                            .overlay {
+                                if showsContent {
+                                    MusicNowPlayingArtwork(
+                                        track: track,
+                                        cornerRadius: PrismediaRadius.badge
+                                    )
+                                    .matchedGeometryEffect(
+                                        id: "music.now-playing.artwork.\(track.id.uuidString)",
+                                        in: artworkNamespace,
+                                        properties: .frame,
+                                        anchor: .center
+                                    )
+                                    .zIndex(1)
+                                }
                             }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture(perform: onShowPlayer)
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityHint("Shows the full Now Playing view")
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!showsContent)
+                    .accessibilityHidden(!showsContent)
+                    .accessibilityLabel("Show Now Playing")
+                    .accessibilityHint("Shows the full Now Playing view")
 
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                         Text(track.title)

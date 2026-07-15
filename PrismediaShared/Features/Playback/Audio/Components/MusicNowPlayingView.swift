@@ -130,17 +130,17 @@
         }
 
         private var dismissHandle: some View {
-            Capsule()
-                .fill(PrismediaColor.onMedia.opacity(0.45))
-                .frame(width: 38, height: 5)
-                .frame(width: 80, height: PrismediaLayout.minimumHitTarget)
-                .contentShape(Rectangle())
-                .gesture(dismissGesture)
-                .accessibilityElement()
-                .accessibilityLabel("Dismiss Now Playing")
-                .accessibilityAction {
-                    closePlayer()
-                }
+            Button(action: closePlayer) {
+                Capsule()
+                    .fill(PrismediaColor.onMedia.opacity(0.45))
+                    .frame(width: 38, height: 5)
+                    .frame(width: 80, height: PrismediaLayout.minimumHitTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(dismissGesture)
+            .accessibilityIdentifier("music.close-player")
+            .accessibilityLabel("Dismiss Now Playing")
         }
 
         private var dismissGesture: some Gesture {

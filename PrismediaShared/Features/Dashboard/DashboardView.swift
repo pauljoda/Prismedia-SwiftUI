@@ -6,6 +6,7 @@ struct DashboardView: View {
     private let service: DashboardService
     private let detailDependencies: EntityDetailDependencies
     private let allowsHeroAutomaticAdvance: Bool
+    private let reloadRevision: Int
     private let onSelectSection: (DashboardSectionDefinition) -> Void
 
     init(
@@ -13,12 +14,14 @@ struct DashboardView: View {
         detailDependencies: EntityDetailDependencies,
         navigationPath: Binding<[EntityLink]> = .constant([]),
         allowsHeroAutomaticAdvance: Bool = true,
+        reloadRevision: Int = 0,
         onSelectSection: @escaping (DashboardSectionDefinition) -> Void
     ) {
         _navigationPath = navigationPath
         service = DashboardService(loader: loader)
         self.detailDependencies = detailDependencies
         self.allowsHeroAutomaticAdvance = allowsHeroAutomaticAdvance
+        self.reloadRevision = reloadRevision
         self.onSelectSection = onSelectSection
     }
 
@@ -96,8 +99,7 @@ struct DashboardView: View {
             .refreshable { await reload() }
             .prismediaEntityDestinations(dependencies: detailDependencies)
         }
-        .task {
-            guard snapshot.state == .idle else { return }
+        .task(id: reloadRevision) {
             await reload()
         }
         .accessibilityIdentifier("shell.dashboard")

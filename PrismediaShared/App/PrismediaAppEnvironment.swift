@@ -14,6 +14,7 @@ public final class PrismediaAppEnvironment {
     public private(set) var isRestoringSession: Bool
     public private(set) var lastServerURL: URL?
     public private(set) var entityListRevision = 0
+    public private(set) var contentRevision = 0
     public private(set) var allowsNsfwContent: Bool
     public let artworkLoader: any RemoteArtworkLoading
     public let artworkPaletteLoader: any ArtworkPaletteLoading
@@ -154,15 +155,21 @@ public final class PrismediaAppEnvironment {
     }
 
     public func entityDidMutate() {
-        entityListRevision &+= 1
+        publishContentChange()
+    }
+
+    public func reloadContent() {
+        publishContentChange()
     }
 
     public func setAllowsNsfwContent(_ allowsNsfwContent: Bool) {
         guard let session else { return }
         let allowed = session.user.allowNsfw && allowsNsfwContent
+        guard allowed != self.allowsNsfwContent else { return }
         nsfwPreferenceStore.save(allowed, for: session.user.id)
         self.allowsNsfwContent = allowed
         client?.updateNsfwContentPreference(allowed)
+        publishContentChange()
     }
 
     public func verifyCurrentSession() async {
@@ -230,5 +237,10 @@ public final class PrismediaAppEnvironment {
         clientFactory(session.serverURL)
             .allowingNsfwContent(allowsNsfwContent)
             .authenticated(with: session.accessToken)
+    }
+
+    private func publishContentChange() {
+        entityListRevision &+= 1
+        contentRevision &+= 1
     }
 }

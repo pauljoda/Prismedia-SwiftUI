@@ -20,7 +20,8 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         readingPositionLabel = reading?.positionLabel
         listeningPercent = listening?.progress.percent ?? 0
         listeningPositionLabel = listening?.progress.positionLabel
-        combinedContextLabel = combinedUsesReadingPosition
+        combinedContextLabel =
+            combinedUsesReadingPosition
             ? "Combined continues from your reading position"
             : "Combined continues from your listening position"
         readingStatus = reading?.status ?? .notStarted

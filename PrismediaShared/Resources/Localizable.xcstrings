@@ -1,0 +1,1922 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "%.0f%%" : {
+
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ of %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ → %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, %@ size" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@ size"
+          }
+        }
+      }
+    },
+    "%@, page %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, page %2$lld"
+          }
+        }
+      }
+    },
+    "%@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@"
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld active" : {
+
+    },
+    "%lld barren" : {
+
+    },
+    "%lld found" : {
+
+    },
+    "%lld items" : {
+
+    },
+    "%lld percent" : {
+
+    },
+    "%lld percent complete" : {
+
+    },
+    "%lld plays · %lld skips" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld plays · %2$lld skips"
+          }
+        }
+      }
+    },
+    "%lld seeders" : {
+
+    },
+    "%lld star%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld star%2$@"
+          }
+        }
+      }
+    },
+    "%lld stars or less" : {
+
+    },
+    "%lld stars or more" : {
+
+    },
+    "%lld%%" : {
+
+    },
+    "0.5×" : {
+
+    },
+    "2×" : {
+
+    },
+    "@%@" : {
+
+    },
+    "A Longer Adaptive Music Title" : {
+
+    },
+    "A Storm Blows In" : {
+
+    },
+    "A deliberately long summary that must wrap inside the narrow phone viewport instead of expanding the entire detail surface." : {
+
+    },
+    "A longer content card title that can wrap" : {
+
+    },
+    "API key" : {
+
+    },
+    "Accept" : {
+
+    },
+    "Account, %@" : {
+
+    },
+    "Acquisition Action Failed" : {
+
+    },
+    "Acquisition Settings" : {
+
+    },
+    "Acquisition Settings Unavailable" : {
+
+    },
+    "Actions" : {
+
+    },
+    "Activity in progress" : {
+
+    },
+    "Actual Size" : {
+
+    },
+    "Add %@" : {
+
+    },
+    "Add Current Location" : {
+
+    },
+    "Add Role" : {
+
+    },
+    "Add a watched root in server settings." : {
+
+    },
+    "Add to Collection" : {
+
+    },
+    "Add to Queue" : {
+
+    },
+    "Administrator Access Required" : {
+
+    },
+    "Albums" : {
+
+    },
+    "All Kinds" : {
+
+    },
+    "All Media" : {
+
+    },
+    "Allow NSFW Content" : {
+
+    },
+    "Any" : {
+
+    },
+    "Apply" : {
+
+    },
+    "Apply %@" : {
+
+    },
+    "Applying related metadata" : {
+
+    },
+    "Artwork" : {
+
+    },
+    "Artwork accent" : {
+
+    },
+    "Artwork for %@" : {
+
+    },
+    "Artwork preview" : {
+
+    },
+    "Ascending" : {
+
+    },
+    "At %@" : {
+
+    },
+    "Attempt to Find This Passage" : {
+
+    },
+    "Audio" : {
+
+    },
+    "Audiobook Now Playing" : {
+
+    },
+    "Audiobook parts play in order" : {
+
+    },
+    "Availability" : {
+
+    },
+    "Back" : {
+
+    },
+    "Back 15 Seconds" : {
+
+    },
+    "Back up database now" : {
+
+    },
+    "Best Match" : {
+
+    },
+    "Blocklist" : {
+
+    },
+    "Book Format" : {
+
+    },
+    "Book Type" : {
+
+    },
+    "Bookmarks" : {
+
+    },
+    "Bookmarks you add will include this book’s chapter, page, date, and time." : {
+
+    },
+    "Browse" : {
+
+    },
+    "Building the canonical proposal…" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel Acquisition" : {
+
+    },
+    "Candidates" : {
+
+    },
+    "Change Server" : {
+
+    },
+    "Changes queue order" : {
+
+    },
+    "Chapter %lld" : {
+
+    },
+    "Chapter %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Chapter %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Chapters" : {
+
+    },
+    "Character or contribution" : {
+
+    },
+    "Check your connection and try again." : {
+
+    },
+    "Choose Audio Output" : {
+
+    },
+    "Choose Chapter" : {
+
+    },
+    "Choose Provider" : {
+
+    },
+    "Choose a different server" : {
+
+    },
+    "Choose an Item" : {
+
+    },
+    "Classification" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear Toggle bookmark" : {
+
+    },
+    "Clear failures" : {
+
+    },
+    "Clear transcode cache" : {
+
+    },
+    "Clearing prepared streams is safe; Prismedia recreates them when needed." : {
+
+    },
+    "Close" : {
+
+    },
+    "Close Player" : {
+
+    },
+    "Close reader" : {
+
+    },
+    "Collapsed" : {
+
+    },
+    "Comic page, %@" : {
+
+    },
+    "Completed and skipped media will appear here." : {
+
+    },
+    "Connection" : {
+
+    },
+    "Contents" : {
+
+    },
+    "Context, %@" : {
+
+    },
+    "Continue watching" : {
+
+    },
+    "Couldn’t Add to Collection" : {
+
+    },
+    "Couldn’t Find a Matching Page" : {
+
+    },
+    "Couldn’t Load %@" : {
+
+    },
+    "Couldn’t Load Acquisition" : {
+
+    },
+    "Couldn’t Load Chapters" : {
+
+    },
+    "Couldn’t Load Collection" : {
+
+    },
+    "Couldn’t Load Details" : {
+
+    },
+    "Couldn’t Load Reading Progress" : {
+
+    },
+    "Couldn’t Load Stats" : {
+
+    },
+    "Couldn’t Load Transcript" : {
+
+    },
+    "Couldn’t Open Bookmark" : {
+
+    },
+    "Couldn’t Open EPUB" : {
+
+    },
+    "Couldn’t Open Image" : {
+
+    },
+    "Couldn’t Open PDF" : {
+
+    },
+    "Couldn’t Open Reader" : {
+
+    },
+    "Couldn’t Play Video" : {
+
+    },
+    "Couldn’t Search Prismedia" : {
+
+    },
+    "Couldn’t Start Playback" : {
+
+    },
+    "Couldn’t Update Acquisition" : {
+
+    },
+    "Couldn’t Update Details" : {
+
+    },
+    "Create a collection first, then it will appear here." : {
+
+    },
+    "Create new %@" : {
+
+    },
+    "Creates a manual server-side backup using the configured backup storage." : {
+
+    },
+    "Credentials required" : {
+
+    },
+    "Credit Details" : {
+
+    },
+    "Current" : {
+
+    },
+    "Current cue" : {
+
+    },
+    "Current position, %@" : {
+
+    },
+    "Current usage" : {
+
+    },
+    "Currently Playing" : {
+
+    },
+    "Daily Activity" : {
+
+    },
+    "Dark" : {
+
+    },
+    "Dashboard" : {
+
+    },
+    "Decrease" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete Preset" : {
+
+    },
+    "Descending" : {
+
+    },
+    "Description" : {
+
+    },
+    "Detail section" : {
+
+    },
+    "Discovers new child items from its provider" : {
+
+    },
+    "Dismiss" : {
+
+    },
+    "Dismiss Now Playing" : {
+
+    },
+    "Display name" : {
+
+    },
+    "Display options" : {
+
+    },
+    "Done" : {
+
+    },
+    "Download progress" : {
+
+    },
+    "Downloaded" : {
+
+    },
+    "EPUB reader" : {
+
+    },
+    "ETA" : {
+
+    },
+    "Edit Entity" : {
+
+    },
+    "Edit section" : {
+
+    },
+    "Eligible for monitoring" : {
+
+    },
+    "Embedded field" : {
+
+    },
+    "Empty Folder" : {
+
+    },
+    "Enter a word or phrase to find it in the publication." : {
+
+    },
+    "Enter the provider-specific details above to find candidates." : {
+
+    },
+    "Entity actions" : {
+
+    },
+    "Events" : {
+
+    },
+    "Exit Full Screen" : {
+
+    },
+    "Expanded" : {
+
+    },
+    "Fallback accent" : {
+
+    },
+    "Favorite" : {
+
+    },
+    "Favorites only" : {
+
+    },
+    "Featured %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Featured %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Featured media" : {
+
+    },
+    "Files" : {
+
+    },
+    "Files Unavailable" : {
+
+    },
+    "Filter collections" : {
+
+    },
+    "Filters" : {
+
+    },
+    "Filters cues using all entered words" : {
+
+    },
+    "First Page Is Cover" : {
+
+    },
+    "Fixed media surface" : {
+
+    },
+    "Flow" : {
+
+    },
+    "Forward 30 Seconds" : {
+
+    },
+    "Forward gestures" : {
+
+    },
+    "From %@" : {
+
+    },
+    "Has references" : {
+
+    },
+    "Hero artwork for %@" : {
+
+    },
+    "Hide Password" : {
+
+    },
+    "History" : {
+
+    },
+    "How your name appears" : {
+
+    },
+    "Identify" : {
+
+    },
+    "Identify Queue" : {
+
+    },
+    "Identify Unavailable" : {
+
+    },
+    "Identity" : {
+
+    },
+    "Image viewer" : {
+
+    },
+    "Images and sub-galleries will appear here when they’re added." : {
+
+    },
+    "Immersive Media" : {
+
+    },
+    "Import Torrent" : {
+
+    },
+    "Import into" : {
+
+    },
+    "Imported Files" : {
+
+    },
+    "In progress" : {
+
+    },
+    "Increase" : {
+
+    },
+    "Inline Player" : {
+
+    },
+    "Install plugins on the server to use metadata and request providers." : {
+
+    },
+    "Item Size" : {
+
+    },
+    "Items needing metadata review will appear here." : {
+
+    },
+    "Jobs" : {
+
+    },
+    "Jump to Toggle bookmark" : {
+
+    },
+    "Kind" : {
+
+    },
+    "Last %@" : {
+
+    },
+    "Latest Acquisition" : {
+
+    },
+    "Layout" : {
+
+    },
+    "Library" : {
+
+    },
+    "Light" : {
+
+    },
+    "Line Spacing" : {
+
+    },
+    "Listening" : {
+
+    },
+    "Loading %@ items…" : {
+
+    },
+    "Loading %@…" : {
+
+    },
+    "Loading TV home…" : {
+
+    },
+    "Loading acquisition settings…" : {
+
+    },
+    "Loading acquisition status…" : {
+
+    },
+    "Loading acquisition…" : {
+
+    },
+    "Loading collection audio…" : {
+
+    },
+    "Loading collection items…" : {
+
+    },
+    "Loading collections…" : {
+
+    },
+    "Loading dashboard…" : {
+
+    },
+    "Loading details…" : {
+
+    },
+    "Loading episodes…" : {
+
+    },
+    "Loading folder…" : {
+
+    },
+    "Loading identify queue…" : {
+
+    },
+    "Loading jobs…" : {
+
+    },
+    "Loading library…" : {
+
+    },
+    "Loading more results" : {
+
+    },
+    "Loading more results…" : {
+
+    },
+    "Loading more…" : {
+
+    },
+    "Loading playback history…" : {
+
+    },
+    "Loading playback options" : {
+
+    },
+    "Loading plugins…" : {
+
+    },
+    "Loading profiles and libraries…" : {
+
+    },
+    "Loading reading progress…" : {
+
+    },
+    "Loading roots…" : {
+
+    },
+    "Loading settings…" : {
+
+    },
+    "Loading transcript…" : {
+
+    },
+    "Loading your Prismedia library…" : {
+
+    },
+    "Loads %@" : {
+
+    },
+    "Maintenance" : {
+
+    },
+    "Margins" : {
+
+    },
+    "Mark Listened" : {
+
+    },
+    "Mark Read" : {
+
+    },
+    "Mark Unlistened" : {
+
+    },
+    "Mark Unread" : {
+
+    },
+    "Maximum rating" : {
+
+    },
+    "Media" : {
+
+    },
+    "Media type" : {
+
+    },
+    "Metadata" : {
+
+    },
+    "Midnight Sessions" : {
+
+    },
+    "Monitor" : {
+
+    },
+    "Monitoring" : {
+
+    },
+    "Monitoring and acquisition controls are managed by server administrators." : {
+
+    },
+    "Monitoring unavailable" : {
+
+    },
+    "More" : {
+
+    },
+    "More actions" : {
+
+    },
+    "More actions for %@" : {
+
+    },
+    "Movies, music, books, and more" : {
+
+    },
+    "Movies, series, and the collections you love—ready for the biggest screen in the house." : {
+
+    },
+    "Music Library" : {
+
+    },
+    "Mute" : {
+
+    },
+    "NEXT CHAPTER" : {
+
+    },
+    "NO NEXT CHAPTER" : {
+
+    },
+    "NOW PLAYING" : {
+
+    },
+    "NSFW" : {
+
+    },
+    "Navigate" : {
+
+    },
+    "Navigate Book" : {
+
+    },
+    "Need help signing in?" : {
+
+    },
+    "New media and playback activity will appear here." : {
+
+    },
+    "Next" : {
+
+    },
+    "Next %@" : {
+
+    },
+    "Next Chapter" : {
+
+    },
+    "Next Image" : {
+
+    },
+    "Next Part" : {
+
+    },
+    "Next Result" : {
+
+    },
+    "Next Track" : {
+
+    },
+    "Next frame" : {
+
+    },
+    "Next page" : {
+
+    },
+    "No %@" : {
+
+    },
+    "No %@ profile yet. Permissive defaults will apply." : {
+
+    },
+    "No Bookmarks" : {
+
+    },
+    "No Candidates" : {
+
+    },
+    "No Candidates Found" : {
+
+    },
+    "No Collections" : {
+
+    },
+    "No Compatible Plugins" : {
+
+    },
+    "No Episodes" : {
+
+    },
+    "No Gallery Content" : {
+
+    },
+    "No Items" : {
+
+    },
+    "No Job Runs" : {
+
+    },
+    "No Library Roots" : {
+
+    },
+    "No Playable Audio" : {
+
+    },
+    "No Playback History Yet" : {
+
+    },
+    "No Provider" : {
+
+    },
+    "No Results" : {
+
+    },
+    "No Search Providers" : {
+
+    },
+    "No Settings Available" : {
+
+    },
+    "No Table of Contents" : {
+
+    },
+    "No enabled library supports %@. Add one in Settings first." : {
+
+    },
+    "No enabled metadata provider can track this entity yet. Identify it with a supported provider first." : {
+
+    },
+    "No files reported yet." : {
+
+    },
+    "No library items match “%@”." : {
+
+    },
+    "No more tracks in the queue" : {
+
+    },
+    "No references" : {
+
+    },
+    "No related details yet." : {
+
+    },
+    "No roles selected" : {
+
+    },
+    "No visible files or folders are here." : {
+
+    },
+    "Not organized" : {
+
+    },
+    "Not selected" : {
+
+    },
+    "Nothing Playing" : {
+
+    },
+    "Now Playing" : {
+
+    },
+    "Now Playing, %@" : {
+
+    },
+    "OK" : {
+
+    },
+    "Off" : {
+
+    },
+    "On" : {
+
+    },
+    "One Page" : {
+
+    },
+    "Open %@" : {
+
+    },
+    "Open Entity" : {
+
+    },
+    "Open Link" : {
+
+    },
+    "Open bookmark, %@, page %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open bookmark, %1$@, page %2$lld of %3$lld"
+          }
+        }
+      }
+    },
+    "Open chapter" : {
+
+    },
+    "Open entity" : {
+
+    },
+    "Opening EPUB…" : {
+
+    },
+    "Opening PDF…" : {
+
+    },
+    "Opening reader…" : {
+
+    },
+    "Opening video" : {
+
+    },
+    "Opening your library…" : {
+
+    },
+    "Opens %@" : {
+
+    },
+    "Opens companion audiobook playback controls" : {
+
+    },
+    "Opens details" : {
+
+    },
+    "Opens details for %@" : {
+
+    },
+    "Opens in your default browser" : {
+
+    },
+    "Opens tag details" : {
+
+    },
+    "Opens the %@ section" : {
+
+    },
+    "Opens the full-screen image viewer" : {
+
+    },
+    "Opens the reader and starts the audiobook near the furthest saved position" : {
+
+    },
+    "Opens the table of contents" : {
+
+    },
+    "Opens this image’s metadata and management details" : {
+
+    },
+    "Organization" : {
+
+    },
+    "Organized" : {
+
+    },
+    "PDF reader" : {
+
+    },
+    "PDF view options" : {
+
+    },
+    "PREPARING" : {
+
+    },
+    "PRESS PLAY" : {
+
+    },
+    "PRISMEDIA" : {
+
+    },
+    "Page %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Page Fit" : {
+
+    },
+    "Page Layout" : {
+
+    },
+    "Page Size" : {
+
+    },
+    "Page Unavailable" : {
+
+    },
+    "Paged" : {
+
+    },
+    "Password" : {
+
+    },
+    "Path" : {
+
+    },
+    "Pause" : {
+
+    },
+    "Pause animation" : {
+
+    },
+    "Pause looping image" : {
+
+    },
+    "Paused" : {
+
+    },
+    "Peers" : {
+
+    },
+    "Play" : {
+
+    },
+    "Play animation" : {
+
+    },
+    "Play looping image" : {
+
+    },
+    "Playback" : {
+
+    },
+    "Playback Options" : {
+
+    },
+    "Playback Position" : {
+
+    },
+    "Playback Speed" : {
+
+    },
+    "Playback Stats" : {
+
+    },
+    "Playback position" : {
+
+    },
+    "Playing" : {
+
+    },
+    "Plays this song" : {
+
+    },
+    "Plugin Action Failed" : {
+
+    },
+    "Plugins" : {
+
+    },
+    "Prepares the video and begins playback" : {
+
+    },
+    "Preparing media…" : {
+
+    },
+    "Preparing playback options…" : {
+
+    },
+    "Preparing video…" : {
+
+    },
+    "Preset" : {
+
+    },
+    "Preset name" : {
+
+    },
+    "Presets" : {
+
+    },
+    "Preview" : {
+
+    },
+    "Preview Account" : {
+
+    },
+    "Previous" : {
+
+    },
+    "Previous Chapter" : {
+
+    },
+    "Previous Image" : {
+
+    },
+    "Previous Part" : {
+
+    },
+    "Previous Result" : {
+
+    },
+    "Previous Track" : {
+
+    },
+    "Previous frame" : {
+
+    },
+    "Previous page" : {
+
+    },
+    "Prismedia" : {
+
+    },
+    "Prismedia Design System" : {
+
+    },
+    "Prismedia will estimate the matching page from your current audiobook position." : {
+
+    },
+    "Processed %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Processed %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Progress" : {
+
+    },
+    "Progress Options" : {
+
+    },
+    "Proposal Changed" : {
+
+    },
+    "Proposed" : {
+
+    },
+    "Provider" : {
+
+    },
+    "Providers" : {
+
+    },
+    "Publisher" : {
+
+    },
+    "Quality profile" : {
+
+    },
+    "Queue Is Clear" : {
+
+    },
+    "Queued and recent background work will appear here." : {
+
+    },
+    "Queues" : {
+
+    },
+    "Rate %lld" : {
+
+    },
+    "Rating" : {
+
+    },
+    "Read" : {
+
+    },
+    "Read & Listen" : {
+
+    },
+    "Reader Settings" : {
+
+    },
+    "Reader Unavailable" : {
+
+    },
+    "Reader settings" : {
+
+    },
+    "Reading" : {
+
+    },
+    "Reading Mode" : {
+
+    },
+    "Reading Speed" : {
+
+    },
+    "Reading the EPUB contents…" : {
+
+    },
+    "Rebuild previews" : {
+
+    },
+    "Recent Events" : {
+
+    },
+    "Recent Runs" : {
+
+    },
+    "Recently added" : {
+
+    },
+    "References" : {
+
+    },
+    "Regular" : {
+
+    },
+    "Reject" : {
+
+    },
+    "Release Candidates" : {
+
+    },
+    "Reload" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove %@" : {
+
+    },
+    "Remove %@ role" : {
+
+    },
+    "Remove %@ value" : {
+
+    },
+    "Remove Selected" : {
+
+    },
+    "Request" : {
+
+    },
+    "Request Options" : {
+
+    },
+    "Request Section" : {
+
+    },
+    "Required" : {
+
+    },
+    "Rescan" : {
+
+    },
+    "Reset" : {
+
+    },
+    "Reset Grid Settings" : {
+
+    },
+    "Reset Sort and Filters" : {
+
+    },
+    "Reshuffle" : {
+
+    },
+    "Restore Reader Defaults" : {
+
+    },
+    "Retry Import" : {
+
+    },
+    "Retry and Allow Format Change" : {
+
+    },
+    "Return from Toggle bookmark" : {
+
+    },
+    "Review" : {
+
+    },
+    "Review All" : {
+
+    },
+    "Review Request" : {
+
+    },
+    "Review Unavailable" : {
+
+    },
+    "Rewind gestures" : {
+
+    },
+    "Sans Serif" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save %@" : {
+
+    },
+    "Save Current as Preset" : {
+
+    },
+    "Save Grid Preset" : {
+
+    },
+    "Save the current sort, filters, layout, density, and page size." : {
+
+    },
+    "Saved Locations" : {
+
+    },
+    "Score %@" : {
+
+    },
+    "Scroll" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search %@" : {
+
+    },
+    "Search Again" : {
+
+    },
+    "Search Book" : {
+
+    },
+    "Search PDF" : {
+
+    },
+    "Search Selected" : {
+
+    },
+    "Search This Book" : {
+
+    },
+    "Search Transcript" : {
+
+    },
+    "Search Unavailable" : {
+
+    },
+    "Search again or import a torrent file manually." : {
+
+    },
+    "Search book" : {
+
+    },
+    "Search for a Match" : {
+
+    },
+    "Search library" : {
+
+    },
+    "Search your library" : {
+
+    },
+    "Searching" : {
+
+    },
+    "Searching %@…" : {
+
+    },
+    "Searching Prismedia…" : {
+
+    },
+    "Searching book…" : {
+
+    },
+    "Searching with %@" : {
+
+    },
+    "Searching…" : {
+
+    },
+    "Seeks playback by one preview frame" : {
+
+    },
+    "Seeks playback to this marker" : {
+
+    },
+    "Seeks the active video to this cue" : {
+
+    },
+    "Seeks the active video to this marker" : {
+
+    },
+    "Select %@" : {
+
+    },
+    "Select an identify queue item to search or review metadata." : {
+
+    },
+    "Select this candidate for review." : {
+
+    },
+    "Selected" : {
+
+    },
+    "Selected %lld" : {
+
+    },
+    "Selected Page" : {
+
+    },
+    "Sepia" : {
+
+    },
+    "Serif" : {
+
+    },
+    "Server" : {
+
+    },
+    "Server URL" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share Original" : {
+
+    },
+    "Shares a local copy without exposing your Prismedia session" : {
+
+    },
+    "Show Details" : {
+
+    },
+    "Show History" : {
+
+    },
+    "Show Now Playing" : {
+
+    },
+    "Show Now Playing for %@" : {
+
+    },
+    "Show Password" : {
+
+    },
+    "Show Queue" : {
+
+    },
+    "Show details" : {
+
+    },
+    "Show wanted entities" : {
+
+    },
+    "Shows playback and navigation actions" : {
+
+    },
+    "Shows the full Now Playing view" : {
+
+    },
+    "Shows the full episode description" : {
+
+    },
+    "Shows the playing queue" : {
+
+    },
+    "Shuffle" : {
+
+    },
+    "Sign Out" : {
+
+    },
+    "Sign Out?" : {
+
+    },
+    "Some providers could not be searched" : {
+
+    },
+    "Sort" : {
+
+    },
+    "Spectral content layer" : {
+
+    },
+    "Speed" : {
+
+    },
+    "Start Listening Over" : {
+
+    },
+    "Start Over" : {
+
+    },
+    "Start Reading Over" : {
+
+    },
+    "Start this video on the current page to enable seeking" : {
+
+    },
+    "Start video playback to seek to this marker" : {
+
+    },
+    "Starts playback" : {
+
+    },
+    "State" : {
+
+    },
+    "Status" : {
+
+    },
+    "Stop monitoring this item?" : {
+
+    },
+    "Storage" : {
+
+    },
+    "Sub Galleries" : {
+
+    },
+    "Subtitle Track" : {
+
+    },
+    "Subtitle style preview" : {
+
+    },
+    "Subtitles" : {
+
+    },
+    "System" : {
+
+    },
+    "System Background" : {
+
+    },
+    "System navigation and controls remain above the content background." : {
+
+    },
+    "Table of Contents" : {
+
+    },
+    "Text Size" : {
+
+    },
+    "That saved location is no longer available in this edition of the book." : {
+
+    },
+    "The provider changed this proposal after you reviewed it. Reload and confirm the selection again." : {
+
+    },
+    "The server did not return any administrative settings." : {
+
+    },
+    "Theme" : {
+
+    },
+    "This PDF does not include an outline." : {
+
+    },
+    "This audiobook position could not be matched to a readable chapter." : {
+
+    },
+    "This book does not include a readable chapter list." : {
+
+    },
+    "This collection is empty." : {
+
+    },
+    "This collection no longer contains playable audio." : {
+
+    },
+    "This publication does not include a readable contents list." : {
+
+    },
+    "This removes its acquisition and downloads. A fileless wanted placeholder may also be removed from the library." : {
+
+    },
+    "This removes the selected download data from the client. Monitored items remain Wanted and can search again." : {
+
+    },
+    "Timeframe" : {
+
+    },
+    "Title" : {
+
+    },
+    "Toggle Playback" : {
+
+    },
+    "Toggle animation" : {
+
+    },
+    "Transfer" : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Try another provider or refine the search fields." : {
+
+    },
+    "Two Pages" : {
+
+    },
+    "Typeface" : {
+
+    },
+    "Typography" : {
+
+    },
+    "Unable to Load %@" : {
+
+    },
+    "Unable to Load Acquisition" : {
+
+    },
+    "Unmonitor" : {
+
+    },
+    "Unmonitor Selected" : {
+
+    },
+    "Unmute" : {
+
+    },
+    "Unrated" : {
+
+    },
+    "Unread" : {
+
+    },
+    "Unwatched" : {
+
+    },
+    "Up Next" : {
+
+    },
+    "Up Next Parts" : {
+
+    },
+    "Update to %@" : {
+
+    },
+    "Updated" : {
+
+    },
+    "Updates the selected episode" : {
+
+    },
+    "Updating identify queue…" : {
+
+    },
+    "Updating items…" : {
+
+    },
+    "Updating jobs…" : {
+
+    },
+    "Updating progress" : {
+
+    },
+    "Updating results" : {
+
+    },
+    "Use %@ artwork from %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use %1$@ artwork from %2$@"
+          }
+        }
+      }
+    },
+    "Use as Toggle bookmark" : {
+
+    },
+    "User Metadata" : {
+
+    },
+    "Username" : {
+
+    },
+    "Value" : {
+
+    },
+    "Video Size" : {
+
+    },
+    "Video Unavailable" : {
+
+    },
+    "Video library" : {
+
+    },
+    "View" : {
+
+    },
+    "View Options" : {
+
+    },
+    "Visibility" : {
+
+    },
+    "Watched" : {
+
+    },
+    "Webtoon" : {
+
+    },
+    "Webtoon reader, %@" : {
+
+    },
+    "What would you like to request?" : {
+
+    },
+    "Work" : {
+
+    },
+    "Your Library Is Ready" : {
+
+    },
+    "Your library,\nmade cinematic." : {
+
+    },
+    "Your progress" : {
+
+    },
+    "You’ll return to the Prismedia sign-in screen on this Apple TV." : {
+
+    },
+    "Zoom %lld percent" : {
+
+    },
+    "Zoom In" : {
+
+    },
+    "Zoom Out" : {
+
+    },
+    "prismedia.example.com" : {
+
+    },
+    "−%@" : {
+
+    }
+  },
+  "version" : "1.0"
+}

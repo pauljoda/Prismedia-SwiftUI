@@ -7,10 +7,11 @@ struct EPUBProgressLocation: Equatable, Sendable {
 
     init?(serialized: String) {
         if let data = serialized.data(using: .utf8),
-           let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let href = root["href"] as? String,
-           !href.isEmpty,
-           let locations = root["locations"] as? [String: Any] {
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let href = root["href"] as? String,
+            !href.isEmpty,
+            let locations = root["locations"] as? [String: Any]
+        {
             self.href = href
             resourceProgression = Self.fraction(locations["progression"])
             totalProgression = locations["totalProgression"].flatMap(Self.optionalFraction)
@@ -19,9 +20,10 @@ struct EPUBProgressLocation: Equatable, Sendable {
 
         let marker = "#prismedia-progress="
         guard let range = serialized.range(of: marker),
-              range.lowerBound != serialized.startIndex,
-              let value = Double(serialized[range.upperBound...]),
-              value.isFinite else { return nil }
+            range.lowerBound != serialized.startIndex,
+            let value = Double(serialized[range.upperBound...]),
+            value.isFinite
+        else { return nil }
         href = String(serialized[..<range.lowerBound])
         resourceProgression = min(max(0, value), 1)
         totalProgression = nil

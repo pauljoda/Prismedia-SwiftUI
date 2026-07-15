@@ -51,7 +51,7 @@
                         }
                 )
             }
-            .frame(height: 14)
+            .frame(height: interactionHeight)
             .accessibilityElement()
             .accessibilityLabel("Playback position")
             .accessibilityValue(
@@ -80,6 +80,14 @@
                     incrementing: incrementing
                 )
             )
+        }
+
+        private var interactionHeight: CGFloat {
+            #if os(iOS)
+                44
+            #else
+                28
+            #endif
         }
     }
 

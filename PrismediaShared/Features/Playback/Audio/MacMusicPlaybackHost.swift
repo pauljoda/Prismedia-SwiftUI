@@ -23,6 +23,7 @@
             content
                 .environment(controller)
                 .environment(\.musicMiniPlayerVisibility, miniPlayerVisibility)
+                .focusedSceneValue(controller)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if showsMiniPlayer {
                         MacMusicMiniPlayerView {

@@ -112,7 +112,8 @@ struct EPUBChapterContentsService: Sendable {
 
     private func href(from progressLocation: String?) -> String? {
         if let progressLocation,
-           let location = EPUBProgressLocation(serialized: progressLocation) {
+            let location = EPUBProgressLocation(serialized: progressLocation)
+        {
             return location.href
         }
         guard let progressLocation,

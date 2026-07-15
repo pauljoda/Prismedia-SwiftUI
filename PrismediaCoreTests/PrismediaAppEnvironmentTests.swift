@@ -113,6 +113,8 @@ final class PrismediaAppEnvironmentTests: XCTestCase {
         XCTAssertTrue(model.allowsNsfwContent)
         XCTAssertTrue(model.client?.allowsNsfwContent ?? false)
         XCTAssertEqual(nsfwStore.savedValues[eligibleUser.id], true)
+        XCTAssertEqual(model.contentRevision, 1)
+        XCTAssertEqual(model.entityListRevision, 1)
     }
 
     func testUserWithoutNsfwPermissionCannotEnableTheGlobalPreference() {
@@ -132,10 +134,21 @@ final class PrismediaAppEnvironmentTests: XCTestCase {
         let model = makeModel(store: RecordingSessionStore(), loader: MockHTTPDataLoader(responses: []))
 
         XCTAssertEqual(model.entityListRevision, 0)
+        XCTAssertEqual(model.contentRevision, 0)
 
         model.entityDidMutate()
 
         XCTAssertEqual(model.entityListRevision, 1)
+        XCTAssertEqual(model.contentRevision, 1)
+    }
+
+    func testManualReloadInvalidatesAllRetainedContent() {
+        let model = makeModel(store: RecordingSessionStore(), loader: MockHTTPDataLoader(responses: []))
+
+        model.reloadContent()
+
+        XCTAssertEqual(model.entityListRevision, 1)
+        XCTAssertEqual(model.contentRevision, 1)
     }
 
     func testSuccessfulProbeRemembersServerBeforeLogin() async throws {

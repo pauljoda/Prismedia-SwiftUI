@@ -424,74 +424,20 @@ public struct EntityDetailView: View {
 
                         VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
                             #if os(iOS) || os(macOS)
-                                if let combinedProgress = combinedProgressPresentation(for: detail) {
-                                    BookCombinedProgressSection(
-                                        presentation: combinedProgress,
-                                        readingErrorMessage: readingState.errorMessage,
-                                        listeningErrorMessage: audiobookErrorMessage,
-                                        horizontalPadding: detailHorizontalPadding,
-                                        onContinueReading: {
-                                            if readingState.requiresResetBeforeReading {
-                                                Task { await startReadingOver(openReaderWhenReady: true) }
-                                            } else {
-                                                openReader(command: .resume)
-                                            }
-                                        },
-                                        onContinueListening: { beginListening(to: detail) },
-                                        onContinueCombined: { openCombinedReader(for: detail) },
-                                        onStartReadingOver: { Task { await startReadingOver() } },
-                                        onStartListeningOver: { Task { await startListeningOver(detail) } },
-                                        onToggleReadingCompletion: {
-                                            Task {
-                                                await toggleReadingCompletion(
-                                                    readingState.progressPresentation?.status ?? .notStarted
-                                                )
-                                            }
-                                        },
-                                        onToggleListeningCompletion: {
-                                            Task { await toggleListeningCompletion(detail) }
-                                        },
-                                        onDismissReadingError: { readingState.dismissError() },
-                                        onDismissListeningError: { audiobookErrorMessage = nil }
-                                    )
-                                } else {
-                                    EntityDetailReadingSection(
-                                        state: readingState,
-                                        horizontalPadding: detailHorizontalPadding,
-                                        onResume: { openReader(command: .resume) },
-                                        onStartOver: { Task { await startReadingOver() } },
-                                        onToggleCompletion: { status in
-                                            Task { await toggleReadingCompletion(status) }
-                                        },
-                                        onRetry: {
-                                            Task { await loadReadingState(for: detail) }
-                                        },
-                                        onDismissError: { readingState.dismissError() }
-                                    )
-
-                                    AudiobookDetailPlaybackSection(
-                                        presentation: audiobookPresentation(for: detail),
-                                        errorMessage: audiobookErrorMessage,
-                                        horizontalPadding: detailHorizontalPadding,
-                                        onResume: { beginListening(to: detail) },
-                                        onStartOver: { Task { await startListeningOver(detail) } },
-                                        onToggleCompletion: { Task { await toggleListeningCompletion(detail) } },
-                                        onDismissError: { audiobookErrorMessage = nil }
-                                    )
-                                }
-
-                                BookChapterListSection(
+                                EntityDetailBookProgressView(
+                                    combinedProgress: combinedProgressPresentation(for: detail),
+                                    readingState: readingState,
+                                    audiobookPresentation: audiobookPresentation(for: detail),
+                                    listeningErrorMessage: audiobookErrorMessage,
                                     chapters: mappedBookChapters,
-                                    isLoading: areBookChaptersLoading,
-                                    errorMessage: bookChaptersErrorMessage,
-                                    readingProgressLabel: readingChapterProgressLabel,
-                                    listeningProgressLabel: listeningChapterProgressLabel(for: detail),
+                                    chaptersAreLoading: areBookChaptersLoading,
+                                    chaptersErrorMessage: bookChaptersErrorMessage,
+                                    readingChapterProgressLabel: readingChapterProgressLabel,
+                                    listeningChapterProgressLabel: listeningChapterProgressLabel(for: detail),
                                     horizontalPadding: detailHorizontalPadding,
-                                    onRead: { openBookChapter($0, combined: false) },
-                                    onListen: playBookChapter,
-                                    onCombined: { openBookChapter($0, combined: true) },
-                                    onRetry: { Task { await loadBookChapters(for: detail) } }
+                                    onAction: performBookProgressAction
                                 )
+                                .equatable()
                             #endif
 
                             #if os(tvOS)
@@ -1225,6 +1171,48 @@ public struct EntityDetailView: View {
     }
 
     #if os(iOS) || os(macOS)
+        private func performBookProgressAction(_ action: EntityDetailBookProgressAction) {
+            guard case .content(let detail) = state.phase else { return }
+
+            switch action {
+            case .continueReading:
+                if readingState.requiresResetBeforeReading {
+                    Task { await startReadingOver(openReaderWhenReady: true) }
+                } else {
+                    openReader(command: .resume)
+                }
+            case .resumeReading:
+                openReader(command: .resume)
+            case .continueListening:
+                beginListening(to: detail)
+            case .continueCombined:
+                openCombinedReader(for: detail)
+            case .startReadingOver:
+                Task { await startReadingOver() }
+            case .startListeningOver:
+                Task { await startListeningOver(detail) }
+            case .toggleReadingCompletion:
+                let status = readingState.progressPresentation?.status ?? .notStarted
+                Task { await toggleReadingCompletion(status) }
+            case .toggleListeningCompletion:
+                Task { await toggleListeningCompletion(detail) }
+            case .dismissReadingError:
+                readingState.dismissError()
+            case .dismissListeningError:
+                audiobookErrorMessage = nil
+            case .retryReading:
+                Task { await loadReadingState(for: detail) }
+            case .readChapter(let chapter):
+                openBookChapter(chapter, combined: false)
+            case .listenToChapter(let chapter):
+                playBookChapter(chapter)
+            case .combineChapter(let chapter):
+                openBookChapter(chapter, combined: true)
+            case .retryChapters:
+                Task { await loadBookChapters(for: detail) }
+            }
+        }
+
         private func refreshBookChapterMappings(for detail: EntityDetail) {
             guard detail.kind == .book, detail.bookFormat == .epub else {
                 mappedBookChapters = []

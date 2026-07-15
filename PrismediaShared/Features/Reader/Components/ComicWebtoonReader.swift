@@ -31,21 +31,9 @@ struct ComicWebtoonReader: View {
         let pageIDs = manifest.pages.map(\.id)
         let pages = ScrollView(.vertical) {
             LazyVStack(spacing: 0) {
-                ForEach(Array(manifest.pages.enumerated()), id: \.element.id) { index, page in
+                ForEach(manifest.pages) { page in
                     AuthenticatedComicPage(page: page, cache: pageCache, fit: false)
                         .id(page.id)
-                        .background {
-                            GeometryReader { pageGeometry in
-                                Color.clear.preference(
-                                    key: ComicPageOffsetPreferenceKey.self,
-                                    value: [
-                                        index: pageGeometry.frame(
-                                            in: .named("comic-scroll")
-                                        ).minY
-                                    ]
-                                )
-                            }
-                        }
                 }
 
                 ComicReaderChapterEnd(
@@ -56,8 +44,8 @@ struct ComicWebtoonReader: View {
                 .frame(minHeight: 280)
                 .id("comic-reader-end")
             }
+            .scrollTargetLayout()
         }
-        .coordinateSpace(.named("comic-scroll"))
         .task(
             id: ComicReaderPreloadKey(
                 chapterIDs: manifest.chapters.map(\.id),
@@ -79,29 +67,22 @@ struct ComicWebtoonReader: View {
             else { return }
 
             proxy.scrollTo(manifest.pages[currentIndex].id, anchor: .top)
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            restoredPageIDs = pageIDs
         }
         .onChange(of: navigationRequestID) {
             guard manifest.pages.indices.contains(currentIndex) else { return }
+            restoredPageIDs = nil
             proxy.scrollTo(manifest.pages[currentIndex].id, anchor: .top)
-        }
-        .onPreferenceChange(ComicPageOffsetPreferenceKey.self) { offsets in
-            guard manifest.pages.indices.contains(currentIndex) else { return }
-            if restoredPageIDs != pageIDs {
-                guard let targetOffset = offsets[currentIndex] else { return }
-                if abs(targetOffset) <= 2 {
-                    restoredPageIDs = pageIDs
-                } else {
-                    proxy.scrollTo(manifest.pages[currentIndex].id, anchor: .top)
-                }
-                return
+            Task { @MainActor in
+                await Task.yield()
+                restoredPageIDs = pageIDs
             }
-
-            let anchor = viewport.size.height * 0.45
-            let index =
-                offsets
-                .filter { $0.value <= anchor }
-                .max(by: { $0.value < $1.value })?
-                .key
+        }
+        .onScrollTargetVisibilityChange(idType: UUID.self, threshold: 0.2) { visiblePageIDs in
+            guard restoredPageIDs == pageIDs else { return }
+            let index = visiblePageIDs.compactMap(pageIDs.firstIndex(of:)).min()
             if let index { onMove(index) }
         }
 

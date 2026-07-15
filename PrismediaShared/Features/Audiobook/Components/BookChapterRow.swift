@@ -135,15 +135,15 @@ struct BookChapterRow: View {
                     .font(.caption.weight(.semibold))
             }
         }
-            .buttonStyle(.glass)
-            .buttonBorderShape(compact ? .circle : .capsule)
-            .frame(
-                minWidth: PrismediaLayout.minimumHitTarget,
-                minHeight: PrismediaLayout.minimumHitTarget
-            )
-            .contentShape(.rect)
-            .accessibilityLabel(title)
-            .accessibilityHint(hint)
+        .buttonStyle(.glass)
+        .buttonBorderShape(compact ? .circle : .capsule)
+        .frame(
+            minWidth: PrismediaLayout.minimumHitTarget,
+            minHeight: PrismediaLayout.minimumHitTarget
+        )
+        .contentShape(.rect)
+        .accessibilityLabel(title)
+        .accessibilityHint(hint)
     }
 }
 
