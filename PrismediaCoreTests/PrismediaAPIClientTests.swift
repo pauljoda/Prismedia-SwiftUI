@@ -247,6 +247,31 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(queryItem("hideNsfw", in: request), "false")
     }
 
+    func testFetchMovieAndSeriesUseCreditBearingDetailEndpoints() async throws {
+        let movieID = UUID(uuidString: "7e72cc70-b6c6-441a-8218-867accf82075")!
+        let seriesID = UUID(uuidString: "bcae3577-63df-44f8-896b-08f9c44c9c46")!
+        let personID = UUID(uuidString: "97bea9e6-c1cb-4c0a-8ab3-d77b822e581a")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(creditDetailJSON(id: movieID, kind: "movie", personID: personID, character: "Louise Banks")),
+            .json(creditDetailJSON(id: seriesID, kind: "video-series", personID: personID, character: "Rebecca Welton")),
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, loader: loader)
+            .authenticated(with: "token")
+
+        let movie = try await client.fetchEntity(id: movieID, kind: .movie)
+        let series = try await client.fetchEntity(id: seriesID, kind: .videoSeries)
+
+        XCTAssertEqual(movie.creditMetadata.first?.character, "Louise Banks")
+        XCTAssertEqual(series.creditMetadata.first?.character, "Rebecca Welton")
+        XCTAssertEqual(
+            loader.requests.map { $0.url?.path },
+            [
+                "/api/movies/\(movieID.uuidString.lowercased())",
+                "/api/series/\(seriesID.uuidString.lowercased())",
+            ]
+        )
+    }
+
     func testUpdateEntityRatingPatchesTheSharedRatingEndpoint() async throws {
         let entityID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let loader = MockHTTPDataLoader(responses: [.json(entityDetailJSON(id: entityID, rating: 4))])
@@ -971,6 +996,37 @@ final class PrismediaAPIClientTests: XCTestCase {
               ],
               "childrenByKind": [],
               "relationships": []
+            }
+            """
+    }
+
+    private func creditDetailJSON(id: UUID, kind: String, personID: UUID, character: String) -> String {
+        """
+            {
+              "id": "\(id.uuidString)",
+              "kind": "\(kind)",
+              "title": "Credit Detail",
+              "capabilities": [],
+              "childrenByKind": [],
+              "relationships": [
+                {
+                  "kind": "person",
+                  "label": "Cast",
+                  "code": "cast",
+                  "entities": [
+                    { "id": "\(personID.uuidString)", "kind": "person", "title": "Actor" }
+                  ]
+                }
+              ],
+              "creditMetadata": [
+                {
+                  "personId": "\(personID.uuidString)",
+                  "role": "actor",
+                  "character": "\(character)",
+                  "roles": ["actor"],
+                  "characters": ["\(character)"]
+                }
+              ]
             }
             """
     }

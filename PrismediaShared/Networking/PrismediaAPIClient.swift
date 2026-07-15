@@ -153,12 +153,32 @@ public struct PrismediaAPIClient: Sendable {
     }
 
     public func fetchEntity(id: UUID, kind: EntityKind) async throws -> EntityDetail {
-        guard kind == .book else { return try await fetchEntity(id: id) }
+        guard let route = entityDetailRoute(for: kind) else { return try await fetchEntity(id: id) }
         return try await send(
             EntityDetail.self,
-            path: "/api/books/\(id.uuidString.lowercased())",
+            path: "\(route)/\(id.uuidString.lowercased())",
             queryItems: [nsfwVisibilityQueryItem]
         )
+    }
+
+    private func entityDetailRoute(for kind: EntityKind) -> String? {
+        switch kind {
+        case .audioLibrary: "/api/audio-libraries"
+        case .audioTrack: "/api/audio-tracks"
+        case .book: "/api/books"
+        case .bookAuthor: "/api/book-authors"
+        case .collection: "/api/collections"
+        case .gallery: "/api/galleries"
+        case .image: "/api/images"
+        case .movie: "/api/movies"
+        case .musicArtist: "/api/music-artists"
+        case .person: "/api/people"
+        case .studio: "/api/studios"
+        case .tag: "/api/tags"
+        case .video: "/api/videos"
+        case .videoSeries: "/api/series"
+        default: nil
+        }
     }
 
     public func fetchEntityMonitorState(entityID: UUID) async throws -> EntityMonitorState {
