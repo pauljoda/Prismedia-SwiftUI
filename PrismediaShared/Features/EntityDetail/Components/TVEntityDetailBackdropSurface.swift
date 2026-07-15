@@ -36,14 +36,14 @@ import SwiftUI
                     maxHeight: .infinity,
                     alignment: .topLeading
                 )
-                .environment(\.artworkPalette, palette)
+                .environment(\.artworkPalette, activePalette)
                 .environment(
                     \.artworkPrimaryAccent,
-                    palette?.primary.color ?? PrismediaColor.accent
+                    activePalette?.primary.color ?? PrismediaColor.accent
                 )
                 .environment(
                     \.artworkSecondaryText,
-                    palette?.secondary.color ?? PrismediaColor.textSecondary
+                    activePalette?.secondary.color ?? PrismediaColor.textSecondary
                 )
                 .background {
                     TVEntityDetailBackdrop(
@@ -57,11 +57,15 @@ import SwiftUI
                     .ignoresSafeArea()
                 }
         }
+
+        private var activePalette: ArtworkPalette? {
+            heroPath == nil ? nil : palette
+        }
     }
 #endif
 
 #if os(tvOS) && DEBUG
-    #Preview("TV Entity Detail Backdrop Surface · Poster Fallback") {
+    #Preview("TV Entity Detail Backdrop Surface · No Hero") {
         @Previewable @State var palette: ArtworkPalette?
         PreviewShell(signedIn: true) {
             TVEntityDetailBackdropSurface(

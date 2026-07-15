@@ -57,6 +57,19 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.sort, "title")
     }
 
+    func testConfigurationRejectsARestoredDisplayModeOutsideItsSupportedLayouts() {
+        let configuration = EntityGridConfiguration(
+            title: "Episodes",
+            query: EntityListQuery(kind: .video),
+            defaultDisplayMode: .list,
+            availableDisplayModes: [.list]
+        )
+
+        XCTAssertEqual(configuration.resolvedDisplayMode(restoring: .grid), .list)
+        XCTAssertEqual(configuration.resolvedDisplayMode(restoring: .list), .list)
+        XCTAssertEqual(configuration.resolvedDisplayMode(restoring: nil), .list)
+    }
+
     func testPreferencesEncodeUserControlsAsOneNestedValue() throws {
         var controls = EntityGridControls(baselineQuery: EntityListQuery(kind: .book))
         controls.sort = .rating

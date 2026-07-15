@@ -30,14 +30,14 @@ struct EntityDetailArtworkSurface<Content: View>: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
-            .environment(\.artworkPalette, palette)
+            .environment(\.artworkPalette, activePalette)
             .environment(
                 \.artworkPrimaryAccent,
-                palette?.primary.color ?? PrismediaColor.accent
+                activePalette?.primary.color ?? PrismediaColor.accent
             )
             .environment(
                 \.artworkSecondaryText,
-                palette?.secondary.color ?? PrismediaColor.textSecondary
+                activePalette?.secondary.color ?? PrismediaColor.textSecondary
             )
             .background {
                 if showsAtmosphere {
@@ -64,6 +64,10 @@ struct EntityDetailArtworkSurface<Content: View>: View {
                     .accessibilityHidden(true)
                 }
             }
+    }
+
+    private var activePalette: ArtworkPalette? {
+        showsAtmosphere ? palette : nil
     }
 }
 

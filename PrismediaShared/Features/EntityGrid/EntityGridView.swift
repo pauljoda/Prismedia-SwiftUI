@@ -49,7 +49,11 @@ public struct EntityGridView<ItemContent: View>: View {
         self.itemContent = itemContent
         let restoredPreferences = preferencesStore.load(for: configuration.preferencesID)
         let restoredControls = restoredPreferences?.controls(baselineQuery: configuration.query)
-        _displayMode = State(initialValue: restoredPreferences?.displayMode ?? configuration.defaultDisplayMode)
+        _displayMode = State(
+            initialValue: configuration.resolvedDisplayMode(
+                restoring: restoredPreferences?.displayMode
+            )
+        )
         _density = State(initialValue: restoredPreferences?.density ?? .standard)
         _pageSize = State(initialValue: restoredPreferences?.pageSize ?? configuration.pageSize)
         _presets = State(initialValue: preferencesStore.loadPresets(for: configuration.preferencesID))
@@ -460,31 +464,34 @@ public struct EntityGridView<ItemContent: View>: View {
 
     private var displayMenu: some View {
         Menu {
-            Section("Layout") {
-                ForEach(EntityGridDisplayMode.allCases) { option in
-                    Button {
-                        selectDisplayMode(option)
-                    } label: {
-                        Label(
-                            option.label,
-                            systemImage: displayMode == option ? "checkmark" : option.systemImage
-                        )
+            if configuration.availableDisplayModes.count > 1 {
+                Section("Layout") {
+                    ForEach(configuration.availableDisplayModes) { option in
+                        Button {
+                            selectDisplayMode(option)
+                        } label: {
+                            Label(
+                                option.label,
+                                systemImage: displayMode == option ? "checkmark" : option.systemImage
+                            )
+                        }
                     }
                 }
             }
 
-            Section("Item Size") {
-                ForEach(EntityGridDensity.allCases) { option in
-                    Button {
-                        selectDensity(option)
-                    } label: {
-                        if density == option {
-                            Label(option.label, systemImage: "checkmark")
-                        } else {
-                            Text(option.label)
+            if displayMode != .list {
+                Section("Item Size") {
+                    ForEach(EntityGridDensity.allCases) { option in
+                        Button {
+                            selectDensity(option)
+                        } label: {
+                            if density == option {
+                                Label(option.label, systemImage: "checkmark")
+                            } else {
+                                Text(option.label)
+                            }
                         }
                     }
-                    .disabled(displayMode == .list)
                 }
             }
 
@@ -561,7 +568,7 @@ public struct EntityGridView<ItemContent: View>: View {
     }
 
     private func selectDisplayMode(_ mode: EntityGridDisplayMode) {
-        guard displayMode != mode else { return }
+        guard configuration.availableDisplayModes.contains(mode), displayMode != mode else { return }
         displayMode = mode
         savePreferences()
     }
@@ -582,7 +589,7 @@ public struct EntityGridView<ItemContent: View>: View {
     private func applyPreset(_ preset: EntityGridPreset) async {
         let preferences = preset.preferences
         snapshot.setControls(preferences.controls(baselineQuery: configuration.query))
-        displayMode = preferences.displayMode
+        displayMode = configuration.resolvedDisplayMode(restoring: preferences.displayMode)
         density = preferences.density
         pageSize = preferences.pageSize ?? configuration.pageSize
         savePreferences()

@@ -32,16 +32,6 @@ import SwiftUI
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .overlay(backdropGradients)
                     }
-                } else if let fallbackArtworkPath = posterPath ?? previewPath {
-                    ArtworkPaletteSurface(
-                        artworkPath: fallbackArtworkPath,
-                        previewPath: previewPath,
-                        fallbackSeed: fallbackSeed,
-                        systemImage: systemImage,
-                        palette: $palette
-                    ) {
-                        Color.clear
-                    }
                 } else {
                     PrismediaBackdrop()
                 }

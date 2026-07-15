@@ -302,15 +302,17 @@ public struct EntityDetailView: View {
         _ detail: EntityDetail,
         presentation: EntityDetailPresentation
     ) -> some View {
-        detailScrollView(detail, presentation: presentation)
-            .environment(\.artworkPalette, artworkPalette)
+        let activePalette = presentation.heroPath == nil ? nil : artworkPalette
+
+        return detailScrollView(detail, presentation: presentation)
+            .environment(\.artworkPalette, activePalette)
             .environment(
                 \.artworkPrimaryAccent,
-                artworkPalette?.primary.color ?? PrismediaColor.accent
+                activePalette?.primary.color ?? PrismediaColor.accent
             )
             .environment(
                 \.artworkSecondaryText,
-                artworkPalette?.secondary.color ?? PrismediaColor.textSecondary
+                activePalette?.secondary.color ?? PrismediaColor.textSecondary
             )
     }
 
@@ -327,13 +329,14 @@ public struct EntityDetailView: View {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         EntityDetailArtworkSurface(
                             artworkPath: EntityDetailHeroArtworkPolicy.atmospherePath(
-                                heroPath: presentation.heroPath,
-                                posterPath: presentation.posterPath
+                                heroPath: presentation.heroPath
                             ),
-                            previewPath: link.thumbnailPreview?.artworkPath,
+                            previewPath: presentation.heroPath == nil
+                                ? nil
+                                : link.thumbnailPreview?.artworkPath,
                             fallbackSeed: detail.title,
                             systemImage: presentation.systemImage,
-                            showsAtmosphere: showsHeroArtwork,
+                            showsAtmosphere: showsHeroArtwork && presentation.heroPath != nil,
                             palette: $artworkPalette
                         ) {
                             VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {

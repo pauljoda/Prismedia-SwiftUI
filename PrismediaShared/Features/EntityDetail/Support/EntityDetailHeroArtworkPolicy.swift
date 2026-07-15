@@ -6,9 +6,9 @@ enum EntityDetailHeroArtworkPolicy {
     static let contentMode: ContentMode = .fill
     static let summaryLineLimit = 6
 
-    /// The full detail atmosphere prefers the sharp hero's source, while a
-    /// poster remains a safe fallback without becoming a synthetic hero.
-    static func atmospherePath(heroPath: String?, posterPath: String?) -> String? {
-        heroPath ?? posterPath
+    /// Only dedicated API backdrop artwork may create a full-width detail
+    /// atmosphere. Posters remain discrete header artwork.
+    static func atmospherePath(heroPath: String?) -> String? {
+        heroPath
     }
 }

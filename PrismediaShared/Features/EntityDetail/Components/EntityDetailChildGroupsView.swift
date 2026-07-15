@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct EntityDetailChildGroupsView: View {
-    @Environment(\.artworkSecondaryText) private var artworkSecondaryText
+    @Environment(PrismediaAppEnvironment.self) private var environment
     let groups: [EntityGroup]
     let horizontalPadding: CGFloat
     let onPrimaryAction: ((EntityThumbnail) -> Void)?
@@ -28,37 +28,45 @@ struct EntityDetailChildGroupsView: View {
     }
 
     private func thumbnailGroup(_ group: EntityGroup) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(group.label)
-                    .font(.title3.bold())
-                    .foregroundStyle(PrismediaColor.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-
-                Spacer()
-
-                Text(String(group.entities.count))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(artworkSecondaryText)
-            }
-            .padding(.horizontal, horizontalPadding)
-
-            EntityThumbnailGrid(
+        EntityGridView(
+            configuration: gridConfiguration(for: group),
+            loader: StaticEntityGridLoader(
                 items: group.entities,
-                minimumColumnWidth: minimumColumnWidth
-            ) { item in
-                EntityThumbnailNavigationSurface(
-                    item: item,
-                    onPrimaryAction: onPrimaryAction
-                )
-                .accessibilityIdentifier("entity-detail.child.\(item.id.uuidString)")
-            }
-            .padding(.horizontal, horizontalPadding)
-            .padding(.bottom, PrismediaSpacing.medium)
-            .accessibilityIdentifier("entity-detail.children.\(group.kind.rawValue)")
-            .accessibilityValue(String(group.entities.count))
-            .prismediaFocusSection()
+                allowsNsfwContent: environment.allowsNsfwContent
+            ),
+            presentation: .embedded,
+            horizontalContentPadding: horizontalPadding
+        ) { item, layout in
+            EntityThumbnailNavigationSurface(
+                item: item,
+                layout: layout,
+                onPrimaryAction: onPrimaryAction
+            )
+            .accessibilityIdentifier("entity-detail.child.\(item.id.uuidString)")
         }
+        .padding(.bottom, PrismediaSpacing.medium)
+        .accessibilityIdentifier("entity-detail.children.\(group.kind.rawValue)")
+        .prismediaFocusSection()
+    }
+
+    private func gridConfiguration(for group: EntityGroup) -> EntityGridConfiguration {
+        let presentsEpisodes = group.kind == .video
+        let itemKinds = Array(Set(group.entities.map(\.kind))).sorted {
+            $0.rawValue < $1.rawValue
+        }
+        let query =
+            itemKinds.count == 1
+            ? EntityListQuery(kind: itemKinds.first)
+            : EntityListQuery(kinds: itemKinds)
+
+        return EntityGridConfiguration(
+            title: group.label,
+            query: query,
+            pageSize: 48,
+            minimumColumnWidth: minimumColumnWidth,
+            defaultDisplayMode: presentsEpisodes ? .list : .grid,
+            availableDisplayModes: presentsEpisodes ? [.list] : EntityGridDisplayMode.allCases
+        )
     }
 
     private var minimumColumnWidth: CGFloat {
