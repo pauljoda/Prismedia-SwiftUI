@@ -95,11 +95,22 @@ struct EntityDetailSectionPanel: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: relationshipCardSpacing) {
                         ForEach(group.entities) { item in
-                            EntityThumbnailNavigationSurface(
-                                item: item,
-                                layout: .rail,
-                                preferredWidth: relationshipCardWidth(for: item.thumbnailPresentationKind)
-                            )
+                            let cardWidth = relationshipCardWidth(for: item.thumbnailPresentationKind)
+
+                            VStack(spacing: PrismediaSpacing.small) {
+                                EntityThumbnailNavigationSurface(
+                                    item: item,
+                                    layout: .rail,
+                                    preferredWidth: cardWidth
+                                )
+
+                                if group.kind == .person,
+                                    let subtitle = presentation.creditSubtitle(for: item.id)
+                                {
+                                    EntityDetailCreditSubtitleView(subtitle: subtitle)
+                                }
+                            }
+                            .frame(width: cardWidth)
                         }
                     }
                     .padding(.vertical, PrismediaSpacing.medium)

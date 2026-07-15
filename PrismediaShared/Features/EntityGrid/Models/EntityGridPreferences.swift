@@ -14,6 +14,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
     public var favoriteOnly: Bool { savedControls.filters.favoriteOnly }
     public var organization: String { savedControls.filters.organization.rawValue }
     public var availability: String { savedControls.filters.availability.rawValue }
+    public var includeWanted: Bool { savedControls.filters.includeWanted }
     public var acquisitionStatus: String? { savedControls.filters.acquisitionStatus?.rawValue }
     public var engagement: String { savedControls.filters.engagement.rawValue }
     public var isUnrated: Bool { savedControls.filters.rating == .unrated }

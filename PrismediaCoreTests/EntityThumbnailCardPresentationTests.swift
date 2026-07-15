@@ -13,6 +13,48 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         XCTAssertEqual(summary.summary, "A summary.")
     }
 
+    func testOverlayPolicyCarriesWebThumbnailStatusChips() {
+        let item = EntityThumbnail(
+            id: UUID(),
+            kind: .video,
+            title: "Wanted Video",
+            rating: 4,
+            isNsfw: true,
+            isWanted: true,
+            wantedStatus: AcquisitionStatus(rawValue: "downloading")
+        )
+
+        let policy = EntityThumbnailOverlayPolicy(item: item)
+
+        XCTAssertEqual(policy.topTrailing.map(\.kind), [.wanted, .nsfw])
+        XCTAssertEqual(policy.topTrailing.first?.label, "Downloading")
+        XCTAssertEqual(policy.bottomTrailing.map(\.kind), [.rating])
+        XCTAssertEqual(policy.bottomTrailing.first?.label, "4")
+    }
+
+    func testOverlayPolicyOmitsZeroRating() {
+        let item = EntityThumbnail(id: UUID(), kind: .movie, title: "Unrated", rating: 0)
+
+        XCTAssertTrue(EntityThumbnailOverlayPolicy(item: item).bottomTrailing.isEmpty)
+    }
+
+    func testPosterArtworkKeepsStatusChipsVisible() {
+        let item = EntityThumbnail(
+            id: UUID(),
+            kind: .movie,
+            title: "Poster Movie",
+            coverURL: "/poster.jpg",
+            rating: 5,
+            isNsfw: true,
+            isWanted: true
+        )
+
+        let presentation = EntityThumbnailCardPresentation(item: item, layout: .grid)
+
+        XCTAssertFalse(presentation.usesArtworkExtension)
+        XCTAssertTrue(presentation.showsArtworkBadges)
+    }
+
     private func decodeThumbnail(descriptionMember: String) throws -> EntityThumbnail {
         let data = Data(
             """

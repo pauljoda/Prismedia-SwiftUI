@@ -30,6 +30,10 @@ struct EntityGridControlsView: View {
                 }
 
                 Section("Availability") {
+                    #if os(tvOS)
+                        Toggle("Show wanted entities", isOn: $draft.filters.includeWanted)
+                    #endif
+
                     Picker("Availability", selection: availabilitySelection) {
                         ForEach(Self.availabilityOptions) { option in
                             Text(option.label).tag(option.id)

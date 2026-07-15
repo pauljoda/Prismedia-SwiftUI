@@ -170,6 +170,36 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertNil(query.nsfw, "The API client owns the global NSFW safety policy.")
     }
 
+    func testWantedVisibilityCanExcludeWantedEntitiesWithoutChangingAvailabilityFilter() {
+        var controls = EntityGridControls(baselineQuery: EntityListQuery(kind: .movie))
+        controls.filters.includeWanted = false
+
+        let query = controls.applying(to: EntityListQuery(kind: .movie))
+
+        XCTAssertEqual(query.wanted, false)
+        XCTAssertNil(query.hasFile)
+    }
+
+    func testExplicitWantedAvailabilityOverridesHiddenWantedPreference() {
+        var controls = EntityGridControls(baselineQuery: EntityListQuery(kind: .movie))
+        controls.filters.includeWanted = false
+        controls.filters.availability = .wanted
+
+        let query = controls.applying(to: EntityListQuery(kind: .movie))
+
+        XCTAssertEqual(query.wanted, true)
+    }
+
+    func testHiddenWantedPreferenceDoesNotOverrideWantedOnlyRoute() {
+        let baseline = EntityListQuery(kind: .movie, wanted: true)
+        var controls = EntityGridControls(baselineQuery: baseline)
+        controls.filters.includeWanted = false
+
+        let query = controls.applying(to: baseline)
+
+        XCTAssertEqual(query.wanted, true)
+    }
+
     func testRandomSortKeepsItsSeedInTheAppliedQuery() {
         var controls = EntityGridControls(baselineQuery: EntityListQuery(kind: .video))
         controls.sort = .random

@@ -83,61 +83,22 @@ struct EntityThumbnailArtworkView: View {
                 if cardPresentation.showsArtworkBadges,
                     !cardPresentation.usesArtworkExtension
                 {
-                    badgeRow(overlayPolicy.topLeading)
+                    EntityThumbnailBadgeRow(badges: overlayPolicy.topLeading)
                         .padding(PrismediaSpacing.small)
                 }
             }
             .overlay(alignment: .topTrailing) {
                 if cardPresentation.showsArtworkBadges {
-                    badgeRow(overlayPolicy.topTrailing)
+                    EntityThumbnailBadgeRow(badges: overlayPolicy.topTrailing)
                         .padding(PrismediaSpacing.small)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
                 if cardPresentation.showsArtworkBadges {
-                    badgeRow(overlayPolicy.bottomTrailing)
+                    EntityThumbnailBadgeRow(badges: overlayPolicy.bottomTrailing)
                         .padding(PrismediaSpacing.small)
                 }
             }
-    }
-
-    private func badgeRow(_ badges: [EntityThumbnailBadgePresentation]) -> some View {
-        HStack(spacing: PrismediaSpacing.small) {
-            ForEach(badges, id: \.kind) { badge in
-                ThumbnailBadge(
-                    systemImage: badge.systemImage,
-                    label: badge.label,
-                    tint: badgeTint(badge.tone),
-                    background: badgeBackground(badge.tone),
-                    iconAfterLabel: badge.kind == .rating
-                )
-            }
-        }
-    }
-
-    private func badgeTint(_ tone: EntityThumbnailBadgeTone) -> Color {
-        switch tone {
-        case .accent, .downloading, .attention: PrismediaColor.accent
-        case .searching, .cleanup: PrismediaColor.warning
-        case .queued, .muted: PrismediaColor.textSecondary
-        case .failed, .danger: PrismediaColor.destructive
-        case .success: PrismediaColor.success
-        }
-    }
-
-    private func badgeBackground(_ tone: EntityThumbnailBadgeTone) -> Color {
-        switch tone {
-        case .accent, .downloading, .attention:
-            PrismediaColor.accent.opacity(PrismediaOpacity.statusFill)
-        case .searching, .cleanup:
-            PrismediaColor.warning.opacity(PrismediaOpacity.statusFill)
-        case .queued, .muted:
-            PrismediaColor.controlFill
-        case .failed, .danger:
-            PrismediaColor.destructive.opacity(PrismediaOpacity.statusFill)
-        case .success:
-            PrismediaColor.success.opacity(PrismediaOpacity.statusFill)
-        }
     }
 
     private func progressMeter(_ value: Double) -> some View {

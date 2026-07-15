@@ -12,10 +12,7 @@ public struct EntityThumbnailCardPresentation: Hashable, Sendable {
         showsTitleOverlay =
             !usesArtworkExtension
             && (item.bestCoverPath == nil || Self.alwaysIdentifiesWithTitle(item.kind))
-        showsArtworkBadges =
-            usesArtworkExtension
-            || item.bestCoverPath == nil
-            || !layout.supportsArtworkExtension
+        showsArtworkBadges = true
         cardAspectRatio =
             usesArtworkExtension
             ? Self.extendedLandscapeAspectRatio

@@ -198,6 +198,13 @@ struct EntityDetailPresentation {
         return Array(items.prefix(16))
     }
 
+    func creditSubtitle(for personID: UUID) -> String? {
+        guard let metadata = detail.creditMetadata.first(where: { $0.personID == personID }) else {
+            return nil
+        }
+        return EntityDetailCreditSubtitlePolicy.subtitle(for: metadata)
+    }
+
     private var supportsAcquisition: Bool {
         detail.hasSourceMedia || flagCapability?.isWanted != nil
     }

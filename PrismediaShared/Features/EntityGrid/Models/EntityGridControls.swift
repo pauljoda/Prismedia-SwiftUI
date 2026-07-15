@@ -48,6 +48,9 @@ public struct EntityGridControls: Codable, Hashable, Sendable {
             query.wanted = filters.availability == .wanted ? true : nil
             query.acquisitionStatus = filters.acquisitionStatus
         }
+        if query.wanted == nil, !filters.includeWanted {
+            query.wanted = false
+        }
         if let engagementStatus { query.status = engagementStatus }
         if let minimumRating { query.ratingMin = minimumRating }
         if let maximumRating = filters.maximumRating { query.ratingMax = maximumRating }

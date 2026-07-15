@@ -13,6 +13,14 @@ struct EntityThumbnailLandscapeCardView: View {
     var body: some View {
         artwork
             .backgroundExtensionEffect(isEnabled: !reduceTransparency)
+            .overlay(alignment: .topTrailing) {
+                EntityThumbnailBadgeRow(badges: overlayPolicy.topTrailing)
+                    .padding(PrismediaSpacing.small)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                EntityThumbnailBadgeRow(badges: overlayPolicy.bottomTrailing)
+                    .padding(PrismediaSpacing.small)
+            }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 metadata
             }
@@ -34,6 +42,10 @@ struct EntityThumbnailLandscapeCardView: View {
 
     private var presentation: EntityThumbnailCardPresentation {
         EntityThumbnailCardPresentation(item: item, layout: layout)
+    }
+
+    private var overlayPolicy: EntityThumbnailOverlayPolicy {
+        EntityThumbnailOverlayPolicy(item: item)
     }
 
     private var artwork: some View {

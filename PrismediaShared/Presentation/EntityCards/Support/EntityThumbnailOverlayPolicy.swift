@@ -25,11 +25,12 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
         self.topTrailing = topTrailing
 
         bottomTrailing =
-            item.rating.map {
-                [
+            item.rating.flatMap { rating in
+                guard rating > 0 else { return nil }
+                return [
                     EntityThumbnailBadgePresentation(
                         kind: .rating,
-                        label: String($0),
+                        label: String(rating),
                         systemImage: "star.fill",
                         tone: .accent
                     )

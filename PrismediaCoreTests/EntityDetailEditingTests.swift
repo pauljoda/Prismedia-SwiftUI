@@ -199,6 +199,44 @@ final class EntityDetailEditingTests: XCTestCase {
         XCTAssertEqual(Array(presentation.sections.map(\.title).prefix(2)), ["Main", "Metadata"])
     }
 
+    func testCreditPresentationUsesCharacterBeforeRole() throws {
+        let detail = try makeDetail()
+
+        XCTAssertEqual(
+            EntityDetailPresentation(detail: detail).creditSubtitle(
+                for: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+            ),
+            "Dr. Hale"
+        )
+    }
+
+    func testCreditPresentationHumanizesRoleWhenCharacterIsUnavailable() throws {
+        let detail = try makeDetail(
+            creditMetadata:
+                #"[{"personId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"executive_producer","character":null,"roles":["executive_producer"],"characters":[]}]"#
+        )
+
+        XCTAssertEqual(
+            EntityDetailPresentation(detail: detail).creditSubtitle(
+                for: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+            ),
+            "Executive Producer"
+        )
+    }
+
+    func testCreditPresentationSuppressesGenericPersonRole() throws {
+        let detail = try makeDetail(
+            creditMetadata:
+                #"[{"personId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"person","character":null,"roles":["person"],"characters":[]}]"#
+        )
+
+        XCTAssertNil(
+            EntityDetailPresentation(detail: detail).creditSubtitle(
+                for: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+            )
+        )
+    }
+
     func testReverseReferenceQueryEncodesTaxonomyContract() {
         let id = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let query = EntityListQuery(referencedBy: id, relationshipCode: "tags")
