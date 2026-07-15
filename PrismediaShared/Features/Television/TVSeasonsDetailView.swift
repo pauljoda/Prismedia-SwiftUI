@@ -72,8 +72,7 @@ import SwiftUI
             .background {
                 TVSeasonsHeroBackground(
                     series: displayedSeries,
-                    selectedEpisode: snapshot.selectedEpisode,
-                    trickplayLoader: dependencies.trickplayFrameLoader
+                    selectedEpisode: snapshot.selectedEpisode
                 )
                 .ignoresSafeArea()
             }

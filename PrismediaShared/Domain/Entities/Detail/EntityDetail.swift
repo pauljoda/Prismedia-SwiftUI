@@ -14,6 +14,7 @@ public struct EntityDetail: Identifiable, Decodable, Hashable, Sendable {
     public let capabilities: [EntityCapability]
     public let childrenByKind: [EntityGroup]
     public let relationships: [EntityGroup]
+    public let creditMetadata: [EntityCreditMetadata]
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -28,6 +29,7 @@ public struct EntityDetail: Identifiable, Decodable, Hashable, Sendable {
         case capabilities
         case childrenByKind
         case relationships
+        case creditMetadata
     }
 
     public init(from decoder: Decoder) throws {
@@ -44,6 +46,7 @@ public struct EntityDetail: Identifiable, Decodable, Hashable, Sendable {
         capabilities = try container.decodeIfPresent([EntityCapability].self, forKey: .capabilities) ?? []
         childrenByKind = try container.decodeIfPresent([EntityGroup].self, forKey: .childrenByKind) ?? []
         relationships = try container.decodeIfPresent([EntityGroup].self, forKey: .relationships) ?? []
+        creditMetadata = try container.decodeIfPresent([EntityCreditMetadata].self, forKey: .creditMetadata) ?? []
     }
 
     init(
@@ -58,7 +61,8 @@ public struct EntityDetail: Identifiable, Decodable, Hashable, Sendable {
         hasSourceMedia: Bool,
         capabilities: [EntityCapability],
         childrenByKind: [EntityGroup],
-        relationships: [EntityGroup]
+        relationships: [EntityGroup],
+        creditMetadata: [EntityCreditMetadata] = []
     ) {
         self.id = id
         self.kind = kind
@@ -72,6 +76,7 @@ public struct EntityDetail: Identifiable, Decodable, Hashable, Sendable {
         self.capabilities = capabilities
         self.childrenByKind = childrenByKind
         self.relationships = relationships
+        self.creditMetadata = creditMetadata
     }
 
 }

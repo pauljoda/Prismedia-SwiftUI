@@ -20,7 +20,12 @@ public struct EntityDetailView: View {
     @State private var isAudiobookLoading = false
     @State private var isListeningMutating = false
     @State private var audiobookErrorMessage: String?
+    @State private var readableBookChapters: [ReadableBookChapter] = []
+    @State private var currentReadableChapterID: String?
+    @State private var areBookChaptersLoading = false
+    @State private var bookChaptersErrorMessage: String?
     @State private var artworkPalette: ArtworkPalette?
+    @State private var editPresentation: EntityDetailEditPresentation?
     #if os(iOS)
         @State private var collectionSheetPresented = false
     #endif
@@ -70,7 +75,10 @@ public struct EntityDetailView: View {
             .toolbar {
                 if case .content(let detail) = state.phase {
                     ToolbarItem(placement: .primaryAction) {
-                        let presentation = EntityDetailPresentation(detail: detail)
+                        let presentation = EntityDetailPresentation(
+                            detail: detail,
+                            canEditMetadata: dependencies.metadataMutator != nil
+                        )
                         EntityDetailToolbarMenu(
                             actions: presentation.modificationActions.filter(isSupported),
                             isEnabled: isEnabled,
@@ -95,6 +103,11 @@ public struct EntityDetailView: View {
                 }
             }
         #endif
+        #if !os(tvOS)
+            .sheet(item: $editPresentation) { presentation in
+                editSheet(for: presentation)
+            }
+        #endif
         .task(id: link) {
             videoPlaybackPreparation.reset()
             await loadDetail()
@@ -115,12 +128,15 @@ public struct EntityDetailView: View {
                     selected: presentation.detail,
                     command: presentation.command,
                     service: service,
-                    bookmarkStore: dependencies.readerBookmarkStore
+                    bookmarkStore: dependencies.readerBookmarkStore,
+                    initialEPUBLocation: presentation.initialEPUBLocation,
+                    companionPlayer: companionPlayer(for: presentation)
                 )
             }
         }
         .onChange(of: readerPresentation) { previous, current in
             guard previous != nil, current == nil else { return }
+            pauseCompanionAudiobook(for: previous)
             Task {
                 await reloadReadingState()
             }
@@ -218,7 +234,10 @@ public struct EntityDetailView: View {
 
     @ViewBuilder
     private func standardDetailView(_ detail: EntityDetail) -> some View {
-        let presentation = EntityDetailPresentation(detail: detail)
+        let presentation = EntityDetailPresentation(
+            detail: detail,
+            canEditMetadata: dependencies.metadataMutator != nil
+        )
 
         #if os(tvOS)
             if detail.kind == .movie {
@@ -372,6 +391,17 @@ public struct EntityDetailView: View {
                                 onToggleCompletion: { Task { await toggleListeningCompletion(detail) } },
                                 onDismissError: { audiobookErrorMessage = nil }
                             )
+
+                            BookChapterCardsSection(
+                                chapters: bookChapterMappings(for: detail),
+                                isLoading: areBookChaptersLoading,
+                                errorMessage: bookChaptersErrorMessage,
+                                horizontalPadding: detailHorizontalPadding,
+                                onRead: { openBookChapter($0, combined: false) },
+                                onListen: playBookChapter,
+                                onCombined: { openBookChapter($0, combined: true) },
+                                onRetry: { Task { await loadBookChapters(for: detail) } }
+                            )
                         #endif
 
                         #if os(tvOS)
@@ -393,16 +423,8 @@ public struct EntityDetailView: View {
                             onEntityPruned: handlePrunedEntity
                         )
 
-                        if detail.kind == .collection {
-                            CollectionMembersView(
-                                phase: collectionMembersState.phase,
-                                horizontalPadding: detailHorizontalPadding,
-                                retry: {
-                                    Task { await reloadCollectionMembers() }
-                                }
-                            )
-                        } else {
-                            childGroupsView(for: detail)
+                        if selectedSection == .details {
+                            mainSupplementView(for: detail)
                         }
 
                         Color.clear
@@ -422,12 +444,15 @@ public struct EntityDetailView: View {
                     if case .content(let refreshedDetail) = state.phase {
                         await loadReadingState(for: refreshedDetail)
                         await loadCollectionMembers(for: refreshedDetail, force: true)
+                        await loadAudiobook(for: refreshedDetail)
+                        await loadBookChapters(for: refreshedDetail)
                     }
                 }
                 .task(id: detail.id) {
                     await loadReadingState(for: detail)
                     await loadCollectionMembers(for: detail)
                     await loadAudiobook(for: detail)
+                    await loadBookChapters(for: detail)
                 }
                 #if DEBUG
                     .task(id: detail.id) {
@@ -513,6 +538,37 @@ public struct EntityDetailView: View {
                     horizontalPadding: detailHorizontalPadding
                 )
             }
+        }
+    }
+
+    @ViewBuilder
+    private func mainSupplementView(for detail: EntityDetail) -> some View {
+        if let referencePresentation = EntityDetailReferencedContentPresentation(detail: detail),
+            let entityGridLoader = dependencies.entityGridLoader
+        {
+            EntityDetailReferencedContentView(
+                presentation: referencePresentation,
+                loader: entityGridLoader
+            )
+            .padding(.horizontal, detailHorizontalPadding)
+        }
+
+        if detail.kind == .collection {
+            CollectionMembersView(
+                phase: collectionMembersState.phase,
+                horizontalPadding: PrismediaSpacing.extraLarge,
+                retry: {
+                    Task { await reloadCollectionMembers() }
+                }
+            )
+            .padding(.vertical, PrismediaSpacing.extraLarge)
+            .entityDetailContentSurface()
+            .padding(.horizontal, detailHorizontalPadding)
+        } else if !visibleChildGroups(in: detail).isEmpty {
+            childGroupsView(for: detail)
+                .padding(.vertical, PrismediaSpacing.extraLarge)
+                .entityDetailContentSurface()
+                .padding(.horizontal, detailHorizontalPadding)
         }
     }
 
@@ -695,6 +751,11 @@ public struct EntityDetailView: View {
     }
 
     private func isEnabled(_ action: EntityDetailAction) -> Bool {
+        if action.id == .edit {
+            return !state.isMutating
+                && dependencies.metadataMutator != nil
+                && dependencies.entityGridLoader != nil
+        }
         if action.id == .listen {
             #if os(iOS) || os(macOS)
                 return audiobookProjection != nil
@@ -717,6 +778,13 @@ public struct EntityDetailView: View {
     }
 
     private func isSupported(_ action: EntityDetailAction) -> Bool {
+        if action.id == .edit {
+            #if os(tvOS)
+                return false
+            #else
+                return dependencies.metadataMutator != nil
+            #endif
+        }
         if action.id == .listen {
             #if os(iOS) || os(macOS)
                 return audiobookProjection != nil
@@ -766,6 +834,12 @@ public struct EntityDetailView: View {
                     beginListening(to: detail)
                 }
             #endif
+        case .edit:
+            guard case .content(let detail) = state.phase,
+                dependencies.metadataMutator != nil,
+                dependencies.entityGridLoader != nil
+            else { return }
+            editPresentation = EntityDetailEditPresentation(detail: detail)
         default:
             break
         }
@@ -791,7 +865,34 @@ public struct EntityDetailView: View {
         if action.id == .read || action.id == .resume {
             return isEnabled(action) ? "Opens the native reader" : "This item cannot be opened in the native reader"
         }
+        if action.id == .edit {
+            return isEnabled(action)
+                ? "Opens the Main and Metadata editor"
+                : "Editing requires taxonomy search to be available"
+        }
         return isEnabled(action) ? "Updates this entity" : "This action is not available in the native app yet"
+    }
+
+    @ViewBuilder
+    private func editSheet(
+        for presentation: EntityDetailEditPresentation
+    ) -> some View {
+        if let metadataMutator = dependencies.metadataMutator,
+            let entityGridLoader = dependencies.entityGridLoader
+        {
+            EntityDetailEditSheet(
+                presentation: presentation,
+                service: EntityDetailEditService(
+                    metadataMutator: metadataMutator,
+                    userMetadataMutator: dependencies.mutator
+                ),
+                referenceLoader: entityGridLoader,
+                onSaved: {
+                    await loadDetail()
+                    dependencies.onEntityMutated()
+                }
+            )
+        }
     }
 
     private var currentBookUsesNativeReader: Bool {
@@ -870,6 +971,20 @@ public struct EntityDetailView: View {
         readerPresentation = .init(detail: detail, command: command)
     }
 
+    private func presentReader(
+        detail: EntityDetail,
+        location: String,
+        companionAudiobookBookID: UUID?
+    ) {
+        guard dependencies.readerService != nil else { return }
+        readerPresentation = .init(
+            detail: detail,
+            command: .read,
+            initialEPUBLocation: location,
+            companionAudiobookBookID: companionAudiobookBookID
+        )
+    }
+
     private func toggleReadingCompletion(_ status: MediaProgressStatus) async {
         guard case .content(let detail) = state.phase,
             let manifest = readingState.manifest,
@@ -942,7 +1057,119 @@ public struct EntityDetailView: View {
         #endif
     }
 
+    private func loadBookChapters(for detail: EntityDetail) async {
+        #if os(iOS) || os(macOS)
+            guard detail.kind == .book,
+                detail.bookFormat == .epub,
+                let reader = dependencies.readerService
+            else {
+                readableBookChapters = []
+                currentReadableChapterID = nil
+                areBookChaptersLoading = false
+                bookChaptersErrorMessage = nil
+                return
+            }
+
+            areBookChaptersLoading = true
+            bookChaptersErrorMessage = nil
+            do {
+                let contents = try await EPUBChapterContentsService(reader: reader).load(book: detail)
+                guard case .content(let currentDetail) = state.phase,
+                    currentDetail.id == detail.id
+                else { return }
+                readableBookChapters = contents.chapters
+                currentReadableChapterID = contents.currentChapterID
+            } catch is CancellationError {
+                return
+            } catch {
+                readableBookChapters = []
+                currentReadableChapterID = nil
+                bookChaptersErrorMessage = error.localizedDescription
+            }
+            areBookChaptersLoading = false
+        #else
+            readableBookChapters = []
+            currentReadableChapterID = nil
+            areBookChaptersLoading = false
+            bookChaptersErrorMessage = nil
+        #endif
+    }
+
     #if os(iOS) || os(macOS)
+        private func bookChapterMappings(for detail: EntityDetail) -> [BookChapterMapping] {
+            guard detail.kind == .book, detail.bookFormat == .epub else { return [] }
+            return BookChapterMappingBuilder().build(
+                readableChapters: readableBookChapters,
+                audioTracks: audiobookProjection?.tracks ?? [],
+                currentReadableID: currentReadableChapterID,
+                currentAudioTrackID: currentAudiobookTrackID(for: detail)
+            )
+        }
+
+        private func currentAudiobookTrackID(for detail: EntityDetail) -> UUID? {
+            guard let projection = audiobookProjection else { return nil }
+            let isCurrent =
+                musicPlayer.context?.playbackOwnerEntityID == detail.id
+                && musicPlayer.context?.playbackOwnerEntityKind == .book
+            if isCurrent { return musicPlayer.currentTrack?.id }
+            let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+            return projection.resumePoint(at: savedResume)?.trackID
+        }
+
+        private func openBookChapter(_ chapter: BookChapterMapping, combined: Bool) {
+            guard case .content(let detail) = state.phase,
+                case .some(.epub(let location)) = chapter.readTarget
+            else { return }
+
+            if combined {
+                guard let track = chapter.audioTrack,
+                    let projection = audiobookProjection
+                else { return }
+                let isCurrentTrack =
+                    musicPlayer.context?.playbackOwnerEntityID == detail.id
+                    && musicPlayer.context?.playbackOwnerEntityKind == .book
+                    && musicPlayer.currentTrack?.id == track.id
+                if isCurrentTrack {
+                    if !musicPlayer.isPlaying { musicPlayer.resume() }
+                } else {
+                    play(projection, startingAt: track.id, startSeconds: 0)
+                }
+            }
+
+            presentReader(
+                detail: detail,
+                location: location,
+                companionAudiobookBookID: combined ? detail.id : nil
+            )
+        }
+
+        private func playBookChapter(_ chapter: BookChapterMapping) {
+            guard case .content(let detail) = state.phase,
+                let projection = audiobookProjection,
+                let track = chapter.audioTrack
+            else { return }
+            let isCurrentTrack =
+                musicPlayer.context?.playbackOwnerEntityID == detail.id
+                && musicPlayer.context?.playbackOwnerEntityKind == .book
+                && musicPlayer.currentTrack?.id == track.id
+            if isCurrentTrack {
+                if musicPlayer.isPlaying {
+                    musicPlayer.pause()
+                } else {
+                    musicPlayer.resume()
+                }
+                return
+            }
+
+            let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+            let resume = projection.resumePoint(at: savedResume)
+            play(
+                projection,
+                startingAt: track.id,
+                startSeconds: resume?.trackID == track.id ? resume?.trackOffsetSeconds ?? 0 : 0
+            )
+        }
+
         private func audiobookPresentation(for detail: EntityDetail) -> AudiobookPlaybackPresentation? {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id
@@ -993,16 +1220,28 @@ public struct EntityDetailView: View {
 
         private func play(_ projection: AudiobookPlaybackProjection, resumeSeconds: Double) {
             guard let resume = projection.resumePoint(at: resumeSeconds) else { return }
+            play(
+                projection,
+                startingAt: resume.trackID,
+                startSeconds: resume.trackOffsetSeconds
+            )
+        }
+
+        private func play(
+            _ projection: AudiobookPlaybackProjection,
+            startingAt trackID: UUID,
+            startSeconds: Double
+        ) {
             musicPlayer.play(
                 tracks: projection.tracks,
-                startingAt: resume.trackID,
+                startingAt: trackID,
                 queueMode: .ordered,
                 context: MusicPlaybackContext(
                     playbackOwnerEntityID: projection.bookID,
                     playbackOwnerTitle: projection.title,
                     playbackOwnerEntityKind: .book
                 ),
-                startSeconds: resume.trackOffsetSeconds
+                startSeconds: startSeconds
             )
         }
 
@@ -1081,6 +1320,33 @@ public struct EntityDetailView: View {
             dependencies.onEntityMutated()
         }
     #endif
+
+    private func companionPlayer(
+        for presentation: EntityReaderPresentation
+    ) -> MusicPlayerController? {
+        #if os(iOS) || os(macOS)
+            guard let bookID = presentation.companionAudiobookBookID,
+                musicPlayer.context?.playbackOwnerEntityID == bookID,
+                musicPlayer.context?.playbackOwnerEntityKind == .book
+            else { return nil }
+            return musicPlayer
+        #else
+            return nil
+        #endif
+    }
+
+    private func pauseCompanionAudiobook(
+        for presentation: EntityReaderPresentation?
+    ) {
+        #if os(iOS) || os(macOS)
+            guard let bookID = presentation?.companionAudiobookBookID,
+                musicPlayer.context?.playbackOwnerEntityID == bookID,
+                musicPlayer.context?.playbackOwnerEntityKind == .book,
+                musicPlayer.isPlaying
+            else { return }
+            musicPlayer.pause()
+        #endif
+    }
 
     private var navigationTitle: String {
         guard case .content(let detail) = state.phase else {

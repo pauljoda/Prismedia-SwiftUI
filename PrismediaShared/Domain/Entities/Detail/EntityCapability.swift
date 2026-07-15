@@ -81,7 +81,8 @@ extension EntityDetail {
             hasSourceMedia: hasSourceMedia,
             capabilities: mergedCapabilities,
             childrenByKind: childrenByKind,
-            relationships: relationships
+            relationships: relationships,
+            creditMetadata: creditMetadata
         )
     }
 }

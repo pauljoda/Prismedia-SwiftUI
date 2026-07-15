@@ -51,4 +51,23 @@ public struct MusicPlaybackRestoration: Codable, Equatable, Sendable {
             history: queue.history
         )
     }
+
+    public func applying(_ checkpoint: MusicPlaybackProgressCheckpoint) -> Self {
+        guard
+            let currentTrackID = checkpoint.currentTrackID,
+            tracks.contains(where: { $0.id == currentTrackID })
+        else { return self }
+
+        return Self(
+            tracks: tracks,
+            orderedTrackIDs: orderedTrackIDs,
+            currentTrackID: currentTrackID,
+            repeatMode: repeatMode,
+            isShuffled: isShuffled,
+            elapsedTime: checkpoint.elapsedTime,
+            context: context,
+            audiobookCompleted: checkpoint.audiobookCompleted,
+            history: history
+        )
+    }
 }

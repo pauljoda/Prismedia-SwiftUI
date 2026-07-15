@@ -21,6 +21,12 @@ struct VideoSubtitlePlaybackOverlay: View {
                 )
             }
         }
+        #if os(tvOS)
+            // AVPlayerViewController expands its bottom safe area while the
+            // transport bar is visible. Subtitle percentages belong to the
+            // video canvas, not that temporarily unobscured control region.
+            .ignoresSafeArea()
+        #endif
         .allowsHitTesting(false)
     }
 }

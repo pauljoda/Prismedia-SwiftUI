@@ -4,14 +4,17 @@ import Foundation
 final class RemoteArtworkCache: @unchecked Sendable {
     private let dataStorage = NSCache<NSURL, NSData>()
     private let decodedLock = NSLock()
+    private let compressedByteCostLimit: Int
     private let decodedByteCostLimit: Int
     private var decodedImages: [String: CGImage] = [:]
     private var decodedCosts: [String: Int] = [:]
     private var decodedRecency: [String] = []
     private var decodedByteCost = 0
 
-    init(countLimit: Int, decodedByteCostLimit: Int) {
+    init(countLimit: Int, compressedByteCostLimit: Int, decodedByteCostLimit: Int) {
         dataStorage.countLimit = countLimit
+        self.compressedByteCostLimit = max(0, compressedByteCostLimit)
+        dataStorage.totalCostLimit = self.compressedByteCostLimit
         self.decodedByteCostLimit = max(0, decodedByteCostLimit)
     }
 
@@ -20,7 +23,8 @@ final class RemoteArtworkCache: @unchecked Sendable {
     }
 
     func store(_ data: Data, for url: URL) {
-        dataStorage.setObject(data as NSData, forKey: url as NSURL)
+        guard data.count <= compressedByteCostLimit else { return }
+        dataStorage.setObject(data as NSData, forKey: url as NSURL, cost: data.count)
     }
 
     func image(for url: URL, maxPixelSize: Int) -> CGImage? {

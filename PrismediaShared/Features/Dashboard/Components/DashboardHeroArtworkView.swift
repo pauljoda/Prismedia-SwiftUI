@@ -2,17 +2,15 @@ import SwiftUI
 
 struct DashboardHeroArtworkView: View {
     let presentation: DashboardHeroPresentation
-    let sceneIndex: Int
-    let trickplayFrames: [TrickplayPlaylist.Frame]
 
     var body: some View {
         Color.clear
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .overlay {
-                DashboardHeroSceneView(
-                    presentation: presentation,
-                    sceneIndex: sceneIndex,
-                    trickplayFrames: trickplayFrames,
+                RemotePosterImage(
+                    path: presentation.thumbnailPath,
+                    fallbackSeed: presentation.item.title,
+                    systemImage: "play.rectangle",
                     maxPixelSize: 1_536
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -28,9 +26,7 @@ struct DashboardHeroArtworkView: View {
     #Preview("Dashboard Hero Artwork · Static") {
         PreviewShell(signedIn: true) {
             DashboardHeroArtworkView(
-                presentation: DashboardHeroPresentation(item: PrismediaPreviewData.videos[0]),
-                sceneIndex: 0,
-                trickplayFrames: []
+                presentation: DashboardHeroPresentation(item: PrismediaPreviewData.videos[0])
             )
             .frame(height: 440)
         }

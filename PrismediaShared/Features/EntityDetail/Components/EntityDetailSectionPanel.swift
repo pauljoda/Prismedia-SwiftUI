@@ -61,13 +61,20 @@ struct EntityDetailSectionPanel: View {
 
     @ViewBuilder
     private var detailsContent: some View {
-        if presentation.detail.relationships.isEmpty {
+        if presentation.detail.relationships.isEmpty,
+            EntityDetailReferencedContentPresentation(detail: presentation.detail) == nil
+        {
             Text("No related details yet.")
                 .foregroundStyle(artworkSecondaryText)
         }
 
         ForEach(presentation.detail.relationships, id: \.entityDetailGroupID) { group in
             relationshipGroup(group)
+                .padding(.bottom, PrismediaSpacing.large)
+                .overlay(alignment: .bottom) {
+                    Divider()
+                        .overlay(PrismediaColor.borderSubtle)
+                }
         }
     }
 
@@ -112,7 +119,13 @@ struct EntityDetailSectionPanel: View {
             )
         } else {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 135), spacing: PrismediaSpacing.medium, alignment: .topLeading)],
+                columns: [
+                    GridItem(
+                        .adaptive(minimum: 220),
+                        spacing: PrismediaSpacing.medium,
+                        alignment: .topLeading
+                    )
+                ],
                 alignment: .leading,
                 spacing: PrismediaSpacing.medium
             ) {
@@ -162,7 +175,9 @@ struct EntityDetailSectionPanel: View {
             }
         }
         .padding(.vertical, PrismediaSpacing.small)
+        .padding(.horizontal, PrismediaSpacing.medium)
         .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
+        .prismediaCard(cornerRadius: PrismediaRadius.compact)
     }
 
     private var markersContent: some View {

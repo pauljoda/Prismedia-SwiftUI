@@ -7,7 +7,9 @@ import Foundation
 public struct EntityDetailDependencies: Sendable {
     public let detailLoader: any EntityDetailLoading
     public let mutator: (any EntityDetailMutating)?
+    public let metadataMutator: (any EntityMetadataMutating)?
     public let collectionItemsLoader: (any CollectionItemsLoading)?
+    public let entityGridLoader: (any EntityGridLoading)?
     public let readerService: (any BookReaderServicing)?
     public let readerBookmarkStore: any EPUBBookmarkStoring
     public let videoPlaybackService: (any VideoPlaybackServicing)?
@@ -34,11 +36,15 @@ public struct EntityDetailDependencies: Sendable {
         mediaSequenceLoader: (any EntityMediaSequenceLoading)? = nil,
         transcriptSourceLoader: (any EntityTranscriptSourceLoading)? = nil,
         trickplayFrameLoader: (any TrickplayFrameLoading)? = nil,
+        entityGridLoader: (any EntityGridLoading)? = nil,
+        metadataMutator: (any EntityMetadataMutating)? = nil,
         readerBookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled
     ) {
         self.detailLoader = detailLoader
         self.mutator = mutator
+        self.metadataMutator = metadataMutator
         self.collectionItemsLoader = collectionItemsLoader
+        self.entityGridLoader = entityGridLoader
         self.readerService = readerService
         self.readerBookmarkStore = readerBookmarkStore
         self.videoPlaybackService = videoPlaybackService

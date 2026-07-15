@@ -6,12 +6,16 @@ struct AdministrativePluginsView: View {
     @State private var updatingPluginID: String?
     @State private var errorMessage: String?
     private let service: any AdministrationServicing
+    private let hidesNsfw: Bool
 
-    init(service: any AdministrationServicing) { self.service = service }
+    init(service: any AdministrationServicing, hidesNsfw: Bool) {
+        self.service = service
+        self.hidesNsfw = hidesNsfw
+    }
 
     var body: some View {
         NavigationStack {
-            List(plugins) { plugin in
+            List(visiblePlugins) { plugin in
                 VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                     HStack {
                         Text(plugin.name)
@@ -34,11 +38,11 @@ struct AdministrativePluginsView: View {
             }
             .prismediaScreenBackground()
             .overlay {
-                if isLoading && plugins.isEmpty {
+                if isLoading && visiblePlugins.isEmpty {
                     PrismediaLoadingView("Loading plugins…")
                 } else if isLoading {
                     ProgressView("Loading plugins…")
-                } else if plugins.isEmpty {
+                } else if visiblePlugins.isEmpty {
                     ContentUnavailableView(
                         "No Compatible Plugins", systemImage: "puzzlepiece.extension",
                         description: Text("Install plugins on the server to use metadata and request providers."))
@@ -59,6 +63,10 @@ struct AdministrativePluginsView: View {
         .accessibilityIdentifier("administration.plugins")
     }
 
+    private var visiblePlugins: [AdministrativePlugin] {
+        AdministrativePluginVisibilityPolicy.visiblePlugins(plugins, hidesNsfw: hidesNsfw)
+    }
+
     private func load() async {
         isLoading = true
         defer { isLoading = false }
@@ -76,5 +84,5 @@ struct AdministrativePluginsView: View {
 }
 
 #if DEBUG
-    #Preview { AdministrativePluginsView(service: AdministrativePreviewService()) }
+    #Preview { AdministrativePluginsView(service: AdministrativePreviewService(), hidesNsfw: true) }
 #endif

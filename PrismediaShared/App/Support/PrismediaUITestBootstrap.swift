@@ -102,6 +102,14 @@
                 && environment["PRISMEDIA_UI_TEST_START_VIDEO"] == "1"
         }
 
+        static func pausesVideoPlayback(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Bool {
+            arguments.contains("-prismedia-ui-testing")
+                && environment["PRISMEDIA_UI_TEST_AUTOPLAY"] == "0"
+        }
+
         static func startsVideoInFullscreen(
             arguments: [String] = CommandLine.arguments,
             environment: [String: String] = ProcessInfo.processInfo.environment

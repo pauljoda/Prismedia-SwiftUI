@@ -16,6 +16,11 @@
         let onNavigationMenuDismissed: () -> Void
         let onToggleBookmark: () -> Void
         let onOpenSettings: () -> Void
+        let companionTrackTitle: String?
+        let companionIsPlaying: Bool
+        let companionPlaybackRate: Float
+        let onToggleCompanionPlayback: () -> Void
+        let onSetCompanionPlaybackRate: (Float) -> Void
 
         @ToolbarContentBuilder
         var body: some ToolbarContent {
@@ -47,6 +52,20 @@
             }
 
             ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+            if let companionTrackTitle {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ReaderAudiobookControlMenu(
+                        trackTitle: companionTrackTitle,
+                        isPlaying: companionIsPlaying,
+                        playbackRate: companionPlaybackRate,
+                        onTogglePlayback: onToggleCompanionPlayback,
+                        onSetPlaybackRate: onSetCompanionPlaybackRate
+                    )
+                }
+
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            }
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Reader settings", systemImage: "textformat.size", action: onOpenSettings)
@@ -125,7 +144,12 @@
                             onOpenBookmarks: {},
                             onNavigationMenuDismissed: {},
                             onToggleBookmark: {},
-                            onOpenSettings: { settingsPresented = true }
+                            onOpenSettings: { settingsPresented = true },
+                            companionTrackTitle: "Chapter 7",
+                            companionIsPlaying: true,
+                            companionPlaybackRate: 1.25,
+                            onToggleCompanionPlayback: {},
+                            onSetCompanionPlaybackRate: { _ in }
                         )
                     }
             }

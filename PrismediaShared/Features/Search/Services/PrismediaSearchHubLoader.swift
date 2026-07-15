@@ -11,14 +11,30 @@ public struct PrismediaSearchHubLoader: SearchHubLoading, Sendable {
 
     public func loadRecent(limit: Int) async throws -> EntityListResponse {
         let itemLimit = max(1, limit / SearchHubCatalog.previewKinds.count)
-        var items: [EntityThumbnail] = []
-        for kind in SearchHubCatalog.previewKinds {
-            let response = try await client.listEntities(
-                EntityListQuery(kind: kind, sort: "added", sortDescending: true),
-                limit: itemLimit
-            )
-            items += response.items
+        let indexedItems = try await withThrowingTaskGroup(
+            of: (Int, [EntityThumbnail]).self,
+            returning: [(Int, [EntityThumbnail])].self
+        ) { group in
+            for (index, kind) in SearchHubCatalog.previewKinds.enumerated() {
+                group.addTask { [client] in
+                    let response = try await client.listEntities(
+                        EntityListQuery(kind: kind, sort: "added", sortDescending: true),
+                        limit: itemLimit
+                    )
+                    return (index, response.items)
+                }
+            }
+
+            var results: [(Int, [EntityThumbnail])] = []
+            for try await result in group {
+                results.append(result)
+            }
+            return results
         }
+        let items =
+            indexedItems
+            .sorted { $0.0 < $1.0 }
+            .flatMap(\.1)
         return EntityListResponse(items: items, totalCount: items.count)
     }
 

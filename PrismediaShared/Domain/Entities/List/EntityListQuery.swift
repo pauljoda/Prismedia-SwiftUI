@@ -23,6 +23,8 @@ public struct EntityListQuery: Hashable, Sendable {
     public var orphaned: Bool?
     public var wanted: Bool?
     public var acquisitionStatus: AcquisitionStatus?
+    public var referencedBy: UUID?
+    public var relationshipCode: String?
     public var cursor: String?
     /// Native lists are SFW-only unless a future user-facing preference opts in.
     public var hideNsfw: Bool
@@ -48,6 +50,8 @@ public struct EntityListQuery: Hashable, Sendable {
         orphaned: Bool? = nil,
         wanted: Bool? = nil,
         acquisitionStatus: AcquisitionStatus? = nil,
+        referencedBy: UUID? = nil,
+        relationshipCode: String? = nil,
         cursor: String? = nil,
         hideNsfw: Bool = true
     ) {
@@ -71,6 +75,8 @@ public struct EntityListQuery: Hashable, Sendable {
         self.orphaned = orphaned
         self.wanted = wanted
         self.acquisitionStatus = acquisitionStatus
+        self.referencedBy = referencedBy
+        self.relationshipCode = relationshipCode
         self.cursor = cursor
         self.hideNsfw = hideNsfw
     }
@@ -115,6 +121,17 @@ public struct EntityListQuery: Hashable, Sendable {
         if let wanted { items.append(URLQueryItem(name: "wanted", value: String(wanted))) }
         if let acquisitionStatus {
             items.append(URLQueryItem(name: "acquisitionStatus", value: acquisitionStatus.rawValue))
+        }
+        if let referencedBy {
+            items.append(
+                URLQueryItem(
+                    name: "referencedBy",
+                    value: referencedBy.uuidString.lowercased()
+                )
+            )
+        }
+        if let relationshipCode, !relationshipCode.isEmpty {
+            items.append(URLQueryItem(name: "relationshipCode", value: relationshipCode))
         }
         if let cursor, !cursor.isEmpty {
             items.append(URLQueryItem(name: "cursor", value: cursor))

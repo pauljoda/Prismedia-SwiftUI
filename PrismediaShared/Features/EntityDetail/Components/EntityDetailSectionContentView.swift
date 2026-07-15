@@ -18,19 +18,27 @@ struct EntityDetailSectionContentView: View {
                 EntityDetailSectionPicker(
                     sections: presentation.sections,
                     selection: $selection,
-                    horizontalPadding: horizontalPadding
+                    horizontalPadding: PrismediaSpacing.small
                 )
+                .padding(.top, PrismediaSpacing.small)
+
+                Divider()
+                    .overlay(PrismediaColor.borderSubtle)
+                    .padding(.horizontal, PrismediaSpacing.large)
+
                 sectionPanel(section: selection)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .entityDetailContentSurface()
+        .padding(.horizontal, horizontalPadding)
     }
 
     private func sectionPanel(section: EntityDetailSectionID) -> some View {
         EntityDetailSectionPanel(
             presentation: presentation,
             section: section,
-            horizontalPadding: horizontalPadding,
+            horizontalPadding: PrismediaSpacing.extraLarge,
             ownerLink: ownerLink,
             acquisitionService: acquisitionService,
             transcriptSourceLoader: transcriptSourceLoader,

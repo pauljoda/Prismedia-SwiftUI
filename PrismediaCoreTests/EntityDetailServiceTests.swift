@@ -295,7 +295,12 @@ private actor EntityDetailMutationServiceStub: EntityDetailLoading, EntityDetail
         return try nextResponse().get()
     }
 
-    func updateFlags(id: UUID, isFavorite: Bool?, isOrganized: Bool?) async throws -> EntityDetail {
+    func updateFlags(
+        id: UUID,
+        isFavorite: Bool?,
+        isNsfw: Bool?,
+        isOrganized: Bool?
+    ) async throws -> EntityDetail {
         return try nextResponse().get()
     }
 

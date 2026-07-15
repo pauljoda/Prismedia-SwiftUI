@@ -268,7 +268,12 @@ final class PrismediaAPIClientTests: XCTestCase {
         let loader = MockHTTPDataLoader(responses: [.json(entityDetailJSON(id: entityID, rating: nil))])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
 
-        _ = try await client.updateEntityFlags(id: entityID, isFavorite: true, isOrganized: nil)
+        _ = try await client.updateEntityFlags(
+            id: entityID,
+            isFavorite: true,
+            isNsfw: nil,
+            isOrganized: nil
+        )
 
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/api/entities/\(entityID.uuidString.lowercased())/flags")

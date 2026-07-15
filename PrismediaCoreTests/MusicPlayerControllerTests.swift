@@ -18,6 +18,44 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrack, track)
     }
 
+    func testPlaybackRateAppliesImmediatelyAndSurvivesTrackChanges() {
+        let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
+        let engine = AudioPlaybackEngineSpy()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: MusicPlaybackServiceStub()
+        )
+
+        controller.setPlaybackRate(1.5)
+        controller.play(
+            tracks: tracks,
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book
+            )
+        )
+        controller.skipToNext()
+
+        XCTAssertEqual(controller.playbackRate, 1.5)
+        XCTAssertEqual(engine.playbackRates, [1.5, 1.5, 1.5])
+    }
+
+    func testStartingOrdinaryMusicResetsAudiobookPlaybackRate() {
+        let track = makeTrack(idSuffix: 1)
+        let engine = AudioPlaybackEngineSpy()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: MusicPlaybackServiceStub()
+        )
+
+        controller.setPlaybackRate(1.75)
+        controller.play(tracks: [track])
+
+        XCTAssertEqual(controller.playbackRate, 1)
+        XCTAssertEqual(engine.playbackRates.suffix(2), [1, 1])
+    }
+
     func testSelectingAndReorderingUpNextTracksUpdatesPlaybackAndQueueOrder() {
         let tracks = [
             makeTrack(idSuffix: 1),
@@ -175,8 +213,30 @@ final class MusicPlayerControllerTests: XCTestCase {
 
         XCTAssertEqual(store.saved.last?.currentTrackID, tracks[0].id)
         XCTAssertEqual(store.saved.last?.repeatMode, .all)
-        XCTAssertEqual(store.saved.last?.elapsedTime, 18)
+        XCTAssertEqual(store.savedProgress.last?.currentTrackID, tracks[0].id)
+        XCTAssertEqual(store.savedProgress.last?.elapsedTime, 18)
         XCTAssertLessThanOrEqual(store.saved.count, 6)
+    }
+
+    func testElapsedTimeCheckpointsDoNotRewriteTheQueueRestoration() {
+        let tracks = (1...1_000).map(makeTrack(idSuffix:))
+        let store = MusicPlaybackStateStoreSpy()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: MusicPlaybackServiceStub(),
+            stateStore: store
+        )
+
+        controller.play(tracks: tracks)
+        XCTAssertEqual(store.saved.count, 1)
+
+        controller.updateElapsedTime(6)
+        controller.seek(to: 18)
+        controller.pause()
+
+        XCTAssertEqual(store.saved.count, 1)
+        XCTAssertEqual(store.savedProgress.last?.currentTrackID, tracks[0].id)
+        XCTAssertEqual(store.savedProgress.last?.elapsedTime, 18)
     }
 
     func testTrackTapUsesPersistedGlobalShuffleAndRepeatModes() {
@@ -303,6 +363,7 @@ private final class MusicPlaybackStateStoreSpy: MusicPlaybackStatePersisting {
     private let restoration: MusicPlaybackRestoration?
     private var preferences: MusicPlaybackPreferences?
     private(set) var saved: [MusicPlaybackRestoration] = []
+    private(set) var savedProgress: [MusicPlaybackProgressCheckpoint] = []
     private(set) var savedPreferences: [MusicPlaybackPreferences] = []
     private(set) var clearCallCount = 0
 
@@ -316,6 +377,9 @@ private final class MusicPlaybackStateStoreSpy: MusicPlaybackStatePersisting {
 
     func load() -> MusicPlaybackRestoration? { restoration }
     func save(_ restoration: MusicPlaybackRestoration) { saved.append(restoration) }
+    func saveProgress(_ checkpoint: MusicPlaybackProgressCheckpoint) {
+        savedProgress.append(checkpoint)
+    }
     func clear() { clearCallCount += 1 }
     func loadPreferences() -> MusicPlaybackPreferences? { preferences }
     func savePreferences(_ preferences: MusicPlaybackPreferences) {
@@ -330,6 +394,7 @@ private final class AudioPlaybackEngineSpy: AudioPlaybackEngine {
     private(set) var playCallCount = 0
     private(set) var pauseCallCount = 0
     private(set) var seekPositions: [Double] = []
+    private(set) var playbackRates: [Float] = []
 
     func load(url: URL) {
         loadedURLs.append(url)
@@ -345,6 +410,10 @@ private final class AudioPlaybackEngineSpy: AudioPlaybackEngine {
 
     func seek(to seconds: Double) {
         seekPositions.append(seconds)
+    }
+
+    func setPlaybackRate(_ rate: Float) {
+        playbackRates.append(rate)
     }
 }
 

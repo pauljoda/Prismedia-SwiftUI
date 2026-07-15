@@ -6,40 +6,34 @@ struct DashboardHeroPageView: View {
     @State private var artworkPalette: ArtworkPalette?
 
     let presentation: DashboardHeroPresentation
-    let sceneIndex: Int
-    let trickplayFrames: [TrickplayPlaylist.Frame]
     let viewportWidth: CGFloat
     let topSafeAreaHeight: CGFloat
     let reservesProgressIndicatorSpace: Bool
     let onNavigate: (EntityLink) -> Void
 
     var body: some View {
-        DashboardHeroArtworkView(
-            presentation: presentation,
-            sceneIndex: sceneIndex,
-            trickplayFrames: trickplayFrames
-        )
-        .backgroundExtensionEffect(isEnabled: !reduceTransparency)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            Color.clear
-                .frame(height: max(topSafeAreaHeight, 0))
-                .accessibilityHidden(true)
-        }
-        .safeAreaInset(edge: .bottom, spacing: -seamOverlap) {
-            DashboardHeroContentView(
-                presentation: presentation,
-                viewportWidth: viewportWidth,
-                accent: resolvedAccent,
-                reservesProgressIndicatorSpace: reservesProgressIndicatorSpace,
-                onNavigate: onNavigate
+        DashboardHeroArtworkView(presentation: presentation)
+            .backgroundExtensionEffect(isEnabled: !reduceTransparency)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                Color.clear
+                    .frame(height: max(topSafeAreaHeight, 0))
+                    .accessibilityHidden(true)
+            }
+            .safeAreaInset(edge: .bottom, spacing: -seamOverlap) {
+                DashboardHeroContentView(
+                    presentation: presentation,
+                    viewportWidth: viewportWidth,
+                    accent: resolvedAccent,
+                    reservesProgressIndicatorSpace: reservesProgressIndicatorSpace,
+                    onNavigate: onNavigate
+                )
+            }
+            .clipped()
+            .frame(width: viewportWidth, alignment: .topLeading)
+            .prismediaArtworkPalette(
+                for: presentation.item.bestCoverPath,
+                palette: $artworkPalette
             )
-        }
-        .clipped()
-        .frame(width: viewportWidth, alignment: .topLeading)
-        .prismediaArtworkPalette(
-            for: presentation.item.bestCoverPath,
-            palette: $artworkPalette
-        )
     }
 
     private var resolvedAccent: Color {
@@ -57,8 +51,6 @@ struct DashboardHeroPageView: View {
         PreviewShell(signedIn: true) {
             DashboardHeroPageView(
                 presentation: presentations[0],
-                sceneIndex: 0,
-                trickplayFrames: [],
                 viewportWidth: 390,
                 topSafeAreaHeight: 59,
                 reservesProgressIndicatorSpace: true,

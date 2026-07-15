@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 public final class UserDefaultsMusicPlaybackStateStore: MusicPlaybackStatePersisting {
     private static let stateKey = "prismedia.music.playback-restoration.v1"
+    private static let progressKey = "prismedia.music.playback-progress.v1"
     private static let preferencesKey = "prismedia.music.playback-preferences.v1"
 
     private let defaults: UserDefaults
@@ -15,16 +16,38 @@ public final class UserDefaultsMusicPlaybackStateStore: MusicPlaybackStatePersis
 
     public func load() -> MusicPlaybackRestoration? {
         guard let data = defaults.data(forKey: Self.stateKey) else { return nil }
-        return try? decoder.decode(MusicPlaybackRestoration.self, from: data)
+        guard let restoration = try? decoder.decode(MusicPlaybackRestoration.self, from: data)
+        else { return nil }
+        guard
+            let progressData = defaults.data(forKey: Self.progressKey),
+            let checkpoint = try? decoder.decode(
+                MusicPlaybackProgressCheckpoint.self,
+                from: progressData
+            )
+        else { return restoration }
+        return restoration.applying(checkpoint)
     }
 
     public func save(_ restoration: MusicPlaybackRestoration) {
         guard let data = try? encoder.encode(restoration) else { return }
         defaults.set(data, forKey: Self.stateKey)
+        saveProgress(
+            MusicPlaybackProgressCheckpoint(
+                currentTrackID: restoration.currentTrackID,
+                elapsedTime: restoration.elapsedTime,
+                audiobookCompleted: restoration.audiobookCompleted
+            )
+        )
+    }
+
+    public func saveProgress(_ checkpoint: MusicPlaybackProgressCheckpoint) {
+        guard let data = try? encoder.encode(checkpoint) else { return }
+        defaults.set(data, forKey: Self.progressKey)
     }
 
     public func clear() {
         defaults.removeObject(forKey: Self.stateKey)
+        defaults.removeObject(forKey: Self.progressKey)
     }
 
     public func loadPreferences() -> MusicPlaybackPreferences? {

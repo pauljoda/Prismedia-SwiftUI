@@ -5,13 +5,11 @@ import SwiftUI
     struct TVSeasonsHeroBackground: View {
         let series: EntityDetail
         let selectedEpisode: EntityThumbnail?
-        let trickplayLoader: (any TrickplayFrameLoading)?
 
         var body: some View {
-            TVEpisodePreviewBackdrop(
+            TVEpisodeThumbnailBackdrop(
                 episode: selectedEpisode,
-                seriesHeroPath: seriesHeroPath,
-                loader: trickplayLoader
+                seriesHeroPath: seriesHeroPath
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
@@ -43,8 +41,7 @@ import SwiftUI
         PreviewShell {
             TVSeasonsHeroBackground(
                 series: TVSeasonsPreviewData.series,
-                selectedEpisode: TVSeasonsPreviewData.episodeThumbnail,
-                trickplayLoader: nil
+                selectedEpisode: TVSeasonsPreviewData.episodeThumbnail
             )
             .ignoresSafeArea()
         }

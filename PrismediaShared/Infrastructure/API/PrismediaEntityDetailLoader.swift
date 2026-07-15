@@ -1,7 +1,8 @@
 import Foundation
 
 /// Infrastructure adapter for the feature-owned Entity Detail ports.
-public struct PrismediaEntityDetailLoader: EntityDetailLoading, EntityDetailMutating, CollectionItemsLoading,
+public struct PrismediaEntityDetailLoader: EntityDetailLoading, EntityDetailMutating, EntityMetadataMutating,
+    CollectionItemsLoading,
     EntityImageSourceLoading, Sendable
 {
     let client: PrismediaAPIClient
@@ -33,12 +34,22 @@ public struct PrismediaEntityDetailLoader: EntityDetailLoading, EntityDetailMuta
     public func updateFlags(
         id: UUID,
         isFavorite: Bool?,
+        isNsfw: Bool?,
         isOrganized: Bool?
     ) async throws -> EntityDetail {
         try await client.updateEntityFlags(
             id: id,
             isFavorite: isFavorite,
+            isNsfw: isNsfw,
             isOrganized: isOrganized
         )
+    }
+
+    public func updateMetadata(
+        id: UUID,
+        kind: EntityKind,
+        request: EntityDetailMetadataUpdateRequest
+    ) async throws -> EntityDetail {
+        try await client.updateEntityMetadata(id: id, kind: kind, request: request)
     }
 }

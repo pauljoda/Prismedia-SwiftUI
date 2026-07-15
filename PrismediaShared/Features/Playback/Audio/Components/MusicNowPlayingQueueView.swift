@@ -54,9 +54,10 @@
                     .padding(.bottom, PrismediaSpacing.large)
                 }
                 .scrollEdgeEffectStyle(.soft, for: .top)
+                .layoutPriority(1)
             }
             .padding(.horizontal, PrismediaSpacing.section)
-            .padding(.vertical, PrismediaSpacing.large)
+            .padding(.bottom, PrismediaSpacing.large)
         }
 
         private var historyPage: some View {
@@ -67,7 +68,7 @@
                     onShowCurrent: showCurrent
                 )
                 .padding(.horizontal, PrismediaSpacing.section)
-                .padding(.vertical, PrismediaSpacing.large)
+                .padding(.bottom, PrismediaSpacing.large)
             }
             .scrollEdgeEffectStyle(.soft, for: .top)
             .accessibilityIdentifier("music.queue.history-page")

@@ -2,12 +2,16 @@ import SwiftUI
 
 struct EntityDetailPresentation {
     let detail: EntityDetail
+    let canEditMetadata: Bool
+
+    init(detail: EntityDetail, canEditMetadata: Bool = false) {
+        self.detail = detail
+        self.canEditMetadata = canEditMetadata
+    }
 
     var sections: [EntityDetailSection] {
-        guard usesTabbedContent else { return [] }
-
-        var values = [section(.details, "Details", "text.alignleft")]
-        if !metadata.isEmpty || hasMetadataCapability {
+        var values = [section(.details, "Main", "square.text.square")]
+        if !metadata.isEmpty || hasMetadataCapability || canEditMetadata {
             values.append(section(.metadata, "Metadata", "info.circle"))
         }
         if !markers.isEmpty {
@@ -192,10 +196,6 @@ struct EntityDetailPresentation {
             }
         }
         return Array(items.prefix(16))
-    }
-
-    private var usesTabbedContent: Bool {
-        ![EntityKind.person, .studio, .tag, .image].contains(detail.kind)
     }
 
     private var supportsAcquisition: Bool {

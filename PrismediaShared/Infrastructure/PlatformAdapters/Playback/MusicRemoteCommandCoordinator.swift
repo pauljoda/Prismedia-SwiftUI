@@ -5,6 +5,8 @@
 
     @MainActor
     final class MusicRemoteCommandCoordinator {
+        private static let artworkMaximumPixelSize = 1_024
+
         private let controller: MusicPlayerController
         private let engine: AVPlayerAudioPlaybackEngine
         private let client: PrismediaAPIClient
@@ -114,7 +116,7 @@
                 MPMediaItemPropertyTitle: track.title,
                 MPMediaItemPropertyArtist: MusicPresentation.artist(track.artist),
                 MPNowPlayingInfoPropertyElapsedPlaybackTime: engine.elapsedTime,
-                MPNowPlayingInfoPropertyPlaybackRate: controller.isPlaying ? 1 : 0,
+                MPNowPlayingInfoPropertyPlaybackRate: controller.isPlaying ? controller.playbackRate : 0,
                 MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
             ]
             if let existingArtwork { information[MPMediaItemPropertyArtwork] = existingArtwork }
@@ -137,11 +139,14 @@
                 return
             }
             artworkTask = Task { [weak self] in
-                guard let data = try? await RemoteArtworkPipeline.shared.data(for: url),
-                    !Task.isCancelled,
-                    let image = UIImage(data: data)
+                guard
+                    let decodedImage = try? await RemoteArtworkPipeline.shared.image(
+                        for: url,
+                        maxPixelSize: Self.artworkMaximumPixelSize
+                    ),
+                    !Task.isCancelled
                 else { return }
-                await MainActor.run { self?.installArtwork(image, for: track.id) }
+                self?.installArtwork(UIImage(cgImage: decodedImage), for: track.id)
             }
         }
 

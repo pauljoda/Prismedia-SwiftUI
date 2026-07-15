@@ -6,4 +6,5 @@ public protocol AudioPlaybackEngine: AnyObject {
     func play()
     func pause()
     func seek(to seconds: Double)
+    func setPlaybackRate(_ rate: Float)
 }

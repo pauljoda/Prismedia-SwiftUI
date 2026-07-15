@@ -225,6 +225,7 @@ public struct PrismediaAPIClient: Sendable {
     public func updateEntityFlags(
         id: UUID,
         isFavorite: Bool?,
+        isNsfw: Bool?,
         isOrganized: Bool?
     ) async throws -> EntityDetail {
         try await send(
@@ -233,9 +234,22 @@ public struct PrismediaAPIClient: Sendable {
             method: "PATCH",
             body: EntityFlagsUpdateRequest(
                 isFavorite: isFavorite,
-                isNsfw: nil,
+                isNsfw: isNsfw,
                 isOrganized: isOrganized
             )
+        )
+    }
+
+    public func updateEntityMetadata(
+        id: UUID,
+        kind: EntityKind,
+        request: EntityDetailMetadataUpdateRequest
+    ) async throws -> EntityDetail {
+        try await send(
+            EntityDetail.self,
+            path: "/api/entities/\(kind.rawValue)/\(id.uuidString.lowercased())",
+            method: "PATCH",
+            body: request
         )
     }
 

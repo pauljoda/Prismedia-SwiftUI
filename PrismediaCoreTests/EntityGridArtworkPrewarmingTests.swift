@@ -76,6 +76,23 @@ final class EntityGridArtworkPrewarmingTests: XCTestCase {
         XCTAssertEqual(largeDecodeCount, 1)
     }
 
+    func testCompressedCacheDoesNotRetainAnEntryLargerThanItsByteBudget() async throws {
+        let url = URL(string: "https://media.example.test/assets/oversized-cover.jpg")!
+        let loader = ArtworkLoaderSpy(data: Data([1, 2, 3]))
+        let pipeline = RemoteArtworkPipeline(
+            loader: loader,
+            cacheLimit: 4,
+            compressedByteCostLimit: 2
+        )
+
+        _ = try await pipeline.data(for: url)
+        _ = try await pipeline.data(for: url)
+
+        XCTAssertNil(pipeline.cachedData(for: url))
+        let requestCount = await loader.requestCount()
+        XCTAssertEqual(requestCount, 2)
+    }
+
 }
 
 private actor ArtworkLoaderSpy: HTTPDataLoading {

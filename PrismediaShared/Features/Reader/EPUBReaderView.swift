@@ -14,16 +14,22 @@
         private let service: any BookReaderServicing
         private let useCase: DocumentReaderUseCase
         private let bookmarkStore: any EPUBBookmarkStoring
+        private let initialLocation: String?
+        private let companionPlayer: MusicPlayerController?
 
         public init(
             book: EntityDetail,
             command: BookReaderCommand,
             service: any BookReaderServicing,
-            bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled
+            bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
+            initialLocation: String? = nil,
+            companionPlayer: MusicPlayerController? = nil
         ) {
             self.command = command
             self.service = service
             self.bookmarkStore = bookmarkStore
+            self.initialLocation = initialLocation
+            self.companionPlayer = companionPlayer
             useCase = DocumentReaderUseCase(book: book, service: service)
             _progressWriter = State(initialValue: BookReaderProgressWriter(service: service))
         }
@@ -35,7 +41,9 @@
                     book: useCase.book,
                     command: command,
                     service: service,
-                    bookmarkStore: bookmarkStore
+                    bookmarkStore: bookmarkStore,
+                    initialLocation: initialLocation,
+                    companionPlayer: companionPlayer
                 )
             #else
                 NavigationStack {
@@ -45,6 +53,23 @@
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Close", systemImage: "xmark", action: close)
+                            }
+                            if let companionPlayer, let currentTrack = companionPlayer.currentTrack {
+                                ToolbarItem(placement: .primaryAction) {
+                                    ReaderAudiobookControlMenu(
+                                        trackTitle: currentTrack.title,
+                                        isPlaying: companionPlayer.isPlaying,
+                                        playbackRate: companionPlayer.playbackRate,
+                                        onTogglePlayback: {
+                                            if companionPlayer.isPlaying {
+                                                companionPlayer.pause()
+                                            } else {
+                                                companionPlayer.resume()
+                                            }
+                                        },
+                                        onSetPlaybackRate: companionPlayer.setPlaybackRate
+                                    )
+                                }
                             }
                             if let publication {
                                 ToolbarItemGroup(placement: .primaryAction) {
@@ -130,14 +155,23 @@
                 }.value
                 guard !Task.isCancelled else { return }
                 let locations = loaded.chapters.map(\.location)
-                currentChapter =
-                    command == .resume
-                    ? DocumentReaderProgressMapper.initialIndex(progress: useCase.progress, locations: locations)
-                    : 0
-                currentChapterProgress =
-                    command == .resume
-                    ? DocumentReaderProgressMapper.epubProgress(from: useCase.progress?.location) ?? 0
-                    : 0
+                if let initialLocation,
+                    let initialIndex = locations.firstIndex(where: {
+                        documentResource($0) == documentResource(initialLocation)
+                    })
+                {
+                    currentChapter = initialIndex
+                    currentChapterProgress = 0
+                } else {
+                    currentChapter =
+                        command == .resume
+                        ? DocumentReaderProgressMapper.initialIndex(progress: useCase.progress, locations: locations)
+                        : 0
+                    currentChapterProgress =
+                        command == .resume
+                        ? DocumentReaderProgressMapper.epubProgress(from: useCase.progress?.location) ?? 0
+                        : 0
+                }
                 publication = loaded
             } catch is CancellationError {
                 return
@@ -173,6 +207,11 @@
             components.fragment = nil
             components.query = nil
             return components.url?.standardizedFileURL ?? url.standardizedFileURL
+        }
+
+        private func documentResource(_ location: String) -> String {
+            let path = location.split(separator: "#", maxSplits: 1).first.map(String.init) ?? location
+            return (path.removingPercentEncoding ?? path).lowercased()
         }
 
         private func saveProgress() {

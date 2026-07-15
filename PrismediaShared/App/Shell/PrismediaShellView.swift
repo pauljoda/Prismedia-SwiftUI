@@ -111,7 +111,6 @@ public struct PrismediaShellView: View {
         case .dashboard:
             DashboardView(
                 loader: PrismediaDashboardLoader(client: client),
-                trickplayLoader: PrismediaTrickplayFrameLoader(client: client),
                 detailDependencies: detailDependencies,
                 navigationPath: pathBinding(
                     for: destination.id,
@@ -137,7 +136,8 @@ public struct PrismediaShellView: View {
         case .administration(let administration):
             AdministrativeDestinationView(
                 destination: administration,
-                service: AdministrationService(client: client)
+                service: AdministrationService(client: client),
+                hidesNsfw: !environment.allowsNsfwContent
             )
 
         case .entityList(let entityList):

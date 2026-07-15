@@ -4,14 +4,12 @@ struct DashboardView: View {
     @Binding private var navigationPath: [EntityLink]
     @State private var snapshot = DashboardSnapshot()
     private let service: DashboardService
-    private let trickplayLoader: any TrickplayFrameLoading
     private let detailDependencies: EntityDetailDependencies
     private let allowsHeroAutomaticAdvance: Bool
     private let onSelectSection: (DashboardSectionDefinition) -> Void
 
     init(
         loader: any DashboardLoading,
-        trickplayLoader: any TrickplayFrameLoading,
         detailDependencies: EntityDetailDependencies,
         navigationPath: Binding<[EntityLink]> = .constant([]),
         allowsHeroAutomaticAdvance: Bool = true,
@@ -19,7 +17,6 @@ struct DashboardView: View {
     ) {
         _navigationPath = navigationPath
         service = DashboardService(loader: loader)
-        self.trickplayLoader = trickplayLoader
         self.detailDependencies = detailDependencies
         self.allowsHeroAutomaticAdvance = allowsHeroAutomaticAdvance
         self.onSelectSection = onSelectSection
@@ -44,7 +41,6 @@ struct DashboardView: View {
                                         items: snapshot.featuredItems,
                                         viewportWidth: viewport.size.width,
                                         topSafeAreaHeight: viewport.safeAreaInsets.top,
-                                        trickplayLoader: trickplayLoader,
                                         allowsAutomaticAdvance: allowsHeroAutomaticAdvance,
                                         onNavigate: navigate
                                     )
@@ -126,7 +122,6 @@ struct DashboardView: View {
         PreviewShell(signedIn: true) {
             DashboardView(
                 loader: DashboardPreviewLoader(),
-                trickplayLoader: DashboardHeroPreviewTrickplayLoader(),
                 detailDependencies: EntityDetailDependencies(
                     detailLoader: detailLoader,
                     mutator: nil,

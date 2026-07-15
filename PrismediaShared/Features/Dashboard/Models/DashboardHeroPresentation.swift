@@ -2,18 +2,10 @@ import Foundation
 
 struct DashboardHeroPresentation: Identifiable, Sendable {
     let item: EntityThumbnail
-    let scenePaths: [String]
+    let thumbnailPath: String?
     let metadataChips: [String]
 
     var id: UUID { item.id }
-
-    var sceneCount: Int {
-        max(scenePaths.count, 1)
-    }
-
-    var trickplayPlaylistPath: String? {
-        item.trickplayPlaylistPath
-    }
 
     var primaryActionTitle: String {
         (item.resumeSeconds ?? 0) > 0 || (item.progress ?? 0) > 0
@@ -31,19 +23,8 @@ struct DashboardHeroPresentation: Identifiable, Sendable {
 
     init(item: EntityThumbnail) {
         self.item = item
-        scenePaths = Self.scenePaths(for: item)
+        thumbnailPath = item.bestCoverPath
         metadataChips = Self.metadataChips(for: item)
-    }
-
-    private static func scenePaths(for item: EntityThumbnail) -> [String] {
-        let candidates = [item.bestCoverPath] + item.hoverImages.map(\.path)
-        var seen = Set<String>()
-        return Array(
-            candidates
-                .compactMap { $0 }
-                .filter { !$0.isEmpty && seen.insert($0).inserted }
-                .prefix(6)
-        )
     }
 
     private static func metadataChips(for item: EntityThumbnail) -> [String] {

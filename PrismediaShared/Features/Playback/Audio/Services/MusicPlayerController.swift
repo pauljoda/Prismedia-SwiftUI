@@ -10,6 +10,7 @@ public final class MusicPlayerController {
     public private(set) var errorMessage: String?
     public private(set) var context: MusicPlaybackContext?
     public private(set) var elapsedTime = 0.0
+    public private(set) var playbackRate: Float = 1
 
     /// Narrow bridge for MediaPlayer publication. UI observation remains
     /// property-granular through `@Observable`.
@@ -61,6 +62,10 @@ public final class MusicPlayerController {
             history: previousQueue.history
         )
         self.context = context
+        if context?.isAudiobook != true, playbackRate != 1 {
+            playbackRate = 1
+            engine.setPlaybackRate(playbackRate)
+        }
         audiobookCompleted = false
         queue.setRepeatMode(preferences.repeatMode)
         queue.setShuffled(shuffleEnabled(for: queueMode, context: context))
@@ -76,7 +81,7 @@ public final class MusicPlayerController {
         engine.play()
         isPlaying = true
         publishNowPlayingState()
-        persistState()
+        persistProgress()
     }
 
     public func pause() {
@@ -84,7 +89,7 @@ public final class MusicPlayerController {
         isPlaying = false
         reportAudiobookProgress(completed: false)
         publishNowPlayingState()
-        persistState()
+        persistProgress()
     }
 
     public func clearPlayback() {
@@ -97,7 +102,16 @@ public final class MusicPlayerController {
         elapsedTime = 0
         lastPersistedElapsedTime = 0
         audiobookCompleted = false
+        playbackRate = 1
+        engine.setPlaybackRate(playbackRate)
         stateStore?.clear()
+        publishNowPlayingState()
+    }
+
+    public func setPlaybackRate(_ rate: Float) {
+        guard rate.isFinite else { return }
+        playbackRate = min(max(rate, 0.5), 3)
+        engine.setPlaybackRate(playbackRate)
         publishNowPlayingState()
     }
 
@@ -106,7 +120,7 @@ public final class MusicPlayerController {
         elapsedTime = max(0, seconds)
         engine.seek(to: elapsedTime)
         reportAudiobookProgress(completed: false)
-        persistState()
+        persistProgress()
     }
 
     public func skipToNext() {
@@ -214,6 +228,7 @@ public final class MusicPlayerController {
             let url = service.audioStreamURL(for: currentTrack.id)
         else { return }
         engine.load(url: url)
+        engine.setPlaybackRate(playbackRate)
         if elapsedTime > 0 { engine.seek(to: elapsedTime) }
         isPlaying = false
         publishNowPlayingState()
@@ -224,7 +239,7 @@ public final class MusicPlayerController {
         elapsedTime = seconds
         guard abs(seconds - lastPersistedElapsedTime) >= 5 else { return }
         reportAudiobookProgress(completed: false)
-        persistState()
+        persistProgress()
     }
 
     public func flushPendingPlaybackReports() async {
@@ -233,7 +248,7 @@ public final class MusicPlayerController {
 
     public func flushAudiobookProgress() async {
         reportAudiobookProgress(completed: false)
-        persistState()
+        persistProgress()
         await flushPendingPlaybackReports()
     }
 
@@ -244,7 +259,7 @@ public final class MusicPlayerController {
             engine.pause()
             isPlaying = false
             publishNowPlayingState()
-            persistState()
+            persistProgress()
         }
     }
 
@@ -263,6 +278,7 @@ public final class MusicPlayerController {
 
         errorMessage = nil
         engine.load(url: url)
+        engine.setPlaybackRate(playbackRate)
         if elapsedTime > 0 { engine.seek(to: elapsedTime) }
         engine.play()
         isPlaying = true
@@ -307,6 +323,18 @@ public final class MusicPlayerController {
                 queue: queue,
                 elapsedTime: elapsedTime,
                 context: context,
+                audiobookCompleted: audiobookCompleted
+            )
+        )
+    }
+
+    private func persistProgress() {
+        defer { lastPersistedElapsedTime = elapsedTime }
+        guard let stateStore, !queue.tracks.isEmpty else { return }
+        stateStore.saveProgress(
+            MusicPlaybackProgressCheckpoint(
+                currentTrackID: currentTrack?.id,
+                elapsedTime: elapsedTime,
                 audiobookCompleted: audiobookCompleted
             )
         )

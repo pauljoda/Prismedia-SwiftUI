@@ -2,8 +2,7 @@ import SwiftUI
 
 struct DashboardHeroProgressIndicator: View {
     let presentations: [DashboardHeroPresentation]
-    let sceneCounts: [Int]
-    let position: DashboardHeroPosition
+    let selectedIndex: Int
     let accent: Color
     let onSelect: (UUID) -> Void
 
@@ -17,14 +16,14 @@ struct DashboardHeroProgressIndicator: View {
                         Capsule()
                             .fill(PrismediaColor.onMedia.opacity(0.3))
 
-                        if index == position.itemIndex {
+                        if index == selectedIndex {
                             Capsule()
                                 .fill(accent)
-                                .frame(width: selectedWidth * sceneProgress(at: index))
+                                .frame(width: selectedWidth)
                         }
                     }
                     .frame(
-                        width: index == position.itemIndex ? selectedWidth : unselectedWidth,
+                        width: index == selectedIndex ? selectedWidth : unselectedWidth,
                         height: indicatorHeight
                     )
                     .frame(
@@ -35,8 +34,8 @@ struct DashboardHeroProgressIndicator: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(presentation.item.title)
-                .accessibilityValue(accessibilityValue(at: index))
-                .accessibilityAddTraits(index == position.itemIndex ? .isSelected : [])
+                .accessibilityValue("Featured \(index + 1) of \(presentations.count)")
+                .accessibilityAddTraits(index == selectedIndex ? .isSelected : [])
             }
         }
         .accessibilityElement(children: .contain)
@@ -47,32 +46,13 @@ struct DashboardHeroProgressIndicator: View {
     private let unselectedWidth: CGFloat = 10
     private let indicatorHeight: CGFloat = 6
 
-    private func sceneProgress(at index: Int) -> Double {
-        let sceneCount = sceneCount(at: index)
-        let scene = min(max(position.sceneIndex, 0), sceneCount - 1)
-        return Double(scene + 1) / Double(sceneCount)
-    }
-
-    private func accessibilityValue(at index: Int) -> String {
-        let page = "Featured \(index + 1) of \(presentations.count)"
-        guard index == position.itemIndex else { return page }
-        return "\(page), scene \(position.sceneIndex + 1) of \(sceneCount(at: index))"
-    }
-
-    private func sceneCount(at index: Int) -> Int {
-        guard sceneCounts.indices.contains(index) else { return 1 }
-        return max(sceneCounts[index], 1)
-    }
 }
 
 #if DEBUG
     #Preview("Dashboard Hero Progress") {
         DashboardHeroProgressIndicator(
             presentations: PrismediaPreviewData.videos.map(DashboardHeroPresentation.init),
-            sceneCounts: PrismediaPreviewData.videos.map {
-                DashboardHeroPresentation(item: $0).sceneCount
-            },
-            position: DashboardHeroPosition(itemIndex: 0, sceneIndex: 0),
+            selectedIndex: 0,
             accent: PrismediaColor.spectrumCyan,
             onSelect: { _ in }
         )

@@ -28,6 +28,7 @@
 
         private let bookID: UUID
         private let bookmarkStore: any EPUBBookmarkStoring
+        private let companionPlayer: MusicPlayerController?
 
         init(
             book: EntityDetail,
@@ -35,19 +36,23 @@
             service: any BookReaderServicing,
             preferencesStore: ReaderPreferencesStore = .standard,
             locatorStore: EPUBLocatorStore = .standard,
-            bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled
+            bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
+            initialLocation: String? = nil,
+            companionPlayer: MusicPlayerController? = nil
         ) {
             let session = ReadiumEPUBReaderSession(
                 book: book,
                 command: command,
                 service: service,
                 preferencesStore: preferencesStore,
-                locatorStore: locatorStore
+                locatorStore: locatorStore,
+                initialLocation: initialLocation
             )
             _session = State(initialValue: session)
             _preferences = State(initialValue: session.preferences)
             bookID = book.id
             self.bookmarkStore = bookmarkStore
+            self.companionPlayer = companionPlayer
         }
 
         var body: some View {
@@ -70,7 +75,12 @@
                         onOpenBookmarks: openBookmarks,
                         onNavigationMenuDismissed: completeNavigationMenuAction,
                         onToggleBookmark: toggleQuickBookmark,
-                        onOpenSettings: openSettings
+                        onOpenSettings: openSettings,
+                        companionTrackTitle: companionPlayer?.currentTrack?.title,
+                        companionIsPlaying: companionPlayer?.isPlaying ?? false,
+                        companionPlaybackRate: companionPlayer?.playbackRate ?? 1,
+                        onToggleCompanionPlayback: toggleCompanionPlayback,
+                        onSetCompanionPlaybackRate: setCompanionPlaybackRate
                     )
                     ReaderPageNavigationToolbar(
                         status: readerProgressStatus,
@@ -266,6 +276,21 @@
         private func openSettings() {
             revealChrome()
             settingsPresented = true
+        }
+
+        private func toggleCompanionPlayback() {
+            guard let companionPlayer else { return }
+            if companionPlayer.isPlaying {
+                companionPlayer.pause()
+            } else {
+                companionPlayer.resume()
+            }
+            revealChrome()
+        }
+
+        private func setCompanionPlaybackRate(_ rate: Float) {
+            companionPlayer?.setPlaybackRate(rate)
+            revealChrome()
         }
 
         private func previousPage() {

@@ -7,6 +7,8 @@
 
     @MainActor
     final class VideoNowPlayingCoordinator {
+        private static let artworkMaximumPixelSize = 1_024
+
         private let service: any VideoPlaybackServicing
         private var controller: VideoPlaybackController?
         private var metadata: VideoNowPlayingMetadata?
@@ -16,6 +18,7 @@
         private var commandTargets: [(command: MPRemoteCommand, target: Any)] = []
         private var artworkTask: Task<Void, Never>?
         private var artworkData: Data?
+        private var artworkImage: UIImage?
 
         init(service: any VideoPlaybackServicing) {
             self.service = service
@@ -67,6 +70,7 @@
                 artworkTask?.cancel()
                 artworkTask = nil
                 artworkData = nil
+                artworkImage = nil
             }
             self.metadata = metadata
             publishCurrentItem()
@@ -91,25 +95,40 @@
             currentItem.nowPlayingInfo = Self.nowPlayingInfo(
                 for: metadata,
                 duration: controller.duration,
-                artworkData: artworkData
+                artworkImage: artworkImage
             )
 
-            guard artworkData == nil, artworkTask == nil, let path = metadata.artworkPath,
+            guard artworkData == nil, artworkImage == nil, artworkTask == nil,
+                let path = metadata.artworkPath,
                 let url = service.authenticatedMediaURL(for: path)
             else { return }
             let contentID = metadata.contentID
             artworkTask = Task { [weak self] in
-                guard let data = try? await RemoteArtworkPipeline.shared.data(for: url),
-                    !Task.isCancelled
-                else { return }
-                self?.installArtwork(data, contentID: contentID)
+                let pipeline = RemoteArtworkPipeline.shared
+                do {
+                    async let data = pipeline.data(for: url)
+                    async let decodedImage = pipeline.image(
+                        for: url,
+                        maxPixelSize: Self.artworkMaximumPixelSize
+                    )
+                    let artwork = try await (data, decodedImage)
+                    guard !Task.isCancelled else { return }
+                    self?.installArtwork(
+                        artwork.0,
+                        image: UIImage(cgImage: artwork.1),
+                        contentID: contentID
+                    )
+                } catch {
+                    return
+                }
             }
         }
 
-        private func installArtwork(_ data: Data, contentID: UUID) {
+        private func installArtwork(_ data: Data, image: UIImage, contentID: UUID) {
             artworkTask = nil
             guard metadata?.contentID == contentID else { return }
             artworkData = data
+            artworkImage = image
             publishCurrentItem()
         }
 
@@ -178,12 +197,13 @@
             controller = nil
             metadata = nil
             artworkData = nil
+            artworkImage = nil
         }
 
         private static func nowPlayingInfo(
             for metadata: VideoNowPlayingMetadata,
             duration: Double,
-            artworkData: Data?
+            artworkImage: UIImage?
         ) -> [String: Any] {
             var information: [String: Any] = [
                 MPMediaItemPropertyTitle: metadata.title,
@@ -196,8 +216,8 @@
             if duration.isFinite, duration > 0 {
                 information[MPMediaItemPropertyPlaybackDuration] = duration
             }
-            if let artworkData, let image = UIImage(data: artworkData) {
-                information[MPMediaItemPropertyArtwork] = mediaItemArtwork(for: image)
+            if let artworkImage {
+                information[MPMediaItemPropertyArtwork] = mediaItemArtwork(for: artworkImage)
             }
             return information
         }

@@ -3,10 +3,11 @@ import SwiftUI
 struct AdministrativeDestinationView: View {
     let destination: AdministrativeDestination
     let service: any AdministrationServicing
+    let hidesNsfw: Bool
 
     var body: some View {
         switch destination {
-        case .plugins: AdministrativePluginsView(service: service)
+        case .plugins: AdministrativePluginsView(service: service, hidesNsfw: hidesNsfw)
         case .jobs: AdministrativeJobsView(service: service)
         case .settings: AdministrativeSettingsView(service: service)
         }
@@ -17,7 +18,8 @@ struct AdministrativeDestinationView: View {
     #Preview {
         AdministrativeDestinationView(
             destination: .plugins,
-            service: AdministrativePreviewService()
+            service: AdministrativePreviewService(),
+            hidesNsfw: true
         )
     }
 #endif

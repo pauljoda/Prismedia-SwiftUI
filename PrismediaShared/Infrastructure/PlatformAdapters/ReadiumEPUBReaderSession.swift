@@ -20,6 +20,7 @@
         private let service: any BookReaderServicing
         private let preferencesStore: ReaderPreferencesStore
         private let locatorStore: EPUBLocatorStore
+        private let initialLocation: String?
         private let progressWriter: BookReaderProgressWriter
         private var publication: Publication?
         private var navigator: EPUBNavigatorViewController?
@@ -38,13 +39,15 @@
             command: BookReaderCommand,
             service: any BookReaderServicing,
             preferencesStore: ReaderPreferencesStore,
-            locatorStore: EPUBLocatorStore
+            locatorStore: EPUBLocatorStore,
+            initialLocation: String? = nil
         ) {
             self.book = book
             self.command = command
             self.service = service
             self.preferencesStore = preferencesStore
             self.locatorStore = locatorStore
+            self.initialLocation = initialLocation
             progressWriter = BookReaderProgressWriter(service: service)
             preferences = preferencesStore.loadEPUB()
         }
@@ -82,7 +85,10 @@
             readingOrder = opened.readingOrder
             chapterTitlesByResource = chapterTitles(in: tableOfContentsLinks)
 
-            let initialLocation = await restoreLocation(in: opened)
+            let initialLocation = await restoreLocation(
+                in: opened,
+                tableOfContentsLinks: tableOfContentsLinks
+            )
             let controller = try EPUBNavigatorViewController(
                 publication: opened,
                 initialLocation: initialLocation,
@@ -262,7 +268,15 @@
             return url
         }
 
-        private func restoreLocation(in publication: Publication) async -> Locator? {
+        private func restoreLocation(
+            in publication: Publication,
+            tableOfContentsLinks: [Link]
+        ) async -> Locator? {
+            if let initialLocation,
+                let link = findLink(initialLocation, in: tableOfContentsLinks)
+            {
+                return await publication.locate(link)
+            }
             guard command == .resume, let progress = progressCapability else { return nil }
             if let location = locatorStore.load(bookID: book.id) ?? readiumMigrationLocation,
                 let locator = try? Locator(jsonString: location),

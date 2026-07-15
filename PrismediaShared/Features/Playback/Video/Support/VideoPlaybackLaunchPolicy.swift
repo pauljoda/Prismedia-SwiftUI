@@ -5,6 +5,12 @@ public enum VideoPlaybackLaunchPolicy {
         intent == .playback
     }
 
+    public static func shouldAutoPlayOnTV(
+        isValidationPlaybackPaused: Bool
+    ) -> Bool {
+        !isValidationPlaybackPaused
+    }
+
     public static func presentationMode(
         for ownerLink: EntityLink
     ) -> VideoPlaybackPresentationMode {

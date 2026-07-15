@@ -9,6 +9,17 @@ final class VideoPlaybackLaunchPolicyTests: XCTestCase {
         XCTAssertFalse(VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(for: .metadata))
     }
 
+    func testTVPlaybackActionAutoplaysUnlessValidationExplicitlyPausesIt() {
+        XCTAssertTrue(
+            VideoPlaybackLaunchPolicy.shouldAutoPlayOnTV(
+                isValidationPlaybackPaused: false
+            ))
+        XCTAssertFalse(
+            VideoPlaybackLaunchPolicy.shouldAutoPlayOnTV(
+                isValidationPlaybackPaused: true
+            ))
+    }
+
     func testSeasonEpisodePlaybackTransfersToFullscreenWithoutChangingOtherOwnership() {
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episode = EntityThumbnail(

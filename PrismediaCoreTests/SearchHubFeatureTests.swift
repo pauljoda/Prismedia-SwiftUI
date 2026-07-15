@@ -251,15 +251,7 @@ final class SearchHubFeatureTests: XCTestCase {
     }
 
     func testPrismediaLoaderBuildsPreviewAndUniversalSearchRequests() async throws {
-        let dataLoader = MockHTTPDataLoader(responses: [
-            .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
-            .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
-            .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
-            .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
-            .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
-            .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
-            .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
-        ])
+        let dataLoader = SearchRecentHTTPDataLoader()
         let client = PrismediaAPIClient(
             serverURL: URL(string: "https://media.example.test")!,
             accessToken: "token",
@@ -271,7 +263,8 @@ final class SearchHubFeatureTests: XCTestCase {
         _ = try await loader.search(query: "matrix", limit: 20, cursor: nil)
         _ = try await loader.search(query: "matrix", limit: 20, cursor: "page-2")
 
-        let previewRequests = dataLoader.requests.dropLast(2)
+        let recordedRequests = await dataLoader.recordedRequests()
+        let previewRequests = recordedRequests.dropLast(2)
         let previewQueries = previewRequests.compactMap { request in
             request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
                 .map { queryDictionary($0.queryItems ?? []) }
@@ -283,7 +276,7 @@ final class SearchHubFeatureTests: XCTestCase {
         XCTAssertTrue(previewQueries.allSatisfy { $0["limit"] == "2" })
         XCTAssertTrue(previewQueries.allSatisfy { $0["hideNsfw"] == "true" })
 
-        let searchRequests = dataLoader.requests.suffix(2)
+        let searchRequests = recordedRequests.suffix(2)
         let searchQueries = searchRequests.compactMap { request in
             request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
                 .map { queryDictionary($0.queryItems ?? []) }
@@ -298,6 +291,21 @@ final class SearchHubFeatureTests: XCTestCase {
         )
         XCTAssertNil(searchQueries[0]["cursor"])
         XCTAssertEqual(searchQueries[1]["cursor"], "page-2")
+    }
+
+    func testPrismediaRecentLoaderOverlapsRequestsAndPreservesCatalogOrder() async throws {
+        let dataLoader = SearchRecentHTTPDataLoader()
+        let client = PrismediaAPIClient(
+            serverURL: URL(string: "https://media.example.test")!,
+            accessToken: "token",
+            loader: dataLoader
+        )
+
+        let response = try await PrismediaSearchHubLoader(client: client).loadRecent(limit: 10)
+
+        XCTAssertEqual(response.items.map(\.kind), SearchHubCatalog.previewKinds)
+        let maximumConcurrentRequests = await dataLoader.maximumConcurrentRequestCount()
+        XCTAssertEqual(maximumConcurrentRequests, SearchHubCatalog.previewKinds.count)
     }
 }
 
@@ -381,6 +389,75 @@ private actor SearchHubLoaderStub: SearchHubLoading {
         await Task.detached {
             try? await Task.sleep(for: duration)
         }.value
+    }
+}
+
+private actor SearchRecentHTTPDataLoader: HTTPDataLoading {
+    private var requests: [URLRequest] = []
+    private var activeRequestCount = 0
+    private var maximumActiveRequestCount = 0
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        requests.append(request)
+        activeRequestCount += 1
+        maximumActiveRequestCount = max(maximumActiveRequestCount, activeRequestCount)
+        defer { activeRequestCount -= 1 }
+
+        let kind = request.url
+            .flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
+            .flatMap { components in
+                components.queryItems?.first(where: { $0.name == "kind" })?.value
+            }
+            .flatMap(EntityKind.init(rawValue:))
+        if let kind,
+            let index = SearchHubCatalog.previewKinds.firstIndex(of: kind)
+        {
+            let reverseIndex = SearchHubCatalog.previewKinds.count - index
+            try await Task.sleep(for: .milliseconds(Int64(reverseIndex * 10)))
+            return try response(
+                for: request,
+                body: """
+                    {
+                      "items": [{
+                        "id": "00000000-0000-0000-0000-\(String(format: "%012d", index + 1))",
+                        "kind": "\(kind.rawValue)",
+                        "title": "Recent \(index + 1)"
+                      }],
+                      "nextCursor": null,
+                      "totalCount": 1
+                    }
+                    """
+            )
+        }
+
+        return try response(
+            for: request,
+            body: #"{"items":[],"nextCursor":null,"totalCount":0}"#
+        )
+    }
+
+    func recordedRequests() -> [URLRequest] {
+        requests
+    }
+
+    func maximumConcurrentRequestCount() -> Int {
+        maximumActiveRequestCount
+    }
+
+    private func response(
+        for request: URLRequest,
+        body: String
+    ) throws -> (Data, URLResponse) {
+        let url = try XCTUnwrap(request.url)
+        let response = try XCTUnwrap(
+            HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )
+        )
+        return (Data(body.utf8), response)
     }
 }
 

@@ -33,18 +33,12 @@
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(PrismediaColor.background)
+                .navigationTitle("")
+                .prismediaInlineNavigationTitle()
                 .toolbar {
                     ToolbarItem(placement: .principal) {
                         dismissHandle
                     }
-
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Close Player", systemImage: "xmark", action: closePlayer)
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(PrismediaColor.destructive)
-                            .accessibilityIdentifier("music.close-player")
-                    }
-
                 }
                 .toolbarBackground(.hidden, for: .navigationBar)
             }

@@ -42,6 +42,8 @@ enum PrismediaEntityDetailComposition {
             ),
             transcriptSourceLoader: adapter,
             trickplayFrameLoader: PrismediaTrickplayFrameLoader(client: client),
+            entityGridLoader: PrismediaEntityGridLoader(client: client),
+            metadataMutator: adapter,
             readerBookmarkStore: readerBookmarkStore
         )
     }

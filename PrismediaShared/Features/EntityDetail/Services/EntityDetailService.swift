@@ -76,9 +76,19 @@ struct EntityDetailService {
         case .rating(let value):
             try await mutator.updateRating(id: id, value: value)
         case .favorite(let isFavorite):
-            try await mutator.updateFlags(id: id, isFavorite: isFavorite, isOrganized: nil)
+            try await mutator.updateFlags(
+                id: id,
+                isFavorite: isFavorite,
+                isNsfw: nil,
+                isOrganized: nil
+            )
         case .organized(let isOrganized):
-            try await mutator.updateFlags(id: id, isFavorite: nil, isOrganized: isOrganized)
+            try await mutator.updateFlags(
+                id: id,
+                isFavorite: nil,
+                isNsfw: nil,
+                isOrganized: isOrganized
+            )
         }
     }
 }

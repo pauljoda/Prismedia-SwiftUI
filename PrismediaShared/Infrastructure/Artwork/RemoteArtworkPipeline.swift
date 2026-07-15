@@ -13,11 +13,13 @@ public actor RemoteArtworkPipeline: RemoteArtworkLoading {
     public init(
         loader: any HTTPDataLoading = URLSession.shared,
         cacheLimit: Int = 96,
+        compressedByteCostLimit: Int = 64 * 1_024 * 1_024,
         decodedByteCostLimit: Int = 64 * 1_024 * 1_024
     ) {
         self.loader = loader
         cache = RemoteArtworkCache(
             countLimit: cacheLimit,
+            compressedByteCostLimit: compressedByteCostLimit,
             decodedByteCostLimit: decodedByteCostLimit
         )
         imageDecoder = { data, maxPixelSize in
@@ -30,12 +32,14 @@ public actor RemoteArtworkPipeline: RemoteArtworkLoading {
     init(
         loader: any HTTPDataLoading,
         cacheLimit: Int,
+        compressedByteCostLimit: Int = 64 * 1_024 * 1_024,
         decodedByteCostLimit: Int,
         imageDecoder: @escaping @Sendable (Data, Int) async throws -> CGImage
     ) {
         self.loader = loader
         cache = RemoteArtworkCache(
             countLimit: cacheLimit,
+            compressedByteCostLimit: compressedByteCostLimit,
             decodedByteCostLimit: decodedByteCostLimit
         )
         self.imageDecoder = imageDecoder

@@ -23,6 +23,7 @@
         nonisolated(unsafe) private var endObserver: NSObjectProtocol?
         @ObservationIgnored private var statusObservation: NSKeyValueObservation?
         @ObservationIgnored private var wantsToPlay = false
+        @ObservationIgnored private var playbackRate: Float = 1
 
         public override init() {
             player = AVPlayer()
@@ -51,10 +52,11 @@
                     await audioSession.activate()
                     guard !Task.isCancelled else { return }
                     guard self?.wantsToPlay == true else { return }
-                    self?.player.play()
+                    guard let self else { return }
+                    self.player.playImmediately(atRate: self.playbackRate)
                 }
             #else
-                player.play()
+                player.playImmediately(atRate: playbackRate)
             #endif
         }
 
@@ -66,6 +68,14 @@
         public func seek(to seconds: Double) {
             let target = CMTime(seconds: max(0, seconds), preferredTimescale: 600)
             player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
+        }
+
+        public func setPlaybackRate(_ rate: Float) {
+            guard rate.isFinite else { return }
+            playbackRate = min(max(rate, 0.5), 3)
+            if wantsToPlay {
+                player.rate = playbackRate
+            }
         }
 
         private func observeTime() {

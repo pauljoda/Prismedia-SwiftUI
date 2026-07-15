@@ -5,17 +5,23 @@ public struct EntityReaderView: View {
     let command: BookReaderCommand
     let service: any BookReaderServicing
     let bookmarkStore: any EPUBBookmarkStoring
+    let initialEPUBLocation: String?
+    let companionPlayer: MusicPlayerController?
 
     public init(
         selected: EntityDetail,
         command: BookReaderCommand,
         service: any BookReaderServicing,
-        bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled
+        bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
+        initialEPUBLocation: String? = nil,
+        companionPlayer: MusicPlayerController? = nil
     ) {
         self.selected = selected
         self.command = command
         self.service = service
         self.bookmarkStore = bookmarkStore
+        self.initialEPUBLocation = initialEPUBLocation
+        self.companionPlayer = companionPlayer
     }
 
     @ViewBuilder
@@ -38,7 +44,9 @@ public struct EntityReaderView: View {
                     book: selected,
                     command: command,
                     service: service,
-                    bookmarkStore: bookmarkStore
+                    bookmarkStore: bookmarkStore,
+                    initialLocation: initialEPUBLocation,
+                    companionPlayer: companionPlayer
                 )
             case .unsupported(let format):
                 UnsupportedBookReaderView(

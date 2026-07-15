@@ -191,16 +191,18 @@ struct VideoEntityPlaybackView: View {
         }
 
         private func startTVPlayback(_ resolved: EntityDetail, action: TVPlaybackAction) {
-            // Enter fullscreen and begin warming immediately. Production playback
-            // remains paused until the user presses Play; automated validation can
-            // opt into playback once the item is ready.
+            // Choosing Play or Resume is the playback request. Begin playback once
+            // the item is loaded instead of requiring a second remote Play press.
             #if DEBUG
-                let autoPlay = PrismediaUITestBootstrap.startsVideoAutomatically()
+                let pausesForValidation = PrismediaUITestBootstrap.pausesVideoPlayback()
                 let resumeAt = PrismediaUITestBootstrap.videoResumeSeconds() ?? action.startSeconds
             #else
-                let autoPlay = false
+                let pausesForValidation = false
                 let resumeAt = action.startSeconds
             #endif
+            let autoPlay = VideoPlaybackLaunchPolicy.shouldAutoPlayOnTV(
+                isValidationPlaybackPaused: pausesForValidation
+            )
             prepareController(
                 for: resolved,
                 resumeAt: resumeAt,

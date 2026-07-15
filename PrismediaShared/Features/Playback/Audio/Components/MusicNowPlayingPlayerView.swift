@@ -10,8 +10,6 @@
 
         var body: some View {
             VStack(spacing: PrismediaSpacing.extraExtraLarge) {
-                Spacer(minLength: PrismediaSpacing.medium)
-
                 Color.clear
                     .aspectRatio(1, contentMode: .fit)
                     .containerRelativeFrame(.horizontal) { width, _ in
@@ -35,11 +33,12 @@
                                 .accessibilityHint("Shows the playing queue")
                         }
                     }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .layoutPriority(1)
 
                 metadata
                     .opacity(isActive ? 1 : 0)
-
-                Spacer(minLength: PrismediaSpacing.small)
+                    .padding(.bottom, PrismediaSpacing.small)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())

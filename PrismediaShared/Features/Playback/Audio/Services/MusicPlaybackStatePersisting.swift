@@ -2,6 +2,7 @@
 public protocol MusicPlaybackStatePersisting: AnyObject {
     func load() -> MusicPlaybackRestoration?
     func save(_ restoration: MusicPlaybackRestoration)
+    func saveProgress(_ checkpoint: MusicPlaybackProgressCheckpoint)
     func clear()
     func loadPreferences() -> MusicPlaybackPreferences?
     func savePreferences(_ preferences: MusicPlaybackPreferences)
@@ -18,4 +19,9 @@ extension MusicPlaybackStatePersisting {
     }
 
     public func savePreferences(_ preferences: MusicPlaybackPreferences) {}
+
+    public func saveProgress(_ checkpoint: MusicPlaybackProgressCheckpoint) {
+        guard let restoration = load() else { return }
+        save(restoration.applying(checkpoint))
+    }
 }

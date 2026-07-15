@@ -113,6 +113,7 @@ private final class AudiobookAudioEngineSpy: AudioPlaybackEngine {
     func play() {}
     func pause() {}
     func seek(to seconds: Double) { seekPositions.append(seconds) }
+    func setPlaybackRate(_ rate: Float) {}
 }
 
 @MainActor
