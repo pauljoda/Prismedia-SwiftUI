@@ -314,11 +314,15 @@ public struct PrismediaShellView: View {
         client: PrismediaAPIClient,
         detailDependencies: EntityDetailDependencies
     ) -> some View {
-        EntityGridView(
+        let presentsVideoList = entityList.query.kind == .video
+
+        return EntityGridView(
             configuration: EntityGridConfiguration(
                 title: destination.title,
                 query: entityList.query,
-                supportsSearch: entityList.supportsSearch
+                supportsSearch: entityList.supportsSearch,
+                defaultDisplayMode: presentsVideoList ? .list : .grid,
+                availableDisplayModes: presentsVideoList ? [.list] : EntityGridDisplayMode.allCases
             ),
             loader: PrismediaEntityGridLoader(client: client),
             feedMediaDependencies: EntityMediaFeedDependencies(
