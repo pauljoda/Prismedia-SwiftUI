@@ -63,11 +63,13 @@ struct VideoEntityPlaybackView: View {
                                 title: presentedVideoDetail?.title ?? playbackTitle,
                                 isInteractive: fullscreenPlayerIsInteractive,
                                 playRequested: preparation.playRequested,
-                                onPlay: startPlayback
+                                onPlay: startPlayback,
+                                onDismiss: { fullscreenPresentationDidChange(false) }
                             )
                         )
                         .onChange(of: isFullscreenPresented) { _, isPresented in
-                            fullscreenPresentationDidChange(isPresented)
+                            guard isPresented else { return }
+                            fullscreenPresentationDidChange(true)
                         }
                 } else if preparation.phase == .ready,
                     let videoDetail = presentedVideoDetail,

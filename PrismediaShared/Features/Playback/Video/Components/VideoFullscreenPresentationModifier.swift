@@ -7,14 +7,29 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     let isInteractive: Bool
     var playRequested = false
     var onPlay: () -> Void = {}
+    var onDismiss: () -> Void = {}
     @State private var usesRotatedLandscapeFallback = false
+    @State private var orientationController = VideoFullscreenOrientationController()
 
     func body(content: Content) -> some View {
-        #if os(macOS)
-            content.sheet(isPresented: $isPresented) { expandedPlayer }
-        #else
-            content.fullScreenCover(isPresented: $isPresented) { expandedPlayer }
-        #endif
+        Group {
+            #if os(macOS)
+                content.sheet(isPresented: $isPresented, onDismiss: presentationDidDismiss) {
+                    expandedPlayer
+                }
+            #else
+                content.fullScreenCover(isPresented: $isPresented, onDismiss: presentationDidDismiss) {
+                    expandedPlayer
+                }
+            #endif
+        }
+        .onChange(of: isPresented, initial: true) { _, isPresented in
+            if isPresented {
+                orientationController.prepareForPresentation()
+            } else {
+                orientationController.beginDismissal()
+            }
+        }
     }
 
     private var expandedPlayer: some View {
@@ -47,7 +62,8 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
         }
         .background(
             VideoFullscreenOrientationRequest(
-                usesRotatedFallback: $usesRotatedLandscapeFallback
+                usesRotatedFallback: $usesRotatedLandscapeFallback,
+                controller: orientationController
             )
         )
         .background(Color.black.ignoresSafeArea())
@@ -62,19 +78,29 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                     isInteractive: isInteractive,
                     isExpanded: true,
                     badges: controller.badges,
-                    onFullscreen: { isPresented = false },
-                    onDismiss: { isPresented = false }
+                    onFullscreen: requestDismissal,
+                    onDismiss: requestDismissal
                 )
             } else {
                 VideoFullscreenPreparationView(
                     title: title,
                     playRequested: playRequested,
                     onPlay: onPlay,
-                    onDismiss: { isPresented = false }
+                    onDismiss: requestDismissal
                 )
             }
         }
         .padding(PrismediaSpacing.small)
+    }
+
+    private func presentationDidDismiss() {
+        orientationController.exitFullscreen()
+        onDismiss()
+    }
+
+    private func requestDismissal() {
+        orientationController.beginDismissal()
+        isPresented = false
     }
 }
 

@@ -63,7 +63,8 @@ struct ResolvedVideoPlaybackView: View {
                 isPresented: $isFullScreen,
                 controller: controller,
                 title: detail.title,
-                isInteractive: isInteractive
+                isInteractive: isInteractive,
+                onDismiss: { onFullscreenChange(false) }
             )
         )
         #if DEBUG
@@ -81,7 +82,8 @@ struct ResolvedVideoPlaybackView: View {
             }
         #endif
         .onChange(of: isFullScreen) { _, isPresented in
-            onFullscreenChange(isPresented)
+            guard isPresented else { return }
+            onFullscreenChange(true)
         }
         .alert("Couldn’t Play Video", isPresented: errorPresented) {
             Button("OK", role: .cancel) {}

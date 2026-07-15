@@ -3,6 +3,21 @@ import XCTest
 @testable import PrismediaCore
 
 final class AppShellNavigationTests: XCTestCase {
+    func testLandscapePhoneKeepsCompactShellDuringFullscreenPlayback() {
+        XCTAssertFalse(
+            AppShellLayoutPolicy.usesWideShell(
+                horizontalSizeClass: .regular,
+                verticalSizeClass: .compact
+            )
+        )
+        XCTAssertTrue(
+            AppShellLayoutPolicy.usesWideShell(
+                horizontalSizeClass: .regular,
+                verticalSizeClass: .regular
+            )
+        )
+    }
+
     func testSidebarCatalogMatchesTheWebNavigationHierarchy() {
         let sections = AppSidebarCatalog.sections(for: PrismediaPreviewData.user)
 

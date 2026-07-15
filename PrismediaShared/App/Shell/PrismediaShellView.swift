@@ -7,6 +7,7 @@ public struct PrismediaShellView: View {
     @Environment(PrismediaAppRouter.self) private var router
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
 
     public init() {}
@@ -347,7 +348,10 @@ public struct PrismediaShellView: View {
                 VideoPlaybackHost(
                     client: client, onRestore: restoreVideoPlayback,
                     content: { session in
-                        if horizontalSizeClass == .regular {
+                        if AppShellLayoutPolicy.usesWideShell(
+                            horizontalSizeClass: horizontalSizeClass,
+                            verticalSizeClass: verticalSizeClass
+                        ) {
                             wideShell(
                                 user: user,
                                 client: client,

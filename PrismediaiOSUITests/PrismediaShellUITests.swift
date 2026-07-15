@@ -97,6 +97,36 @@ final class PrismediaShellUITests: XCTestCase {
     }
 
     @MainActor
+    func testRapidEpisodeFullscreenDismissRestoresPortraitAndSeason() throws {
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = signedInApplication(
+            initialEntityID: "10101010-1010-1010-1010-101010101010",
+            kind: "video-season"
+        )
+        XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 10))
+
+        let episode = app.buttons.matching(
+            identifier: "entity-detail.child.12010100-1212-1212-1212-000000000001"
+        ).matching(
+            NSPredicate(format: "label BEGINSWITH %@", "E1, Mock Episode One")
+        ).firstMatch
+        for _ in 0..<4 where !episode.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(episode.waitForExistence(timeout: 5))
+        episode.tap()
+
+        let player = element("video-player.surface", in: app)
+        XCTAssertTrue(player.waitForExistence(timeout: 10))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.08)).tap()
+
+        XCTAssertTrue(waitForPortrait(in: app))
+        XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Season 1"].exists)
+    }
+
+    @MainActor
     func testSignInSearchesAndOpensAnEntity() throws {
         let app = launchedApplication()
 
