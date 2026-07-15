@@ -61,3 +61,8 @@
   - `PrismediaTV` for a generic tvOS Simulator
 - Run focused UI smoke tests from a fresh, isolated preference/session state after shell, sign-in, search, or navigation changes.
 - Keep `ModernArchitectureGuardTests` passing; update the contract only through an intentional architecture decision.
+
+## Git history
+
+- When requested work is complete and its appropriate validation has passed, create a focused commit before handing the work back unless the user explicitly asks not to commit.
+- Keep commits coherent and descriptive. Stage only files that belong to the completed task, preserve unrelated worktree changes, and never commit known-broken or incomplete work merely to make the tree clean.
