@@ -1,9 +1,11 @@
 import SwiftUI
 
 public struct PrismediaRootView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(PrismediaAppEnvironment.self) private var environment
     @Environment(PrismediaAppRouter.self) private var router
+    @Namespace private var launchBrandNamespace
 
     private let presentationOverride: PrismediaRootPresentation?
     private let authenticationServiceOverride: (any AuthenticationServicing)?
@@ -37,6 +39,7 @@ public struct PrismediaRootView: View {
                     }
             }
         }
+        .animation(launchAnimation, value: presentation)
         .tint(PrismediaColor.accent)
         .preferredColorScheme(.dark)
         .onOpenURL { url in
@@ -50,7 +53,12 @@ public struct PrismediaRootView: View {
     }
 
     private var signedInView: some View {
-        PrismediaShellView()
+        PrismediaShellView(launchBrandNamespace: launchBrandNamespace)
+    }
+
+    private var launchAnimation: Animation? {
+        guard presentation == .signedIn, !reduceMotion else { return nil }
+        return .spring(response: 0.58, dampingFraction: 0.84)
     }
 
     private var presentation: PrismediaRootPresentation {
@@ -77,8 +85,11 @@ public struct PrismediaRootView: View {
             )
             .ignoresSafeArea()
 
-            PrismediaLoadingView("Opening your library…")
-                .padding(PrismediaSpacing.section)
+            PrismediaLoadingView(
+                "Opening your library…",
+                launchBrandNamespace: launchBrandNamespace
+            )
+            .padding(PrismediaSpacing.section)
         }
         .accessibilityIdentifier("root.restoring")
     }

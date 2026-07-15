@@ -26,14 +26,17 @@ enum PrismediaLoadingRenderer {
     static func draw(
         frame: PrismediaLoadingAnimationFrame,
         context: inout GraphicsContext,
-        size: CGSize
+        size: CGSize,
+        drawsPrism: Bool = true
     ) {
         guard size.width > 0, size.height > 0 else { return }
 
         let prismRectangle = prismRectangle(in: size)
         drawSpectrum(frame: frame, in: prismRectangle, context: &context, size: size)
         drawIncomingLight(frame: frame, in: prismRectangle, context: &context, size: size)
-        drawPrism(frame: frame, in: prismRectangle, context: &context)
+        if drawsPrism {
+            drawPrism(frame: frame, in: prismRectangle, context: &context)
+        }
         drawInternalLight(frame: frame, in: prismRectangle, context: &context)
         drawImpactGlow(frame: frame, in: prismRectangle, context: &context)
     }

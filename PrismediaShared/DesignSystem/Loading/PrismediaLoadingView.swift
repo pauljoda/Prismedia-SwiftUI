@@ -2,9 +2,16 @@ import SwiftUI
 
 public struct PrismediaLoadingView: View {
     private let title: LocalizedStringKey
+    private let launchBrandNamespace: Namespace.ID?
 
     public init(_ title: LocalizedStringKey) {
         self.title = title
+        launchBrandNamespace = nil
+    }
+
+    init(_ title: LocalizedStringKey, launchBrandNamespace: Namespace.ID) {
+        self.title = title
+        self.launchBrandNamespace = launchBrandNamespace
     }
 
     public var body: some View {
@@ -12,7 +19,7 @@ public struct PrismediaLoadingView: View {
             Spacer()
 
             VStack(spacing: PrismediaSpacing.medium) {
-                PrismediaLoadingMark()
+                PrismediaLoadingMark(launchBrandNamespace: launchBrandNamespace)
 
                 Text(title)
                     .font(.subheadline)

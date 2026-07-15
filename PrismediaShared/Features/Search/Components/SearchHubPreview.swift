@@ -33,14 +33,10 @@ import SwiftUI
                     onEntityMutated: {}
                 ),
                 searchText: $searchText,
-                user: user,
                 modes: ModeCatalog.modes(for: user),
-                allowsNsfwContent: false,
                 debounce: .milliseconds(10),
                 onSelectMode: { _ in },
-                onSelectDestination: { _, _ in },
-                onSetAllowsNsfwContent: { _ in },
-                onSignOut: {}
+                onSelectDestination: { _, _ in }
             )
             .environment(\.dynamicTypeSize, dynamicTypeSize ?? .large)
         }

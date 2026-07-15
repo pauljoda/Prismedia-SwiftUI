@@ -13,43 +13,31 @@ struct SearchHubView: View {
     private let service: SearchHubService
     private let debounce: Duration
     private let detailDependencies: EntityDetailDependencies
-    private let user: UserAccount
     private let modes: [AppMode]
-    private let allowsNsfwContent: Bool
     private let reloadRevision: Int
-    private let onSetAllowsNsfwContent: @MainActor @Sendable (Bool) -> Void
     private let onSelectMode: (AppMode) -> Void
     private let onSelectDestination: (AppMode, AppDestination) -> Void
-    private let onSignOut: () -> Void
 
     init(
         loader: any SearchHubLoading,
         detailDependencies: EntityDetailDependencies,
         searchText: Binding<String>,
         navigationPath: Binding<[EntityLink]> = .constant([]),
-        user: UserAccount,
         modes: [AppMode],
-        allowsNsfwContent: Bool,
         reloadRevision: Int = 0,
         debounce: Duration = .milliseconds(300),
         onSelectMode: @escaping (AppMode) -> Void,
-        onSelectDestination: @escaping (AppMode, AppDestination) -> Void,
-        onSetAllowsNsfwContent: @escaping @MainActor @Sendable (Bool) -> Void,
-        onSignOut: @escaping () -> Void
+        onSelectDestination: @escaping (AppMode, AppDestination) -> Void
     ) {
         _searchText = searchText
         _navigationPath = navigationPath
         service = SearchHubService(loader: loader)
         self.debounce = debounce
         self.detailDependencies = detailDependencies
-        self.user = user
         self.modes = modes
-        self.allowsNsfwContent = allowsNsfwContent
         self.reloadRevision = reloadRevision
         self.onSelectMode = onSelectMode
         self.onSelectDestination = onSelectDestination
-        self.onSetAllowsNsfwContent = onSetAllowsNsfwContent
-        self.onSignOut = onSignOut
     }
 
     var body: some View {
@@ -81,11 +69,6 @@ struct SearchHubView: View {
                 await retryActiveContent()
             }
             .navigationTitle("Browse")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    accountMenu
-                }
-            }
             .accessibilityIdentifier("shell.search")
             .prismediaEntityDestinations(dependencies: detailDependencies)
         }
@@ -500,58 +483,6 @@ struct SearchHubView: View {
         }
     }
 
-    // MARK: - Account
-
-    private var accountMenu: some View {
-        Menu {
-            Section {
-                Label(user.displayName, systemImage: "person.crop.circle")
-                Text("@\(user.username)")
-            }
-
-            if user.isAdmin,
-                let settings = ModeCatalog.operate.destination(id: "settings"),
-                modes.contains(where: { $0.id == ModeCatalog.operate.id })
-            {
-                Button("Settings", systemImage: "gearshape") {
-                    onSelectDestination(ModeCatalog.operate, settings)
-                }
-            }
-
-            if user.allowNsfw {
-                Toggle(
-                    "Allow NSFW Content",
-                    isOn: Binding(
-                        get: { allowsNsfwContent },
-                        set: onSetAllowsNsfwContent
-                    )
-                )
-                .accessibilityIdentifier("shell.account.allowNsfw")
-            }
-
-            Divider()
-
-            Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                onSignOut()
-            }
-        } label: {
-            Text(accountInitials)
-                .font(.caption.bold())
-                .foregroundStyle(PrismediaColor.onAccent.opacity(0.82))
-                .frame(width: 34, height: 34)
-                .background(PrismediaColor.accent.gradient, in: Circle())
-        }
-        .accessibilityLabel("Account, \(user.displayName)")
-        .accessibilityIdentifier("shell.account")
-    }
-
-    private var accountInitials: String {
-        let parts = user.displayName
-            .split(whereSeparator: \.isWhitespace)
-            .prefix(2)
-        let initials = parts.compactMap(\.first).map(String.init).joined()
-        return initials.isEmpty ? String(user.username.prefix(1)).uppercased() : initials.uppercased()
-    }
 }
 
 #if DEBUG
@@ -571,14 +502,10 @@ struct SearchHubView: View {
                 onEntityMutated: {}
             ),
             searchText: $searchText,
-            user: PrismediaPreviewData.user,
             modes: ModeCatalog.modes(for: PrismediaPreviewData.user),
-            allowsNsfwContent: false,
             debounce: .milliseconds(10),
             onSelectMode: { _ in },
-            onSelectDestination: { _, _ in },
-            onSetAllowsNsfwContent: { _ in },
-            onSignOut: {}
+            onSelectDestination: { _, _ in }
         )
     }
 

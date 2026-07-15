@@ -54,13 +54,7 @@ public struct DashboardService {
             playbackHistory: loadedContinueItems + snapshot.recentItems,
             catalogSources: snapshot.sections.map(\.items)
         )
-        let heroID = snapshot.hero?.id
-        var removedFeaturedItem = false
-        snapshot.continueItems = loadedContinueItems.filter { item in
-            guard !removedFeaturedItem, item.id == heroID else { return true }
-            removedFeaturedItem = true
-            return false
-        }
+        snapshot.continueItems = loadedContinueItems
 
         snapshot.state = snapshot.hasContent ? .content : .empty
         return snapshot

@@ -10,7 +10,15 @@ public struct PrismediaShellView: View {
         @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
 
-    public init() {}
+    private let launchBrandNamespace: Namespace.ID?
+
+    public init() {
+        launchBrandNamespace = nil
+    }
+
+    init(launchBrandNamespace: Namespace.ID) {
+        self.launchBrandNamespace = launchBrandNamespace
+    }
 
     public var body: some View {
         Group {
@@ -51,6 +59,7 @@ public struct PrismediaShellView: View {
                 ) {
                     destinationContent(
                         destination,
+                        user: user,
                         client: client,
                         detailDependencies: detailDependencies,
                         videoPlaybackSession: videoPlaybackSession
@@ -65,7 +74,6 @@ public struct PrismediaShellView: View {
                 role: .search
             ) {
                 searchContent(
-                    user: user,
                     client: client,
                     detailDependencies: detailDependencies,
                     videoPlaybackSession: videoPlaybackSession
@@ -129,7 +137,6 @@ public struct PrismediaShellView: View {
         switch router.selectedTab {
         case .search:
             searchContent(
-                user: user,
                 client: client,
                 detailDependencies: detailDependencies,
                 videoPlaybackSession: videoPlaybackSession
@@ -139,6 +146,7 @@ public struct PrismediaShellView: View {
             if let destination = selectedDestination(id: destinationID) {
                 destinationContent(
                     destination,
+                    user: user,
                     client: client,
                     detailDependencies: detailDependencies,
                     videoPlaybackSession: videoPlaybackSession
@@ -150,7 +158,6 @@ public struct PrismediaShellView: View {
     }
 
     private func searchContent(
-        user: UserAccount,
         client: PrismediaAPIClient,
         detailDependencies: EntityDetailDependencies,
         videoPlaybackSession: VideoPlaybackSession
@@ -165,9 +172,7 @@ public struct PrismediaShellView: View {
                 for: PrismediaAppRouter.searchPathID,
                 videoPlaybackSession: videoPlaybackSession
             ),
-            user: user,
             modes: availableModes,
-            allowsNsfwContent: environment.allowsNsfwContent,
             reloadRevision: environment.contentRevision,
             onSelectMode: { mode in
                 videoPlaybackSession.inlinePlaybackWillNavigate()
@@ -176,10 +181,6 @@ public struct PrismediaShellView: View {
             onSelectDestination: { mode, destination in
                 videoPlaybackSession.inlinePlaybackWillNavigate()
                 router.select(mode: mode, destination: destination)
-            },
-            onSetAllowsNsfwContent: environment.setAllowsNsfwContent,
-            onSignOut: {
-                Task { await environment.signOut() }
             }
         )
     }
@@ -187,6 +188,7 @@ public struct PrismediaShellView: View {
     @ViewBuilder
     private func destinationContent(
         _ destination: AppDestination,
+        user: UserAccount,
         client: PrismediaAPIClient,
         detailDependencies: EntityDetailDependencies,
         videoPlaybackSession: VideoPlaybackSession
@@ -196,15 +198,26 @@ public struct PrismediaShellView: View {
             DashboardView(
                 loader: PrismediaDashboardLoader(client: client),
                 detailDependencies: detailDependencies,
+                user: user,
                 navigationPath: pathBinding(
                     for: destination.id,
                     videoPlaybackSession: videoPlaybackSession
                 ),
+                allowsNsfwContent: environment.allowsNsfwContent,
+                launchBrandNamespace: launchBrandNamespace,
                 allowsHeroAutomaticAdvance: allowsDashboardHeroAutomaticAdvance,
                 reloadRevision: environment.contentRevision,
                 onSelectSection: { section in
                     videoPlaybackSession.inlinePlaybackWillNavigate()
                     router.selectDashboardSection(section)
+                },
+                onOpenSettings: settingsAction(
+                    for: user,
+                    videoPlaybackSession: videoPlaybackSession
+                ),
+                onSetAllowsNsfwContent: environment.setAllowsNsfwContent,
+                onSignOut: {
+                    Task { await environment.signOut() }
                 }
             )
 
@@ -470,6 +483,21 @@ public struct PrismediaShellView: View {
 
     private func selectedDestination(id destinationID: String) -> AppDestination? {
         availableModes.lazy.compactMap { $0.destination(id: destinationID) }.first
+    }
+
+    private func settingsAction(
+        for user: UserAccount,
+        videoPlaybackSession: VideoPlaybackSession
+    ) -> (() -> Void)? {
+        guard user.isAdmin,
+            let settings = ModeCatalog.operate.destination(id: "settings"),
+            availableModes.contains(where: { $0.id == ModeCatalog.operate.id })
+        else { return nil }
+
+        return {
+            videoPlaybackSession.inlinePlaybackWillNavigate()
+            router.select(mode: ModeCatalog.operate, destination: settings)
+        }
     }
 
     private var allowsDashboardHeroAutomaticAdvance: Bool {
