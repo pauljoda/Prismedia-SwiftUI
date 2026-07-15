@@ -60,13 +60,14 @@ struct BookChapterMappingBuilder: Sendable {
             )
         }
 
+        var nextOrder = readable.count
         for index in tracks.indices where !consumedTrackIndexes.contains(index) {
             let track = tracks[index]
             rows.append(
                 BookChapterMapping(
                     id: "audio-\(track.id.uuidString.lowercased())",
                     title: track.title,
-                    order: readable.count + index,
+                    order: nextOrder,
                     depth: 0,
                     readTarget: nil,
                     audioTrack: track,
@@ -74,6 +75,7 @@ struct BookChapterMappingBuilder: Sendable {
                     isCurrentAudio: track.id == currentAudioTrackID
                 )
             )
+            nextOrder += 1
         }
 
         return rows

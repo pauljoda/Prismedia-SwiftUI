@@ -7,7 +7,7 @@ struct EPUBChapterContentsService: Sendable {
         self.reader = reader
     }
 
-    func load(book: EntityDetail) async throws -> EPUBChapterContents {
+    func load(book: EntityDetail, storedLocation: String? = nil) async throws -> EPUBChapterContents {
         let data = try await reader.loadSourceData(id: book.id)
         let title = book.title
         let destination = cacheDirectory(bookID: book.id)
@@ -15,17 +15,45 @@ struct EPUBChapterContentsService: Sendable {
             try EPUBPublicationLoader().load(
                 data: data,
                 fallbackTitle: title,
-                destination: destination
+                destination: destination,
+                extractsContent: false
             )
         }.value
-        let chapters = flattenedChapters(publication.tableOfContents)
+        let chapters = readableChapters(in: publication)
+        let progress: EntityProgressCapability? = book.capability()
         return EPUBChapterContents(
             chapters: chapters,
             currentChapterID: currentChapterID(
-                progressLocation: book.capability(EntityProgressCapability.self)?.location,
+                progressLocation: progress?.completedAt == nil
+                    ? (storedLocation ?? progress?.location)
+                    : nil,
                 chapters: chapters
             )
         )
+    }
+
+    private func readableChapters(in publication: EPUBPublication) -> [ReadableBookChapter] {
+        let tableOfContents = flattenedChapters(publication.tableOfContents)
+        guard tableOfContents.isEmpty else { return tableOfContents }
+
+        return publication.chapters.enumerated().map { index, chapter in
+            ReadableBookChapter(
+                id: chapter.location,
+                title: fallbackTitle(for: chapter.location, index: index),
+                order: index,
+                depth: 0,
+                target: .epub(location: chapter.location)
+            )
+        }
+    }
+
+    private func fallbackTitle(for location: String, index: Int) -> String {
+        let decoded = location.removingPercentEncoding ?? location
+        let name = ((decoded as NSString).lastPathComponent as NSString).deletingPathExtension
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "Chapter \(index + 1)" : name
     }
 
     private func flattenedChapters(
@@ -83,6 +111,10 @@ struct EPUBChapterContentsService: Sendable {
     }
 
     private func href(from progressLocation: String?) -> String? {
+        if let progressLocation,
+           let location = EPUBProgressLocation(serialized: progressLocation) {
+            return location.href
+        }
         guard let progressLocation,
             let data = progressLocation.data(using: .utf8),
             let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -108,7 +140,8 @@ struct EPUBChapterContentsService: Sendable {
         let root =
             FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        return root
+        return
+            root
             .appending(path: "Prismedia", directoryHint: .isDirectory)
             .appending(path: "EPUBContents", directoryHint: .isDirectory)
             .appending(path: bookID.uuidString.lowercased(), directoryHint: .isDirectory)

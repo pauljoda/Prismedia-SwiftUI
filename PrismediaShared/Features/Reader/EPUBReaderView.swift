@@ -9,27 +9,38 @@
         @State private var errorMessage: String?
         @State private var progressWriter: BookReaderProgressWriter
         @State private var progressSaveTask: Task<Void, Never>?
+        @State private var audiobookControlsPresented = false
+        @State private var hasSignaledReady = false
 
         private let command: BookReaderCommand
         private let service: any BookReaderServicing
         private let useCase: DocumentReaderUseCase
         private let bookmarkStore: any EPUBBookmarkStoring
+        private let locatorStore: EPUBLocatorStore
         private let initialLocation: String?
+        private let initialProgression: Double?
         private let companionPlayer: MusicPlayerController?
+        private let onReady: () -> Void
 
         public init(
             book: EntityDetail,
             command: BookReaderCommand,
             service: any BookReaderServicing,
             bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
+            locatorStore: EPUBLocatorStore = .disabled,
             initialLocation: String? = nil,
-            companionPlayer: MusicPlayerController? = nil
+            initialProgression: Double? = nil,
+            companionPlayer: MusicPlayerController? = nil,
+            onReady: @escaping () -> Void = {}
         ) {
             self.command = command
             self.service = service
             self.bookmarkStore = bookmarkStore
+            self.locatorStore = locatorStore
             self.initialLocation = initialLocation
+            self.initialProgression = initialProgression
             self.companionPlayer = companionPlayer
+            self.onReady = onReady
             useCase = DocumentReaderUseCase(book: book, service: service)
             _progressWriter = State(initialValue: BookReaderProgressWriter(service: service))
         }
@@ -41,9 +52,12 @@
                     book: useCase.book,
                     command: command,
                     service: service,
+                    locatorStore: locatorStore,
                     bookmarkStore: bookmarkStore,
                     initialLocation: initialLocation,
-                    companionPlayer: companionPlayer
+                    initialProgression: initialProgression,
+                    companionPlayer: companionPlayer,
+                    onReady: onReady
                 )
             #else
                 NavigationStack {
@@ -54,9 +68,12 @@
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Close", systemImage: "xmark", action: close)
                             }
-                            if let companionPlayer, let currentTrack = companionPlayer.currentTrack {
+                            if let companionPlayer = activeCompanionPlayer,
+                                let currentTrack = companionPlayer.currentTrack
+                            {
                                 ToolbarItem(placement: .primaryAction) {
                                     ReaderAudiobookControlMenu(
+                                        isPresented: $audiobookControlsPresented,
                                         trackTitle: currentTrack.title,
                                         isPlaying: companionPlayer.isPlaying,
                                         playbackRate: companionPlayer.playbackRate,
@@ -161,7 +178,7 @@
                     })
                 {
                     currentChapter = initialIndex
-                    currentChapterProgress = 0
+                    currentChapterProgress = min(max(0, initialProgression ?? 0), 1)
                 } else {
                     currentChapter =
                         command == .resume
@@ -173,6 +190,7 @@
                         : 0
                 }
                 publication = loaded
+                await signalReady()
             } catch is CancellationError {
                 return
             } catch {
@@ -212,6 +230,21 @@
         private func documentResource(_ location: String) -> String {
             let path = location.split(separator: "#", maxSplits: 1).first.map(String.init) ?? location
             return (path.removingPercentEncoding ?? path).lowercased()
+        }
+
+        private var activeCompanionPlayer: MusicPlayerController? {
+            guard let companionPlayer,
+                companionPlayer.context?.playbackOwnerEntityID == useCase.book.id,
+                companionPlayer.context?.playbackOwnerEntityKind == .book
+            else { return nil }
+            return companionPlayer
+        }
+
+        private func signalReady() async {
+            guard !hasSignaledReady else { return }
+            hasSignaledReady = true
+            await Task.yield()
+            onReady()
         }
 
         private func saveProgress() {

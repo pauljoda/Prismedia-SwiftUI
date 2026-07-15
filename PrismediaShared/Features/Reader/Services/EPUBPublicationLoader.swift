@@ -6,7 +6,8 @@ public struct EPUBPublicationLoader: Sendable {
     public func load(
         data: Data,
         fallbackTitle: String,
-        destination: URL
+        destination: URL,
+        extractsContent: Bool = true
     ) throws -> EPUBPublication {
         let entries = try EPUBZipArchiveReader().entries(in: data)
         guard entries["META-INF/encryption.xml"] == nil else {
@@ -33,7 +34,9 @@ public struct EPUBPublicationLoader: Sendable {
         }
         guard !chapters.isEmpty else { throw EPUBReaderError.emptySpine }
 
-        try extract(entries: entries, to: destination)
+        if extractsContent {
+            try extract(entries: entries, to: destination)
+        }
         return EPUBPublication(
             title: package.title ?? fallbackTitle,
             chapters: chapters.map { item, location in
@@ -86,9 +89,30 @@ public struct EPUBPublicationLoader: Sendable {
         entries: [String: Data],
         packageDirectory: String
     ) throws -> [EPUBTableOfContentsItem] {
-        guard let item = package.manifest.values.first(where: { $0.properties.contains("nav") }) else {
-            return []
+        if let item = package.manifest.values.first(where: { $0.properties.contains("nav") }) {
+            return try parseEPUB3TableOfContents(
+                item: item,
+                entries: entries,
+                packageDirectory: packageDirectory
+            )
         }
+
+        let ncxItem =
+            package.tableOfContentsID.flatMap { package.manifest[$0] }
+            ?? package.manifest.values.first { $0.mediaType == "application/x-dtbncx+xml" }
+        guard let ncxItem else { return [] }
+        return try parseEPUB2TableOfContents(
+            item: ncxItem,
+            entries: entries,
+            packageDirectory: packageDirectory
+        )
+    }
+
+    private func parseEPUB3TableOfContents(
+        item: EPUBManifestItem,
+        entries: [String: Data],
+        packageDirectory: String
+    ) throws -> [EPUBTableOfContentsItem] {
         let navigationPath = try resolvedPath(base: packageDirectory, relative: item.href)
         guard let data = entries[navigationPath] else { return [] }
         let delegate = EPUBNavigationDocumentDelegate()
@@ -97,8 +121,40 @@ public struct EPUBPublicationLoader: Sendable {
         parser.shouldResolveExternalEntities = false
         guard parser.parse() else { throw EPUBReaderError.malformedPackageDocument }
 
+        return try tableOfContents(
+            rows: delegate.entries,
+            navigationPath: navigationPath,
+            packageDirectory: packageDirectory
+        )
+    }
+
+    private func parseEPUB2TableOfContents(
+        item: EPUBManifestItem,
+        entries: [String: Data],
+        packageDirectory: String
+    ) throws -> [EPUBTableOfContentsItem] {
+        let navigationPath = try resolvedPath(base: packageDirectory, relative: item.href)
+        guard let data = entries[navigationPath] else { return [] }
+        let delegate = EPUBNCXNavigationDelegate()
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+        parser.shouldResolveExternalEntities = false
+        guard parser.parse() else { throw EPUBReaderError.malformedPackageDocument }
+
+        return try tableOfContents(
+            rows: delegate.entries,
+            navigationPath: navigationPath,
+            packageDirectory: packageDirectory
+        )
+    }
+
+    private func tableOfContents(
+        rows: [(title: String, href: String, depth: Int)],
+        navigationPath: String,
+        packageDirectory: String
+    ) throws -> [EPUBTableOfContentsItem] {
         let navigationDirectory = (navigationPath as NSString).deletingLastPathComponent
-        let rows = try delegate.entries.map { row in
+        let resolvedRows = try rows.map { row in
             let fragment = row.href.split(separator: "#", maxSplits: 1).dropFirst().first.map(String.init)
             let path = try resolvedPath(base: navigationDirectory, relative: row.href)
             let relative = relativePath(path, from: packageDirectory)
@@ -109,7 +165,7 @@ public struct EPUBPublicationLoader: Sendable {
             )
         }
         var index = 0
-        return buildTableOfContents(rows, level: 0, index: &index)
+        return buildTableOfContents(resolvedRows, level: 0, index: &index)
     }
 
     private func buildTableOfContents(

@@ -34,7 +34,7 @@ struct EntityDetailSectionPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
+        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
             switch section {
             case .details:
                 detailsContent
@@ -55,7 +55,7 @@ struct EntityDetailSectionPanel: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, horizontalPadding)
-        .padding(.vertical, PrismediaSpacing.large)
+        .padding(.vertical, PrismediaSpacing.medium)
         .accessibilityIdentifier("entity-detail.panel.\(section.rawValue)")
     }
 
@@ -70,7 +70,7 @@ struct EntityDetailSectionPanel: View {
 
         ForEach(presentation.detail.relationships, id: \.entityDetailGroupID) { group in
             relationshipGroup(group)
-                .padding(.bottom, PrismediaSpacing.large)
+                .padding(.bottom, PrismediaSpacing.medium)
                 .overlay(alignment: .bottom) {
                     Divider()
                         .overlay(PrismediaColor.borderSubtle)
@@ -122,12 +122,12 @@ struct EntityDetailSectionPanel: View {
                 columns: [
                     GridItem(
                         .adaptive(minimum: 220),
-                        spacing: PrismediaSpacing.medium,
+                        spacing: PrismediaSpacing.extraLarge,
                         alignment: .topLeading
                     )
                 ],
                 alignment: .leading,
-                spacing: PrismediaSpacing.medium
+                spacing: 0
             ) {
                 ForEach(presentation.metadata) { item in
                     metadataItem(item)
@@ -174,10 +174,13 @@ struct EntityDetailSectionPanel: View {
                 }
             }
         }
-        .padding(.vertical, PrismediaSpacing.small)
-        .padding(.horizontal, PrismediaSpacing.medium)
+        .padding(.vertical, PrismediaSpacing.medium)
         .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
-        .prismediaCard(cornerRadius: PrismediaRadius.compact)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) {
+            Divider()
+                .overlay(PrismediaColor.borderSubtle)
+        }
     }
 
     private var markersContent: some View {

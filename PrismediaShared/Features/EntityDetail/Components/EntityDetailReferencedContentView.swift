@@ -20,8 +20,6 @@ struct EntityDetailReferencedContentView: View {
         ) { item, layout in
             EntityThumbnailNavigationSurface(item: item, layout: layout)
         }
-        .padding(PrismediaSpacing.extraLarge)
-        .entityDetailContentSurface()
         .accessibilityIdentifier("entity-detail.referenced-content")
     }
 

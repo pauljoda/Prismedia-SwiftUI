@@ -21,6 +21,7 @@
         private let preferencesStore: ReaderPreferencesStore
         private let locatorStore: EPUBLocatorStore
         private let initialLocation: String?
+        private let initialProgression: Double?
         private let progressWriter: BookReaderProgressWriter
         private var publication: Publication?
         private var navigator: EPUBNavigatorViewController?
@@ -40,7 +41,8 @@
             service: any BookReaderServicing,
             preferencesStore: ReaderPreferencesStore,
             locatorStore: EPUBLocatorStore,
-            initialLocation: String? = nil
+            initialLocation: String? = nil,
+            initialProgression: Double? = nil
         ) {
             self.book = book
             self.command = command
@@ -48,6 +50,7 @@
             self.preferencesStore = preferencesStore
             self.locatorStore = locatorStore
             self.initialLocation = initialLocation
+            self.initialProgression = initialProgression
             progressWriter = BookReaderProgressWriter(service: service)
             preferences = preferencesStore.loadEPUB()
         }
@@ -273,9 +276,16 @@
             tableOfContentsLinks: [Link]
         ) async -> Locator? {
             if let initialLocation,
-                let link = findLink(initialLocation, in: tableOfContentsLinks)
+                let link = findLink(
+                    initialLocation,
+                    in: tableOfContentsLinks + publication.readingOrder
+                )
             {
-                return await publication.locate(link)
+                guard let locator = await publication.locate(link) else { return nil }
+                guard let initialProgression else { return locator }
+                return locator.copy(locations: {
+                    $0.progression = min(max(0, initialProgression), 1)
+                })
             }
             guard command == .resume, let progress = progressCapability else { return nil }
             if let location = locatorStore.load(bookID: book.id) ?? readiumMigrationLocation,
@@ -340,11 +350,18 @@
         }
 
         private func findLink(_ href: String, in links: [Link]) -> Link? {
-            for link in links {
-                if link.href == href { return link }
-                if let child = findLink(href, in: link.children) { return child }
-            }
-            return nil
+            let candidates = flattenedLinks(links)
+            guard
+                let matchedHref = EPUBResourceLocationMatcher().bestMatch(
+                    for: href,
+                    candidates: candidates.map(\.href)
+                )
+            else { return nil }
+            return candidates.first { $0.href == matchedHref }
+        }
+
+        private func flattenedLinks(_ links: [Link]) -> [Link] {
+            links.flatMap { [$0] + flattenedLinks($0.children) }
         }
 
         private func chapterTitles(in links: [Link]) -> [String: String] {

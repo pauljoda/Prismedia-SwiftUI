@@ -10,48 +10,126 @@ struct MediaProgressCard: View {
     let onToggleCompletion: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-            progressSummary
-            progressBar
-            actionsView
+        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+            header
+            progressRow
         }
-        .padding(.vertical, PrismediaSpacing.small)
-        .frame(
-            maxWidth: PrismediaLayout.readableContentWidth,
-            alignment: .leading
-        )
+        .padding(PrismediaSpacing.extraLarge)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .prismediaPanel()
+        .disabled(presentation.isBusy)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(presentation.progressAccessibilityLabel)
     }
 
-    private var progressSummary: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.medium) {
-                Label(
-                    presentation.statusTitle,
-                    systemImage: presentation.statusSystemImage
-                )
-                .font(.headline)
-                .foregroundStyle(statusTint)
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.medium) {
+            Text("Your progress")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PrismediaColor.textSecondary)
+                .textCase(.uppercase)
 
-                Spacer(minLength: PrismediaSpacing.small)
+            Spacer(minLength: PrismediaSpacing.small)
 
-                if presentation.isBusy {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(artworkPrimaryAccent)
-                        .accessibilityLabel("Updating progress")
-                }
-
-                if presentation.percent > 0 {
-                    Text("\(presentation.percent)%")
-                        .font(.title2.monospacedDigit().weight(.bold))
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                        .accessibilityLabel("\(presentation.percent) percent complete")
-                }
+            if presentation.isBusy {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(artworkPrimaryAccent)
+                    .accessibilityLabel("Updating progress")
             }
 
-            progressLabels
+            progressOptions
+        }
+    }
+
+    private var progressRow: some View {
+        GlassEffectContainer(spacing: PrismediaSpacing.small) {
+            HStack(spacing: PrismediaSpacing.medium) {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                    HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.medium) {
+                        Label(
+                            presentation.statusTitle,
+                            systemImage: presentation.resumeSystemImage
+                        )
+                        .font(.headline)
+                        .foregroundStyle(statusTint)
+
+                        Spacer(minLength: PrismediaSpacing.small)
+
+                        if presentation.percent > 0 {
+                            Text("\(presentation.percent)%")
+                                .font(.headline.monospacedDigit())
+                                .foregroundStyle(PrismediaColor.textPrimary)
+                                .accessibilityLabel(
+                                    "\(presentation.percent) percent complete"
+                                )
+                        }
+                    }
+
+                    progressBar
+                    progressLabels
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+
+                resumeButton
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var resumeButton: some View {
+        if presentation.showsResume {
+            Button(action: onResume) {
+                Image(systemName: presentation.resumeSystemImage)
+                    .font(.body.weight(.semibold))
+                    .frame(
+                        width: PrismediaLayout.minimumHitTarget,
+                        height: PrismediaLayout.minimumHitTarget
+                    )
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.glass(.clear))
+            .buttonBorderShape(.circle)
+            .accessibilityLabel(presentation.resumeTitle)
+            .accessibilityHint(presentation.resumeAccessibilityHint)
+            .accessibilityIdentifier("media-progress.resume")
+        }
+    }
+
+    @ViewBuilder
+    private var progressOptions: some View {
+        if presentation.showsStartOver || presentation.showsCompletionToggle {
+            Menu {
+                if presentation.showsStartOver {
+                    Button(
+                        "Start Over",
+                        systemImage: "arrow.counterclockwise",
+                        action: onStartOver
+                    )
+                    .accessibilityHint(presentation.startOverAccessibilityHint)
+                    .accessibilityIdentifier("media-progress.start-over")
+                }
+
+                if presentation.showsCompletionToggle {
+                    Button(
+                        presentation.completionTitle,
+                        systemImage: presentation.status == .completed
+                            ? "circle"
+                            : "checkmark.circle",
+                        action: onToggleCompletion
+                    )
+                    .accessibilityHint(presentation.completionAccessibilityHint)
+                    .accessibilityIdentifier("media-progress.completion")
+                }
+            } label: {
+                Label("Progress Options", systemImage: "ellipsis")
+                    .labelStyle(.iconOnly)
+                    .padding(PrismediaSpacing.small)
+            }
+            .buttonStyle(.glass(.clear))
+            .buttonBorderShape(.circle)
+            .accessibilityLabel("Progress Options")
         }
     }
 
@@ -61,14 +139,14 @@ struct MediaProgressCard: View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                 if let positionLabel = presentation.positionLabel {
                     Text(positionLabel)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(PrismediaColor.textPrimary)
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
                         .accessibilityLabel("Current position, \(positionLabel)")
                 }
 
                 if let contextLabel = presentation.contextLabel {
                     Text(contextLabel)
-                        .font(.footnote)
+                        .font(.caption)
                         .foregroundStyle(PrismediaColor.textSecondary)
                         .accessibilityLabel("Context, \(contextLabel)")
                 }
@@ -84,88 +162,6 @@ struct MediaProgressCard: View {
                 .accessibilityLabel("Progress")
                 .accessibilityValue("\(presentation.percent) percent complete")
         }
-    }
-
-    @ViewBuilder
-    private var actionsView: some View {
-        if presentation.hasVisibleAction {
-            GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                    primaryAction
-                    secondaryActions
-                }
-            }
-            .disabled(presentation.isBusy)
-        }
-    }
-
-    @ViewBuilder
-    private var primaryAction: some View {
-        if presentation.showsResume {
-            PrismediaButton(
-                presentation.resumeTitle,
-                systemImage: presentation.resumeSystemImage,
-                variant: .prominent,
-                form: .fill,
-                primaryTint: artworkPrimaryAccent,
-                isLoading: presentation.isBusy,
-                action: onResume
-            )
-            .accessibilityHint(presentation.resumeAccessibilityHint)
-            .accessibilityIdentifier("media-progress.resume")
-        }
-    }
-
-    @ViewBuilder
-    private var secondaryActions: some View {
-        if presentation.showsStartOver || presentation.showsCompletionToggle {
-            HStack(spacing: PrismediaSpacing.small) {
-                if presentation.showsStartOver {
-                    compactActionButton(
-                        title: "Start Over",
-                        systemImage: "arrow.counterclockwise",
-                        accessibilityHint: presentation.startOverAccessibilityHint,
-                        identifier: "media-progress.start-over",
-                        action: onStartOver
-                    )
-                }
-
-                if presentation.showsCompletionToggle {
-                    compactActionButton(
-                        title: presentation.completionTitle,
-                        systemImage: presentation.status == .completed ? "circle" : "checkmark.circle",
-                        accessibilityHint: presentation.completionAccessibilityHint,
-                        identifier: "media-progress.completion",
-                        action: onToggleCompletion
-                    )
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    private func compactActionButton(
-        title: String,
-        systemImage: String,
-        accessibilityHint: String,
-        identifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .labelStyle(.iconOnly)
-        }
-        .buttonStyle(.glass(.clear))
-        .buttonBorderShape(.circle)
-        .frame(
-            minWidth: PrismediaLayout.minimumHitTarget,
-            minHeight: PrismediaLayout.minimumHitTarget
-        )
-        .contentShape(.rect)
-        .accessibilityLabel(title)
-        .accessibilityHint(accessibilityHint)
-        .accessibilityIdentifier(identifier)
     }
 
     private var statusTint: Color {

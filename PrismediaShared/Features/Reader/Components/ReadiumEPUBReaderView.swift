@@ -21,14 +21,17 @@
         @State private var bookmarksState = EPUBBookmarksState()
         @State private var isToggleReturnAvailable = false
         @State private var navigationMenuPresented = false
+        @State private var audiobookControlsPresented = false
         @State private var pendingNavigationAction: EPUBReaderNavigationAction?
         @State private var isClosing = false
+        @State private var hasSignaledReady = false
         @State private var chrome = ReaderChromeState()
         @State private var chromeTask: Task<Void, Never>?
 
         private let bookID: UUID
         private let bookmarkStore: any EPUBBookmarkStoring
         private let companionPlayer: MusicPlayerController?
+        private let onReady: () -> Void
 
         init(
             book: EntityDetail,
@@ -38,7 +41,9 @@
             locatorStore: EPUBLocatorStore = .standard,
             bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
             initialLocation: String? = nil,
-            companionPlayer: MusicPlayerController? = nil
+            initialProgression: Double? = nil,
+            companionPlayer: MusicPlayerController? = nil,
+            onReady: @escaping () -> Void = {}
         ) {
             let session = ReadiumEPUBReaderSession(
                 book: book,
@@ -46,13 +51,15 @@
                 service: service,
                 preferencesStore: preferencesStore,
                 locatorStore: locatorStore,
-                initialLocation: initialLocation
+                initialLocation: initialLocation,
+                initialProgression: initialProgression
             )
             _session = State(initialValue: session)
             _preferences = State(initialValue: session.preferences)
             bookID = book.id
             self.bookmarkStore = bookmarkStore
             self.companionPlayer = companionPlayer
+            self.onReady = onReady
         }
 
         var body: some View {
@@ -67,6 +74,7 @@
                         preferences: $preferences,
                         navigationMenuPresented: $navigationMenuPresented,
                         settingsPresented: $settingsPresented,
+                        audiobookControlsPresented: $audiobookControlsPresented,
                         hasToggleBookmark: toggleBookmark != nil,
                         isReturningFromToggleBookmark: isToggleReturnAvailable,
                         onClose: close,
@@ -76,9 +84,9 @@
                         onNavigationMenuDismissed: completeNavigationMenuAction,
                         onToggleBookmark: toggleQuickBookmark,
                         onOpenSettings: openSettings,
-                        companionTrackTitle: companionPlayer?.currentTrack?.title,
-                        companionIsPlaying: companionPlayer?.isPlaying ?? false,
-                        companionPlaybackRate: companionPlayer?.playbackRate ?? 1,
+                        companionTrackTitle: activeCompanionPlayer?.currentTrack?.title,
+                        companionIsPlaying: activeCompanionPlayer?.isPlaying ?? false,
+                        companionPlaybackRate: activeCompanionPlayer?.playbackRate ?? 1,
                         onToggleCompanionPlayback: toggleCompanionPlayback,
                         onSetCompanionPlaybackRate: setCompanionPlaybackRate
                     )
@@ -141,6 +149,9 @@
                 updateChromePin()
             }
             .onChange(of: navigationMenuPresented) {
+                updateChromePin()
+            }
+            .onChange(of: audiobookControlsPresented) {
                 updateChromePin()
             }
             .onChange(of: bookmarksState) { _, value in
@@ -221,6 +232,7 @@
                 && !searchPresented
                 && !settingsPresented
                 && !navigationMenuPresented
+                && !audiobookControlsPresented
                 && !isLoading
                 && errorMessage == nil
         }
@@ -242,6 +254,7 @@
                 guard !Task.isCancelled else { return }
                 tableOfContents = contents
                 isLoading = false
+                await signalReady()
             } catch is CancellationError {
                 return
             } catch {
@@ -279,7 +292,7 @@
         }
 
         private func toggleCompanionPlayback() {
-            guard let companionPlayer else { return }
+            guard let companionPlayer = activeCompanionPlayer else { return }
             if companionPlayer.isPlaying {
                 companionPlayer.pause()
             } else {
@@ -289,8 +302,31 @@
         }
 
         private func setCompanionPlaybackRate(_ rate: Float) {
-            companionPlayer?.setPlaybackRate(rate)
+            activeCompanionPlayer?.setPlaybackRate(rate)
             revealChrome()
+        }
+
+        private var activeCompanionPlayer: MusicPlayerController? {
+            guard let companionPlayer,
+                companionPlayer.context?.playbackOwnerEntityID == bookID,
+                companionPlayer.context?.playbackOwnerEntityKind == .book
+            else { return nil }
+            return companionPlayer
+        }
+
+        private var isReaderPresentationActive: Bool {
+            inspectorPresented
+                || searchPresented
+                || settingsPresented
+                || navigationMenuPresented
+                || audiobookControlsPresented
+        }
+
+        private func signalReady() async {
+            guard !hasSignaledReady else { return }
+            hasSignaledReady = true
+            await Task.yield()
+            onReady()
         }
 
         private func previousPage() {
@@ -331,9 +367,7 @@
 
         private func updateChromePin() {
             chromeTask?.cancel()
-            chrome.setPinned(
-                inspectorPresented || searchPresented || settingsPresented || navigationMenuPresented
-            )
+            chrome.setPinned(isReaderPresentationActive)
             scheduleChromeHide()
         }
 
@@ -385,7 +419,11 @@
 
         private func scheduleChromeHide() {
             chromeTask?.cancel()
-            guard chrome.shouldScheduleHide, !isLoading, errorMessage == nil else { return }
+            guard chrome.shouldScheduleHide,
+                !isReaderPresentationActive,
+                !isLoading,
+                errorMessage == nil
+            else { return }
             chromeTask = Task { @MainActor in
                 try? await Task.sleep(for: ReaderChromeState.autoHideDelay)
                 guard !Task.isCancelled else { return }

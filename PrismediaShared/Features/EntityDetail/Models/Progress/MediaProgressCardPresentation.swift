@@ -58,15 +58,6 @@ extension MediaProgressCardPresentation {
         }
     }
 
-    var statusSystemImage: String {
-        switch (kind, status) {
-        case (_, .notStarted): "circle"
-        case (.read, .inProgress): "bookmark.fill"
-        case (.listen, .inProgress): "waveform.circle.fill"
-        case (_, .completed): "checkmark.circle.fill"
-        }
-    }
-
     var progressAccessibilityLabel: String {
         switch kind {
         case .read: "Reading progress"
@@ -118,9 +109,5 @@ extension MediaProgressCardPresentation {
         case (.listen, false): "Marks this media as listened"
         case (.listen, true): "Removes the listened status"
         }
-    }
-
-    var hasVisibleAction: Bool {
-        showsResume || showsStartOver || showsCompletionToggle
     }
 }

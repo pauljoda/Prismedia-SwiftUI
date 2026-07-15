@@ -11,6 +11,8 @@ enum PrismediaEntityDetailComposition {
     ) -> EntityDetailDependencies {
         let adapter = PrismediaEntityDetailLoader(client: client)
         #if DEBUG
+            let readerLocatorStore: EPUBLocatorStore =
+                CommandLine.arguments.contains("-prismedia-ui-testing") ? .disabled : .standard
             let readerBookmarkStore: any EPUBBookmarkStoring =
                 CommandLine.arguments.contains("-prismedia-ui-testing")
                 ? EPUBBookmarkStore.disabled
@@ -18,6 +20,7 @@ enum PrismediaEntityDetailComposition {
                     scope: EPUBBookmarkScope(serverURL: client.serverURL, userID: userID)
                 )
         #else
+            let readerLocatorStore: EPUBLocatorStore = .standard
             let readerBookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.standard(
                 scope: EPUBBookmarkScope(serverURL: client.serverURL, userID: userID)
             )
@@ -44,7 +47,8 @@ enum PrismediaEntityDetailComposition {
             trickplayFrameLoader: PrismediaTrickplayFrameLoader(client: client),
             entityGridLoader: PrismediaEntityGridLoader(client: client),
             metadataMutator: adapter,
-            readerBookmarkStore: readerBookmarkStore
+            readerBookmarkStore: readerBookmarkStore,
+            readerLocatorStore: readerLocatorStore
         )
     }
 }

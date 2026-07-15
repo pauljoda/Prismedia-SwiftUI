@@ -6,6 +6,7 @@ public struct EntityDetailView: View {
     @Environment(\.videoPlaybackSession) private var videoPlaybackSession
     #if os(iOS) || os(macOS)
         @Environment(MusicPlayerController.self) private var musicPlayer
+        @State private var pendingCombinedPlaybackTask: Task<Void, Never>?
     #endif
     @State private var state = EntityDetailState()
     @State private var videoPlaybackPreparation = VideoPlaybackPreparationCoordinator()
@@ -24,6 +25,7 @@ public struct EntityDetailView: View {
     @State private var currentReadableChapterID: String?
     @State private var areBookChaptersLoading = false
     @State private var bookChaptersErrorMessage: String?
+    @State private var mappedBookChapters: [BookChapterMapping] = []
     @State private var artworkPalette: ArtworkPalette?
     @State private var editPresentation: EntityDetailEditPresentation?
     #if os(iOS)
@@ -129,18 +131,40 @@ public struct EntityDetailView: View {
                     command: presentation.command,
                     service: service,
                     bookmarkStore: dependencies.readerBookmarkStore,
+                    locatorStore: dependencies.readerLocatorStore,
                     initialEPUBLocation: presentation.initialEPUBLocation,
-                    companionPlayer: companionPlayer(for: presentation)
+                    initialEPUBProgression: presentation.initialEPUBProgression,
+                    companionPlayer: companionPlayer(for: presentation),
+                    onEPUBReady: {
+                        #if os(iOS) || os(macOS)
+                            beginCombinedPlayback(for: presentation)
+                        #endif
+                    }
                 )
             }
         }
         .onChange(of: readerPresentation) { previous, current in
+            #if os(iOS) || os(macOS)
+                if current == nil {
+                    pendingCombinedPlaybackTask?.cancel()
+                    pendingCombinedPlaybackTask = nil
+                }
+            #endif
             guard previous != nil, current == nil else { return }
             pauseCompanionAudiobook(for: previous)
             Task {
                 await reloadReadingState()
+                if case .singleFile(let refreshedDetail) = readingState.phase {
+                    await loadBookChapters(for: refreshedDetail)
+                }
             }
         }
+        #if os(iOS) || os(macOS)
+            .onChange(of: musicPlayer.currentTrack?.id) {
+                guard case .content(let detail) = state.phase else { return }
+                refreshBookChapterMappings(for: detail)
+            }
+        #endif
         .alert("Couldn’t Update Details", isPresented: mutationErrorPresented) {
             Button("OK") { state.dismissMutationError() }
         } message: {
@@ -291,148 +315,204 @@ public struct EntityDetailView: View {
         return ZStack {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
-                        #if os(tvOS)
-                            if !showsHeroArtwork {
-                                Color.clear
-                                    .frame(height: 120)
-                                    .accessibilityHidden(true)
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                            #if os(tvOS)
+                                if !showsHeroArtwork {
+                                    Color.clear
+                                        .frame(height: 120)
+                                        .accessibilityHidden(true)
+                                }
+
+                                EntityDetailHeroInformationView(
+                                    presentation: presentation,
+                                    previewPath: link.thumbnailPreview?.artworkPath,
+                                    showsArtwork: showsHeroArtwork,
+                                    actions: primaryActions(for: detail, fallback: presentation.primaryActions),
+                                    isMutating: state.isMutating,
+                                    canMutate: service.canMutate,
+                                    isActionEnabled: isEnabled,
+                                    actionHint: accessibilityHint,
+                                    onRatingChange: ratingDidChange,
+                                    onAction: perform
+                                )
+                            #endif
+
+                            if let playbackOwnerLink,
+                                VideoPlaybackLaunchPolicy.presentationMode(
+                                    for: playbackOwnerLink
+                                ) == .inline,
+                                PlayableVideoResolver.videoID(
+                                    in: detail,
+                                    sourceThumbnail: playbackOwnerLink.sourceThumbnail
+                                ) != nil,
+                                let playbackService = dependencies.videoPlaybackService
+                            {
+                                VideoEntityPlaybackView(
+                                    detail: detail,
+                                    ownerLink: playbackOwnerLink,
+                                    detailLoader: dependencies.detailLoader,
+                                    playbackService: playbackService,
+                                    preparation: videoPlaybackPreparation,
+                                    presentationMode: VideoPlaybackLaunchPolicy.presentationMode(
+                                        for: playbackOwnerLink
+                                    ),
+                                    presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
+                                        for: playbackOwnerLink.intent
+                                    ),
+                                    onFullscreenDismiss: {
+                                        guard
+                                            VideoPlaybackLaunchPolicy.presentationMode(
+                                                for: playbackOwnerLink
+                                            ) == .fullscreenOnly
+                                        else { return }
+                                        suppressesRoutePlayback = true
+                                        thumbnailPlaybackLink = nil
+                                    },
+                                    onAdvance: { destination in
+                                        guard playbackOwnerLink.kind != .videoSeason else { return }
+                                        advancedEntityLink = destination
+                                    }
+                                )
+                                .id(playbackOwnerLink)
                             }
 
-                            EntityDetailHeroInformationView(
-                                presentation: presentation,
-                                previewPath: link.thumbnailPreview?.artworkPath,
-                                showsArtwork: showsHeroArtwork,
-                                actions: primaryActions(for: detail, fallback: presentation.primaryActions),
-                                isMutating: state.isMutating,
-                                canMutate: service.canMutate,
-                                isActionEnabled: isEnabled,
-                                actionHint: accessibilityHint,
-                                onRatingChange: ratingDidChange,
-                                onAction: perform
-                            )
-                        #endif
+                            #if !os(tvOS)
+                                EntityDetailHeroInformationView(
+                                    presentation: presentation,
+                                    previewPath: link.thumbnailPreview?.artworkPath,
+                                    showsArtwork: true,
+                                    actions: primaryActions(for: detail, fallback: presentation.primaryActions),
+                                    isMutating: state.isMutating,
+                                    canMutate: service.canMutate,
+                                    isActionEnabled: isEnabled,
+                                    actionHint: accessibilityHint,
+                                    onRatingChange: ratingDidChange,
+                                    onAction: perform
+                                )
+                            #endif
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        if let playbackOwnerLink,
-                            VideoPlaybackLaunchPolicy.presentationMode(
-                                for: playbackOwnerLink
-                            ) == .inline,
-                            PlayableVideoResolver.videoID(
-                                in: detail,
-                                sourceThumbnail: playbackOwnerLink.sourceThumbnail
-                            ) != nil,
-                            let playbackService = dependencies.videoPlaybackService
-                        {
-                            VideoEntityPlaybackView(
-                                detail: detail,
-                                ownerLink: playbackOwnerLink,
-                                detailLoader: dependencies.detailLoader,
-                                playbackService: playbackService,
-                                preparation: videoPlaybackPreparation,
-                                presentationMode: VideoPlaybackLaunchPolicy.presentationMode(
-                                    for: playbackOwnerLink
-                                ),
-                                presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
-                                    for: playbackOwnerLink.intent
-                                ),
-                                onFullscreenDismiss: {
-                                    guard
-                                        VideoPlaybackLaunchPolicy.presentationMode(
-                                            for: playbackOwnerLink
-                                        ) == .fullscreenOnly
-                                    else { return }
-                                    suppressesRoutePlayback = true
-                                    thumbnailPlaybackLink = nil
-                                },
-                                onAdvance: { destination in
-                                    guard playbackOwnerLink.kind != .videoSeason else { return }
-                                    advancedEntityLink = destination
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                            #if os(iOS) || os(macOS)
+                                if let combinedProgress = combinedProgressPresentation(for: detail) {
+                                    BookCombinedProgressSection(
+                                        presentation: combinedProgress,
+                                        readingErrorMessage: readingState.errorMessage,
+                                        listeningErrorMessage: audiobookErrorMessage,
+                                        horizontalPadding: detailHorizontalPadding,
+                                        onContinueReading: {
+                                            if readingState.requiresResetBeforeReading {
+                                                Task { await startReadingOver(openReaderWhenReady: true) }
+                                            } else {
+                                                openReader(command: .resume)
+                                            }
+                                        },
+                                        onContinueListening: { beginListening(to: detail) },
+                                        onContinueCombined: { openCombinedReader(for: detail) },
+                                        onStartReadingOver: { Task { await startReadingOver() } },
+                                        onStartListeningOver: { Task { await startListeningOver(detail) } },
+                                        onToggleReadingCompletion: {
+                                            Task {
+                                                await toggleReadingCompletion(
+                                                    readingState.progressPresentation?.status ?? .notStarted
+                                                )
+                                            }
+                                        },
+                                        onToggleListeningCompletion: {
+                                            Task { await toggleListeningCompletion(detail) }
+                                        },
+                                        onDismissReadingError: { readingState.dismissError() },
+                                        onDismissListeningError: { audiobookErrorMessage = nil }
+                                    )
+                                } else {
+                                    EntityDetailReadingSection(
+                                        state: readingState,
+                                        horizontalPadding: detailHorizontalPadding,
+                                        onResume: { openReader(command: .resume) },
+                                        onStartOver: { Task { await startReadingOver() } },
+                                        onToggleCompletion: { status in
+                                            Task { await toggleReadingCompletion(status) }
+                                        },
+                                        onRetry: {
+                                            Task { await loadReadingState(for: detail) }
+                                        },
+                                        onDismissError: { readingState.dismissError() }
+                                    )
+
+                                    AudiobookDetailPlaybackSection(
+                                        presentation: audiobookPresentation(for: detail),
+                                        errorMessage: audiobookErrorMessage,
+                                        horizontalPadding: detailHorizontalPadding,
+                                        onResume: { beginListening(to: detail) },
+                                        onStartOver: { Task { await startListeningOver(detail) } },
+                                        onToggleCompletion: { Task { await toggleListeningCompletion(detail) } },
+                                        onDismissError: { audiobookErrorMessage = nil }
+                                    )
                                 }
-                            )
-                            .id(playbackOwnerLink)
-                        }
 
-                        #if !os(tvOS)
-                            EntityDetailHeroInformationView(
+                                BookChapterListSection(
+                                    chapters: mappedBookChapters,
+                                    isLoading: areBookChaptersLoading,
+                                    errorMessage: bookChaptersErrorMessage,
+                                    readingProgressLabel: readingChapterProgressLabel,
+                                    listeningProgressLabel: listeningChapterProgressLabel(for: detail),
+                                    horizontalPadding: detailHorizontalPadding,
+                                    onRead: { openBookChapter($0, combined: false) },
+                                    onListen: playBookChapter,
+                                    onCombined: { openBookChapter($0, combined: true) },
+                                    onRetry: { Task { await loadBookChapters(for: detail) } }
+                                )
+                            #endif
+
+                            #if os(tvOS)
+                                EntityDetailReadingSection(
+                                    state: readingState,
+                                    horizontalPadding: detailHorizontalPadding,
+                                    onResume: { openReader(command: .resume) },
+                                    onStartOver: { Task { await startReadingOver() } },
+                                    onToggleCompletion: { status in
+                                        Task { await toggleReadingCompletion(status) }
+                                    },
+                                    onRetry: { Task { await loadReadingState(for: detail) } },
+                                    onDismissError: { readingState.dismissError() }
+                                )
+                            #endif
+
+                            #if os(tvOS)
+                                ratingControl(presentation)
+                            #endif
+
+                            #if os(tvOS) || os(macOS)
+                                modificationActionRow(presentation.modificationActions)
+                            #endif
+
+                            EntityDetailSectionContentView(
                                 presentation: presentation,
-                                previewPath: link.thumbnailPreview?.artworkPath,
-                                showsArtwork: true,
-                                actions: primaryActions(for: detail, fallback: presentation.primaryActions),
-                                isMutating: state.isMutating,
-                                canMutate: service.canMutate,
-                                isActionEnabled: isEnabled,
-                                actionHint: accessibilityHint,
-                                onRatingChange: ratingDidChange,
-                                onAction: perform
-                            )
-                        #endif
-
-                        EntityDetailReadingSection(
-                            state: readingState,
-                            horizontalPadding: detailHorizontalPadding,
-                            onResume: { openReader(command: .resume) },
-                            onStartOver: { Task { await startReadingOver() } },
-                            onToggleCompletion: { status in
-                                Task { await toggleReadingCompletion(status) }
-                            },
-                            onRetry: {
-                                Task { await loadReadingState(for: detail) }
-                            },
-                            onDismissError: { readingState.dismissError() }
-                        )
-
-                        #if os(iOS) || os(macOS)
-                            AudiobookDetailPlaybackSection(
-                                presentation: audiobookPresentation(for: detail),
-                                errorMessage: audiobookErrorMessage,
+                                selection: $selectedSection,
                                 horizontalPadding: detailHorizontalPadding,
-                                onResume: { beginListening(to: detail) },
-                                onStartOver: { Task { await startListeningOver(detail) } },
-                                onToggleCompletion: { Task { await toggleListeningCompletion(detail) } },
-                                onDismissError: { audiobookErrorMessage = nil }
+                                ownerLink: link,
+                                acquisitionService: dependencies.acquisitionService,
+                                transcriptSourceLoader: dependencies.transcriptSourceLoader,
+                                onAcquisitionMutated: refreshAfterAcquisitionMutation,
+                                onEntityPruned: handlePrunedEntity
                             )
 
-                            BookChapterCardsSection(
-                                chapters: bookChapterMappings(for: detail),
-                                isLoading: areBookChaptersLoading,
-                                errorMessage: bookChaptersErrorMessage,
-                                horizontalPadding: detailHorizontalPadding,
-                                onRead: { openBookChapter($0, combined: false) },
-                                onListen: playBookChapter,
-                                onCombined: { openBookChapter($0, combined: true) },
-                                onRetry: { Task { await loadBookChapters(for: detail) } }
-                            )
-                        #endif
+                            if selectedSection == .details {
+                                mainSupplementView(for: detail)
+                            }
 
-                        #if os(tvOS)
-                            ratingControl(presentation)
-                        #endif
-
-                        #if os(tvOS) || os(macOS)
-                            modificationActionRow(presentation.modificationActions)
-                        #endif
-
-                        EntityDetailSectionContentView(
-                            presentation: presentation,
-                            selection: $selectedSection,
-                            horizontalPadding: detailHorizontalPadding,
-                            ownerLink: link,
-                            acquisitionService: dependencies.acquisitionService,
-                            transcriptSourceLoader: dependencies.transcriptSourceLoader,
-                            onAcquisitionMutated: refreshAfterAcquisitionMutation,
-                            onEntityPruned: handlePrunedEntity
-                        )
-
-                        if selectedSection == .details {
-                            mainSupplementView(for: detail)
+                            Color.clear
+                                .frame(height: 1)
+                                .id("entity-detail.bottom")
+                                .accessibilityHidden(true)
                         }
-
-                        Color.clear
-                            .frame(height: 1)
-                            .id("entity-detail.bottom")
-                            .accessibilityHidden(true)
+                        .padding(.top, PrismediaSpacing.section)
+                        .padding(.bottom, PrismediaSpacing.section)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background { PrismediaBackdrop() }
                     }
-                    .padding(.bottom, PrismediaSpacing.section)
                 }
                 .frame(
                     maxWidth: .infinity,
@@ -512,8 +592,14 @@ public struct EntityDetailView: View {
     }
 
     private func visibleChildGroups(in detail: EntityDetail) -> [EntityGroup] {
-        guard detail.kind == .movie else { return detail.childrenByKind }
-        return detail.childrenByKind.filter { $0.kind != .video }
+        switch detail.kind {
+        case .book where detail.bookFormat == .epub && AudiobookPlaybackProjection(detail: detail) != nil:
+            return detail.childrenByKind.filter { $0.kind != .audioTrack }
+        case .movie:
+            return detail.childrenByKind.filter { $0.kind != .video }
+        default:
+            return detail.childrenByKind
+        }
     }
 
     @ViewBuilder
@@ -556,19 +642,13 @@ public struct EntityDetailView: View {
         if detail.kind == .collection {
             CollectionMembersView(
                 phase: collectionMembersState.phase,
-                horizontalPadding: PrismediaSpacing.extraLarge,
+                horizontalPadding: detailHorizontalPadding,
                 retry: {
                     Task { await reloadCollectionMembers() }
                 }
             )
-            .padding(.vertical, PrismediaSpacing.extraLarge)
-            .entityDetailContentSurface()
-            .padding(.horizontal, detailHorizontalPadding)
         } else if !visibleChildGroups(in: detail).isEmpty {
             childGroupsView(for: detail)
-                .padding(.vertical, PrismediaSpacing.extraLarge)
-                .entityDetailContentSurface()
-                .padding(.horizontal, detailHorizontalPadding)
         }
     }
 
@@ -974,14 +1054,20 @@ public struct EntityDetailView: View {
     private func presentReader(
         detail: EntityDetail,
         location: String,
-        companionAudiobookBookID: UUID?
+        progression: Double? = nil,
+        companionAudiobookBookID: UUID?,
+        companionAudiobookTrackID: UUID?,
+        companionAudiobookStartSeconds: Double = 0
     ) {
         guard dependencies.readerService != nil else { return }
         readerPresentation = .init(
             detail: detail,
             command: .read,
             initialEPUBLocation: location,
-            companionAudiobookBookID: companionAudiobookBookID
+            initialEPUBProgression: progression,
+            companionAudiobookBookID: companionAudiobookBookID,
+            companionAudiobookTrackID: companionAudiobookTrackID,
+            companionAudiobookStartSeconds: companionAudiobookStartSeconds
         )
     }
 
@@ -1038,18 +1124,21 @@ public struct EntityDetailView: View {
         #if os(iOS) || os(macOS)
             guard let baseProjection = AudiobookPlaybackProjection(detail: detail) else {
                 audiobookProjection = nil
+                refreshBookChapterMappings(for: detail)
                 isAudiobookLoading = false
                 audiobookErrorMessage = nil
                 return
             }
 
             audiobookProjection = baseProjection
+            refreshBookChapterMappings(for: detail)
             isAudiobookLoading = true
             let hydrated = await AudiobookQueueLoader(detailLoader: dependencies.detailLoader).load(detail: detail)
             guard case .content(let currentDetail) = state.phase,
                 currentDetail.id == detail.id
             else { return }
             audiobookProjection = hydrated ?? baseProjection
+            refreshBookChapterMappings(for: currentDetail)
             isAudiobookLoading = false
         #else
             audiobookProjection = nil
@@ -1064,6 +1153,7 @@ public struct EntityDetailView: View {
                 let reader = dependencies.readerService
             else {
                 readableBookChapters = []
+                mappedBookChapters = []
                 currentReadableChapterID = nil
                 areBookChaptersLoading = false
                 bookChaptersErrorMessage = nil
@@ -1072,23 +1162,35 @@ public struct EntityDetailView: View {
 
             areBookChaptersLoading = true
             bookChaptersErrorMessage = nil
+            defer { areBookChaptersLoading = false }
             do {
-                let contents = try await EPUBChapterContentsService(reader: reader).load(book: detail)
+                let contents = try await EPUBChapterContentsService(reader: reader).load(
+                    book: detail,
+                    storedLocation: dependencies.readerLocatorStore.load(bookID: detail.id)
+                )
                 guard case .content(let currentDetail) = state.phase,
                     currentDetail.id == detail.id
                 else { return }
                 readableBookChapters = contents.chapters
-                currentReadableChapterID = contents.currentChapterID
+                if detail.capability(EntityProgressCapability.self)?.completedAt != nil {
+                    currentReadableChapterID = nil
+                } else if let currentChapterID = contents.currentChapterID {
+                    currentReadableChapterID = currentChapterID
+                } else if !contents.chapters.contains(where: { $0.id == currentReadableChapterID }) {
+                    currentReadableChapterID = nil
+                }
+                refreshBookChapterMappings(for: currentDetail)
             } catch is CancellationError {
                 return
             } catch {
                 readableBookChapters = []
+                mappedBookChapters = []
                 currentReadableChapterID = nil
                 bookChaptersErrorMessage = error.localizedDescription
             }
-            areBookChaptersLoading = false
         #else
             readableBookChapters = []
+            mappedBookChapters = []
             currentReadableChapterID = nil
             areBookChaptersLoading = false
             bookChaptersErrorMessage = nil
@@ -1096,9 +1198,16 @@ public struct EntityDetailView: View {
     }
 
     #if os(iOS) || os(macOS)
-        private func bookChapterMappings(for detail: EntityDetail) -> [BookChapterMapping] {
-            guard detail.kind == .book, detail.bookFormat == .epub else { return [] }
-            return BookChapterMappingBuilder().build(
+        private func refreshBookChapterMappings(for detail: EntityDetail) {
+            guard detail.kind == .book, detail.bookFormat == .epub else {
+                mappedBookChapters = []
+                return
+            }
+            guard !readableBookChapters.isEmpty else {
+                mappedBookChapters = []
+                return
+            }
+            mappedBookChapters = BookChapterMappingBuilder().build(
                 readableChapters: readableBookChapters,
                 audioTracks: audiobookProjection?.tracks ?? [],
                 currentReadableID: currentReadableChapterID,
@@ -1112,8 +1221,103 @@ public struct EntityDetailView: View {
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
             if isCurrent { return musicPlayer.currentTrack?.id }
-            let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+            let playback = detail.capability(EntityPlaybackCapability.self)
+            guard playback?.completedAt == nil else { return nil }
+            let savedResume = playback?.resumeSeconds ?? 0
+            guard savedResume > 0 else { return nil }
             return projection.resumePoint(at: savedResume)?.trackID
+        }
+
+        private var readingChapterProgressLabel: String? {
+            guard let progress = readingState.progressPresentation else { return nil }
+            if let positionLabel = progress.positionLabel { return positionLabel }
+            return progress.status == .completed ? "Complete" : "\(progress.percent)% read"
+        }
+
+        private func listeningChapterProgressLabel(for detail: EntityDetail) -> String? {
+            guard let progress = audiobookPresentation(for: detail)?.progress else { return nil }
+            if let positionLabel = progress.positionLabel { return positionLabel }
+            return progress.status == .completed ? "Complete" : "\(progress.percent)% listened"
+        }
+
+        private func combinedProgressPresentation(
+            for detail: EntityDetail
+        ) -> BookCombinedProgressPresentation? {
+            guard detail.kind == .book,
+                  detail.bookFormat == .epub,
+                  audiobookProjection?.bookID == detail.id,
+                  let target = combinedResumeTarget(for: detail),
+                  readingCheckpoint(for: detail) != nil || listeningCheckpoint(for: detail) != nil
+            else { return nil }
+            return BookCombinedProgressPresentation(
+                reading: readingState.progressPresentation,
+                listening: audiobookPresentation(for: detail),
+                combinedUsesReadingPosition: target.readingTarget == .savedLocation,
+                isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
+            )
+        }
+
+        private func combinedResumeTarget(
+            for detail: EntityDetail
+        ) -> BookCombinedResumeTarget? {
+            BookCombinedResumeResolver().resolveContinuation(
+                chapters: mappedBookChapters,
+                reading: readingCheckpoint(for: detail),
+                listening: listeningCheckpoint(for: detail)
+            )
+        }
+
+        private func readingCheckpoint(for detail: EntityDetail) -> BookReadingCheckpoint? {
+            let progress: EntityProgressCapability? = readingState.manifest?.progress
+                ?? detail.capability()
+            guard progress?.completedAt == nil else { return nil }
+            let serialized = dependencies.readerLocatorStore.load(bookID: detail.id)
+                ?? progress?.location
+            guard let serialized,
+                  let location = EPUBProgressLocation(serialized: serialized)
+            else { return nil }
+            let publicationProgression = location.totalProgression ?? {
+                guard let progress else { return 0 }
+                return Double(max(0, progress.index)) / Double(max(1, progress.total))
+            }()
+            return BookReadingCheckpoint(
+                chapterLocation: location.href,
+                chapterProgression: location.resourceProgression,
+                publicationProgression: publicationProgression
+            )
+        }
+
+        private func listeningCheckpoint(for detail: EntityDetail) -> BookListeningCheckpoint? {
+            guard let projection = audiobookProjection,
+                  projection.bookID == detail.id,
+                  detail.capability(EntityPlaybackCapability.self)?.completedAt == nil
+            else { return nil }
+            let isCurrent =
+                musicPlayer.context?.playbackOwnerEntityID == detail.id
+                && musicPlayer.context?.playbackOwnerEntityKind == .book
+            let resume: AudiobookResumePoint?
+            if isCurrent, let track = musicPlayer.currentTrack {
+                resume = AudiobookResumePoint(
+                    trackID: track.id,
+                    trackOffsetSeconds: musicPlayer.elapsedTime
+                )
+            } else {
+                let saved = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+                guard saved > 0 else { return nil }
+                resume = projection.resumePoint(at: saved)
+            }
+            guard let resume else { return nil }
+            let absolute = projection.absoluteTime(
+                trackID: resume.trackID,
+                trackOffsetSeconds: resume.trackOffsetSeconds
+            )
+            return BookListeningCheckpoint(
+                trackID: resume.trackID,
+                trackOffsetSeconds: resume.trackOffsetSeconds,
+                publicationProgression: projection.totalDuration > 0
+                    ? absolute / projection.totalDuration
+                    : 0
+            )
         }
 
         private func openBookChapter(_ chapter: BookChapterMapping, combined: Bool) {
@@ -1121,53 +1325,103 @@ public struct EntityDetailView: View {
                 case .some(.epub(let location)) = chapter.readTarget
             else { return }
 
+            currentReadableChapterID =
+                readableBookChapters.first {
+                    guard case .epub(let candidateLocation) = $0.target else { return false }
+                    return candidateLocation == location
+                }?.id
+            refreshBookChapterMappings(for: detail)
+
             if combined {
-                guard let track = chapter.audioTrack,
-                    let projection = audiobookProjection
-                else { return }
-                let isCurrentTrack =
+                guard let target = BookCombinedResumeResolver().resolveChapter(
+                    chapter,
+                    reading: readingCheckpoint(for: detail),
+                    listening: listeningCheckpoint(for: detail)
+                ) else { return }
+                let isCurrentBook =
                     musicPlayer.context?.playbackOwnerEntityID == detail.id
                     && musicPlayer.context?.playbackOwnerEntityKind == .book
-                    && musicPlayer.currentTrack?.id == track.id
-                if isCurrentTrack {
-                    if !musicPlayer.isPlaying { musicPlayer.resume() }
-                } else {
-                    play(projection, startingAt: track.id, startSeconds: 0)
-                }
+                if isCurrentBook, musicPlayer.isPlaying { musicPlayer.pause() }
+                presentCombinedReader(detail: detail, target: target)
+                return
             }
 
             presentReader(
                 detail: detail,
                 location: location,
-                companionAudiobookBookID: combined ? detail.id : nil
+                companionAudiobookBookID: nil,
+                companionAudiobookTrackID: nil
             )
+        }
+
+        private func openCombinedReader(for detail: EntityDetail) {
+            guard let target = combinedResumeTarget(for: detail) else { return }
+            let isCurrentBook =
+                musicPlayer.context?.playbackOwnerEntityID == detail.id
+                && musicPlayer.context?.playbackOwnerEntityKind == .book
+            if isCurrentBook, musicPlayer.isPlaying { musicPlayer.pause() }
+            presentCombinedReader(detail: detail, target: target)
+        }
+
+        private func presentCombinedReader(
+            detail: EntityDetail,
+            target: BookCombinedResumeTarget
+        ) {
+            switch target.readingTarget {
+            case .savedLocation:
+                readerPresentation = .init(
+                    detail: detail,
+                    command: .resume,
+                    companionAudiobookBookID: detail.id,
+                    companionAudiobookTrackID: target.audioTrackID,
+                    companionAudiobookStartSeconds: target.audioStartSeconds
+                )
+            case .chapter(let location, let progression):
+                presentReader(
+                    detail: detail,
+                    location: location,
+                    progression: progression,
+                    companionAudiobookBookID: detail.id,
+                    companionAudiobookTrackID: target.audioTrackID,
+                    companionAudiobookStartSeconds: target.audioStartSeconds
+                )
+            }
+        }
+
+        private func beginCombinedPlayback(for presentation: EntityReaderPresentation) {
+            pendingCombinedPlaybackTask?.cancel()
+            pendingCombinedPlaybackTask = Task { @MainActor in
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled,
+                    readerPresentation == presentation,
+                    let bookID = presentation.companionAudiobookBookID,
+                    let trackID = presentation.companionAudiobookTrackID,
+                    let projection = audiobookProjection,
+                    projection.bookID == bookID,
+                    projection.tracks.contains(where: { $0.id == trackID })
+                else { return }
+
+                play(
+                    projection,
+                    startingAt: trackID,
+                    startSeconds: presentation.companionAudiobookStartSeconds
+                )
+                refreshBookChapterMappings(for: presentation.detail)
+                pendingCombinedPlaybackTask = nil
+            }
         }
 
         private func playBookChapter(_ chapter: BookChapterMapping) {
             guard case .content(let detail) = state.phase,
                 let projection = audiobookProjection,
+                projection.bookID == detail.id,
                 let track = chapter.audioTrack
             else { return }
-            let isCurrentTrack =
-                musicPlayer.context?.playbackOwnerEntityID == detail.id
-                && musicPlayer.context?.playbackOwnerEntityKind == .book
-                && musicPlayer.currentTrack?.id == track.id
-            if isCurrentTrack {
-                if musicPlayer.isPlaying {
-                    musicPlayer.pause()
-                } else {
-                    musicPlayer.resume()
-                }
-                return
-            }
-
-            let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
-            let resume = projection.resumePoint(at: savedResume)
-            play(
-                projection,
-                startingAt: track.id,
-                startSeconds: resume?.trackID == track.id ? resume?.trackOffsetSeconds ?? 0 : 0
-            )
+            play(projection, startingAt: track.id, startSeconds: 0)
         }
 
         private func audiobookPresentation(for detail: EntityDetail) -> AudiobookPlaybackPresentation? {
@@ -1325,10 +1579,7 @@ public struct EntityDetailView: View {
         for presentation: EntityReaderPresentation
     ) -> MusicPlayerController? {
         #if os(iOS) || os(macOS)
-            guard let bookID = presentation.companionAudiobookBookID,
-                musicPlayer.context?.playbackOwnerEntityID == bookID,
-                musicPlayer.context?.playbackOwnerEntityKind == .book
-            else { return nil }
+            guard presentation.companionAudiobookBookID != nil else { return nil }
             return musicPlayer
         #else
             return nil

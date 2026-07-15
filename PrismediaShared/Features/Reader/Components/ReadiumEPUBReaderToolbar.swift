@@ -6,6 +6,7 @@
         @Binding var preferences: EPUBReaderPreferences
         @Binding var navigationMenuPresented: Bool
         @Binding var settingsPresented: Bool
+        @Binding var audiobookControlsPresented: Bool
 
         let hasToggleBookmark: Bool
         let isReturningFromToggleBookmark: Bool
@@ -56,6 +57,7 @@
             if let companionTrackTitle {
                 ToolbarItem(placement: .topBarTrailing) {
                     ReaderAudiobookControlMenu(
+                        isPresented: $audiobookControlsPresented,
                         trackTitle: companionTrackTitle,
                         isPlaying: companionIsPlaying,
                         playbackRate: companionPlaybackRate,
@@ -127,6 +129,7 @@
             @Previewable @State var preferences = EPUBReaderPreferences()
             @Previewable @State var navigationMenuPresented = false
             @Previewable @State var settingsPresented = false
+            @Previewable @State var audiobookControlsPresented = false
 
             NavigationStack {
                 Color.black
@@ -136,6 +139,7 @@
                             preferences: $preferences,
                             navigationMenuPresented: $navigationMenuPresented,
                             settingsPresented: $settingsPresented,
+                            audiobookControlsPresented: $audiobookControlsPresented,
                             hasToggleBookmark: true,
                             isReturningFromToggleBookmark: false,
                             onClose: {},

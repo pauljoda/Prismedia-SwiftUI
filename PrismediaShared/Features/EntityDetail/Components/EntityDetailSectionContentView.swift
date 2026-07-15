@@ -11,34 +11,27 @@ struct EntityDetailSectionContentView: View {
     let onEntityPruned: @MainActor () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
             if presentation.sections.isEmpty {
                 sectionPanel(section: .details)
             } else {
                 EntityDetailSectionPicker(
                     sections: presentation.sections,
                     selection: $selection,
-                    horizontalPadding: PrismediaSpacing.small
+                    horizontalPadding: horizontalPadding
                 )
-                .padding(.top, PrismediaSpacing.small)
-
-                Divider()
-                    .overlay(PrismediaColor.borderSubtle)
-                    .padding(.horizontal, PrismediaSpacing.large)
 
                 sectionPanel(section: selection)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .entityDetailContentSurface()
-        .padding(.horizontal, horizontalPadding)
     }
 
     private func sectionPanel(section: EntityDetailSectionID) -> some View {
         EntityDetailSectionPanel(
             presentation: presentation,
             section: section,
-            horizontalPadding: PrismediaSpacing.extraLarge,
+            horizontalPadding: horizontalPadding,
             ownerLink: ownerLink,
             acquisitionService: acquisitionService,
             transcriptSourceLoader: transcriptSourceLoader,

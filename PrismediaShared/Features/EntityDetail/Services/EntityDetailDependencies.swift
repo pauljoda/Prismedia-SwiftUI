@@ -12,6 +12,7 @@ public struct EntityDetailDependencies: Sendable {
     public let entityGridLoader: (any EntityGridLoading)?
     public let readerService: (any BookReaderServicing)?
     public let readerBookmarkStore: any EPUBBookmarkStoring
+    public let readerLocatorStore: EPUBLocatorStore
     public let videoPlaybackService: (any VideoPlaybackServicing)?
     public let audioPlaybackService: (any MusicPlaybackServicing)?
     public let onEntityMutated: @MainActor @Sendable () -> Void
@@ -38,7 +39,8 @@ public struct EntityDetailDependencies: Sendable {
         trickplayFrameLoader: (any TrickplayFrameLoading)? = nil,
         entityGridLoader: (any EntityGridLoading)? = nil,
         metadataMutator: (any EntityMetadataMutating)? = nil,
-        readerBookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled
+        readerBookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
+        readerLocatorStore: EPUBLocatorStore = .disabled
     ) {
         self.detailLoader = detailLoader
         self.mutator = mutator
@@ -47,6 +49,7 @@ public struct EntityDetailDependencies: Sendable {
         self.entityGridLoader = entityGridLoader
         self.readerService = readerService
         self.readerBookmarkStore = readerBookmarkStore
+        self.readerLocatorStore = readerLocatorStore
         self.videoPlaybackService = videoPlaybackService
         self.audioPlaybackService = audioPlaybackService
         self.onEntityMutated = onEntityMutated

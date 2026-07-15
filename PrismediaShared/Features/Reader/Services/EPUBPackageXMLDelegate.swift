@@ -4,6 +4,7 @@ final class EPUBPackageXMLDelegate: NSObject, XMLParserDelegate {
     private(set) var title: String?
     private(set) var manifest: [String: EPUBManifestItem] = [:]
     private(set) var spine: [String] = []
+    private(set) var tableOfContentsID: String?
     private var collectingTitle = false
     private var titleText = ""
 
@@ -35,6 +36,8 @@ final class EPUBPackageXMLDelegate: NSObject, XMLParserDelegate {
             )
         case "itemref":
             if let idref = attributeDict["idref"] { spine.append(idref) }
+        case "spine":
+            tableOfContentsID = attributeDict["toc"]
         default:
             break
         }

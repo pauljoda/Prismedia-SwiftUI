@@ -5,6 +5,58 @@ import zlib
 @testable import PrismediaCore
 
 final class EPUBPublicationLoaderTests: XCTestCase {
+    func testLoadsNestedEPUB2NCXAsTableOfContents() throws {
+        let fixture = try makeArchive(
+            [
+                "META-INF/container.xml": """
+                <?xml version="1.0"?>
+                <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+                  <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
+                </container>
+                """,
+                "OEBPS/content.opf": """
+                <?xml version="1.0"?>
+                <package xmlns="http://www.idpf.org/2007/opf" version="2.0">
+                  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>NCX Fixture</dc:title></metadata>
+                  <manifest>
+                    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+                    <item id="one" href="Text/one.xhtml" media-type="application/xhtml+xml"/>
+                    <item id="two" href="Text/two.xhtml" media-type="application/xhtml+xml"/>
+                  </manifest>
+                  <spine toc="ncx"><itemref idref="one"/><itemref idref="two"/></spine>
+                </package>
+                """,
+                "OEBPS/toc.ncx": """
+                <?xml version="1.0"?>
+                <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/">
+                  <navMap>
+                    <navPoint id="one"><navLabel><text>Arrival</text></navLabel><content src="Text/one.xhtml#start"/>
+                      <navPoint id="signal"><navLabel><text>The Signal</text></navLabel><content src="Text/one.xhtml#signal"/></navPoint>
+                    </navPoint>
+                    <navPoint id="two"><navLabel><text>Departure</text></navLabel><content src="Text/two.xhtml"/></navPoint>
+                  </navMap>
+                </ncx>
+                """,
+                "OEBPS/Text/one.xhtml": "<html><body>Arrival</body></html>",
+                "OEBPS/Text/two.xhtml": "<html><body>Departure</body></html>",
+            ]
+        )
+        let destination = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: destination) }
+
+        let publication = try EPUBPublicationLoader().load(
+            data: fixture,
+            fallbackTitle: "Fallback",
+            destination: destination
+        )
+
+        XCTAssertEqual(publication.tableOfContents.map(\.title), ["Arrival", "Departure"])
+        XCTAssertEqual(publication.tableOfContents[0].location, "Text/one.xhtml#start")
+        XCTAssertEqual(publication.tableOfContents[0].children.map(\.title), ["The Signal"])
+        XCTAssertEqual(publication.tableOfContents[0].children[0].location, "Text/one.xhtml#signal")
+    }
+
     func testLoadsNestedEPUB3NavigationAsTableOfContents() throws {
         let fixture = try makeArchive(
             [
@@ -97,6 +149,35 @@ final class EPUBPublicationLoaderTests: XCTestCase {
         let sanitized = try String(contentsOf: publication.chapters[1].fileURL, encoding: .utf8)
         XCTAssertFalse(sanitized.localizedCaseInsensitiveContains("<script"))
         XCTAssertTrue(sanitized.contains("Content-Security-Policy"))
+    }
+
+    func testMetadataOnlyLoadDoesNotExtractPublicationFiles() throws {
+        let fixture = try makeArchive(
+            [
+                "META-INF/container.xml": """
+                <container><rootfiles><rootfile full-path="content.opf"/></rootfiles></container>
+                """,
+                "content.opf": """
+                <package><metadata><title>Metadata</title></metadata><manifest>
+                  <item id="one" href="one.xhtml" media-type="application/xhtml+xml"/>
+                </manifest><spine><itemref idref="one"/></spine></package>
+                """,
+                "one.xhtml": "<html><body>One</body></html>",
+            ]
+        )
+        let destination = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: destination) }
+
+        let publication = try EPUBPublicationLoader().load(
+            data: fixture,
+            fallbackTitle: "Fallback",
+            destination: destination,
+            extractsContent: false
+        )
+
+        XCTAssertEqual(publication.chapters.map(\.location), ["one.xhtml"])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
     }
 
     func testRejectsArchiveTraversalBeforeWritingFiles() throws {
