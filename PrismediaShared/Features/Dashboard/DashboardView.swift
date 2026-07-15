@@ -43,7 +43,8 @@ struct DashboardView: View {
                                     DashboardHeroCarouselView(
                                         items: snapshot.featuredItems,
                                         viewportWidth: viewport.size.width,
-                                        topSafeAreaHeight: viewport.safeAreaInsets.top,
+                                        viewportHeight: viewport.size.height
+                                            + viewport.safeAreaInsets.top,
                                         allowsAutomaticAdvance: allowsHeroAutomaticAdvance,
                                         onNavigate: navigate
                                     )

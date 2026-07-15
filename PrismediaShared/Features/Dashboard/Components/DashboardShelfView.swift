@@ -19,8 +19,8 @@ struct DashboardShelfView: View {
                 .padding(.horizontal, PrismediaSpacing.large)
 
                 ScrollView(.horizontal) {
-                    HStack(alignment: .top, spacing: PrismediaSpacing.small) {
-                        ForEach(items) { item in
+                    LazyHStack(alignment: .top, spacing: PrismediaSpacing.small) {
+                        ForEach(items.prefix(DashboardCatalog.itemLimit)) { item in
                             EntityThumbnailNavigationSurface(
                                 item: item,
                                 layout: .rail,
@@ -28,6 +28,7 @@ struct DashboardShelfView: View {
                             )
                         }
                     }
+                    .frame(height: railCardHeight, alignment: .top)
                     .padding(.horizontal, PrismediaSpacing.large)
                     .padding(.bottom, PrismediaSpacing.extraSmall)
                 }
@@ -36,14 +37,14 @@ struct DashboardShelfView: View {
         }
     }
 
-    private var railCardHeight: Double {
-        260 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
+    private var railCardHeight: CGFloat {
+        CGFloat(260 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio)
     }
 
     private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
         CGFloat(
             EntityThumbnailCardPresentation(item: item, layout: .rail)
-                .width(forCardHeight: railCardHeight)
+                .width(forCardHeight: Double(railCardHeight))
         )
     }
 }

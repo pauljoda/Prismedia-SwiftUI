@@ -1,10 +1,12 @@
 import Foundation
 
 enum DashboardFeaturedSelection {
+    static let itemLimit = 6
+
     static func items(
         playbackHistory: [EntityThumbnail],
         catalogSources: [[EntityThumbnail]],
-        limit: Int = 6
+        limit: Int = itemLimit
     ) -> [EntityThumbnail] {
         guard limit > 0 else { return [] }
 

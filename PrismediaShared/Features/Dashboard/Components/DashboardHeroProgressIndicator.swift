@@ -8,7 +8,7 @@ struct DashboardHeroProgressIndicator: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(Array(presentations.enumerated()), id: \.element.id) { index, presentation in
+            ForEach(presentations.enumerated(), id: \.element.id) { index, presentation in
                 Button {
                     onSelect(presentation.id)
                 } label: {

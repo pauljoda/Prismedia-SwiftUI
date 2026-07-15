@@ -2,24 +2,19 @@ import SwiftUI
 
 struct DashboardHeroPageView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.displayScale) private var displayScale
     @State private var artworkPalette: ArtworkPalette?
 
     let presentation: DashboardHeroPresentation
     let viewportWidth: CGFloat
-    let topSafeAreaHeight: CGFloat
+    let heroHeight: CGFloat
     let reservesProgressIndicatorSpace: Bool
     let onNavigate: (EntityLink) -> Void
 
     var body: some View {
         DashboardHeroArtworkView(presentation: presentation)
             .backgroundExtensionEffect(isEnabled: !reduceTransparency)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Color.clear
-                    .frame(height: max(topSafeAreaHeight, 0))
-                    .accessibilityHidden(true)
-            }
-            .safeAreaInset(edge: .bottom, spacing: -seamOverlap) {
+            .frame(width: viewportWidth, height: heroHeight)
+            .overlay(alignment: .bottomLeading) {
                 DashboardHeroContentView(
                     presentation: presentation,
                     viewportWidth: viewportWidth,
@@ -29,7 +24,6 @@ struct DashboardHeroPageView: View {
                 )
             }
             .clipped()
-            .frame(width: viewportWidth, alignment: .topLeading)
             .prismediaArtworkPalette(
                 for: presentation.item.bestCoverPath,
                 palette: $artworkPalette
@@ -38,10 +32,6 @@ struct DashboardHeroPageView: View {
 
     private var resolvedAccent: Color {
         artworkPalette?.primary.color ?? PrismediaColor.accent
-    }
-
-    private var seamOverlap: CGFloat {
-        1 / max(displayScale, 1)
     }
 }
 
@@ -52,7 +42,7 @@ struct DashboardHeroPageView: View {
             DashboardHeroPageView(
                 presentation: presentations[0],
                 viewportWidth: 390,
-                topSafeAreaHeight: 59,
+                heroHeight: 440,
                 reservesProgressIndicatorSpace: true,
                 onNavigate: { _ in }
             )

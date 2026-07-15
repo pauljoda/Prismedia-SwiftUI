@@ -5,22 +5,30 @@ struct DashboardHeroCarouselView: View {
     @State private var artworkPalette: ArtworkPalette?
     @State private var selectedItemID: UUID?
 
-    let items: [EntityThumbnail]
+    private let presentations: [DashboardHeroPresentation]
+    private let presentationIdentity: String
     let viewportWidth: CGFloat
-    let topSafeAreaHeight: CGFloat
+    let heroHeight: CGFloat
     let allowsAutomaticAdvance: Bool
     let onNavigate: (EntityLink) -> Void
 
     init(
         items: [EntityThumbnail],
         viewportWidth: CGFloat,
-        topSafeAreaHeight: CGFloat = 0,
+        viewportHeight: CGFloat,
         allowsAutomaticAdvance: Bool = true,
         onNavigate: @escaping (EntityLink) -> Void
     ) {
-        self.items = items
+        let presentations = items
+            .prefix(DashboardFeaturedSelection.itemLimit)
+            .map(DashboardHeroPresentation.init)
+        self.presentations = presentations
+        presentationIdentity = presentations.map(\.id.uuidString).joined(separator: "|")
         self.viewportWidth = viewportWidth
-        self.topSafeAreaHeight = topSafeAreaHeight
+        heroHeight = Self.heroHeight(
+            viewportWidth: viewportWidth,
+            viewportHeight: viewportHeight
+        )
         self.allowsAutomaticAdvance = allowsAutomaticAdvance
         self.onNavigate = onNavigate
     }
@@ -29,17 +37,17 @@ struct DashboardHeroCarouselView: View {
         if !presentations.isEmpty {
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 0) {
-                    ForEach(Array(presentations.enumerated()), id: \.element.id) {
+                    ForEach(presentations.enumerated(), id: \.element.id) {
                         index,
                         presentation in
                         DashboardHeroPageView(
                             presentation: presentation,
                             viewportWidth: viewportWidth,
-                            topSafeAreaHeight: topSafeAreaHeight,
+                            heroHeight: heroHeight,
                             reservesProgressIndicatorSpace: showsProgressIndicator,
                             onNavigate: onNavigate
                         )
-                        .frame(width: viewportWidth)
+                        .frame(width: viewportWidth, height: heroHeight)
                         .id(presentation.id)
                         .accessibilityHidden(index != selectedIndex)
                     }
@@ -51,7 +59,7 @@ struct DashboardHeroCarouselView: View {
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $selectedItemID)
             .scrollDisabled(presentations.count < 2)
-            .frame(width: viewportWidth)
+            .frame(width: viewportWidth, height: heroHeight)
             .clipped()
             .overlay(alignment: .bottomLeading) {
                 if showsProgressIndicator {
@@ -97,10 +105,6 @@ struct DashboardHeroCarouselView: View {
         }
     }
 
-    private var presentations: [DashboardHeroPresentation] {
-        items.map(DashboardHeroPresentation.init)
-    }
-
     private var selectedPresentation: DashboardHeroPresentation? {
         guard !presentations.isEmpty else { return nil }
         return presentations[selectedIndex]
@@ -124,9 +128,25 @@ struct DashboardHeroCarouselView: View {
     }
 
     private var motionTaskID: String {
-        return items.map(\.id.uuidString).joined(separator: "|")
+        return presentationIdentity
             + "|selected:\(selectedItemID?.uuidString ?? "none")"
             + "|reduce-motion:\(reduceMotion)"
+    }
+
+    private static func heroHeight(
+        viewportWidth: CGFloat,
+        viewportHeight: CGFloat
+    ) -> CGFloat {
+        let isCompact = viewportWidth < 600
+        let widthScale = isCompact ? 1.1 : 0.58
+        let minimumHeight: CGFloat = isCompact ? 420 : 480
+        let maximumHeight: CGFloat = isCompact ? 560 : 640
+        let widthDrivenHeight = min(
+            max(viewportWidth * widthScale, minimumHeight),
+            maximumHeight
+        )
+        let viewportDrivenMaximum = max(420, viewportHeight * 0.82)
+        return min(widthDrivenHeight, viewportDrivenMaximum)
     }
 
     private func normalizePosition() {
@@ -175,6 +195,7 @@ struct DashboardHeroCarouselView: View {
                 DashboardHeroCarouselView(
                     items: PrismediaPreviewData.videos,
                     viewportWidth: 720,
+                    viewportHeight: 900,
                     allowsAutomaticAdvance: true,
                     onNavigate: { _ in }
                 )
@@ -187,10 +208,24 @@ struct DashboardHeroCarouselView: View {
             DashboardHeroCarouselView(
                 items: [PrismediaPreviewData.videos[0]],
                 viewportWidth: 320,
+                viewportHeight: 568,
                 allowsAutomaticAdvance: true,
                 onNavigate: { _ in }
             )
         }
         .environment(\.dynamicTypeSize, .accessibility2)
+    }
+
+    #Preview("Dashboard Hero Carousel · Large Window Cap") {
+        PreviewShell(signedIn: true) {
+            DashboardHeroCarouselView(
+                items: PrismediaPreviewData.videos,
+                viewportWidth: 1_440,
+                viewportHeight: 900,
+                allowsAutomaticAdvance: false,
+                onNavigate: { _ in }
+            )
+        }
+        .frame(width: 1_440, height: 900)
     }
 #endif
