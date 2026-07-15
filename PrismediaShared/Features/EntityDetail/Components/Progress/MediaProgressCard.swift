@@ -13,6 +13,7 @@ struct MediaProgressCard: View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
             header
             progressRow
+            resumeButton
         }
         .padding(PrismediaSpacing.extraLarge)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -71,8 +72,6 @@ struct MediaProgressCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
-
-                resumeButton
             }
         }
     }
@@ -80,18 +79,14 @@ struct MediaProgressCard: View {
     @ViewBuilder
     private var resumeButton: some View {
         if presentation.showsResume {
-            Button(action: onResume) {
-                Image(systemName: presentation.resumeSystemImage)
-                    .font(.body.weight(.semibold))
-                    .frame(
-                        width: PrismediaLayout.minimumHitTarget,
-                        height: PrismediaLayout.minimumHitTarget
-                    )
-                    .contentShape(.circle)
-            }
-            .buttonStyle(.glass(.clear))
-            .buttonBorderShape(.circle)
-            .accessibilityLabel(presentation.resumeTitle)
+            PrismediaButton(
+                presentation.resumeTitle,
+                systemImage: presentation.resumeSystemImage,
+                variant: .prominent,
+                form: .fill,
+                primaryTint: artworkPrimaryAccent,
+                action: onResume
+            )
             .accessibilityHint(presentation.resumeAccessibilityHint)
             .accessibilityIdentifier("media-progress.resume")
         }
