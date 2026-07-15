@@ -24,8 +24,15 @@ public struct BookReaderUseCase: Sendable {
     }
 
     public func loadFollowingManifest(chapterID: UUID) async throws -> BookReaderManifest {
+        try await loadChapterManifest(chapterID: chapterID, command: .resume)
+    }
+
+    public func loadChapterManifest(
+        chapterID: UUID,
+        command: BookReaderCommand
+    ) async throws -> BookReaderManifest {
         let chapter = try await service.loadEntity(id: chapterID)
-        return try await resolve(selected: chapter, command: .resume)
+        return try await resolve(selected: chapter, command: command)
     }
 
     public func progressRequest(

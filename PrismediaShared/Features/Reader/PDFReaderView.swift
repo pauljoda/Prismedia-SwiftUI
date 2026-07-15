@@ -59,6 +59,7 @@
                                 accessibilityPrefix: "pdf-reader",
                                 canGoPrevious: currentPage > 0,
                                 canGoNext: currentPage < document.pageCount - 1,
+                                onOpenContents: openContents,
                                 onPrevious: showPreviousPage,
                                 onNext: showNextPage
                             )
@@ -151,10 +152,12 @@
         }
 
         private var tableOfContentsButton: some View {
-            Button("Table of Contents", systemImage: "list.bullet.indent") {
-                presentedSheet = .contents
-            }
-            .accessibilityIdentifier("pdf-reader.table-of-contents")
+            Button("Table of Contents", systemImage: "list.bullet.indent", action: openContents)
+                .accessibilityIdentifier("pdf-reader.table-of-contents")
+        }
+
+        private func openContents() {
+            presentedSheet = .contents
         }
 
         private var searchButton: some View {

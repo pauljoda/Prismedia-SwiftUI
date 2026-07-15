@@ -6,6 +6,7 @@
         let accessibilityPrefix: String
         let canGoPrevious: Bool
         let canGoNext: Bool
+        let onOpenContents: () -> Void
         let onPrevious: () -> Void
         let onNext: () -> Void
 
@@ -42,10 +43,16 @@
         }
 
         private var progressStatus: some View {
-            ReaderProgressStatusView(
-                status: status,
-                accessibilityIdentifier: "\(accessibilityPrefix).progress"
-            )
+            Button(action: onOpenContents) {
+                ReaderProgressStatusView(
+                    status: status,
+                    accessibilityIdentifier: "\(accessibilityPrefix).progress"
+                )
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(status.accessibilityLabel)
+            .accessibilityHint("Opens the table of contents")
+            .accessibilityIdentifier("\(accessibilityPrefix).progress")
         }
     }
 
@@ -64,6 +71,7 @@
                             accessibilityPrefix: "preview-reader",
                             canGoPrevious: true,
                             canGoNext: true,
+                            onOpenContents: {},
                             onPrevious: {},
                             onNext: {}
                         )

@@ -150,6 +150,7 @@ final class BookReaderManifestResolverTests: XCTestCase {
         XCTAssertEqual(manifest.pages.map(\.id), [pageOneID])
         XCTAssertEqual(manifest.initialIndex, 0)
         XCTAssertEqual(manifest.readerMode, .webtoon)
+        XCTAssertEqual(manifest.tableOfContents.map(\.id), [chapterOneID, chapterTwoID])
         XCTAssertEqual(manifest.nextChapter?.id, chapterTwoID)
     }
 
@@ -203,6 +204,8 @@ final class BookReaderManifestResolverTests: XCTestCase {
         XCTAssertEqual(manifest.pages.map(\.id), [firstPageID, secondPageID])
         XCTAssertEqual(manifest.initialIndex, 1)
         XCTAssertNil(manifest.nextChapter)
+        XCTAssertEqual(manifest.tableOfContents.map(\.id), [firstChapterID, secondChapterID])
+        XCTAssertEqual(manifest.tableOfContents.map(\.pageCount), [1, 1])
         XCTAssertEqual(manifest.position(at: 1)?.chapterID, secondChapterID)
         XCTAssertEqual(manifest.position(at: 1)?.pageIndex, 0)
     }

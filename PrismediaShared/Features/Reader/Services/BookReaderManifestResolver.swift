@@ -74,6 +74,7 @@ public struct BookReaderManifestResolver: Sendable {
             bookID: book.id,
             title: "\(book.title) · \(volume.title)",
             chapters: chapters,
+            tableOfContents: tableOfContents(from: sequence, loadedChapters: chapters),
             nextChapter: nextChapter,
             progress: progress,
             initialIndex: clamp(initialIndex, count: chapters.flatMap(\.pages).count),
@@ -106,6 +107,10 @@ public struct BookReaderManifestResolver: Sendable {
             bookID: book.id,
             title: "\(book.title) · \(chapter.title)",
             chapters: [.init(detail: chapter, pages: pages, sequenceIndex: sequenceIndex)],
+            tableOfContents: tableOfContents(
+                from: sequence,
+                loadedChapters: [.init(detail: chapter, pages: pages, sequenceIndex: sequenceIndex)]
+            ),
             nextChapter: next,
             progress: progress,
             initialIndex: clamp(initialIndex, count: pages.count),
@@ -181,6 +186,20 @@ public struct BookReaderManifestResolver: Sendable {
             sortOrder: nextIndex,
             pageCount: 0
         )
+    }
+
+    private func tableOfContents(
+        from sequence: [EntityThumbnail],
+        loadedChapters: [BookReaderChapter]
+    ) -> [BookChapterSummary] {
+        sequence.enumerated().map { index, chapter in
+            BookChapterSummary(
+                id: chapter.id,
+                title: chapter.title,
+                sortOrder: index,
+                pageCount: loadedChapters.first(where: { $0.id == chapter.id })?.pages.count ?? 0
+            )
+        }
     }
 
     private func comicMode(_ mode: ReaderMode?) -> ReaderMode {

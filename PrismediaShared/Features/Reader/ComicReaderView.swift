@@ -9,7 +9,7 @@
         @State private var readerMode: ReaderMode = .paged
         @State private var pageOptions = ComicReaderOptions()
         @State private var chrome = ReaderChromeState()
-        @State private var isSettingsPresented = false
+        @State private var presentedSheet: ComicReaderSheet?
         @State private var isAdvancingChapter = false
         @State private var webtoonNavigationRequestID = 0
         @State private var chromeTask: Task<Void, Never>?
@@ -49,6 +49,7 @@
                         accessibilityPrefix: "comic-reader",
                         canGoPrevious: canGoPrevious,
                         canGoNext: canGoNext,
+                        onOpenContents: openContents,
                         onPrevious: goPrevious,
                         onNext: goNext
                     )
@@ -62,12 +63,8 @@
                     .toolbarVisibility(chrome.isVisible ? .visible : .hidden)
                 #endif
             }
-            .sheet(isPresented: $isSettingsPresented) {
-                ComicReaderSettingsSheet(
-                    readerMode: readerMode,
-                    pageOptions: $pageOptions,
-                    onSetMode: setReaderMode
-                )
+            .sheet(item: $presentedSheet) { sheet in
+                readerSheet(sheet)
             }
             .accessibilityIdentifier("comic-reader.content")
             .task {
@@ -80,7 +77,7 @@
             .onChange(of: currentIndex) {
                 scheduleChromeHide()
             }
-            .onChange(of: isSettingsPresented) {
+            .onChange(of: presentedSheet) {
                 updateChromePin()
             }
             .onDisappear {
@@ -144,6 +141,10 @@
 
         private var currentPosition: BookReaderPosition? {
             manifest?.position(at: currentIndex)
+        }
+
+        private var currentChapterID: UUID? {
+            currentPosition?.chapterID
         }
 
         private var currentChapterTitle: String {
@@ -365,7 +366,7 @@
 
         private func updateChromePin() {
             chromeTask?.cancel()
-            chrome.setPinned(isSettingsPresented)
+            chrome.setPinned(presentedSheet != nil)
             scheduleChromeHide()
         }
 
@@ -382,7 +383,56 @@
 
         private func openSettings() {
             revealChrome()
-            isSettingsPresented = true
+            presentedSheet = .settings
+        }
+
+        private func openContents() {
+            revealChrome()
+            presentedSheet = .contents
+        }
+
+        @ViewBuilder
+        private func readerSheet(_ sheet: ComicReaderSheet) -> some View {
+            switch sheet {
+            case .contents:
+                ComicReaderTableOfContentsSheet(
+                    chapters: manifest?.tableOfContents ?? [],
+                    currentChapterID: currentChapterID,
+                    onSelect: selectChapter
+                )
+            case .settings:
+                ComicReaderSettingsSheet(
+                    readerMode: readerMode,
+                    pageOptions: $pageOptions,
+                    onSetMode: setReaderMode
+                )
+            }
+        }
+
+        private func selectChapter(_ chapterID: UUID) {
+            guard chapterID != currentChapterID else { return }
+            Task { await loadChapter(chapterID) }
+        }
+
+        private func loadChapter(_ chapterID: UUID) async {
+            guard !isAdvancingChapter else { return }
+            isAdvancingChapter = true
+            defer { isAdvancingChapter = false }
+
+            queueProgressSave(allowAutomaticCompletion: false)
+            await progressWriter.flush()
+
+            do {
+                let selectedManifest = try await useCase.loadChapterManifest(
+                    chapterID: chapterID,
+                    command: .read
+                )
+                install(selectedManifest, preservingMode: readerMode)
+            } catch is CancellationError {
+                return
+            } catch {
+                screenState = .failure(error.localizedDescription)
+            }
         }
 
         private func close() {

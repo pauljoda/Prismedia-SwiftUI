@@ -86,6 +86,7 @@
                         accessibilityPrefix: "epub-reader",
                         canGoPrevious: canGoPrevious,
                         canGoNext: canGoNext,
+                        onOpenContents: openContents,
                         onPrevious: previousPage,
                         onNext: nextPage
                     )

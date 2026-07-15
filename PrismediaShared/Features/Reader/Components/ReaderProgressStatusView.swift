@@ -13,6 +13,7 @@ struct ReaderProgressStatusView: View {
             Text(status.counterText)
                 .font(.subheadline.monospacedDigit().weight(.semibold))
         }
+        .padding(.horizontal, PrismediaSpacing.small)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(status.accessibilityLabel)
         .accessibilityIdentifier(accessibilityIdentifier)
