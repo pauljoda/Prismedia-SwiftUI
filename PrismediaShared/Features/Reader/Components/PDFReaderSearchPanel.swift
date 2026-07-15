@@ -3,6 +3,8 @@
     import SwiftUI
 
     struct PDFReaderSearchPanel: View {
+        @Environment(\.dismiss) private var dismiss
+
         @Binding var query: String
         let selectedResult: Int?
         let resultCount: Int
@@ -12,41 +14,51 @@
         let onNext: () -> Void
 
         var body: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                HStack {
-                    TextField("Search PDF", text: $query)
-                        .prismediaTextInputStyle(surface: .embedded)
-                        .onSubmit(onSearch)
-                        .accessibilityIdentifier("pdf-reader.search-field")
+            NavigationStack {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                    HStack {
+                        TextField("Search PDF", text: $query)
+                            .prismediaTextInputStyle(surface: .embedded)
+                            .onSubmit(onSearch)
+                            .accessibilityIdentifier("pdf-reader.search-field")
 
-                    Button("Search", systemImage: "magnifyingglass", action: onSearch)
-                        .labelStyle(.iconOnly)
-                        .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+                        Button("Search", systemImage: "magnifyingglass", action: onSearch)
+                            .labelStyle(.iconOnly)
+                            .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
 
-                HStack {
-                    if isSearching {
-                        ProgressView("Searching…")
-                            .controlSize(.small)
-                    } else {
-                        Text(resultLabel)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("pdf-reader.search-results")
+                    HStack {
+                        if isSearching {
+                            ProgressView("Searching…")
+                                .controlSize(.small)
+                        } else {
+                            Text(resultLabel)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("pdf-reader.search-results")
+                        }
+
+                        Spacer()
+
+                        Button("Previous Result", systemImage: "chevron.up", action: onPrevious)
+                            .labelStyle(.iconOnly)
+                            .disabled(resultCount == 0 || isSearching)
+
+                        Button("Next Result", systemImage: "chevron.down", action: onNext)
+                            .labelStyle(.iconOnly)
+                            .disabled(resultCount == 0 || isSearching)
                     }
 
                     Spacer()
-
-                    Button("Previous Result", systemImage: "chevron.up", action: onPrevious)
-                        .labelStyle(.iconOnly)
-                        .disabled(resultCount == 0 || isSearching)
-
-                    Button("Next Result", systemImage: "chevron.down", action: onNext)
-                        .labelStyle(.iconOnly)
-                        .disabled(resultCount == 0 || isSearching)
+                }
+                .padding()
+                .navigationTitle("Search PDF")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
                 }
             }
-            .padding()
-            .frame(minWidth: 280, idealWidth: 340)
+            .accessibilityIdentifier("pdf-reader.search-sheet")
         }
 
         private var resultLabel: String {

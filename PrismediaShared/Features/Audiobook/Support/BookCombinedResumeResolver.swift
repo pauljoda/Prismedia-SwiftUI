@@ -3,6 +3,20 @@ import Foundation
 struct BookCombinedResumeResolver: Sendable {
     private let audioRunwaySeconds = 5.0
 
+    func resolveReadingTarget(
+        chapters: [BookChapterMapping],
+        listening: BookListeningCheckpoint
+    ) -> BookReaderLocationTarget? {
+        guard let chapter = chapters.first(where: { $0.audioTrack?.id == listening.trackID }) else {
+            return nil
+        }
+        guard
+            case .chapter(let location, let progression) =
+                resolveChapter(chapter, reading: nil, listening: listening)?.readingTarget
+        else { return nil }
+        return BookReaderLocationTarget(location: location, progression: progression)
+    }
+
     func resolveContinuation(
         chapters: [BookChapterMapping],
         reading: BookReadingCheckpoint?,
@@ -53,10 +67,11 @@ struct BookCombinedResumeResolver: Sendable {
 
         let readingFraction = reading.flatMap { checkpoint -> Double? in
             guard let location = chapter.readLocation,
-                  EPUBResourceLocationMatcher().bestMatch(
+                EPUBResourceLocationMatcher().bestMatch(
                     for: checkpoint.chapterLocation,
                     candidates: [location]
-                  ) != nil else { return nil }
+                ) != nil
+            else { return nil }
             return checkpoint.chapterProgression
         }
         let listeningFraction = listening.flatMap { checkpoint -> Double? in
@@ -65,7 +80,8 @@ struct BookCombinedResumeResolver: Sendable {
         }
 
         if let listeningFraction,
-           listeningFraction > (readingFraction ?? -1) {
+            listeningFraction > (readingFraction ?? -1)
+        {
             return targetFromListening(
                 chapter: chapter,
                 fraction: listeningFraction,
@@ -83,7 +99,7 @@ struct BookCombinedResumeResolver: Sendable {
         listening: (index: Int, fraction: Double)?
     ) -> BookCombinedPreferredPosition? {
         switch (reading, listening) {
-        case let (.some(reading), .some(listening)):
+        case (.some(let reading), .some(let listening)):
             if reading.index != listening.index {
                 return reading.index > listening.index
                     ? .reading(index: reading.index, fraction: reading.fraction)
@@ -92,9 +108,9 @@ struct BookCombinedResumeResolver: Sendable {
             return listening.fraction > reading.fraction
                 ? .listening(index: listening.index, fraction: listening.fraction)
                 : .reading(index: reading.index, fraction: reading.fraction)
-        case let (.some(reading), nil):
+        case (.some(let reading), nil):
             return .reading(index: reading.index, fraction: reading.fraction)
-        case let (nil, .some(listening)):
+        case (nil, .some(let listening)):
             return .listening(index: listening.index, fraction: listening.fraction)
         case (nil, nil):
             return nil
@@ -106,8 +122,9 @@ struct BookCombinedResumeResolver: Sendable {
         chapter: BookChapterMapping
     ) -> Double? {
         guard let duration = chapter.audioTrack?.duration,
-              duration.isFinite,
-              duration > 0 else { return nil }
+            duration.isFinite,
+            duration > 0
+        else { return nil }
         return min(max(0, checkpoint.trackOffsetSeconds / duration), 1)
     }
 
@@ -116,11 +133,13 @@ struct BookCombinedResumeResolver: Sendable {
         fraction: Double
     ) -> BookCombinedResumeTarget? {
         guard let track = chapter.audioTrack,
-              let duration = track.duration,
-              duration.isFinite,
-              duration > 0 else { return nil }
+            let duration = track.duration,
+            duration.isFinite,
+            duration > 0
+        else { return nil }
         let estimatedOffset = min(max(0, fraction), 1) * duration
-        let audioStart = estimatedOffset <= audioRunwaySeconds
+        let audioStart =
+            estimatedOffset <= audioRunwaySeconds
             ? 0
             : estimatedOffset - audioRunwaySeconds
         return BookCombinedResumeTarget(
@@ -136,7 +155,8 @@ struct BookCombinedResumeResolver: Sendable {
         offset: Double
     ) -> BookCombinedResumeTarget? {
         guard let location = chapter.readLocation,
-              let trackID = chapter.audioTrack?.id else { return nil }
+            let trackID = chapter.audioTrack?.id
+        else { return nil }
         return BookCombinedResumeTarget(
             readingTarget: .chapter(
                 location: location,
@@ -148,8 +168,8 @@ struct BookCombinedResumeResolver: Sendable {
     }
 }
 
-private extension BookChapterMapping {
-    var readLocation: String? {
+extension BookChapterMapping {
+    fileprivate var readLocation: String? {
         guard case .epub(let location) = readTarget else { return nil }
         return location
     }

@@ -10,6 +10,7 @@
         let engine: AVPlayerAudioPlaybackEngine
 
         @State private var presentation = MusicNowPlayingPresentation.player
+        @State private var queueShowsHistory = false
         @State private var scrubPosition: Double = 0
         @State private var isScrubbing = false
         @State private var trackForCollection: MusicTrack?
@@ -62,6 +63,7 @@
                         currentTrack: track,
                         artworkNamespace: artworkNamespace,
                         isActive: presentation == .queue,
+                        showsHistory: $queueShowsHistory,
                         onShowPlayer: showPlayer,
                         onAddToCollection: { trackForCollection = track }
                     )
@@ -111,6 +113,13 @@
 
         private func setPresentation(_ newPresentation: MusicNowPlayingPresentation) {
             guard newPresentation != presentation else { return }
+            if newPresentation == .player, queueShowsHistory {
+                var transaction = Transaction(animation: nil)
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    queueShowsHistory = false
+                }
+            }
             withAnimation(.snappy(duration: 0.42, extraBounce: 0.04)) {
                 presentation = newPresentation
             }

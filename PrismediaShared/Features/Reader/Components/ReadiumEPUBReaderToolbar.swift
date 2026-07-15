@@ -3,10 +3,6 @@
 
     struct ReadiumEPUBReaderToolbar: ToolbarContent {
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-        @Binding var preferences: EPUBReaderPreferences
-        @Binding var navigationMenuPresented: Bool
-        @Binding var settingsPresented: Bool
-        @Binding var audiobookControlsPresented: Bool
 
         let hasToggleBookmark: Bool
         let isReturningFromToggleBookmark: Bool
@@ -14,14 +10,12 @@
         let onOpenContents: () -> Void
         let onOpenSearch: () -> Void
         let onOpenBookmarks: () -> Void
-        let onNavigationMenuDismissed: () -> Void
+        let onOpenNavigation: () -> Void
         let onToggleBookmark: () -> Void
         let onOpenSettings: () -> Void
-        let companionTrackTitle: String?
+        let showsAudiobookControls: Bool
         let companionIsPlaying: Bool
-        let companionPlaybackRate: Float
-        let onToggleCompanionPlayback: () -> Void
-        let onSetCompanionPlaybackRate: (Float) -> Void
+        let onOpenAudiobook: () -> Void
 
         @ToolbarContentBuilder
         var body: some ToolbarContent {
@@ -54,15 +48,11 @@
 
             ToolbarSpacer(.fixed, placement: .topBarTrailing)
 
-            if let companionTrackTitle {
+            if showsAudiobookControls {
                 ToolbarItem(placement: .topBarTrailing) {
-                    ReaderAudiobookControlMenu(
-                        isPresented: $audiobookControlsPresented,
-                        trackTitle: companionTrackTitle,
+                    ReaderAudiobookButton(
                         isPlaying: companionIsPlaying,
-                        playbackRate: companionPlaybackRate,
-                        onTogglePlayback: onToggleCompanionPlayback,
-                        onSetPlaybackRate: onSetCompanionPlaybackRate
+                        action: onOpenAudiobook
                     )
                 }
 
@@ -72,29 +62,12 @@
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Reader settings", systemImage: "textformat.size", action: onOpenSettings)
                     .accessibilityIdentifier("epub-reader.settings-button")
-                    .popover(isPresented: $settingsPresented, arrowEdge: .top) {
-                        EPUBReaderSettingsPanel(preferences: $preferences)
-                            .frame(minWidth: 320, idealWidth: 380, minHeight: 460)
-                            .presentationCompactAdaptation(.popover)
-                    }
             }
         }
 
         private var compactNavigationMenu: some View {
-            Button("Navigate Book", systemImage: "text.book.closed") {
-                navigationMenuPresented = true
-            }
-            .accessibilityIdentifier("epub-reader.navigation-menu")
-            .popover(isPresented: $navigationMenuPresented, arrowEdge: .top) {
-                EPUBReaderNavigationPanel(
-                    onOpenContents: onOpenContents,
-                    onOpenSearch: onOpenSearch,
-                    onOpenBookmarks: onOpenBookmarks
-                )
-                .frame(minWidth: 280, idealWidth: 320, minHeight: 260)
-                .presentationCompactAdaptation(.popover)
-                .onDisappear(perform: onNavigationMenuDismissed)
-            }
+            Button("Navigate Book", systemImage: "text.book.closed", action: onOpenNavigation)
+                .accessibilityIdentifier("epub-reader.navigation-menu")
         }
 
         private var contentsButton: some View {
@@ -126,34 +99,23 @@
 
     #if DEBUG
         #Preview("Readium EPUB Reader Toolbar") {
-            @Previewable @State var preferences = EPUBReaderPreferences()
-            @Previewable @State var navigationMenuPresented = false
-            @Previewable @State var settingsPresented = false
-            @Previewable @State var audiobookControlsPresented = false
-
             NavigationStack {
                 Color.black
                     .ignoresSafeArea()
                     .toolbar {
                         ReadiumEPUBReaderToolbar(
-                            preferences: $preferences,
-                            navigationMenuPresented: $navigationMenuPresented,
-                            settingsPresented: $settingsPresented,
-                            audiobookControlsPresented: $audiobookControlsPresented,
                             hasToggleBookmark: true,
                             isReturningFromToggleBookmark: false,
                             onClose: {},
                             onOpenContents: {},
                             onOpenSearch: {},
                             onOpenBookmarks: {},
-                            onNavigationMenuDismissed: {},
+                            onOpenNavigation: {},
                             onToggleBookmark: {},
-                            onOpenSettings: { settingsPresented = true },
-                            companionTrackTitle: "Chapter 7",
+                            onOpenSettings: {},
+                            showsAudiobookControls: true,
                             companionIsPlaying: true,
-                            companionPlaybackRate: 1.25,
-                            onToggleCompanionPlayback: {},
-                            onSetCompanionPlaybackRate: { _ in }
+                            onOpenAudiobook: {}
                         )
                     }
             }

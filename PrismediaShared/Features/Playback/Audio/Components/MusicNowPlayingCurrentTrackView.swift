@@ -5,29 +5,47 @@
         let track: MusicTrack
         let artworkNamespace: Namespace.ID
         let showsContent: Bool
+        let hasHistory: Bool
         let onShowPlayer: () -> Void
+        let onShowHistory: () -> Void
         let onAddToCollection: () -> Void
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Text("Currently Playing")
-                    .font(.title3.bold())
-                    .opacity(showsContent ? 1 : 0)
-                    .accessibilityIdentifier("music.queue.current")
+                HStack {
+                    Text("Currently Playing")
+                        .font(.title3.bold())
+                        .accessibilityIdentifier("music.queue.current")
+
+                    Spacer()
+
+                    if hasHistory {
+                        Button("History", action: onShowHistory)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("music.queue.show-history")
+                    }
+                }
+                .opacity(showsContent ? 1 : 0)
+                .accessibilityHidden(!showsContent)
 
                 HStack(spacing: PrismediaSpacing.medium) {
                     Color.clear
                         .frame(width: 78, height: 78)
                         .overlay {
                             if showsContent {
-                                MusicNowPlayingArtwork(track: track)
-                                    .matchedGeometryEffect(
-                                        id: "music.now-playing.artwork.\(track.id.uuidString)",
-                                        in: artworkNamespace,
-                                        properties: .frame,
-                                        anchor: .center
-                                    )
-                                    .zIndex(1)
+                                MusicNowPlayingArtwork(
+                                    track: track,
+                                    cornerRadius: PrismediaRadius.badge
+                                )
+                                .matchedGeometryEffect(
+                                    id: "music.now-playing.artwork.\(track.id.uuidString)",
+                                    in: artworkNamespace,
+                                    properties: .frame,
+                                    anchor: .center
+                                )
+                                .zIndex(1)
                             }
                         }
                         .contentShape(Rectangle())
@@ -46,15 +64,9 @@
                     }
                     .opacity(showsContent ? 1 : 0)
                     Spacer(minLength: 0)
-                    Menu {
-                        Button("Add to Collection", systemImage: "folder.badge.plus") {
-                            onAddToCollection()
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
-                    .accessibilityLabel("More")
-                    .opacity(showsContent ? 1 : 0)
+                    Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
+                        .labelStyle(.iconOnly)
+                        .opacity(showsContent ? 1 : 0)
                 }
             }
         }
@@ -67,7 +79,9 @@
                 track: MusicPreviewData.tracks[0],
                 artworkNamespace: artworkNamespace,
                 showsContent: true,
+                hasHistory: true,
                 onShowPlayer: {},
+                onShowHistory: {},
                 onAddToCollection: {}
             )
             .environment(PrismediaPreviewData.model(signedIn: true))

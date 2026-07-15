@@ -41,11 +41,7 @@
                 .foregroundStyle(PrismediaColor.onMedia)
                 .toolbar {
                     ComicReaderToolbar(
-                        pageOptions: $pageOptions,
-                        isSettingsPresented: $isSettingsPresented,
-                        readerMode: readerMode,
                         onClose: close,
-                        onSetMode: setReaderMode,
                         onOpenSettings: openSettings
                     )
                     ReaderPageNavigationToolbar(
@@ -65,6 +61,13 @@
                 #else
                     .toolbarVisibility(chrome.isVisible ? .visible : .hidden)
                 #endif
+            }
+            .sheet(isPresented: $isSettingsPresented) {
+                ComicReaderSettingsSheet(
+                    readerMode: readerMode,
+                    pageOptions: $pageOptions,
+                    onSetMode: setReaderMode
+                )
             }
             .accessibilityIdentifier("comic-reader.content")
             .task {

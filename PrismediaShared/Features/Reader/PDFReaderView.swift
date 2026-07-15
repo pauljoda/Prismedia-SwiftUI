@@ -10,8 +10,7 @@
         @State private var fitMode = PDFReaderFitMode.page
         @State private var fitRequestID = 0
         @State private var outlineItems: [PDFReaderOutlineItem] = []
-        @State private var isTableOfContentsPresented = false
-        @State private var isSearchPresented = false
+        @State private var presentedSheet: PDFReaderSheet?
         @State private var searchQuery = ""
         @State private var searchMatches: [PDFSelection] = []
         @State private var selectedSearchResult: Int?
@@ -53,7 +52,7 @@
                             ToolbarItemGroup(placement: .primaryAction) {
                                 tableOfContentsButton
                                 searchButton
-                                viewOptionsMenu
+                                viewOptionsButton
                             }
                             ReaderPageNavigationToolbar(
                                 status: readerProgressStatus(for: document),
@@ -65,6 +64,9 @@
                             )
                         }
                     }
+            }
+            .sheet(item: $presentedSheet) { sheet in
+                readerSheet(sheet)
             }
             .task { await load() }
             .onChange(of: currentPage) { _, _ in saveProgress() }
@@ -78,17 +80,6 @@
                 searchTask?.cancel()
                 saveProgress()
                 Task { await progressWriter.flush() }
-            }
-            .inspector(isPresented: $isTableOfContentsPresented) {
-                NavigationStack {
-                    PDFTableOfContentsView(
-                        items: outlineItems,
-                        currentPage: currentPage,
-                        onSelect: selectPage,
-                        onClose: { isTableOfContentsPresented = false }
-                    )
-                }
-                .inspectorColumnWidth(min: 280, ideal: 340, max: 440)
             }
             .accessibilityIdentifier("pdf-reader.content")
         }
@@ -161,17 +152,36 @@
 
         private var tableOfContentsButton: some View {
             Button("Table of Contents", systemImage: "list.bullet.indent") {
-                isTableOfContentsPresented.toggle()
+                presentedSheet = .contents
             }
             .accessibilityIdentifier("pdf-reader.table-of-contents")
         }
 
         private var searchButton: some View {
             Button("Search", systemImage: "magnifyingglass") {
-                isSearchPresented.toggle()
+                presentedSheet = .search
             }
             .accessibilityIdentifier("pdf-reader.search")
-            .popover(isPresented: $isSearchPresented, arrowEdge: .top) {
+        }
+
+        private var viewOptionsButton: some View {
+            Button("View Options", systemImage: "textformat.size") {
+                presentedSheet = .viewOptions
+            }
+            .accessibilityLabel("PDF view options")
+            .accessibilityValue(layoutMode.label)
+        }
+
+        @ViewBuilder
+        private func readerSheet(_ sheet: PDFReaderSheet) -> some View {
+            switch sheet {
+            case .contents:
+                PDFTableOfContentsView(
+                    items: outlineItems,
+                    currentPage: currentPage,
+                    onSelect: selectPage
+                )
+            case .search:
                 PDFReaderSearchPanel(
                     query: $searchQuery,
                     selectedResult: selectedSearchResult,
@@ -181,28 +191,13 @@
                     onPrevious: showPreviousSearchResult,
                     onNext: showNextSearchResult
                 )
-                .presentationCompactAdaptation(.popover)
+            case .viewOptions:
+                PDFReaderViewOptionsSheet(
+                    layoutMode: $layoutMode,
+                    fitMode: fitMode,
+                    onSelectFitMode: requestFit
+                )
             }
-        }
-
-        private var viewOptionsMenu: some View {
-            Menu("View Options", systemImage: "textformat.size") {
-                Picker("Reading Mode", selection: $layoutMode) {
-                    ForEach(PDFReaderLayoutMode.allCases) { mode in
-                        Label(mode.label, systemImage: mode.systemImage).tag(mode)
-                    }
-                }
-
-                Divider()
-
-                ForEach(PDFReaderFitMode.allCases) { mode in
-                    Button(mode.label, systemImage: mode.systemImage) {
-                        requestFit(mode)
-                    }
-                }
-            }
-            .accessibilityLabel("PDF view options")
-            .accessibilityValue(layoutMode.label)
         }
 
         private var selectedSelection: PDFSelection? {
@@ -215,8 +210,7 @@
         private var canSwipeDownToDismiss: Bool {
             #if os(iOS)
                 return layoutMode == .paged
-                    && !isTableOfContentsPresented
-                    && !isSearchPresented
+                    && presentedSheet == nil
             #else
                 return false
             #endif

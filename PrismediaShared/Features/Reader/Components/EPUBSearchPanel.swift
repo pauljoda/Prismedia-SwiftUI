@@ -13,45 +13,38 @@
         let onSelect: (EPUBSearchResult) async -> Void
 
         var body: some View {
-            NavigationStack {
-                Group {
-                    if isSearching {
-                        PrismediaLoadingView("Searching book…")
-                    } else if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        ContentUnavailableView(
-                            "Search This Book",
-                            systemImage: "text.magnifyingglass",
-                            description: Text("Enter a word or phrase to find it in the publication.")
-                        )
-                    } else if results.isEmpty {
-                        ContentUnavailableView.search(text: query)
-                    } else {
-                        List(results) { result in
-                            Button {
-                                Task {
-                                    await onSelect(result)
-                                    dismiss()
-                                }
-                            } label: {
-                                FullWidthButtonLabel {
-                                    EPUBSearchResultRow(result: result)
-                                }
+            Group {
+                if isSearching {
+                    PrismediaLoadingView("Searching book…")
+                } else if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ContentUnavailableView(
+                        "Search This Book",
+                        systemImage: "text.magnifyingglass",
+                        description: Text("Enter a word or phrase to find it in the publication.")
+                    )
+                } else if results.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                } else {
+                    List(results) { result in
+                        Button {
+                            Task {
+                                await onSelect(result)
+                                dismiss()
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("epub-reader.search-result")
+                        } label: {
+                            FullWidthButtonLabel {
+                                EPUBSearchResultRow(result: result)
+                            }
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("epub-reader.search-result")
                     }
                 }
-                .navigationTitle("Search")
-                .searchable(text: $query, prompt: "Search book")
-                .onSubmit(of: .search) {
-                    performSearch()
-                }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { dismiss() }
-                    }
-                }
+            }
+            .navigationTitle("Search")
+            .searchable(text: $query, prompt: "Search book")
+            .onSubmit(of: .search) {
+                performSearch()
             }
             .onDisappear {
                 searchTask?.cancel()
@@ -92,12 +85,14 @@
                 )
             ]
             @Previewable @State var isSearching = false
-            EPUBSearchPanel(
-                results: $results,
-                isSearching: $isSearching,
-                onSearch: { _ in results },
-                onSelect: { _ in }
-            )
+            NavigationStack {
+                EPUBSearchPanel(
+                    results: $results,
+                    isSearching: $isSearching,
+                    onSearch: { _ in results },
+                    onSelect: { _ in }
+                )
+            }
         }
     #endif
 #endif

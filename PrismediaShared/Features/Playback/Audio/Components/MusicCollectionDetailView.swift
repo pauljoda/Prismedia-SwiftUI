@@ -5,6 +5,7 @@
         @Environment(MusicPlayerController.self) private var controller
         @State private var phase: MusicCollectionPlaybackPhase = .loading
         @State private var artworkPalette: ArtworkPalette?
+        @State private var loadingQueueMode: MusicQueueStartMode?
 
         let detail: EntityDetail
         let preview: EntityLinkPreview?
@@ -57,10 +58,10 @@
                     .foregroundStyle(artworkPalette?.secondary.color ?? PrismediaColor.textSecondary)
 
                 MusicPlaybackButtons(
-                    isBusy: phase == .loading,
+                    loadingMode: loadingQueueMode,
                     isDisabled: currentSnapshot?.tracks.isEmpty != false
-                ) { shuffled in
-                    playAll(shuffled: shuffled)
+                ) { queueMode in
+                    Task { await playAll(queueMode: queueMode) }
                 }
                 .padding(.vertical, PrismediaSpacing.small)
             }
@@ -138,11 +139,15 @@
             }
         }
 
-        private func playAll(shuffled: Bool) {
+        private func playAll(queueMode: MusicQueueStartMode) async {
             guard let snapshot = currentSnapshot else { return }
+            guard loadingQueueMode == nil else { return }
+            loadingQueueMode = queueMode
+            defer { loadingQueueMode = nil }
+            await Task.yield()
             controller.play(
                 tracks: snapshot.tracks,
-                queueMode: shuffled ? .shuffled : .ordered
+                queueMode: queueMode
             )
         }
 

@@ -7,7 +7,7 @@
         let onSelect: (UUID) -> Void
 
         var body: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+            LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
                     Text("Up Next")
                         .font(.title3.bold())

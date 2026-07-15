@@ -3,6 +3,15 @@
 
     struct MusicNowPlayingArtwork: View {
         let track: MusicTrack
+        let cornerRadius: CGFloat
+
+        init(
+            track: MusicTrack,
+            cornerRadius: CGFloat = PrismediaRadius.control
+        ) {
+            self.track = track
+            self.cornerRadius = cornerRadius
+        }
 
         var body: some View {
             RemotePosterImage(
@@ -10,7 +19,7 @@
                 fallbackSeed: track.album ?? track.title,
                 systemImage: "music.note",
                 contentMode: .fit,
-                imageCornerRadius: PrismediaRadius.control
+                imageCornerRadius: cornerRadius
             )
             .aspectRatio(1, contentMode: .fit)
         }

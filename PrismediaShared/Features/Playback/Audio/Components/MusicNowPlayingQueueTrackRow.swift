@@ -6,8 +6,11 @@
 
         var body: some View {
             HStack(spacing: PrismediaSpacing.medium) {
-                MusicNowPlayingArtwork(track: track)
-                    .frame(width: 44, height: 44)
+                MusicNowPlayingArtwork(
+                    track: track,
+                    cornerRadius: PrismediaRadius.badge
+                )
+                .frame(width: 44, height: 44)
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
                     Text(track.title)

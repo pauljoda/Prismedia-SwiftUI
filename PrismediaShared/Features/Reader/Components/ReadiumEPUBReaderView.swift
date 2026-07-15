@@ -6,10 +6,7 @@
         @Environment(\.dismiss) private var dismiss
         @State private var session: ReadiumEPUBReaderSession
         @State private var preferences: EPUBReaderPreferences
-        @State private var presentedInspector = EPUBReaderInspector.contents
-        @State private var inspectorPresented = false
-        @State private var searchPresented = false
-        @State private var settingsPresented = false
+        @State private var presentedSheet: EPUBReaderSheet?
         @State private var isLoading = true
         @State private var errorMessage: String?
         @State private var tableOfContents: [EPUBTableOfContentsItem] = []
@@ -20,9 +17,6 @@
         @State private var canGoNext = false
         @State private var bookmarksState = EPUBBookmarksState()
         @State private var isToggleReturnAvailable = false
-        @State private var navigationMenuPresented = false
-        @State private var audiobookControlsPresented = false
-        @State private var pendingNavigationAction: EPUBReaderNavigationAction?
         @State private var isClosing = false
         @State private var hasSignaledReady = false
         @State private var chrome = ReaderChromeState()
@@ -31,6 +25,7 @@
         private let bookID: UUID
         private let bookmarkStore: any EPUBBookmarkStoring
         private let companionPlayer: MusicPlayerController?
+        private let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
         private let onReady: () -> Void
 
         init(
@@ -43,6 +38,7 @@
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
             companionPlayer: MusicPlayerController? = nil,
+            findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
             onReady: @escaping () -> Void = {}
         ) {
             let session = ReadiumEPUBReaderSession(
@@ -59,6 +55,7 @@
             bookID = book.id
             self.bookmarkStore = bookmarkStore
             self.companionPlayer = companionPlayer
+            self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
             self.onReady = onReady
         }
 
@@ -71,24 +68,18 @@
                 }
                 .toolbar {
                     ReadiumEPUBReaderToolbar(
-                        preferences: $preferences,
-                        navigationMenuPresented: $navigationMenuPresented,
-                        settingsPresented: $settingsPresented,
-                        audiobookControlsPresented: $audiobookControlsPresented,
                         hasToggleBookmark: toggleBookmark != nil,
                         isReturningFromToggleBookmark: isToggleReturnAvailable,
                         onClose: close,
                         onOpenContents: openContents,
                         onOpenSearch: openSearch,
                         onOpenBookmarks: openBookmarks,
-                        onNavigationMenuDismissed: completeNavigationMenuAction,
+                        onOpenNavigation: openNavigation,
                         onToggleBookmark: toggleQuickBookmark,
                         onOpenSettings: openSettings,
-                        companionTrackTitle: activeCompanionPlayer?.currentTrack?.title,
+                        showsAudiobookControls: activeCompanionPlayer?.currentTrack != nil,
                         companionIsPlaying: activeCompanionPlayer?.isPlaying ?? false,
-                        companionPlaybackRate: activeCompanionPlayer?.playbackRate ?? 1,
-                        onToggleCompanionPlayback: toggleCompanionPlayback,
-                        onSetCompanionPlaybackRate: setCompanionPlaybackRate
+                        onOpenAudiobook: openAudiobook
                     )
                     ReaderPageNavigationToolbar(
                         status: readerProgressStatus,
@@ -104,17 +95,8 @@
                     for: .navigationBar, .bottomBar
                 )
             }
-            .inspector(isPresented: $inspectorPresented) {
-                readerInspector(presentedInspector)
-                    .inspectorColumnWidth(min: 280, ideal: 340, max: 460)
-            }
-            .sheet(isPresented: $searchPresented) {
-                EPUBSearchPanel(
-                    results: $searchResults,
-                    isSearching: $isSearching,
-                    onSearch: { query in await session.search(query) },
-                    onSelect: { result in await session.openSearchResult(result) }
-                )
+            .sheet(item: $presentedSheet) { sheet in
+                readerSheet(sheet)
             }
             .task {
                 bookmarksState = bookmarkStore.load(bookID: bookID)
@@ -139,19 +121,7 @@
             .onChange(of: chrome.isVisible) {
                 scheduleChromeHide()
             }
-            .onChange(of: inspectorPresented) {
-                updateChromePin()
-            }
-            .onChange(of: searchPresented) {
-                updateChromePin()
-            }
-            .onChange(of: settingsPresented) {
-                updateChromePin()
-            }
-            .onChange(of: navigationMenuPresented) {
-                updateChromePin()
-            }
-            .onChange(of: audiobookControlsPresented) {
+            .onChange(of: presentedSheet) {
                 updateChromePin()
             }
             .onChange(of: bookmarksState) { _, value in
@@ -228,11 +198,7 @@
 
         private var canSwipeDownToDismiss: Bool {
             preferences.flow == .paged
-                && !inspectorPresented
-                && !searchPresented
-                && !settingsPresented
-                && !navigationMenuPresented
-                && !audiobookControlsPresented
+                && presentedSheet == nil
                 && !isLoading
                 && errorMessage == nil
         }
@@ -264,46 +230,34 @@
         }
 
         private func openContents() {
-            guard !deferNavigationMenuAction(.contents) else { return }
-            endNavigationMenuInteraction()
             revealChrome()
-            presentedInspector = .contents
-            inspectorPresented = true
+            presentedSheet = .contents
         }
 
         private func openSearch() {
-            guard !deferNavigationMenuAction(.search) else { return }
-            endNavigationMenuInteraction()
             revealChrome()
-            searchPresented = true
+            presentedSheet = .search
         }
 
         private func openBookmarks() {
-            guard !deferNavigationMenuAction(.bookmarks) else { return }
-            endNavigationMenuInteraction()
             revealChrome()
-            presentedInspector = .bookmarks
-            inspectorPresented = true
+            presentedSheet = .bookmarks
+        }
+
+        private func openNavigation() {
+            revealChrome()
+            presentedSheet = .navigation
         }
 
         private func openSettings() {
             revealChrome()
-            settingsPresented = true
+            presentedSheet = .settings
         }
 
-        private func toggleCompanionPlayback() {
-            guard let companionPlayer = activeCompanionPlayer else { return }
-            if companionPlayer.isPlaying {
-                companionPlayer.pause()
-            } else {
-                companionPlayer.resume()
-            }
+        private func openAudiobook() {
+            guard activeCompanionPlayer != nil else { return }
             revealChrome()
-        }
-
-        private func setCompanionPlaybackRate(_ rate: Float) {
-            activeCompanionPlayer?.setPlaybackRate(rate)
-            revealChrome()
+            presentedSheet = .audiobook
         }
 
         private var activeCompanionPlayer: MusicPlayerController? {
@@ -315,11 +269,7 @@
         }
 
         private var isReaderPresentationActive: Bool {
-            inspectorPresented
-                || searchPresented
-                || settingsPresented
-                || navigationMenuPresented
-                || audiobookControlsPresented
+            presentedSheet != nil
         }
 
         private func signalReady() async {
@@ -371,50 +321,41 @@
             scheduleChromeHide()
         }
 
-        private func endNavigationMenuInteraction() {
-            navigationMenuPresented = false
-        }
-
-        private func deferNavigationMenuAction(_ action: EPUBReaderNavigationAction) -> Bool {
-            guard navigationMenuPresented else { return false }
-            pendingNavigationAction = action
-            navigationMenuPresented = false
-            return true
-        }
-
-        private func completeNavigationMenuAction() {
-            guard let pendingNavigationAction else { return }
-            self.pendingNavigationAction = nil
-            Task { @MainActor in
-                await Task.yield()
-                switch pendingNavigationAction {
-                case .contents: openContents()
-                case .search: openSearch()
-                case .bookmarks: openBookmarks()
+        @ViewBuilder
+        private func readerSheet(_ sheet: EPUBReaderSheet) -> some View {
+            switch sheet {
+            case .navigation, .contents, .search, .bookmarks, .settings:
+                ReadiumEPUBReaderSheet(
+                    initialRoute: sheet,
+                    tableOfContents: tableOfContents,
+                    searchResults: $searchResults,
+                    isSearching: $isSearching,
+                    bookmarksState: $bookmarksState,
+                    preferences: $preferences,
+                    canAddBookmark: chapterProgress != nil,
+                    onOpenTableOfContentsItem: { item in
+                        Task { await session.openTableOfContentsItem(item) }
+                    },
+                    onSearch: { query in await session.search(query) },
+                    onOpenSearchResult: { result in await session.openSearchResult(result) },
+                    onAddBookmark: { session.currentBookmark() },
+                    onOpenBookmark: openBookmark
+                )
+            case .audiobook:
+                if let companionPlayer = activeCompanionPlayer {
+                    ReaderAudiobookNowPlayingSheet(
+                        controller: companionPlayer,
+                        onFindReadingPosition: moveToCurrentAudiobookPosition
+                    )
+                } else {
+                    ContentUnavailableView("Nothing Playing", systemImage: "headphones")
                 }
             }
         }
 
-        @ViewBuilder
-        private func readerInspector(_ inspector: EPUBReaderInspector) -> some View {
-            switch inspector {
-            case .contents:
-                EPUBTableOfContentsPanel(
-                    items: tableOfContents,
-                    onSelect: { item in
-                        Task { await session.openTableOfContentsItem(item) }
-                    },
-                    onClose: { inspectorPresented = false }
-                )
-            case .bookmarks:
-                EPUBBookmarksPanel(
-                    state: $bookmarksState,
-                    canAddBookmark: chapterProgress != nil,
-                    onAdd: { session.currentBookmark() },
-                    onOpen: openBookmark,
-                    onClose: { inspectorPresented = false }
-                )
-            }
+        private func moveToCurrentAudiobookPosition() async -> Bool {
+            guard let target = findCurrentAudiobookReadingTarget() else { return false }
+            return await session.openReadingTarget(target)
         }
 
         private func scheduleChromeHide() {

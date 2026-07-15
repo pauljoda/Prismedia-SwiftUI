@@ -125,6 +125,19 @@
             _ = await navigator?.go(to: link, options: .animated)
         }
 
+        @discardableResult
+        func openReadingTarget(_ target: BookReaderLocationTarget) async -> Bool {
+            guard
+                let publication,
+                let link = findLink(target.location, in: readingOrder),
+                let chapterLocator = await publication.locate(link)
+            else { return false }
+            let locator = chapterLocator.copy(locations: {
+                $0.progression = target.progression
+            })
+            return await navigator?.go(to: locator, options: .animated) ?? false
+        }
+
         func search(_ query: String) async -> [EPUBSearchResult] {
             searchGeneration &+= 1
             let generation = searchGeneration

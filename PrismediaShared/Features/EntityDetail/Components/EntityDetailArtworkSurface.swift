@@ -6,6 +6,7 @@ struct EntityDetailArtworkSurface<Content: View>: View {
     let previewPath: String?
     let fallbackSeed: String
     let systemImage: String
+    let showsAtmosphere: Bool
     @ViewBuilder let content: Content
 
     init(
@@ -13,6 +14,7 @@ struct EntityDetailArtworkSurface<Content: View>: View {
         previewPath: String? = nil,
         fallbackSeed: String,
         systemImage: String,
+        showsAtmosphere: Bool = true,
         palette: Binding<ArtworkPalette?>,
         @ViewBuilder content: () -> Content
     ) {
@@ -20,6 +22,7 @@ struct EntityDetailArtworkSurface<Content: View>: View {
         self.previewPath = previewPath
         self.fallbackSeed = fallbackSeed
         self.systemImage = systemImage
+        self.showsAtmosphere = showsAtmosphere
         _palette = palette
         self.content = content()
     }
@@ -37,27 +40,29 @@ struct EntityDetailArtworkSurface<Content: View>: View {
                 palette?.secondary.color ?? PrismediaColor.textSecondary
             )
             .background {
-                GeometryReader { geometry in
-                    ArtworkPaletteSurface(
-                        artworkPath: artworkPath,
-                        previewPath: previewPath,
-                        fallbackSeed: fallbackSeed,
-                        systemImage: systemImage,
-                        palette: $palette
-                    ) {
-                        Color.clear
-                            .frame(
-                                width: geometry.size.width,
-                                height: geometry.size.height
-                            )
+                if showsAtmosphere {
+                    GeometryReader { geometry in
+                        ArtworkPaletteSurface(
+                            artworkPath: artworkPath,
+                            previewPath: previewPath,
+                            fallbackSeed: fallbackSeed,
+                            systemImage: systemImage,
+                            palette: $palette
+                        ) {
+                            Color.clear
+                                .frame(
+                                    width: geometry.size.width,
+                                    height: geometry.size.height
+                                )
+                        }
+                        .frame(
+                            width: geometry.size.width,
+                            height: geometry.size.height
+                        )
                     }
-                    .frame(
-                        width: geometry.size.width,
-                        height: geometry.size.height
-                    )
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 }
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
             }
     }
 }

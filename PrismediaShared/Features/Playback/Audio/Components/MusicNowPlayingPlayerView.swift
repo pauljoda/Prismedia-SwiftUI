@@ -57,14 +57,8 @@
                         .lineLimit(1)
                 }
                 Spacer()
-                Menu {
-                    Button("Add to Collection", systemImage: "folder.badge.plus") {
-                        onAddToCollection()
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                }
-                .accessibilityLabel("More")
+                Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
+                    .labelStyle(.iconOnly)
             }
             .font(.body.weight(.semibold))
             .padding(.horizontal, PrismediaSpacing.section)

@@ -9,7 +9,8 @@
         @State private var errorMessage: String?
         @State private var progressWriter: BookReaderProgressWriter
         @State private var progressSaveTask: Task<Void, Never>?
-        @State private var audiobookControlsPresented = false
+        @State private var presentedSheet: EPUBFallbackReaderSheet?
+        @State private var readerNavigationRequestID = 0
         @State private var hasSignaledReady = false
 
         private let command: BookReaderCommand
@@ -20,6 +21,7 @@
         private let initialLocation: String?
         private let initialProgression: Double?
         private let companionPlayer: MusicPlayerController?
+        private let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
         private let onReady: () -> Void
 
         public init(
@@ -31,6 +33,7 @@
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
             companionPlayer: MusicPlayerController? = nil,
+            findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
             onReady: @escaping () -> Void = {}
         ) {
             self.command = command
@@ -40,6 +43,7 @@
             self.initialLocation = initialLocation
             self.initialProgression = initialProgression
             self.companionPlayer = companionPlayer
+            self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
             self.onReady = onReady
             useCase = DocumentReaderUseCase(book: book, service: service)
             _progressWriter = State(initialValue: BookReaderProgressWriter(service: service))
@@ -57,6 +61,7 @@
                     initialLocation: initialLocation,
                     initialProgression: initialProgression,
                     companionPlayer: companionPlayer,
+                    findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
                     onReady: onReady
                 )
             #else
@@ -69,22 +74,12 @@
                                 Button("Close", systemImage: "xmark", action: close)
                             }
                             if let companionPlayer = activeCompanionPlayer,
-                                let currentTrack = companionPlayer.currentTrack
+                                companionPlayer.currentTrack != nil
                             {
                                 ToolbarItem(placement: .primaryAction) {
-                                    ReaderAudiobookControlMenu(
-                                        isPresented: $audiobookControlsPresented,
-                                        trackTitle: currentTrack.title,
+                                    ReaderAudiobookButton(
                                         isPlaying: companionPlayer.isPlaying,
-                                        playbackRate: companionPlayer.playbackRate,
-                                        onTogglePlayback: {
-                                            if companionPlayer.isPlaying {
-                                                companionPlayer.pause()
-                                            } else {
-                                                companionPlayer.resume()
-                                            }
-                                        },
-                                        onSetPlaybackRate: companionPlayer.setPlaybackRate
+                                        action: { presentedSheet = .audiobook }
                                     )
                                 }
                             }
@@ -95,7 +90,12 @@
                                     }
                                     .disabled(currentChapter == 0)
 
-                                    chapterMenu(publication)
+                                    Button("Choose Chapter", systemImage: "text.book.closed") {
+                                        presentedSheet = .chapters
+                                    }
+                                    .accessibilityValue(
+                                        "Chapter \(currentChapter + 1) of \(publication.chapters.count)"
+                                    )
 
                                     Button("Next Chapter", systemImage: "chevron.right") {
                                         selectChapter(min(publication.chapters.count - 1, currentChapter + 1))
@@ -104,6 +104,9 @@
                                 }
                             }
                         }
+                }
+                .sheet(item: $presentedSheet) { sheet in
+                    fallbackSheet(sheet)
                 }
                 .task { await load() }
                 .onDisappear {
@@ -127,6 +130,7 @@
                     onLocalNavigation: openLocalURL,
                     onScrollProgress: recordScrollProgress
                 )
+                .id("\(publication.chapters[currentChapter].id)-\(readerNavigationRequestID)")
                 .accessibilityLabel("EPUB reader")
                 .accessibilityValue("Chapter \(currentChapter + 1) of \(publication.chapters.count)")
             } else if let errorMessage {
@@ -142,17 +146,44 @@
             }
         }
 
-        private func chapterMenu(_ publication: EPUBPublication) -> some View {
-            Menu {
-                ForEach(Array(publication.chapters.enumerated()), id: \.element.id) { index, _ in
-                    Button("Chapter \(index + 1)") { selectChapter(index) }
+        @ViewBuilder
+        private func fallbackSheet(_ sheet: EPUBFallbackReaderSheet) -> some View {
+            switch sheet {
+            case .chapters:
+                if let publication {
+                    EPUBChapterPickerSheet(
+                        chapters: publication.chapters,
+                        selectedIndex: currentChapter,
+                        onSelect: selectChapter
+                    )
                 }
-            } label: {
-                Text("\(currentChapter + 1) of \(publication.chapters.count)")
-                    .monospacedDigit()
+            case .audiobook:
+                if let companionPlayer = activeCompanionPlayer {
+                    ReaderAudiobookNowPlayingSheet(
+                        controller: companionPlayer,
+                        onFindReadingPosition: moveToCurrentAudiobookPosition
+                    )
+                } else {
+                    ContentUnavailableView("Nothing Playing", systemImage: "headphones")
+                }
             }
-            .accessibilityLabel("Choose chapter")
-            .accessibilityValue("Chapter \(currentChapter + 1) of \(publication.chapters.count)")
+        }
+
+        private func moveToCurrentAudiobookPosition() async -> Bool {
+            guard
+                let target = findCurrentAudiobookReadingTarget(),
+                let publication,
+                let matchedLocation = EPUBResourceLocationMatcher().bestMatch(
+                    for: target.location,
+                    candidates: publication.chapters.map(\.location)
+                ),
+                let index = publication.chapters.firstIndex(where: { $0.location == matchedLocation })
+            else { return false }
+
+            currentChapter = index
+            currentChapterProgress = target.progression
+            readerNavigationRequestID &+= 1
+            return true
         }
 
         private func load() async {

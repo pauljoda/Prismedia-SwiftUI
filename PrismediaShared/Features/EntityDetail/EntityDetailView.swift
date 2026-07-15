@@ -135,11 +135,22 @@ public struct EntityDetailView: View {
                     initialEPUBLocation: presentation.initialEPUBLocation,
                     initialEPUBProgression: presentation.initialEPUBProgression,
                     companionPlayer: companionPlayer(for: presentation),
+                    findCurrentAudiobookReadingTarget: {
+                        #if os(iOS) || os(macOS)
+                            currentAudiobookReadingTarget(for: presentation.detail)
+                        #else
+                            nil
+                        #endif
+                    },
                     onEPUBReady: {
                         #if os(iOS) || os(macOS)
                             beginCombinedPlayback(for: presentation)
                         #endif
                     }
+                )
+                .environment(
+                    \.artworkPrimaryAccent,
+                    artworkPalette?.primary.color ?? PrismediaColor.accent
                 )
             }
         }
@@ -291,18 +302,16 @@ public struct EntityDetailView: View {
         _ detail: EntityDetail,
         presentation: EntityDetailPresentation
     ) -> some View {
-        EntityDetailArtworkSurface(
-            artworkPath: EntityDetailHeroArtworkPolicy.atmospherePath(
-                heroPath: presentation.heroPath,
-                posterPath: presentation.posterPath
-            ),
-            previewPath: link.thumbnailPreview?.artworkPath,
-            fallbackSeed: detail.title,
-            systemImage: presentation.systemImage,
-            palette: $artworkPalette
-        ) {
-            detailScrollView(detail, presentation: presentation)
-        }
+        detailScrollView(detail, presentation: presentation)
+            .environment(\.artworkPalette, artworkPalette)
+            .environment(
+                \.artworkPrimaryAccent,
+                artworkPalette?.primary.color ?? PrismediaColor.accent
+            )
+            .environment(
+                \.artworkSecondaryText,
+                artworkPalette?.secondary.color ?? PrismediaColor.textSecondary
+            )
     }
 
     private func detailScrollView(
@@ -316,83 +325,102 @@ public struct EntityDetailView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
-                            #if os(tvOS)
-                                if !showsHeroArtwork {
-                                    Color.clear
-                                        .frame(height: 120)
-                                        .accessibilityHidden(true)
+                        EntityDetailArtworkSurface(
+                            artworkPath: EntityDetailHeroArtworkPolicy.atmospherePath(
+                                heroPath: presentation.heroPath,
+                                posterPath: presentation.posterPath
+                            ),
+                            previewPath: link.thumbnailPreview?.artworkPath,
+                            fallbackSeed: detail.title,
+                            systemImage: presentation.systemImage,
+                            showsAtmosphere: showsHeroArtwork,
+                            palette: $artworkPalette
+                        ) {
+                            VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                                #if os(tvOS)
+                                    if !showsHeroArtwork {
+                                        Color.clear
+                                            .frame(height: 120)
+                                            .accessibilityHidden(true)
+                                    }
+
+                                    EntityDetailHeroInformationView(
+                                        presentation: presentation,
+                                        previewPath: link.thumbnailPreview?.artworkPath,
+                                        showsArtwork: showsHeroArtwork,
+                                        actions: primaryActions(
+                                            for: detail,
+                                            fallback: presentation.primaryActions
+                                        ),
+                                        isMutating: state.isMutating,
+                                        canMutate: service.canMutate,
+                                        isActionEnabled: isEnabled,
+                                        actionHint: accessibilityHint,
+                                        onRatingChange: ratingDidChange,
+                                        onAction: perform
+                                    )
+                                #endif
+
+                                if let playbackOwnerLink,
+                                    VideoPlaybackLaunchPolicy.presentationMode(
+                                        for: playbackOwnerLink
+                                    ) == .inline,
+                                    PlayableVideoResolver.videoID(
+                                        in: detail,
+                                        sourceThumbnail: playbackOwnerLink.sourceThumbnail
+                                    ) != nil,
+                                    let playbackService = dependencies.videoPlaybackService
+                                {
+                                    VideoEntityPlaybackView(
+                                        detail: detail,
+                                        ownerLink: playbackOwnerLink,
+                                        detailLoader: dependencies.detailLoader,
+                                        playbackService: playbackService,
+                                        preparation: videoPlaybackPreparation,
+                                        presentationMode: VideoPlaybackLaunchPolicy.presentationMode(
+                                            for: playbackOwnerLink
+                                        ),
+                                        presentsFullscreenOnTV:
+                                            VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
+                                                for: playbackOwnerLink.intent
+                                            ),
+                                        onFullscreenDismiss: {
+                                            guard
+                                                VideoPlaybackLaunchPolicy.presentationMode(
+                                                    for: playbackOwnerLink
+                                                ) == .fullscreenOnly
+                                            else { return }
+                                            suppressesRoutePlayback = true
+                                            thumbnailPlaybackLink = nil
+                                        },
+                                        onAdvance: { destination in
+                                            guard playbackOwnerLink.kind != .videoSeason else { return }
+                                            advancedEntityLink = destination
+                                        }
+                                    )
+                                    .id(playbackOwnerLink)
                                 }
 
-                                EntityDetailHeroInformationView(
-                                    presentation: presentation,
-                                    previewPath: link.thumbnailPreview?.artworkPath,
-                                    showsArtwork: showsHeroArtwork,
-                                    actions: primaryActions(for: detail, fallback: presentation.primaryActions),
-                                    isMutating: state.isMutating,
-                                    canMutate: service.canMutate,
-                                    isActionEnabled: isEnabled,
-                                    actionHint: accessibilityHint,
-                                    onRatingChange: ratingDidChange,
-                                    onAction: perform
-                                )
-                            #endif
-
-                            if let playbackOwnerLink,
-                                VideoPlaybackLaunchPolicy.presentationMode(
-                                    for: playbackOwnerLink
-                                ) == .inline,
-                                PlayableVideoResolver.videoID(
-                                    in: detail,
-                                    sourceThumbnail: playbackOwnerLink.sourceThumbnail
-                                ) != nil,
-                                let playbackService = dependencies.videoPlaybackService
-                            {
-                                VideoEntityPlaybackView(
-                                    detail: detail,
-                                    ownerLink: playbackOwnerLink,
-                                    detailLoader: dependencies.detailLoader,
-                                    playbackService: playbackService,
-                                    preparation: videoPlaybackPreparation,
-                                    presentationMode: VideoPlaybackLaunchPolicy.presentationMode(
-                                        for: playbackOwnerLink
-                                    ),
-                                    presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
-                                        for: playbackOwnerLink.intent
-                                    ),
-                                    onFullscreenDismiss: {
-                                        guard
-                                            VideoPlaybackLaunchPolicy.presentationMode(
-                                                for: playbackOwnerLink
-                                            ) == .fullscreenOnly
-                                        else { return }
-                                        suppressesRoutePlayback = true
-                                        thumbnailPlaybackLink = nil
-                                    },
-                                    onAdvance: { destination in
-                                        guard playbackOwnerLink.kind != .videoSeason else { return }
-                                        advancedEntityLink = destination
-                                    }
-                                )
-                                .id(playbackOwnerLink)
+                                #if !os(tvOS)
+                                    EntityDetailHeroInformationView(
+                                        presentation: presentation,
+                                        previewPath: link.thumbnailPreview?.artworkPath,
+                                        showsArtwork: true,
+                                        actions: primaryActions(
+                                            for: detail,
+                                            fallback: presentation.primaryActions
+                                        ),
+                                        isMutating: state.isMutating,
+                                        canMutate: service.canMutate,
+                                        isActionEnabled: isEnabled,
+                                        actionHint: accessibilityHint,
+                                        onRatingChange: ratingDidChange,
+                                        onAction: perform
+                                    )
+                                #endif
                             }
-
-                            #if !os(tvOS)
-                                EntityDetailHeroInformationView(
-                                    presentation: presentation,
-                                    previewPath: link.thumbnailPreview?.artworkPath,
-                                    showsArtwork: true,
-                                    actions: primaryActions(for: detail, fallback: presentation.primaryActions),
-                                    isMutating: state.isMutating,
-                                    canMutate: service.canMutate,
-                                    isActionEnabled: isEnabled,
-                                    actionHint: accessibilityHint,
-                                    onRatingChange: ratingDidChange,
-                                    onAction: perform
-                                )
-                            #endif
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
                             #if os(iOS) || os(macOS)
@@ -511,7 +539,6 @@ public struct EntityDetailView: View {
                         .padding(.top, PrismediaSpacing.section)
                         .padding(.bottom, PrismediaSpacing.section)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background { PrismediaBackdrop() }
                     }
                 }
                 .frame(
@@ -1244,10 +1271,10 @@ public struct EntityDetailView: View {
             for detail: EntityDetail
         ) -> BookCombinedProgressPresentation? {
             guard detail.kind == .book,
-                  detail.bookFormat == .epub,
-                  audiobookProjection?.bookID == detail.id,
-                  let target = combinedResumeTarget(for: detail),
-                  readingCheckpoint(for: detail) != nil || listeningCheckpoint(for: detail) != nil
+                detail.bookFormat == .epub,
+                audiobookProjection?.bookID == detail.id,
+                let target = combinedResumeTarget(for: detail),
+                readingCheckpoint(for: detail) != nil || listeningCheckpoint(for: detail) != nil
             else { return nil }
             return BookCombinedProgressPresentation(
                 reading: readingState.progressPresentation,
@@ -1267,19 +1294,33 @@ public struct EntityDetailView: View {
             )
         }
 
+        private func currentAudiobookReadingTarget(
+            for detail: EntityDetail
+        ) -> BookReaderLocationTarget? {
+            guard let listening = listeningCheckpoint(for: detail) else { return nil }
+            return BookCombinedResumeResolver().resolveReadingTarget(
+                chapters: mappedBookChapters,
+                listening: listening
+            )
+        }
+
         private func readingCheckpoint(for detail: EntityDetail) -> BookReadingCheckpoint? {
-            let progress: EntityProgressCapability? = readingState.manifest?.progress
+            let progress: EntityProgressCapability? =
+                readingState.manifest?.progress
                 ?? detail.capability()
             guard progress?.completedAt == nil else { return nil }
-            let serialized = dependencies.readerLocatorStore.load(bookID: detail.id)
+            let serialized =
+                dependencies.readerLocatorStore.load(bookID: detail.id)
                 ?? progress?.location
             guard let serialized,
-                  let location = EPUBProgressLocation(serialized: serialized)
+                let location = EPUBProgressLocation(serialized: serialized)
             else { return nil }
-            let publicationProgression = location.totalProgression ?? {
-                guard let progress else { return 0 }
-                return Double(max(0, progress.index)) / Double(max(1, progress.total))
-            }()
+            let publicationProgression =
+                location.totalProgression
+                ?? {
+                    guard let progress else { return 0 }
+                    return Double(max(0, progress.index)) / Double(max(1, progress.total))
+                }()
             return BookReadingCheckpoint(
                 chapterLocation: location.href,
                 chapterProgression: location.resourceProgression,
@@ -1289,8 +1330,8 @@ public struct EntityDetailView: View {
 
         private func listeningCheckpoint(for detail: EntityDetail) -> BookListeningCheckpoint? {
             guard let projection = audiobookProjection,
-                  projection.bookID == detail.id,
-                  detail.capability(EntityPlaybackCapability.self)?.completedAt == nil
+                projection.bookID == detail.id,
+                detail.capability(EntityPlaybackCapability.self)?.completedAt == nil
             else { return nil }
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
@@ -1333,11 +1374,13 @@ public struct EntityDetailView: View {
             refreshBookChapterMappings(for: detail)
 
             if combined {
-                guard let target = BookCombinedResumeResolver().resolveChapter(
-                    chapter,
-                    reading: readingCheckpoint(for: detail),
-                    listening: listeningCheckpoint(for: detail)
-                ) else { return }
+                guard
+                    let target = BookCombinedResumeResolver().resolveChapter(
+                        chapter,
+                        reading: readingCheckpoint(for: detail),
+                        listening: listeningCheckpoint(for: detail)
+                    )
+                else { return }
                 let isCurrentBook =
                     musicPlayer.context?.playbackOwnerEntityID == detail.id
                     && musicPlayer.context?.playbackOwnerEntityKind == .book

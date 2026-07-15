@@ -4,9 +4,9 @@
     struct MusicPlaybackButtons: View {
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-        let isBusy: Bool
+        let loadingMode: MusicQueueStartMode?
         let isDisabled: Bool
-        let action: (Bool) -> Void
+        let action: (MusicQueueStartMode) -> Void
 
         var body: some View {
             Group {
@@ -25,7 +25,7 @@
             .font(.subheadline.weight(.semibold))
             .controlSize(.large)
             .frame(maxWidth: .infinity)
-            .disabled(isBusy || isDisabled)
+            .disabled(loadingMode != nil || isDisabled)
         }
 
         private var playButton: some View {
@@ -33,16 +33,22 @@
                 "Play",
                 systemImage: "play.fill",
                 variant: .prominent,
-                form: .fill
+                form: .fill,
+                isLoading: loadingMode == .ordered
             ) {
-                action(false)
+                action(.ordered)
             }
             .accessibilityIdentifier("music.library.play")
         }
 
         private var shuffleButton: some View {
-            PrismediaButton("Shuffle", systemImage: "shuffle", form: .fill) {
-                action(true)
+            PrismediaButton(
+                "Shuffle",
+                systemImage: "shuffle",
+                form: .fill,
+                isLoading: loadingMode == .shuffled
+            ) {
+                action(.shuffled)
             }
             .accessibilityIdentifier("music.library.shuffle")
         }
@@ -51,7 +57,7 @@
     #if DEBUG
         #Preview("Music Playback Buttons · Dark") {
             PreviewShell {
-                MusicPlaybackButtons(isBusy: false, isDisabled: false) { _ in }
+                MusicPlaybackButtons(loadingMode: nil, isDisabled: false) { _ in }
                     .padding()
                     .background(PrismediaBackdrop())
             }
@@ -60,7 +66,7 @@
 
         #Preview("Music Playback Buttons · Accessibility") {
             PreviewShell {
-                MusicPlaybackButtons(isBusy: false, isDisabled: false) { _ in }
+                MusicPlaybackButtons(loadingMode: .shuffled, isDisabled: false) { _ in }
                     .padding()
                     .background(PrismediaBackdrop())
             }

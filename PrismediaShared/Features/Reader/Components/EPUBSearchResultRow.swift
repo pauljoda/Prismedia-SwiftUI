@@ -2,6 +2,8 @@
     import SwiftUI
 
     struct EPUBSearchResultRow: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
+
         let result: EPUBSearchResult
 
         var body: some View {
@@ -32,7 +34,7 @@
             var excerpt = AttributedString(result.before ?? "")
             var match = AttributedString(result.highlight ?? "")
             match.font = .caption.bold()
-            match.foregroundColor = PrismediaColor.accent
+            match.foregroundColor = artworkPrimaryAccent
             excerpt.append(match)
             excerpt.append(AttributedString(result.after ?? ""))
             return excerpt

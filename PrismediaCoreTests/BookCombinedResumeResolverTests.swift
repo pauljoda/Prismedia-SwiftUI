@@ -3,6 +3,28 @@ import XCTest
 @testable import PrismediaCore
 
 final class BookCombinedResumeResolverTests: XCTestCase {
+    func testCurrentListeningPositionMapsToTheMatchingReaderChapterProgression() throws {
+        let first = mappedChapter(order: 0, duration: 300)
+        let second = mappedChapter(order: 1, duration: 400)
+
+        let target = BookCombinedResumeResolver().resolveReadingTarget(
+            chapters: [first, second],
+            listening: BookListeningCheckpoint(
+                trackID: try XCTUnwrap(second.audioTrack?.id),
+                trackOffsetSeconds: 100,
+                publicationProgression: 0.6
+            )
+        )
+
+        XCTAssertEqual(
+            target,
+            BookReaderLocationTarget(
+                location: "Text/chapter-2.xhtml",
+                progression: 0.25
+            )
+        )
+    }
+
     func testTenOfTwentyReadingPagesStartsFiveSecondsBeforeTheAudioMidpoint() throws {
         let chapter = mappedChapter(order: 0, duration: 600)
         let target = try XCTUnwrap(

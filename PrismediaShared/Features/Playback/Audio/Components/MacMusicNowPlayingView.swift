@@ -19,7 +19,7 @@
                         palette: $artworkPalette
                     ) {
                         ScrollView {
-                            VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
+                            LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
                                 artwork(track)
                                 metadata(track)
                                 timeline(track)
@@ -125,16 +125,17 @@
         }
 
         private var queue: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+            let upNextTracks = controller.queue.upNextTracks
+            return LazyVStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                 Text(controller.context?.isAudiobook == true ? "Up Next Parts" : "Up Next")
                     .font(.headline)
 
-                if controller.queue.upNextTracks.isEmpty {
+                if upNextTracks.isEmpty {
                     Text("No more tracks in the queue")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(controller.queue.upNextTracks) { track in
+                    ForEach(upNextTracks) { track in
                         HStack(spacing: PrismediaSpacing.small) {
                             RemotePosterImage(
                                 path: track.artworkPath,

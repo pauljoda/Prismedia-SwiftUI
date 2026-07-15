@@ -6,7 +6,7 @@
         @Environment(MusicPlayerController.self) private var controller
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @State private var artworkPalette: ArtworkPalette?
-        @State private var startingPlayback = false
+        @State private var loadingQueueMode: MusicQueueStartMode?
         @State private var playbackError: String?
         let detail: EntityDetail
 
@@ -80,10 +80,10 @@
 
         private var playbackButtons: some View {
             MusicPlaybackButtons(
-                isBusy: startingPlayback,
+                loadingMode: loadingQueueMode,
                 isDisabled: albums.isEmpty
-            ) { shuffled in
-                Task { await playArtist(shuffled: shuffled) }
+            ) { queueMode in
+                Task { await playArtist(queueMode: queueMode) }
             }
         }
 
@@ -141,10 +141,11 @@
             Task(priority: .utility) { await RemoteArtworkPipeline.shared.prewarm(urls) }
         }
 
-        private func playArtist(shuffled: Bool) async {
+        private func playArtist(queueMode: MusicQueueStartMode) async {
             guard let client = environment.client else { return }
-            startingPlayback = true
-            defer { startingPlayback = false }
+            guard loadingQueueMode == nil else { return }
+            loadingQueueMode = queueMode
+            defer { loadingQueueMode = nil }
             do {
                 let tracks = try await MusicLibraryQueueLoader(client: client).tracks(
                     in: albums,
@@ -153,7 +154,7 @@
                 guard !tracks.isEmpty else { return }
                 controller.play(
                     tracks: tracks,
-                    queueMode: shuffled ? .shuffled : .ordered
+                    queueMode: queueMode
                 )
             } catch is CancellationError {
                 return

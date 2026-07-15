@@ -2,6 +2,7 @@
     import SwiftUI
 
     struct EPUBBookmarksPanel: View {
+        @Environment(\.dismiss) private var dismiss
         @State private var openingBookmarkID: UUID?
         @State private var showsOpenError = false
 
@@ -9,49 +10,41 @@
         let canAddBookmark: Bool
         let onAdd: () -> EPUBBookmark?
         let onOpen: (EPUBBookmark) async -> Bool
-        let onClose: () -> Void
 
         var body: some View {
-            NavigationStack {
-                List {
-                    Section {
-                        Button("Add Current Location", systemImage: "bookmark.badge.plus", action: addBookmark)
-                            .disabled(!canAddBookmark)
-                            .accessibilityIdentifier("epub-reader.add-bookmark")
-                    }
+            List {
+                Section {
+                    Button("Add Current Location", systemImage: "bookmark.badge.plus", action: addBookmark)
+                        .disabled(!canAddBookmark)
+                        .accessibilityIdentifier("epub-reader.add-bookmark")
+                }
 
-                    if state.bookmarks.isEmpty {
-                        ContentUnavailableView(
-                            "No Bookmarks",
-                            systemImage: "bookmark",
-                            description: Text(
-                                "Bookmarks you add will include this book’s chapter, page, date, and time.")
-                        )
-                    } else {
-                        Section("Saved Locations") {
-                            ForEach(state.bookmarks) { bookmark in
-                                EPUBBookmarkRow(
-                                    bookmark: bookmark,
-                                    isToggle: state.toggleBookmarkID == bookmark.id,
-                                    onOpen: { open(bookmark) },
-                                    onSetToggle: { setToggle(bookmark) }
-                                )
-                                .swipeActions {
-                                    Button("Delete", systemImage: "trash", role: .destructive) {
-                                        delete(bookmark)
-                                    }
+                if state.bookmarks.isEmpty {
+                    ContentUnavailableView(
+                        "No Bookmarks",
+                        systemImage: "bookmark",
+                        description: Text(
+                            "Bookmarks you add will include this book’s chapter, page, date, and time.")
+                    )
+                } else {
+                    Section("Saved Locations") {
+                        ForEach(state.bookmarks) { bookmark in
+                            EPUBBookmarkRow(
+                                bookmark: bookmark,
+                                isToggle: state.toggleBookmarkID == bookmark.id,
+                                onOpen: { open(bookmark) },
+                                onSetToggle: { setToggle(bookmark) }
+                            )
+                            .swipeActions {
+                                Button("Delete", systemImage: "trash", role: .destructive) {
+                                    delete(bookmark)
                                 }
                             }
                         }
                     }
                 }
-                .navigationTitle("Bookmarks")
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done", action: onClose)
-                    }
-                }
             }
+            .navigationTitle("Bookmarks")
             .accessibilityIdentifier("epub-reader.bookmarks")
             .alert("Couldn’t Open Bookmark", isPresented: $showsOpenError) {
                 Button("OK", role: .cancel) {}
@@ -72,7 +65,7 @@
                 let didOpen = await onOpen(bookmark)
                 openingBookmarkID = nil
                 if didOpen {
-                    onClose()
+                    dismiss()
                 } else {
                     showsOpenError = true
                 }
@@ -106,13 +99,14 @@
                 ],
                 toggleBookmarkID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")
             )
-            EPUBBookmarksPanel(
-                state: $state,
-                canAddBookmark: true,
-                onAdd: { nil },
-                onOpen: { _ in false },
-                onClose: {}
-            )
+            NavigationStack {
+                EPUBBookmarksPanel(
+                    state: $state,
+                    canAddBookmark: true,
+                    onAdd: { nil },
+                    onOpen: { _ in false }
+                )
+            }
         }
     #endif
 #endif

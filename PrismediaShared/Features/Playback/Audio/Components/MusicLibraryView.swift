@@ -7,7 +7,7 @@
         @State private var snapshot: EntityGridSnapshot
         @State private var searchText = ""
         @State private var filtersPresented = false
-        @State private var startingPlayback = false
+        @State private var loadingQueueMode: MusicQueueStartMode?
         @State private var artistNamesByID: [UUID: String] = [:]
         @State private var visibleTracksByID: [UUID: MusicTrack] = [:]
         @State private var playbackError: String?
@@ -310,10 +310,10 @@
 
         private var playbackHeader: some View {
             MusicPlaybackButtons(
-                isBusy: startingPlayback,
+                loadingMode: loadingQueueMode,
                 isDisabled: snapshot.items.isEmpty
-            ) { shuffled in
-                Task { await playLibrary(shuffled: shuffled) }
+            ) { queueMode in
+                Task { await playLibrary(queueMode: queueMode) }
             }
             .padding(.top, PrismediaSpacing.extraSmall)
         }
@@ -480,10 +480,11 @@
             Task(priority: .utility) { await RemoteArtworkPipeline.shared.prewarm(urls) }
         }
 
-        private func playLibrary(shuffled: Bool) async {
+        private func playLibrary(queueMode: MusicQueueStartMode) async {
             guard let client = environment.client else { return }
-            startingPlayback = true
-            defer { startingPlayback = false }
+            guard loadingQueueMode == nil else { return }
+            loadingQueueMode = queueMode
+            defer { loadingQueueMode = nil }
             do {
                 let tracks = try await MusicLibraryQueueLoader(client: client).tracks(
                     matching: snapshot.controls.applying(to: configuration.query),
@@ -492,7 +493,7 @@
                 guard !tracks.isEmpty else { return }
                 controller.play(
                     tracks: tracks,
-                    queueMode: shuffled ? .shuffled : .ordered
+                    queueMode: queueMode
                 )
             } catch is CancellationError {
                 return
