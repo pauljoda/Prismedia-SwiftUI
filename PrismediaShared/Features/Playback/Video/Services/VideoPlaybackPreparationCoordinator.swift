@@ -17,6 +17,7 @@ final class VideoPlaybackPreparationCoordinator {
     private(set) var controller: VideoPlaybackController?
     private(set) var requestedResumeSeconds: Double?
     private(set) var playRequested = false
+    private(set) var playbackStartOverrideSeconds: Double?
 
     @ObservationIgnored
     private let controllerFactory: VideoPlaybackControllerFactory
@@ -48,10 +49,13 @@ final class VideoPlaybackPreparationCoordinator {
         }
     }
 
-    func requestPlayback() {
+    func requestPlayback(from startSeconds: Double? = nil) {
         playRequested = true
+        playbackStartOverrideSeconds = startSeconds
         guard phase == .ready else { return }
-        controller?.play()
+        if let controller {
+            beginRequestedPlayback(with: controller)
+        }
     }
 
     func restoreActivePlaybackIfNeeded(
@@ -98,6 +102,7 @@ final class VideoPlaybackPreparationCoordinator {
         controller = nil
         requestedResumeSeconds = nil
         playRequested = false
+        playbackStartOverrideSeconds = nil
     }
 
     private func beginLoading() -> Int {
@@ -107,6 +112,7 @@ final class VideoPlaybackPreparationCoordinator {
         videoDetail = nil
         controller = nil
         requestedResumeSeconds = nil
+        playbackStartOverrideSeconds = nil
         return preparationGeneration
     }
 
@@ -193,7 +199,7 @@ final class VideoPlaybackPreparationCoordinator {
             videoDetail = detail
             self.controller = controller
             phase = .ready
-            if playRequested { controller.play() }
+            if playRequested { beginRequestedPlayback(with: controller) }
         } catch is CancellationError {
             guard generation == preparationGeneration else { return }
             phase = .idle
@@ -211,6 +217,16 @@ final class VideoPlaybackPreparationCoordinator {
             detailResumeSeconds: resumeSeconds(in: detail),
             thumbnailResumeSeconds: ownerLink.thumbnailPreview?.resumeSeconds
         )
+    }
+
+    private func beginRequestedPlayback(with controller: VideoPlaybackController) {
+        guard let playbackStartOverrideSeconds else {
+            controller.play()
+            return
+        }
+        controller.seek(to: playbackStartOverrideSeconds) { _ in
+            controller.play()
+        }
     }
 
     private static func resumeSeconds(in detail: EntityDetail) -> Double? {

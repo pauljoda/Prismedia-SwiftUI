@@ -133,6 +133,37 @@ final class VideoPlaybackPreparationTests: XCTestCase {
         XCTAssertNotEqual(preparation.controller?.player.timeControlStatus, .paused)
     }
 
+    func testStartOverOverridesPreparedResumePositionBeforePlaybackBegins() async throws {
+        let videoID = UUID(uuidString: "13131313-1313-1313-1313-131313131313")!
+        let detail = try videoDetail(id: videoID, resumeSeconds: 84)
+        let service = DeferredPlaybackService(videoID: videoID)
+        let factory = DeferredPlaybackControllerFactorySpy()
+        let readiness = DeferredPlaybackReadinessGate()
+        let preparation = VideoPlaybackPreparationCoordinator(
+            controllerFactory: factory.factory,
+            readinessWaiter: .init { _ in await readiness.wait() }
+        )
+        let request = VideoPlaybackPreparationRequest(
+            detail: detail,
+            ownerLink: EntityLink(entityID: videoID, kind: .video),
+            detailLoader: DeferredPlaybackDetailLoader(result: detail),
+            playbackService: service,
+            session: nil,
+            onPlaybackCompleted: { _ in }
+        )
+
+        preparation.start(request)
+        await waitUntil { await service.directNegotiationCount == 1 }
+        preparation.requestPlayback(from: 0)
+        await readiness.open()
+        await preparation.waitUntilSettled()
+
+        XCTAssertEqual(preparation.requestedResumeSeconds, 84)
+        XCTAssertEqual(preparation.playbackStartOverrideSeconds, 0)
+        XCTAssertEqual(preparation.controller?.currentTime, 0)
+        XCTAssertTrue(preparation.playRequested)
+    }
+
     func testPreparationFailureIsObservableAndRetryStartsOneNewNegotiation() async throws {
         let videoID = UUID(uuidString: "20202020-2020-2020-2020-202020202020")!
         let detail = try videoDetail(id: videoID)

@@ -47,14 +47,10 @@ struct EntityDetailIdentityView: View {
             }
 
             if let description = presentation.description {
-                Text(description)
-                    .font(PrismediaTypography.body)
-                    .foregroundStyle(artworkSecondaryText)
-                    .lineSpacing(4)
-                    .lineLimit(EntityDetailHeroArtworkPolicy.summaryLineLimit)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .prismediaTextSelection()
-                    .accessibilityIdentifier("entity-detail.summary")
+                EntityDetailExpandableDescriptionView(
+                    description: description,
+                    lineLimit: EntityDetailHeroArtworkPolicy.summaryLineLimit
+                )
             }
         }
         .padding(.horizontal, horizontalPadding)

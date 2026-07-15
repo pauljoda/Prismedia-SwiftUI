@@ -5,6 +5,8 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     let controller: VideoPlaybackController?
     let title: String
     let isInteractive: Bool
+    var requiresExplicitPlay = false
+    var preparationPhase: VideoPlaybackPreparationPhase = .idle
     var playRequested = false
     var onPlay: () -> Void = {}
     var onDismiss: () -> Void = {}
@@ -71,7 +73,16 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
 
     private var expandedPlayerContent: some View {
         Group {
-            if let controller {
+            if requiresExplicitPlay && !playRequested {
+                VideoFullscreenPreparationView(
+                    title: title,
+                    phase: preparationPhase,
+                    isReadyToPlay: controller != nil && isInteractive,
+                    playRequested: false,
+                    onPlay: onPlay,
+                    onDismiss: requestDismissal
+                )
+            } else if let controller {
                 PrismediaVideoPlayerView(
                     controller: controller,
                     title: title,
@@ -84,6 +95,8 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
             } else {
                 VideoFullscreenPreparationView(
                     title: title,
+                    phase: preparationPhase,
+                    isReadyToPlay: false,
                     playRequested: playRequested,
                     onPlay: onPlay,
                     onDismiss: requestDismissal
@@ -119,6 +132,8 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                     controller: controller,
                     title: "Signal in the Static",
                     isInteractive: true,
+                    requiresExplicitPlay: true,
+                    preparationPhase: .ready,
                     playRequested: false,
                     onPlay: {}
                 )

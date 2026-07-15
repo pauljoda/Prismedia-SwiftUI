@@ -6,7 +6,7 @@ import SwiftUI
         let detail: EntityDetail
         let ownerLink: EntityLink
         let phase: VideoPlaybackPreparationPhase
-        let onPlay: () -> Void
+        let onPlay: (Double?) -> Void
 
         var body: some View {
             ZStack {
@@ -64,8 +64,7 @@ import SwiftUI
         private var phaseContent: some View {
             switch phase {
             case .idle:
-                playButton(title: "Play", systemImage: "play.fill")
-                    .accessibilityIdentifier("video-detail.play")
+                playbackActions
             case .loading:
                 ProgressView("Preparing video…")
                     .font(.headline)
@@ -83,8 +82,10 @@ import SwiftUI
                         .font(.callout)
                         .multilineTextAlignment(.center)
                         .lineLimit(3)
-                    playButton(title: "Try Again", systemImage: "arrow.clockwise")
-                        .accessibilityIdentifier("video-detail.retry")
+                    playButton(title: "Try Again", systemImage: "arrow.clockwise") {
+                        onPlay(nil)
+                    }
+                    .accessibilityIdentifier("video-detail.retry")
                 }
                 .foregroundStyle(PrismediaColor.onMedia)
                 .padding(PrismediaSpacing.extraLarge)
@@ -96,16 +97,70 @@ import SwiftUI
             }
         }
 
-        private func playButton(title: String, systemImage: String) -> some View {
+        @ViewBuilder
+        private var playbackActions: some View {
+            GlassEffectContainer(spacing: PrismediaSpacing.medium) {
+                if resumeSeconds > 1 {
+                    HStack(spacing: PrismediaSpacing.medium) {
+                        playButton(
+                            title: "Resume \(playbackTimestamp(resumeSeconds))",
+                            systemImage: "play.fill"
+                        ) {
+                            onPlay(nil)
+                        }
+                        .accessibilityIdentifier("video-detail.resume")
+
+                        playButton(title: "Start Over", systemImage: "arrow.counterclockwise") {
+                            onPlay(0)
+                        }
+                        .accessibilityIdentifier("video-detail.play-from-beginning")
+                    }
+                } else {
+                    playButton(title: "Play", systemImage: "play.fill") {
+                        onPlay(nil)
+                    }
+                    .accessibilityIdentifier("video-detail.play")
+                }
+            }
+            .padding(.horizontal, PrismediaSpacing.extraLarge)
+        }
+
+        private func playButton(
+            title: String,
+            systemImage: String,
+            action: @escaping () -> Void
+        ) -> some View {
             PrismediaButton(
                 title,
                 systemImage: systemImage,
                 variant: .prominent,
-                form: .fill,
-                action: onPlay
+                action: action
             )
             .accessibilityLabel("\(title) \(detail.title)")
             .accessibilityHint("Prepares the video and begins playback")
+        }
+
+        private var resumeSeconds: Double {
+            let detailResumeSeconds = detail.capabilities.compactMap { capability -> Double? in
+                guard case .playback(let playback) = capability else { return nil }
+                return playback.resumeSeconds
+            }.first
+            return VideoInitialResumePosition.resolve(
+                detailResumeSeconds: detailResumeSeconds,
+                thumbnailResumeSeconds: ownerLink.thumbnailPreview?.resumeSeconds
+            )
+        }
+
+        private func playbackTimestamp(_ seconds: Double) -> String {
+            let total = max(0, Int(seconds.rounded(.down)))
+            let hours = total / 3_600
+            let minutes = (total % 3_600) / 60
+            let remainingSeconds = total % 60
+
+            if hours > 0 {
+                return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
+            }
+            return String(format: "%d:%02d", minutes, remainingSeconds)
         }
     }
 
@@ -120,7 +175,7 @@ import SwiftUI
                 detail: detail,
                 ownerLink: EntityLink(entityID: detail.id, kind: detail.kind),
                 phase: .idle,
-                onPlay: {}
+                onPlay: { _ in }
             )
         }
     #endif

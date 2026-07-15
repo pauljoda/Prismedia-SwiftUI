@@ -62,8 +62,10 @@ struct VideoEntityPlaybackView: View {
                                 controller: presentedPlaybackController,
                                 title: presentedVideoDetail?.title ?? playbackTitle,
                                 isInteractive: fullscreenPlayerIsInteractive,
+                                requiresExplicitPlay: true,
+                                preparationPhase: preparation.phase,
                                 playRequested: preparation.playRequested,
-                                onPlay: startPlayback,
+                                onPlay: { startPlayback() },
                                 onDismiss: { fullscreenPresentationDidChange(false) }
                             )
                         )
@@ -91,6 +93,7 @@ struct VideoEntityPlaybackView: View {
                     )
                 }
             }
+            .frame(maxWidth: .infinity)
             .task(id: detail.id) {
                 preparation.restoreActivePlaybackIfNeeded(
                     session: playbackSession,
@@ -283,9 +286,9 @@ struct VideoEntityPlaybackView: View {
     #endif
 
     #if !os(tvOS)
-        private func startPlayback() {
+        private func startPlayback(at startSeconds: Double? = nil) {
             warmPlayback()
-            preparation.requestPlayback()
+            preparation.requestPlayback(from: startSeconds)
         }
 
         private func warmPlayback() {
@@ -519,19 +522,19 @@ struct VideoEntityPlaybackView: View {
                                 detail: detail,
                                 ownerLink: owner,
                                 phase: .idle,
-                                onPlay: {}
+                                onPlay: { _ in }
                             )
                             VideoPlaybackPosterView(
                                 detail: detail,
                                 ownerLink: owner,
                                 phase: .loading,
-                                onPlay: {}
+                                onPlay: { _ in }
                             )
                             VideoPlaybackPosterView(
                                 detail: detail,
                                 ownerLink: owner,
                                 phase: .failure("The server could not prepare this video."),
-                                onPlay: {}
+                                onPlay: { _ in }
                             )
                         }
                         .padding()

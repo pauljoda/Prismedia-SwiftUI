@@ -2,6 +2,8 @@ import SwiftUI
 
 struct VideoFullscreenPreparationView: View {
     let title: String
+    let phase: VideoPlaybackPreparationPhase
+    let isReadyToPlay: Bool
     let playRequested: Bool
     let onPlay: () -> Void
     let onDismiss: () -> Void
@@ -16,28 +18,36 @@ struct VideoFullscreenPreparationView: View {
                 VStack(spacing: PrismediaSpacing.medium) {
                     ProgressView()
                         .tint(artworkPrimaryAccent)
-                    Text("Preparing video…")
+                    Text("Starting playback…")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PrismediaColor.onMedia.opacity(0.82))
                 }
             } else {
-                Button(action: onPlay) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(PrismediaColor.onMedia)
-                        .frame(width: 62, height: 62)
-                        .contentShape(Circle())
+                VStack(spacing: PrismediaSpacing.medium) {
+                    Button(action: onPlay) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(PrismediaColor.onMedia)
+                            .frame(width: 62, height: 62)
+                            .contentShape(Circle())
+                    }
+                    .buttonBorderShape(.circle)
+                    .buttonStyle(.glass(.clear))
+                    .disabled(!isReadyToPlay)
+                    .accessibilityLabel("Play")
+                    .accessibilityHint(statusText)
+                    .accessibilityIdentifier("video-detail.play")
+
+                    Text(statusText)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PrismediaColor.onMedia.opacity(0.82))
                 }
-                .buttonBorderShape(.circle)
-                .buttonStyle(.glass(.clear))
-                .accessibilityLabel("Play")
-                .accessibilityIdentifier("video-detail.play")
             }
 
             VStack(spacing: 0) {
                 HStack(spacing: PrismediaSpacing.medium) {
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-                        Text(playRequested ? "PREPARING" : "PRESS PLAY")
+                        Text(statusEyebrow)
                             .font(.caption2.weight(.bold))
                             .tracking(1.2)
                             .foregroundStyle(artworkPrimaryAccent)
@@ -62,12 +72,26 @@ struct VideoFullscreenPreparationView: View {
         }
         .accessibilityIdentifier("video-player.surface")
     }
+
+    private var statusText: String {
+        if playRequested { return "Starting playback…" }
+        if case .failure = phase { return "Playback unavailable" }
+        return isReadyToPlay ? "Press play to begin" : "Preparing video…"
+    }
+
+    private var statusEyebrow: String {
+        if playRequested { return "STARTING" }
+        if case .failure = phase { return "UNAVAILABLE" }
+        return isReadyToPlay ? "READY" : "PREPARING"
+    }
 }
 
 #if DEBUG
     #Preview("Fullscreen Video Preparation") {
         VideoFullscreenPreparationView(
             title: "Signal in the Static",
+            phase: .ready,
+            isReadyToPlay: true,
             playRequested: false,
             onPlay: {},
             onDismiss: {}
