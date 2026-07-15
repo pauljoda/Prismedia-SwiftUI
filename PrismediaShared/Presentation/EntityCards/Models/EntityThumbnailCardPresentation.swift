@@ -19,6 +19,10 @@ public struct EntityThumbnailCardPresentation: Hashable, Sendable {
             : artwork.aspectRatio
     }
 
+    public func width(forCardHeight height: Double) -> Double {
+        height * cardAspectRatio
+    }
+
     private static func alwaysIdentifiesWithTitle(_ kind: EntityKind) -> Bool {
         kind == .person
             || kind == .studio

@@ -43,9 +43,7 @@ import SwiftUI
                         EntityThumbnailNavigationSurface(
                             item: item,
                             layout: .rail,
-                            preferredWidth: item.thumbnailPresentationKind.prefersWideThumbnail
-                                ? 360
-                                : 250
+                            preferredWidth: railCardWidth(for: item)
                         )
                     }
                 }
@@ -53,6 +51,17 @@ import SwiftUI
                 .padding(.vertical, PrismediaSpacing.medium)
             }
             .frame(height: 420)
+        }
+
+        private var railCardHeight: Double {
+            360 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
+        }
+
+        private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
+            CGFloat(
+                EntityThumbnailCardPresentation(item: item, layout: .rail)
+                    .width(forCardHeight: railCardHeight)
+            )
         }
     }
 #endif

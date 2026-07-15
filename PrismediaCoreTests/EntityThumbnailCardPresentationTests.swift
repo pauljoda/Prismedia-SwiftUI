@@ -55,6 +55,22 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         XCTAssertTrue(presentation.showsArtworkBadges)
     }
 
+    func testRailWidthsPreserveAConsistentCardHeightAcrossThumbnailShapes() {
+        let cardHeight = 216.0
+        let presentations = [EntityKind.video, .movie, .collection, .person].map { kind in
+            EntityThumbnailCardPresentation(
+                item: EntityThumbnail(id: UUID(), kind: kind, title: kind.displayLabel),
+                layout: .rail
+            )
+        }
+
+        for presentation in presentations {
+            let width = presentation.width(forCardHeight: cardHeight)
+
+            XCTAssertEqual(width / presentation.cardAspectRatio, cardHeight, accuracy: 0.001)
+        }
+    }
+
     private func decodeThumbnail(descriptionMember: String) throws -> EntityThumbnail {
         let data = Data(
             """

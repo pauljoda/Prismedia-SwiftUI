@@ -95,7 +95,7 @@ struct EntityDetailSectionPanel: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: relationshipCardSpacing) {
                         ForEach(group.entities) { item in
-                            let cardWidth = relationshipCardWidth(for: item.thumbnailPresentationKind)
+                            let cardWidth = relationshipCardWidth(for: item)
 
                             VStack(spacing: PrismediaSpacing.small) {
                                 EntityThumbnailNavigationSurface(
@@ -293,12 +293,19 @@ struct EntityDetailSectionPanel: View {
         #endif
     }
 
-    private func relationshipCardWidth(for kind: EntityKind) -> CGFloat {
+    private var relationshipCardHeight: Double {
         #if os(tvOS)
-            kind.prefersWideThumbnail ? 300 : 220
+            300 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
         #else
-            kind.prefersWideThumbnail ? 176 : 132
+            176 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
         #endif
+    }
+
+    private func relationshipCardWidth(for item: EntityThumbnail) -> CGFloat {
+        CGFloat(
+            EntityThumbnailCardPresentation(item: item, layout: .rail)
+                .width(forCardHeight: relationshipCardHeight)
+        )
     }
 }
 

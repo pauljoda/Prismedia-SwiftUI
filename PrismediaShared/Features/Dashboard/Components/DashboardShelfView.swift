@@ -24,9 +24,7 @@ struct DashboardShelfView: View {
                             EntityThumbnailNavigationSurface(
                                 item: item,
                                 layout: .rail,
-                                preferredWidth: item.thumbnailPresentationKind.prefersWideThumbnail
-                                    ? 260
-                                    : 124
+                                preferredWidth: railCardWidth(for: item)
                             )
                         }
                     }
@@ -37,16 +35,32 @@ struct DashboardShelfView: View {
             }
         }
     }
+
+    private var railCardHeight: Double {
+        260 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
+    }
+
+    private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
+        CGFloat(
+            EntityThumbnailCardPresentation(item: item, layout: .rail)
+                .width(forCardHeight: railCardHeight)
+        )
+    }
 }
 
 #if DEBUG
-    #Preview("Dashboard Shelf · Movies") {
+    #Preview("Dashboard Shelf · Consistent Heights") {
         PreviewShell(signedIn: true) {
             DashboardShelfView(
-                title: "Movies",
+                title: "Recently Added",
                 systemImage: "movieclapper",
                 colorRole: .movie,
-                items: PrismediaPreviewData.videos,
+                items: [
+                    PrismediaPreviewData.videos[0],
+                    PrismediaPreviewData.series,
+                    PrismediaPreviewData.book,
+                    PrismediaPreviewData.person,
+                ],
                 onSelect: {}
             )
             .padding(.vertical)
