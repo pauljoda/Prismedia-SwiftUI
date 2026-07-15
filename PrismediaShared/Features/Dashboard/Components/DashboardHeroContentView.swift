@@ -12,6 +12,8 @@ struct DashboardHeroContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+            Spacer()
+                .frame(height: PrismediaSpacing.medium)
             Text(presentation.item.title)
                 .font(PrismediaTypography.screenTitle)
                 .foregroundStyle(accent)
