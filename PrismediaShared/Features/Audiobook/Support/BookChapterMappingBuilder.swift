@@ -56,7 +56,7 @@ struct BookChapterMappingBuilder: Sendable {
                 readTarget: chapter.target,
                 audioTrack: track,
                 isCurrentReading: chapter.id == currentReadableID,
-                isCurrentAudio: track?.id == currentAudioTrackID
+                isCurrentAudio: currentAudioTrackID.map { track?.id == $0 } ?? false
             )
         }
 

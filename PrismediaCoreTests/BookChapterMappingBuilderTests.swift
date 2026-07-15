@@ -19,6 +19,7 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         )
 
         XCTAssertEqual(rows.map(\.audioTrack?.id), [tracks[1].id, tracks[0].id])
+        XCTAssertTrue(rows.allSatisfy { !$0.isCurrentAudio })
     }
 
     func testMatchesRemainingChaptersByExplicitNumber() {
@@ -69,6 +70,21 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         XCTAssertTrue(rows[0].isCurrentReading)
         XCTAssertEqual(rows.dropFirst().compactMap(\.audioTrack?.id), tracks.map(\.id))
         XCTAssertTrue(rows.last?.isCurrentAudio == true)
+    }
+
+    func testDoesNotMarkTextOnlyChaptersAsCurrentListeningWithoutListeningHistory() {
+        let chapters = [
+            chapter(id: "one", title: "Chapter 1", order: 0),
+            chapter(id: "two", title: "Chapter 2", order: 1),
+        ]
+
+        let rows = BookChapterMappingBuilder().build(
+            readableChapters: chapters,
+            audioTracks: [],
+            currentAudioTrackID: nil
+        )
+
+        XCTAssertTrue(rows.allSatisfy { !$0.isCurrentAudio })
     }
 
     private func chapter(id: String, title: String, order: Int) -> ReadableBookChapter {
