@@ -28,6 +28,7 @@
                         MacMusicMiniPlayerView {
                             nowPlayingPresented = true
                         }
+                        .environment(controller)
                     }
                 }
                 .inspector(isPresented: $nowPlayingPresented) {
