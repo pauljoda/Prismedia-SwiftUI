@@ -63,4 +63,33 @@
             }
         }
     }
+
+    #if DEBUG
+        #Preview("Readium EPUB Reader Sheet") {
+            @Previewable @State var searchResults: [EPUBSearchResult] = []
+            @Previewable @State var isSearching = false
+            @Previewable @State var bookmarksState = EPUBBookmarksState()
+            @Previewable @State var preferences = EPUBReaderPreferences()
+
+            ReadiumEPUBReaderSheet(
+                initialRoute: .navigation,
+                tableOfContents: [
+                    EPUBTableOfContentsItem(
+                        title: "Chapter One",
+                        location: "Text/chapter-one.xhtml"
+                    )
+                ],
+                searchResults: $searchResults,
+                isSearching: $isSearching,
+                bookmarksState: $bookmarksState,
+                preferences: $preferences,
+                canAddBookmark: true,
+                onOpenTableOfContentsItem: { _ in },
+                onSearch: { _ in [] },
+                onOpenSearchResult: { _ in },
+                onAddBookmark: { nil },
+                onOpenBookmark: { _ in true }
+            )
+        }
+    #endif
 #endif
