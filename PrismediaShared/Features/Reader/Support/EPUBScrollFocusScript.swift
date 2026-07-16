@@ -10,7 +10,7 @@ enum EPUBScrollFocusScript {
             return;
           }
 
-          const blockSelector = "p, li, blockquote, pre, h1, h2, h3, h4, h5, h6";
+          const blockSelector = "p, li:not(:has(p)), blockquote:not(:has(p)), pre, h1, h2, h3, h4, h5, h6";
           const originalOpacity = new WeakMap();
           let blocks = [];
           let guide = null;
@@ -36,8 +36,41 @@ enum EPUBScrollFocusScript {
           };
 
           const refreshBlocks = () => {
-            blocks = Array.from(document.querySelectorAll(blockSelector)).filter((element) => {
-              return !element.parentElement?.closest(blockSelector);
+            blocks = Array.from(document.querySelectorAll(blockSelector));
+          };
+
+          const measureBlock = (element, viewportCenter) => {
+            const rect = element.getBoundingClientRect();
+            const isVisible = rect.bottom > 0 && rect.top < window.innerHeight;
+            const containsCenter = rect.top <= viewportCenter && rect.bottom >= viewportCenter;
+            let distanceFromCenter = 0;
+            if (rect.bottom < viewportCenter) {
+              distanceFromCenter = viewportCenter - rect.bottom;
+            } else if (rect.top > viewportCenter) {
+              distanceFromCenter = rect.top - viewportCenter;
+            }
+            return { element, rect, isVisible, containsCenter, distanceFromCenter };
+          };
+
+          const activeMeasurement = (visibleMeasurements) => {
+            if (visibleMeasurements.length === 0) return null;
+
+            const scrollElement = document.scrollingElement ?? document.documentElement;
+            const isAtScrollEnd = scrollElement.scrollTop + window.innerHeight
+              >= scrollElement.scrollHeight - 2;
+            if (isAtScrollEnd) {
+              return visibleMeasurements[visibleMeasurements.length - 1];
+            }
+
+            const containingParagraph = visibleMeasurements.find(({ containsCenter }) => {
+              return containsCenter;
+            });
+            if (containingParagraph) return containingParagraph;
+
+            return visibleMeasurements.reduce((closest, measurement) => {
+              return measurement.distanceFromCenter < closest.distanceFromCenter
+                ? measurement
+                : closest;
             });
           };
 
@@ -49,31 +82,24 @@ enum EPUBScrollFocusScript {
             }
 
             const viewportCenter = window.innerHeight / 2;
-            const focusRadius = Math.max(56, window.innerHeight * 0.13);
-            const fadeRadius = Math.max(focusRadius + 1, window.innerHeight * 0.52);
+            const fadeRadius = Math.max(140, window.innerHeight * 0.52);
             const minimumOpacity = Math.max(0.2, 1 - state.strength);
-            let closestElement = null;
-            let closestDistance = Number.POSITIVE_INFINITY;
-            const measurements = [];
+            const inactiveCeiling = 0.9;
+            const measurements = blocks.map((element) => measureBlock(element, viewportCenter));
+            const visibleMeasurements = measurements.filter(({ isVisible }) => isVisible);
+            const active = activeMeasurement(visibleMeasurements);
 
-            blocks.forEach((element) => {
-              const rect = element.getBoundingClientRect();
-              const distance = Math.abs((rect.top + rect.bottom) / 2 - viewportCenter);
-              measurements.push({ element, distance });
-              if (rect.bottom >= 0 && rect.top <= window.innerHeight && distance < closestDistance) {
-                closestElement = element;
-                closestDistance = distance;
-              }
-            });
-
-            measurements.forEach(({ element, distance }) => {
+            measurements.forEach(({ element, distanceFromCenter }) => {
               rememberOpacity(element);
               let opacity = minimumOpacity;
-              if (element === closestElement || distance <= focusRadius) {
+              if (element === active?.element) {
                 opacity = 1;
-              } else if (distance < fadeRadius) {
-                const progress = (distance - focusRadius) / (fadeRadius - focusRadius);
-                opacity = 1 - progress * (1 - minimumOpacity);
+              } else if (distanceFromCenter < fadeRadius) {
+                const progress = distanceFromCenter / fadeRadius;
+                opacity = Math.min(
+                  inactiveCeiling,
+                  1 - progress * (1 - minimumOpacity)
+                );
               }
               element.style.setProperty("opacity", opacity.toFixed(3), "important");
             });
