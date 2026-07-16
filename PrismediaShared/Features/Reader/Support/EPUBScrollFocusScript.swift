@@ -85,6 +85,12 @@ enum EPUBScrollFocusScript {
           const activeMeasurement = (visibleMeasurements) => {
             if (visibleMeasurements.length === 0) return null;
 
+            const scrollElement = document.scrollingElement ?? document.documentElement;
+            const startThreshold = Math.max(2, window.innerHeight * 0.01);
+            if (scrollElement.scrollTop <= startThreshold) {
+              return visibleMeasurements[0];
+            }
+
             const containingParagraph = visibleMeasurements.find(({ containsCenter }) => {
               return containsCenter;
             });
