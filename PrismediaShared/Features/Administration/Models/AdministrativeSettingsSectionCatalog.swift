@@ -80,14 +80,6 @@ public enum AdministrativeSettingsSectionCatalog {
             groupKeys: ["transcodeCache"],
             includesTranscodeCacheActions: true
         ),
-        AdministrativeSettingsSectionDefinition(
-            id: "database-backups",
-            title: "Database Backups",
-            description: "Create a known-good database snapshot for recovery.",
-            systemImageName: "archivebox",
-            groupKeys: [],
-            includesDatabaseBackupActions: true
-        ),
     ]
 
 }

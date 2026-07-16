@@ -28,6 +28,8 @@ public struct PrismediaRootView: View {
             switch presentation {
             case .restoring:
                 restoringView
+            case .restoringDatabase:
+                databaseRestoreView
             case .signedOut:
                 signedOutView
             case .signedIn:
@@ -70,7 +72,21 @@ public struct PrismediaRootView: View {
             return .restoring
         }
 
+        if environment.databaseRestoreServerURL != nil {
+            return .restoringDatabase
+        }
+
         return environment.client == nil ? .signedOut : .signedIn
+    }
+
+    @ViewBuilder
+    private var databaseRestoreView: some View {
+        if let serverURL = environment.databaseRestoreServerURL {
+            AdministrativeDatabaseRestoreView(
+                service: DatabaseBackupService(client: PrismediaAPIClient(serverURL: serverURL)),
+                onFinished: environment.finishDatabaseRestore
+            )
+        }
     }
 
     private var restoringView: some View {

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct UserAccount: Codable, Equatable, Identifiable, Sendable {
+public struct UserAccount: Codable, Hashable, Identifiable, Sendable {
     public let id: UUID
     public let username: String
     public let displayName: String
@@ -12,6 +12,7 @@ public struct UserAccount: Codable, Equatable, Identifiable, Sendable {
     public let lastLoginAt: Date?
     public let createdAt: Date?
     public let updatedAt: Date?
+    public let libraryRootIDs: [UUID]?
 
     public var isAdmin: Bool {
         role == .admin
@@ -28,7 +29,8 @@ public struct UserAccount: Codable, Equatable, Identifiable, Sendable {
         enabled: Bool = true,
         lastLoginAt: Date? = nil,
         createdAt: Date? = nil,
-        updatedAt: Date? = nil
+        updatedAt: Date? = nil,
+        libraryRootIDs: [UUID]? = nil
     ) {
         self.id = id
         self.username = username
@@ -41,5 +43,6 @@ public struct UserAccount: Codable, Equatable, Identifiable, Sendable {
         self.lastLoginAt = lastLoginAt
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.libraryRootIDs = libraryRootIDs
     }
 }

@@ -4,6 +4,8 @@ public enum AppSidebarCatalog {
         #if os(iOS) || os(macOS)
             if user?.isAdmin == true {
                 sections.append(operateSection)
+            } else if user?.canCreateLibraries == true {
+                sections.append(libraryManagementSection)
             }
         #endif
         return sections
@@ -22,6 +24,7 @@ public enum AppSidebarCatalog {
                     selection: .search
                 ),
                 item(in: ModeCatalog.overview, destinationID: "stats"),
+                item(in: ModeCatalog.overview, destinationID: "account"),
             ]
         ),
         AppSidebarSection(
@@ -82,6 +85,14 @@ public enum AppSidebarCatalog {
                 item(in: ModeCatalog.operate, destinationID: "plugins"),
                 item(in: ModeCatalog.operate, destinationID: "jobs"),
                 item(in: ModeCatalog.operate, destinationID: "settings"),
+            ]
+        )
+
+        private static let libraryManagementSection = AppSidebarSection(
+            id: "library-management",
+            title: "Manage",
+            items: [
+                item(in: ModeCatalog.libraryManagement, destinationID: "settings")
             ]
         )
     #endif

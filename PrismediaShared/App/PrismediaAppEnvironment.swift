@@ -16,6 +16,7 @@ public final class PrismediaAppEnvironment {
     public private(set) var entityListRevision = 0
     public private(set) var contentRevision = 0
     public private(set) var allowsNsfwContent: Bool
+    public private(set) var databaseRestoreServerURL: URL?
     public let artworkLoader: any RemoteArtworkLoading
     public let artworkPaletteLoader: any ArtworkPaletteLoading
     public let imagePlaybackSession = EntityImagePlaybackSession()
@@ -87,6 +88,7 @@ public final class PrismediaAppEnvironment {
         }
         isRestoringSession = restoreOnInit
         lastServerURL = initialSession?.serverURL ?? serverPreferenceStore.load()
+        databaseRestoreServerURL = nil
 
         if restoreOnInit {
             Task { [weak self] in
@@ -153,6 +155,21 @@ public final class PrismediaAppEnvironment {
         session = nil
         client = nil
         allowsNsfwContent = false
+    }
+
+    /// Leaves the authenticated shell before a destructive restore begins. The
+    /// bearer token is discarded immediately; only the server address remains so
+    /// the public restore-health endpoint can be monitored while the API restarts.
+    public func beginDatabaseRestore() async {
+        databaseRestoreServerURL = session?.serverURL ?? lastServerURL
+        try? await sessionStore.clear()
+        session = nil
+        client = nil
+        allowsNsfwContent = false
+    }
+
+    public func finishDatabaseRestore() {
+        databaseRestoreServerURL = nil
     }
 
     public func entityDidMutate() {

@@ -12,6 +12,7 @@ struct DashboardView: View {
     private let allowsHeroAutomaticAdvance: Bool
     private let reloadRevision: Int
     private let onSelectSection: (DashboardSectionDefinition) -> Void
+    private let onOpenAccount: () -> Void
     private let onOpenSettings: (() -> Void)?
     private let onSetAllowsNsfwContent: @MainActor @Sendable (Bool) -> Void
     private let onSignOut: () -> Void
@@ -27,6 +28,7 @@ struct DashboardView: View {
         allowsHeroAutomaticAdvance: Bool = true,
         reloadRevision: Int = 0,
         onSelectSection: @escaping (DashboardSectionDefinition) -> Void,
+        onOpenAccount: @escaping () -> Void = {},
         onOpenSettings: (() -> Void)?,
         onSetAllowsNsfwContent: @escaping @MainActor @Sendable (Bool) -> Void,
         onSignOut: @escaping () -> Void
@@ -41,6 +43,7 @@ struct DashboardView: View {
         self.allowsHeroAutomaticAdvance = allowsHeroAutomaticAdvance
         self.reloadRevision = reloadRevision
         self.onSelectSection = onSelectSection
+        self.onOpenAccount = onOpenAccount
         self.onOpenSettings = onOpenSettings
         self.onSetAllowsNsfwContent = onSetAllowsNsfwContent
         self.onSignOut = onSignOut
@@ -124,6 +127,7 @@ struct DashboardView: View {
                     PrismediaAccountMenu(
                         user: user,
                         allowsNsfwContent: allowsNsfwContent,
+                        onOpenAccount: onOpenAccount,
                         onOpenSettings: onOpenSettings,
                         onSetAllowsNsfwContent: onSetAllowsNsfwContent,
                         onSignOut: onSignOut

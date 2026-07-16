@@ -3,6 +3,60 @@ import XCTest
 /// Broad cross-boundary smoke tests backed by Scripts/mock-server.py on localhost:8899.
 final class PrismediaShellUITests: XCTestCase {
     @MainActor
+    func testAccountProfileAndSessionFixtureFlow() throws {
+        let app = signedInApplication(initialModeID: "overview", destinationID: "account")
+
+        XCTAssertTrue(element("account", in: app).waitForExistence(timeout: 10))
+        let displayName = app.textFields["Display name"]
+        XCTAssertTrue(displayName.waitForExistence(timeout: 5))
+        XCTAssertFalse((displayName.value as? String ?? "").isEmpty)
+        for _ in 0..<3 where !app.buttons["Refresh Devices"].exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(app.buttons["Refresh Devices"].waitForExistence(timeout: 5))
+        app.buttons["Refresh Devices"].tap()
+
+        for _ in 0..<3 where !displayName.isHittable { app.swipeDown() }
+        let updatedName = "Smoke \(UUID().uuidString.prefix(8))"
+        replaceText(in: displayName, with: updatedName, placeholder: "")
+        XCTAssertTrue(app.buttons["Save Profile"].isEnabled)
+        app.buttons["Save Profile"].tap()
+        XCTAssertTrue(app.staticTexts["Profile saved."].waitForExistence(timeout: 5))
+        attachScreenshot(named: "Step 3 Account profile and sessions", app: app)
+    }
+
+    @MainActor
+    func testSettingsDirectoryAndSafeAdministrationFixtures() throws {
+        let app = signedInApplication(initialModeID: "operate", destinationID: "settings")
+
+        XCTAssertTrue(element("administration.settings", in: app).waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Watched Libraries"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Users"].exists)
+        XCTAssertTrue(app.buttons["Database Backups"].exists)
+        XCTAssertTrue(app.buttons["Diagnostics"].exists)
+
+        app.buttons["Watched Libraries"].tap()
+        XCTAssertTrue(element("administration.settings.libraries", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Fixture Movies"].exists)
+        app.navigationBars["Watched Libraries"].buttons.firstMatch.tap()
+
+        app.buttons["Users"].tap()
+        XCTAssertTrue(element("administration.settings.users", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Fixture Reader"].exists)
+        app.navigationBars["Users"].buttons.firstMatch.tap()
+
+        app.buttons["Database Backups"].tap()
+        XCTAssertTrue(element("administration.settings.database-backups", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["manual-ui-fixture.sqlite"].exists)
+        app.navigationBars["Database Backups"].buttons.firstMatch.tap()
+
+        app.buttons["Diagnostics"].tap()
+        XCTAssertTrue(element("administration.settings.diagnostics", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element(containingLabel: "ui-fixture-worker", in: app).exists)
+        attachScreenshot(named: "Step 3 Settings diagnostics", app: app)
+    }
+
+    @MainActor
     func testAudiobookResumesTheCorrectPartInTheNativePlayer() throws {
         let app = signedInApplication(
             initialEntityID: "abababab-abab-abab-abab-abababababab",
@@ -185,6 +239,16 @@ final class PrismediaShellUITests: XCTestCase {
     }
 
     @MainActor
+    private func signedInApplication(initialModeID: String, destinationID: String) -> XCUIApplication {
+        let app = launchedApplication(preauthenticated: true, launch: false)
+        app.launchEnvironment["PRISMEDIA_UI_TEST_DISABLE_HERO_AUTO_ADVANCE"] = "1"
+        app.launchEnvironment["PRISMEDIA_UI_TEST_MODE_ID"] = initialModeID
+        app.launchEnvironment["PRISMEDIA_UI_TEST_DESTINATION_ID"] = destinationID
+        app.launch()
+        return app
+    }
+
+    @MainActor
     private func launchedApplication(
         preauthenticated: Bool = false,
         launch: Bool = true
@@ -292,6 +356,21 @@ final class PrismediaShellUITests: XCTestCase {
     @MainActor
     private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
+    }
+
+    @MainActor
+    private func element(containingLabel label: String, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", label))
+            .firstMatch
+    }
+
+    @MainActor
+    private func attachScreenshot(named name: String, app: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     @MainActor

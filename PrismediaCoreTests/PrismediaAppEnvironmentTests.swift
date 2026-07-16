@@ -347,6 +347,24 @@ final class PrismediaAppEnvironmentTests: XCTestCase {
         XCTAssertEqual(store.clearCount, 1)
         XCTAssertEqual(loader.requests.first?.url?.path, "/api/auth/logout")
     }
+
+    func testDatabaseRestoreTransitionClearsSecretsWithoutCallingLogoutAndRetainsOnlyServerAddress() async {
+        let store = RecordingSessionStore(savedSession: storedSession)
+        let loader = MockHTTPDataLoader(responses: [])
+        let model = makeModel(store: store, loader: loader, initialSession: storedSession)
+
+        await model.beginDatabaseRestore()
+
+        XCTAssertEqual(model.databaseRestoreServerURL, serverURL)
+        XCTAssertNil(model.session)
+        XCTAssertNil(model.client)
+        XCTAssertNil(store.savedSession)
+        XCTAssertEqual(store.clearCount, 1)
+        XCTAssertTrue(loader.requests.isEmpty)
+
+        model.finishDatabaseRestore()
+        XCTAssertNil(model.databaseRestoreServerURL)
+    }
 }
 
 private final class RecordingSessionStore: SessionStoring {

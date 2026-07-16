@@ -49,6 +49,76 @@ USER = {
     "updatedAt": "2026-07-07T18:30:00.1234567Z",
 }
 
+ACCOUNT_SESSIONS = {
+    "items": [
+        {
+            "id": "11111111-aaaa-bbbb-cccc-111111111111",
+            "client": "Prismedia for iOS",
+            "deviceName": "UI Test iPhone",
+            "deviceId": "ui-test-device",
+            "applicationVersion": "1.0",
+            "createdAt": "2026-07-15T18:30:00Z",
+            "lastSeenAt": "2026-07-16T18:30:00Z",
+            "isCurrent": True,
+        }
+    ]
+}
+
+LIBRARY_ROOT = {
+    "id": "22222222-aaaa-bbbb-cccc-222222222222",
+    "path": "/media/movies",
+    "label": "Fixture Movies",
+    "enabled": True,
+    "recursive": True,
+    "scanVideos": True,
+    "scanImages": False,
+    "scanAudio": False,
+    "scanBooks": False,
+    "isNsfw": False,
+    "lastScannedAt": "2026-07-16T18:00:00Z",
+    "createdAt": "2026-07-01T12:00:00Z",
+    "updatedAt": "2026-07-16T18:00:00Z",
+    "autoIdentify": True,
+    "createdByUserId": USER["id"],
+    "accessUserIds": [],
+}
+
+MEMBER_USER = {
+    "id": "33333333-aaaa-bbbb-cccc-333333333333",
+    "username": "reader",
+    "displayName": "Fixture Reader",
+    "role": "member",
+    "allowSfw": True,
+    "allowNsfw": False,
+    "canCreateLibraries": False,
+    "enabled": True,
+    "libraryRootIds": [LIBRARY_ROOT["id"]],
+    "lastLoginAt": "2026-07-15T12:00:00Z",
+    "createdAt": "2026-07-01T12:00:00Z",
+    "updatedAt": "2026-07-15T12:00:00Z",
+}
+
+DATABASE_BACKUPS = {
+    "backups": [
+        {
+            "id": "44444444-aaaa-bbbb-cccc-444444444444",
+            "fileName": "manual-ui-fixture.sqlite",
+            "backupPath": "/data/backups/manual-ui-fixture.sqlite",
+            "status": "completed",
+            "isManual": True,
+            "sizeBytes": 10485760,
+            "createdAt": "2026-07-16T17:00:00Z",
+            "completedAt": "2026-07-16T17:00:02Z",
+            "expiresAt": None,
+            "error": None,
+        }
+    ],
+    "nextAutomaticBackupAt": "2026-07-17T17:00:00Z",
+    "backupDirectory": "/data/backups",
+    "automaticRetentionDays": 7,
+    "restoreConfirmationText": "DESTROY AND RESTORE",
+}
+
 METADATA_PROVIDER = {
     "id": "tmdb",
     "name": "The Movie Database",
@@ -1102,6 +1172,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/health":
             return self._send(200, {"status": "ok", "runtime": "mock"})
 
+        if path == "/api/health/database-restore":
+            return self._send(200, {"restorePending": False, "restoreFailed": False, "error": None})
+
         if path == "/api/auth/setup-status":
             return self._send(200, {"needsSetup": False, "hasUsers": True})
 
@@ -1126,6 +1199,37 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/auth/me":
             return self._send(200, USER)
+
+        if path == "/api/auth/sessions":
+            return self._send(200, ACCOUNT_SESSIONS)
+
+        if path == "/api/libraries":
+            return self._send(200, [LIBRARY_ROOT])
+
+        if path == "/api/users":
+            current = dict(USER)
+            current["libraryRootIds"] = [LIBRARY_ROOT["id"]]
+            return self._send(200, {"items": [current, MEMBER_USER]})
+
+        if path == "/api/health/worker":
+            return self._send(
+                200,
+                {
+                    "status": "online",
+                    "workerId": "ui-fixture-worker",
+                    "lastSeenAt": "2026-07-16T18:30:00Z",
+                    "staleAfterSeconds": 45,
+                },
+            )
+
+        if path == "/api/settings/database-backups":
+            return self._send(200, DATABASE_BACKUPS)
+
+        if path in ("/api/settings", "/api/settings/"):
+            return self._send(200, {"groups": []})
+
+        if path == "/api/settings/transcode-cache":
+            return self._send(200, {"usedBytes": 1048576, "maxBytes": 1073741824})
 
         if path == PUBLIC_TRICKPLAY_PATH:
             return self._send_text(200, MOCK_TRICKPLAY_PLAYLIST, "text/vtt; charset=utf-8")
@@ -1253,6 +1357,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PATCH(self):
         request_url = urlsplit(self.path)
+        if request_url.path == "/api/auth/me":
+            if not self._authed():
+                return self._send(401, {"code": "authentication_required", "message": "Authentication is required."})
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length) or b"{}")
+            USER["displayName"] = body.get("displayName", USER["displayName"])
+            USER["updatedAt"] = "2026-07-16T18:31:00Z"
+            return self._send(200, USER)
         parts = request_url.path.strip("/").split("/")
         if len(parts) != 4 or parts[:2] != ["api", "entities"]:
             return self._send(404, {"code": "not_found", "message": f"No mock for {self.path}"})

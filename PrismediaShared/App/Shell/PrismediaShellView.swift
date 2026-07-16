@@ -212,6 +212,7 @@ public struct PrismediaShellView: View {
                     videoPlaybackSession.inlinePlaybackWillNavigate()
                     router.selectDashboardSection(section)
                 },
+                onOpenAccount: accountAction(videoPlaybackSession: videoPlaybackSession),
                 onOpenSettings: settingsAction(
                     for: user,
                     videoPlaybackSession: videoPlaybackSession
@@ -232,11 +233,17 @@ public struct PrismediaShellView: View {
                 )
             )
 
+        case .account:
+            AccountView(user: user, service: AccountService(client: client))
+
         case .administration(let administration):
             AdministrativeDestinationView(
                 destination: administration,
                 service: AdministrationService(client: client),
-                hidesNsfw: !environment.allowsNsfwContent
+                client: client,
+                user: user,
+                hidesNsfw: !environment.allowsNsfwContent,
+                onRestoreScheduled: { await environment.beginDatabaseRestore() }
             )
 
         case .entityList(let entityList):
@@ -506,6 +513,14 @@ public struct PrismediaShellView: View {
         return {
             videoPlaybackSession.inlinePlaybackWillNavigate()
             router.select(mode: ModeCatalog.operate, destination: settings)
+        }
+    }
+
+    private func accountAction(videoPlaybackSession: VideoPlaybackSession) -> () -> Void {
+        {
+            guard let account = ModeCatalog.overview.destination(id: "account") else { return }
+            videoPlaybackSession.inlinePlaybackWillNavigate()
+            router.select(mode: ModeCatalog.overview, destination: account)
         }
     }
 

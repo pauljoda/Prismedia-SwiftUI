@@ -3,6 +3,7 @@ import SwiftUI
 struct PrismediaAccountMenu: View {
     let user: UserAccount
     let allowsNsfwContent: Bool
+    let onOpenAccount: () -> Void
     let onOpenSettings: (() -> Void)?
     let onSetAllowsNsfwContent: @MainActor @Sendable (Bool) -> Void
     let onSignOut: () -> Void
@@ -13,6 +14,8 @@ struct PrismediaAccountMenu: View {
                 Label(user.displayName, systemImage: "person.crop.circle")
                 Text("@\(user.username)")
             }
+
+            Button("Account", systemImage: "person.crop.circle", action: onOpenAccount)
 
             if let onOpenSettings {
                 Button("Settings", systemImage: "gearshape", action: onOpenSettings)
@@ -62,6 +65,7 @@ struct PrismediaAccountMenu: View {
         PrismediaAccountMenu(
             user: PrismediaPreviewData.user,
             allowsNsfwContent: false,
+            onOpenAccount: {},
             onOpenSettings: {},
             onSetAllowsNsfwContent: { _ in },
             onSignOut: {}

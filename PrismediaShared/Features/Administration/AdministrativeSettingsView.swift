@@ -6,26 +6,65 @@ struct AdministrativeSettingsView: View {
     @State private var isWorking = true
     @State private var message: String?
     private let service: any AdministrationServicing
+    private let user: UserAccount
+    private let libraryService: any LibraryAdministrationServicing
+    private let userService: any UserAdministrationServicing
+    private let diagnosticsService: any DiagnosticsServicing
+    private let backupService: any DatabaseBackupServicing
+    private let onRestoreScheduled: () async -> Void
 
-    init(service: any AdministrationServicing) { self.service = service }
+    init(
+        service: any AdministrationServicing,
+        user: UserAccount,
+        libraryService: any LibraryAdministrationServicing,
+        userService: any UserAdministrationServicing,
+        diagnosticsService: any DiagnosticsServicing,
+        backupService: any DatabaseBackupServicing,
+        onRestoreScheduled: @escaping () async -> Void
+    ) {
+        self.service = service
+        self.user = user
+        self.libraryService = libraryService
+        self.userService = userService
+        self.diagnosticsService = diagnosticsService
+        self.backupService = backupService
+        self.onRestoreScheduled = onRestoreScheduled
+    }
 
     var body: some View {
         NavigationStack {
-            List(sections) { section in
-                NavigationLink(value: section) {
-                    Label {
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                            Text(section.title)
-                            Text(section.description)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            List {
+                #if os(iOS) || os(macOS)
+                    Section {
+                        directoryLink("Watched Libraries", "folder", "libraries")
+                        if user.isAdmin { directoryLink("Users", "person.2", "users") }
+                    }
+                #endif
+
+                Section {
+                    ForEach(sections) { section in
+                        NavigationLink(value: section) {
+                            Label {
+                                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                                    Text(section.title)
+                                    Text(section.description).font(.caption).foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: section.systemImageName).foregroundStyle(.tint)
+                            }
                         }
-                    } icon: {
-                        Image(systemName: section.systemImageName)
-                            .foregroundStyle(.tint)
+                        .accessibilityIdentifier("administration.settings.section.\(section.id)")
                     }
                 }
-                .accessibilityIdentifier("administration.settings.section.\(section.id)")
+
+                #if os(iOS) || os(macOS)
+                    if user.isAdmin {
+                        Section {
+                            directoryLink("Database Backups", "archivebox", "database-backups")
+                            directoryLink("Diagnostics", "wrench.and.screwdriver", "diagnostics")
+                        }
+                    }
+                #endif
             }
             .prismediaScreenBackground()
             .overlay {
@@ -33,12 +72,6 @@ struct AdministrativeSettingsView: View {
                     PrismediaLoadingView("Loading settings…")
                 } else if isWorking {
                     ProgressView("Loading settings…")
-                } else if sections.isEmpty {
-                    ContentUnavailableView(
-                        "No Settings Available",
-                        systemImage: "gearshape",
-                        description: Text("The server did not return any administrative settings.")
-                    )
                 }
             }
             .navigationTitle("Settings")
@@ -51,6 +84,11 @@ struct AdministrativeSettingsView: View {
                     onCreateBackup: createBackup
                 )
             }
+            #if os(iOS) || os(macOS)
+                .navigationDestination(for: String.self) { destination in
+                    dedicatedDestination(destination)
+                }
+            #endif
             .refreshable { await load() }
             .alert("Settings", isPresented: messageIsPresented) {
                 Button("OK", role: .cancel) {}
@@ -67,27 +105,49 @@ struct AdministrativeSettingsView: View {
     }
 
     private var messageIsPresented: Binding<Bool> {
-        Binding(
-            get: { message != nil },
-            set: { if !$0 { message = nil } }
-        )
+        Binding(get: { message != nil }, set: { if !$0 { message = nil } })
     }
 
-    private func currentSection(id: String) -> AdministrativeSettingsSection? {
-        sections.first { $0.id == id }
+    private func directoryLink(_ title: String, _ image: String, _ value: String) -> some View {
+        NavigationLink(value: value) { Label(title, systemImage: image) }
+            .accessibilityIdentifier("administration.settings.section.\(value)")
     }
+
+    #if os(iOS) || os(macOS)
+        @ViewBuilder
+        private func dedicatedDestination(_ destination: String) -> some View {
+            switch destination {
+            case "libraries":
+                AdministrativeLibrariesView(
+                    user: user, service: libraryService, userService: user.isAdmin ? userService : nil)
+            case "users":
+                AdministrativeUsersView(currentUser: user, service: userService, libraryService: libraryService)
+            case "database-backups":
+                AdministrativeDatabaseBackupsView(service: backupService, onRestoreScheduled: onRestoreScheduled)
+            case "diagnostics":
+                AdministrativeDiagnosticsView(isAdministrator: user.isAdmin, service: diagnosticsService)
+            default:
+                ContentUnavailableView("Page Unavailable", systemImage: "rectangle.slash")
+            }
+        }
+    #endif
+
+    private func currentSection(id: String) -> AdministrativeSettingsSection? { sections.first { $0.id == id } }
 
     private func load() async {
         isWorking = true
         defer { isWorking = false }
+        guard user.isAdmin else {
+            catalog = AdministrativeSettingsCatalog(groups: [])
+            cacheStatus = nil
+            return
+        }
         do {
             async let loadedCatalog = service.settings()
             async let loadedCache = service.transcodeCacheStatus()
             catalog = try await loadedCatalog
             cacheStatus = try await loadedCache
-        } catch {
-            message = error.localizedDescription
-        }
+        } catch { message = error.localizedDescription }
     }
 
     private func save(setting: AdministrativeSetting, value: AdministrativeJSONValue) async
@@ -132,5 +192,15 @@ struct AdministrativeSettingsView: View {
 }
 
 #if DEBUG
-    #Preview { AdministrativeSettingsView(service: AdministrativePreviewService()) }
+    #Preview {
+        AdministrativeSettingsView(
+            service: AdministrativePreviewService(),
+            user: PrismediaPreviewData.user,
+            libraryService: Step3AdministrationPreviewService(),
+            userService: Step3AdministrationPreviewService(),
+            diagnosticsService: Step3AdministrationPreviewService(),
+            backupService: Step3AdministrationPreviewService(),
+            onRestoreScheduled: {}
+        )
+    }
 #endif

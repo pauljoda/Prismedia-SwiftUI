@@ -25,7 +25,7 @@ final class AppShellNavigationTests: XCTestCase {
             sections.map(\.title),
             ["Overview", "Video", "Images", "Audio", "Books", "Browse", "Operate"]
         )
-        XCTAssertEqual(sections[0].items.map(\.title), ["Dashboard", "Search", "Stats"])
+        XCTAssertEqual(sections[0].items.map(\.title), ["Dashboard", "Search", "Stats", "Account"])
         XCTAssertEqual(sections[1].items.map(\.title), ["Movies", "Series", "Videos"])
         XCTAssertEqual(sections[2].items.map(\.title), ["Galleries", "Images"])
         XCTAssertEqual(sections[3].items.map(\.title), ["Artists", "Audio"])
@@ -52,6 +52,21 @@ final class AppShellNavigationTests: XCTestCase {
             AppSidebarCatalog.sections(for: user).map(\.title),
             ["Overview", "Video", "Images", "Audio", "Books", "Browse"]
         )
+    }
+
+    func testLibraryCreatorsReceiveOnlyTheDedicatedManagementEntry() {
+        let user = UserAccount(
+            id: UUID(),
+            username: "curator",
+            displayName: "Curator",
+            role: .member,
+            canCreateLibraries: true
+        )
+
+        XCTAssertEqual(ModeCatalog.modes(for: user).last?.id, "library-management")
+        XCTAssertEqual(AppSidebarCatalog.sections(for: user).last?.title, "Manage")
+        XCTAssertEqual(AppSidebarCatalog.sections(for: user).last?.items.map(\.title), ["Settings"])
+        XCTAssertFalse(ModeCatalog.modes(for: user).contains(where: { $0.id == "operate" }))
     }
 
     func testCanonicalEntityDestinationsDriveSearchAndDashboardPresentation() throws {

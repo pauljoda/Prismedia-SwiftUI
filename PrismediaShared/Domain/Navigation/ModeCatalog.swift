@@ -11,6 +11,7 @@ public enum ModeCatalog {
             destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
             entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
             destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
+            destination("account", "Account", "person.crop.circle", content: .account),
         ]
     )
 
@@ -120,6 +121,17 @@ public enum ModeCatalog {
         preferredTabDestinationIDs: ["plugins", "jobs", "settings"]
     )
 
+    #if os(iOS) || os(macOS)
+        public static let libraryManagement = AppMode(
+            id: "library-management",
+            title: "Settings",
+            systemImage: "folder.badge.gearshape",
+            destinations: [
+                administrativeDestination(.settings, "Settings", "gearshape")
+            ]
+        )
+    #endif
+
     #if os(tvOS)
         public static let all: [AppMode] = [overview, video, images, audio, books, browse, operate]
     #else
@@ -127,7 +139,13 @@ public enum ModeCatalog {
     #endif
 
     public static func modes(for user: UserAccount?) -> [AppMode] {
-        all.filter { !$0.requiresAdmin || user?.isAdmin == true }
+        var modes = all.filter { !$0.requiresAdmin || user?.isAdmin == true }
+        #if os(iOS) || os(macOS)
+            if user?.isAdmin != true, user?.canCreateLibraries == true {
+                modes.append(libraryManagement)
+            }
+        #endif
+        return modes
     }
 
     public static func mode(containing destinationID: String) -> AppMode? {
