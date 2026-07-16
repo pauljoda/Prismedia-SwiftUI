@@ -17,6 +17,9 @@ public struct EPUBReaderPreferences: Codable, Equatable, Sendable {
     public var hyphenationEnabled: Bool
     public var textNormalizationEnabled: Bool
     public var usesPublisherStyles: Bool
+    public var scrollFocusEnabled: Bool
+    public var scrollFocusStrength: Double
+    public var readingGuideEnabled: Bool
 
     public init(
         flow: ReaderMode = .paged,
@@ -34,7 +37,10 @@ public struct EPUBReaderPreferences: Codable, Equatable, Sendable {
         columnCount: EPUBReaderColumnCount = .automatic,
         hyphenationEnabled: Bool = true,
         textNormalizationEnabled: Bool = false,
-        usesPublisherStyles: Bool = false
+        usesPublisherStyles: Bool = false,
+        scrollFocusEnabled: Bool = false,
+        scrollFocusStrength: Double = 0.6,
+        readingGuideEnabled: Bool = false
     ) {
         self.flow = flow == .scrolled ? .scrolled : .paged
         self.theme = theme
@@ -52,6 +58,9 @@ public struct EPUBReaderPreferences: Codable, Equatable, Sendable {
         self.hyphenationEnabled = hyphenationEnabled
         self.textNormalizationEnabled = textNormalizationEnabled
         self.usesPublisherStyles = usesPublisherStyles
+        self.scrollFocusEnabled = scrollFocusEnabled
+        self.scrollFocusStrength = scrollFocusStrength.clamped(to: 0.25...0.8)
+        self.readingGuideEnabled = readingGuideEnabled
     }
 
     public var matchingProfile: EPUBReadingProfile {
@@ -74,7 +83,10 @@ public struct EPUBReaderPreferences: Codable, Equatable, Sendable {
         columnCount: EPUBReaderColumnCount? = nil,
         hyphenationEnabled: Bool? = nil,
         textNormalizationEnabled: Bool? = nil,
-        usesPublisherStyles: Bool? = nil
+        usesPublisherStyles: Bool? = nil,
+        scrollFocusEnabled: Bool? = nil,
+        scrollFocusStrength: Double? = nil,
+        readingGuideEnabled: Bool? = nil
     ) -> Self {
         Self(
             flow: flow ?? self.flow,
@@ -92,7 +104,10 @@ public struct EPUBReaderPreferences: Codable, Equatable, Sendable {
             columnCount: columnCount ?? self.columnCount,
             hyphenationEnabled: hyphenationEnabled ?? self.hyphenationEnabled,
             textNormalizationEnabled: textNormalizationEnabled ?? self.textNormalizationEnabled,
-            usesPublisherStyles: usesPublisherStyles ?? self.usesPublisherStyles
+            usesPublisherStyles: usesPublisherStyles ?? self.usesPublisherStyles,
+            scrollFocusEnabled: scrollFocusEnabled ?? self.scrollFocusEnabled,
+            scrollFocusStrength: scrollFocusStrength ?? self.scrollFocusStrength,
+            readingGuideEnabled: readingGuideEnabled ?? self.readingGuideEnabled
         )
     }
 
@@ -128,7 +143,13 @@ public struct EPUBReaderPreferences: Codable, Equatable, Sendable {
             textNormalizationEnabled: try values.decodeIfPresent(Bool.self, forKey: .textNormalizationEnabled)
                 ?? defaults.textNormalizationEnabled,
             usesPublisherStyles: try values.decodeIfPresent(Bool.self, forKey: .usesPublisherStyles)
-                ?? (fontFamily == .publisher)
+                ?? (fontFamily == .publisher),
+            scrollFocusEnabled: try values.decodeIfPresent(Bool.self, forKey: .scrollFocusEnabled)
+                ?? false,
+            scrollFocusStrength: try values.decodeIfPresent(Double.self, forKey: .scrollFocusStrength)
+                ?? defaults.scrollFocusStrength,
+            readingGuideEnabled: try values.decodeIfPresent(Bool.self, forKey: .readingGuideEnabled)
+                ?? false
         )
     }
 
@@ -149,6 +170,9 @@ public struct EPUBReaderPreferences: Codable, Equatable, Sendable {
         case hyphenationEnabled
         case textNormalizationEnabled
         case usesPublisherStyles
+        case scrollFocusEnabled
+        case scrollFocusStrength
+        case readingGuideEnabled
     }
 }
 

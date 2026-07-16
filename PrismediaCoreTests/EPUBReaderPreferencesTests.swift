@@ -20,7 +20,10 @@ final class EPUBReaderPreferencesTests: XCTestCase {
             columnCount: .two,
             hyphenationEnabled: true,
             textNormalizationEnabled: true,
-            usesPublisherStyles: false
+            usesPublisherStyles: false,
+            scrollFocusEnabled: true,
+            scrollFocusStrength: 9,
+            readingGuideEnabled: true
         )
 
         XCTAssertEqual(preferences.fontScale, 2)
@@ -31,6 +34,7 @@ final class EPUBReaderPreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.paragraphSpacing, 1.5)
         XCTAssertEqual(preferences.paragraphIndent, 0)
         XCTAssertEqual(preferences.pageMargins, 0.5)
+        XCTAssertEqual(preferences.scrollFocusStrength, 0.8)
     }
 
     func testEveryBuiltInReadingProfileCanBeRecognizedAfterApplyingIt() {
@@ -58,6 +62,8 @@ final class EPUBReaderPreferencesTests: XCTestCase {
         XCTAssertTrue(preferences.usesPublisherStyles)
         XCTAssertEqual(preferences.textAlignment, .automatic)
         XCTAssertEqual(preferences.columnCount, .automatic)
+        XCTAssertFalse(preferences.scrollFocusEnabled)
+        XCTAssertFalse(preferences.readingGuideEnabled)
     }
 
     func testPreferenceStoreRoundTripsAndFallsBackFromCorruptData() throws {
@@ -81,7 +87,10 @@ final class EPUBReaderPreferencesTests: XCTestCase {
             columnCount: .one,
             hyphenationEnabled: false,
             textNormalizationEnabled: true,
-            usesPublisherStyles: false
+            usesPublisherStyles: false,
+            scrollFocusEnabled: true,
+            scrollFocusStrength: 0.55,
+            readingGuideEnabled: true
         )
 
         store.save(expected)

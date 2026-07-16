@@ -3,12 +3,20 @@ import Foundation
 public enum EPUBReadingProfile: String, CaseIterable, Codable, Hashable, Sendable {
     case paper
     case comfortable
+    case focus
     case accessible
     case night
     case original
     case custom
 
-    public static let selectableCases: [Self] = [.paper, .comfortable, .accessible, .night, .original]
+    public static let selectableCases: [Self] = [
+        .paper,
+        .comfortable,
+        .focus,
+        .accessible,
+        .night,
+        .original,
+    ]
 
     public var preferences: EPUBReaderPreferences {
         switch self {
@@ -25,6 +33,20 @@ public enum EPUBReadingProfile: String, CaseIterable, Codable, Hashable, Sendabl
                 pageMargins: 1.5,
                 textAlignment: .leading,
                 hyphenationEnabled: false
+            )
+        case .focus:
+            EPUBReaderPreferences(
+                flow: .scrolled,
+                fontScale: 1.1,
+                fontWeight: 1,
+                lineHeight: 1.6,
+                paragraphSpacing: 0.25,
+                paragraphIndent: 0,
+                pageMargins: 1.5,
+                textAlignment: .leading,
+                hyphenationEnabled: false,
+                scrollFocusEnabled: true,
+                scrollFocusStrength: 0.6
             )
         case .accessible:
             EPUBReaderPreferences(

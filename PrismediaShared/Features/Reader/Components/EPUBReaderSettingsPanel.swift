@@ -11,6 +11,7 @@
                 EPUBReaderTypographySection(preferences: $preferences)
                 EPUBReaderSpacingSection(preferences: $preferences)
                 EPUBReaderLayoutSection(preferences: $preferences)
+                EPUBReaderFocusSection(preferences: $preferences)
 
                 Section {
                     Button("Restore Reader Defaults") {

@@ -3,6 +3,7 @@
     @preconcurrency import ReadiumNavigator
     @preconcurrency import ReadiumShared
     @preconcurrency import ReadiumStreamer
+    import WebKit
 
     @MainActor
     final class ReadiumEPUBReaderSession: NSObject {
@@ -30,6 +31,7 @@
         private var searchLocators: [String: Locator] = [:]
         private var searchGeneration = 0
         private var progression = 0.0
+        private var scrollFocusResourceKey: String?
         private var toggleNavigation = EPUBToggleBookmarkNavigation()
         private var isToggleNavigationInFlight = false
 
@@ -116,6 +118,7 @@
             self.preferences = preferences
             preferencesStore.save(preferences)
             navigator?.submitPreferences(readiumPreferences(useDarkSystemTheme: useDarkSystemTheme))
+            Task { await applyScrollFocus() }
         }
 
         func openTableOfContentsItem(_ item: EPUBTableOfContentsItem) async {
@@ -521,6 +524,11 @@
             _ locator: Locator,
             viewport: NavigatorViewport? = nil
         ) {
+            let resourceKey = resourceKey(locator.href)
+            if resourceKey != scrollFocusResourceKey {
+                scrollFocusResourceKey = resourceKey
+                Task { await applyScrollFocus() }
+            }
             if let totalProgression = locator.locations.totalProgression {
                 updateProgression(totalProgression)
             }
@@ -538,9 +546,29 @@
                 }
             }
         }
+
+        private func applyScrollFocus() async {
+            guard let navigator else { return }
+            _ = await navigator.evaluateJavaScript(
+                EPUBScrollFocusScript.update(preferences: preferences)
+            )
+        }
     }
 
     extension ReadiumEPUBReaderSession: EPUBNavigatorDelegate {
+        func navigator(
+            _ navigator: EPUBNavigatorViewController,
+            setupUserScripts userContentController: WKUserContentController
+        ) {
+            userContentController.addUserScript(
+                WKUserScript(
+                    source: EPUBScrollFocusScript.install(preferences: preferences),
+                    injectionTime: .atDocumentEnd,
+                    forMainFrameOnly: true
+                )
+            )
+        }
+
         func navigator(_ navigator: VisualNavigator, didTapAt point: CGPoint) {
             onContentTap?()
         }

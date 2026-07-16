@@ -36,6 +36,7 @@
             switch profile {
             case .paper: "Paper"
             case .comfortable: "Comfortable"
+            case .focus: "Focus"
             case .accessible: "Accessibility"
             case .night: "Night"
             case .original: "Publisher Original"
