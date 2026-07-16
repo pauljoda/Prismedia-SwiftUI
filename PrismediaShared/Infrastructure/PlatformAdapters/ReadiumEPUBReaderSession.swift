@@ -332,25 +332,69 @@
             let theme: Theme =
                 switch preferences.theme {
                 case .system: useDarkSystemTheme ? .dark : .light
-                case .light: .light
+                case .paper, .light, .gray: .light
                 case .sepia: .sepia
                 case .dark: .dark
                 }
             let family: FontFamily? =
                 switch preferences.fontFamily {
                 case .publisher: nil
-                case .serif: .serif
-                case .sansSerif: .sansSerif
+                case .serif: .iowanOldStyle
+                case .literary: .athelas
+                case .sansSerif: .seravek
+                case .accessible: .accessibleDfA
+                case .openDyslexic: .openDyslexic
+                case .monospaced: .iaWriterDuospace
+                }
+            let columnCount: ColumnCount =
+                switch preferences.columnCount {
+                case .automatic: .auto
+                case .one: .one
+                case .two: .two
+                }
+            let textAlignment: TextAlignment? =
+                switch preferences.textAlignment {
+                case .automatic: nil
+                case .leading: .start
+                case .justified: .justify
                 }
             return EPUBPreferences(
+                backgroundColor: readiumBackgroundColor,
+                columnCount: columnCount,
                 fontFamily: family,
                 fontSize: preferences.fontScale,
+                fontWeight: preferences.fontWeight,
+                hyphens: preferences.hyphenationEnabled,
+                letterSpacing: preferences.letterSpacing,
                 lineHeight: preferences.lineHeight,
                 pageMargins: preferences.pageMargins,
-                publisherStyles: preferences.fontFamily == .publisher,
+                paragraphIndent: preferences.paragraphIndent,
+                paragraphSpacing: preferences.paragraphSpacing,
+                publisherStyles: preferences.usesPublisherStyles,
                 scroll: preferences.flow == .scrolled,
-                theme: theme
+                textAlign: textAlignment,
+                textColor: readiumTextColor,
+                textNormalization: preferences.textNormalizationEnabled,
+                theme: theme,
+                wordSpacing: preferences.wordSpacing
             )
+        }
+
+        private var readiumBackgroundColor: Color? {
+            switch preferences.theme {
+            case .system, .light, .sepia: nil
+            case .paper: Color(hex: "#F7F5EE")
+            case .gray: Color(hex: "#E8E8E6")
+            case .dark: Color(hex: "#121212")
+            }
+        }
+
+        private var readiumTextColor: Color? {
+            switch preferences.theme {
+            case .system, .light, .sepia: nil
+            case .paper, .gray: Color(hex: "#202020")
+            case .dark: Color(hex: "#E7E2D7")
+            }
         }
 
         private func tableOfContentsItem(_ link: Link) -> EPUBTableOfContentsItem {

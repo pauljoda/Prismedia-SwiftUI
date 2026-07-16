@@ -9,13 +9,55 @@ final class EPUBReaderPreferencesTests: XCTestCase {
             theme: .sepia,
             fontFamily: .serif,
             fontScale: 9,
+            fontWeight: 8,
             lineHeight: 0.2,
-            pageMargins: -4
+            letterSpacing: -2,
+            wordSpacing: 9,
+            paragraphSpacing: 8,
+            paragraphIndent: -4,
+            pageMargins: -4,
+            textAlignment: .justified,
+            columnCount: .two,
+            hyphenationEnabled: true,
+            textNormalizationEnabled: true,
+            usesPublisherStyles: false
         )
 
         XCTAssertEqual(preferences.fontScale, 2)
+        XCTAssertEqual(preferences.fontWeight, 1.5)
         XCTAssertEqual(preferences.lineHeight, 1.2)
+        XCTAssertEqual(preferences.letterSpacing, 0)
+        XCTAssertEqual(preferences.wordSpacing, 0.5)
+        XCTAssertEqual(preferences.paragraphSpacing, 1.5)
+        XCTAssertEqual(preferences.paragraphIndent, 0)
         XCTAssertEqual(preferences.pageMargins, 0.5)
+    }
+
+    func testEveryBuiltInReadingProfileCanBeRecognizedAfterApplyingIt() {
+        for profile in EPUBReadingProfile.selectableCases {
+            XCTAssertEqual(profile.preferences.matchingProfile, profile)
+        }
+    }
+
+    func testLegacyPreferencesKeepPublisherFormattingWhenNewFieldsAreAbsent() throws {
+        let data = Data(
+            """
+            {
+              "flow": "paged",
+              "theme": "system",
+              "fontFamily": "publisher",
+              "fontScale": 1.1,
+              "lineHeight": 1.5,
+              "pageMargins": 1.0
+            }
+            """.utf8
+        )
+
+        let preferences = try JSONDecoder().decode(EPUBReaderPreferences.self, from: data)
+
+        XCTAssertTrue(preferences.usesPublisherStyles)
+        XCTAssertEqual(preferences.textAlignment, .automatic)
+        XCTAssertEqual(preferences.columnCount, .automatic)
     }
 
     func testPreferenceStoreRoundTripsAndFallsBackFromCorruptData() throws {
@@ -26,10 +68,20 @@ final class EPUBReaderPreferencesTests: XCTestCase {
         let expected = EPUBReaderPreferences(
             flow: .scrolled,
             theme: .dark,
-            fontFamily: .sansSerif,
+            fontFamily: .accessible,
             fontScale: 1.3,
+            fontWeight: 1.15,
             lineHeight: 1.7,
-            pageMargins: 1.2
+            letterSpacing: 0.1,
+            wordSpacing: 0.2,
+            paragraphSpacing: 0.4,
+            paragraphIndent: 0,
+            pageMargins: 1.2,
+            textAlignment: .leading,
+            columnCount: .one,
+            hyphenationEnabled: false,
+            textNormalizationEnabled: true,
+            usesPublisherStyles: false
         )
 
         store.save(expected)

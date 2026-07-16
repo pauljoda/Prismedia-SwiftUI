@@ -170,9 +170,11 @@
         private var readerBackground: Color {
             switch preferences.theme {
             case .system: colorScheme == .dark ? .black : .white
+            case .paper: Color(red: 247 / 255, green: 245 / 255, blue: 238 / 255)
             case .light: .white
             case .sepia: Color(red: 250 / 255, green: 244 / 255, blue: 232 / 255)
-            case .dark: .black
+            case .gray: Color(red: 232 / 255, green: 232 / 255, blue: 230 / 255)
+            case .dark: Color(red: 18 / 255, green: 18 / 255, blue: 18 / 255)
             }
         }
 
