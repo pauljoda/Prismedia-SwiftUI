@@ -302,7 +302,7 @@ public struct EntityDetailView: View {
         _ detail: EntityDetail,
         presentation: EntityDetailPresentation
     ) -> some View {
-        let activePalette = presentation.heroPath == nil ? nil : artworkPalette
+        let activePalette = artworkPalette
 
         return detailScrollView(detail, presentation: presentation)
             .environment(\.artworkPalette, activePalette)
@@ -328,15 +328,16 @@ public struct EntityDetailView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         EntityDetailArtworkSurface(
-                            artworkPath: EntityDetailHeroArtworkPolicy.atmospherePath(
-                                heroPath: presentation.heroPath
-                            ),
-                            previewPath: presentation.heroPath == nil
-                                ? nil
-                                : link.thumbnailPreview?.artworkPath,
+                            artworkPath: presentation.heroPath
+                                ?? presentation.posterPath
+                                ?? link.thumbnailPreview?.artworkPath,
+                            paletteArtworkPath: presentation.posterPath
+                                ?? link.thumbnailPreview?.artworkPath,
+                            previewPath: link.thumbnailPreview?.artworkPath,
                             fallbackSeed: detail.title,
                             systemImage: presentation.systemImage,
-                            showsAtmosphere: showsHeroArtwork && presentation.heroPath != nil,
+                            showsAtmosphere: showsHeroArtwork,
+                            showsArtworkInBackdrop: presentation.heroPath != nil,
                             palette: $artworkPalette
                         ) {
                             VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {

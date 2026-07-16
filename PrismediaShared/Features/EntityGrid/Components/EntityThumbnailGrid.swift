@@ -54,18 +54,8 @@ struct EntityThumbnailGrid<ItemContent: View>: View {
             let layout = displayMode.thumbnailLayout(for: item.kind)
             itemContent(item, layout)
                 .environment(\.entityMediaSequence, mediaSequence)
-                .modifier(
-                    EntityThumbnailSurfaceWidthModifier(
-                        preferredWidth: preferredListItemWidth(layout: layout)
-                    )
-                )
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-    }
-
-    private func preferredListItemWidth(layout: EntityThumbnailLayout) -> CGFloat? {
-        guard displayMode == .list, layout == .rail else { return nil }
-        return density.minimumColumnWidth(default: minimumColumnWidth) * 2
     }
 
     private var columns: [GridItem] {

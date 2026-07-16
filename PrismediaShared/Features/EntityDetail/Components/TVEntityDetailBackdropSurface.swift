@@ -59,7 +59,7 @@ import SwiftUI
         }
 
         private var activePalette: ArtworkPalette? {
-            heroPath == nil ? nil : palette
+            palette
         }
     }
 #endif

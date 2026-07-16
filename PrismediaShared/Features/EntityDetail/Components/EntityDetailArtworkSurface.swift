@@ -3,26 +3,32 @@ import SwiftUI
 struct EntityDetailArtworkSurface<Content: View>: View {
     @Binding private var palette: ArtworkPalette?
     let artworkPath: String?
+    let paletteArtworkPath: String?
     let previewPath: String?
     let fallbackSeed: String
     let systemImage: String
     let showsAtmosphere: Bool
+    let showsArtworkInBackdrop: Bool
     @ViewBuilder let content: Content
 
     init(
         artworkPath: String?,
+        paletteArtworkPath: String? = nil,
         previewPath: String? = nil,
         fallbackSeed: String,
         systemImage: String,
         showsAtmosphere: Bool = true,
+        showsArtworkInBackdrop: Bool = true,
         palette: Binding<ArtworkPalette?>,
         @ViewBuilder content: () -> Content
     ) {
         self.artworkPath = artworkPath
+        self.paletteArtworkPath = paletteArtworkPath
         self.previewPath = previewPath
         self.fallbackSeed = fallbackSeed
         self.systemImage = systemImage
         self.showsAtmosphere = showsAtmosphere
+        self.showsArtworkInBackdrop = showsArtworkInBackdrop
         _palette = palette
         self.content = content()
     }
@@ -44,9 +50,11 @@ struct EntityDetailArtworkSurface<Content: View>: View {
                     GeometryReader { geometry in
                         ArtworkPaletteSurface(
                             artworkPath: artworkPath,
+                            paletteArtworkPath: paletteArtworkPath,
                             previewPath: previewPath,
                             fallbackSeed: fallbackSeed,
                             systemImage: systemImage,
+                            showsArtworkInBackdrop: showsArtworkInBackdrop,
                             palette: $palette
                         ) {
                             Color.clear

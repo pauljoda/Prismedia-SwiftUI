@@ -4,23 +4,29 @@ struct ArtworkPaletteSurface<Content: View>: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
     @Binding private var palette: ArtworkPalette?
     let artworkPath: String?
+    let paletteArtworkPath: String?
     let previewPath: String?
     let fallbackSeed: String
     let systemImage: String
+    let showsArtworkInBackdrop: Bool
     @ViewBuilder let content: Content
 
     init(
         artworkPath: String?,
+        paletteArtworkPath: String? = nil,
         previewPath: String? = nil,
         fallbackSeed: String,
         systemImage: String,
+        showsArtworkInBackdrop: Bool = true,
         palette: Binding<ArtworkPalette?>,
         @ViewBuilder content: () -> Content
     ) {
         self.artworkPath = artworkPath
+        self.paletteArtworkPath = paletteArtworkPath
         self.previewPath = previewPath
         self.fallbackSeed = fallbackSeed
         self.systemImage = systemImage
+        self.showsArtworkInBackdrop = showsArtworkInBackdrop
         _palette = palette
         self.content = content()
     }
@@ -50,6 +56,8 @@ struct ArtworkPaletteSurface<Content: View>: View {
                         return
                     }
                 }
+                guard !Task.isCancelled else { return }
+                palette = nil
             }
     }
 
@@ -59,16 +67,18 @@ struct ArtworkPaletteSurface<Content: View>: View {
             ZStack {
                 palette.background.color
 
-                RemotePosterImage(
-                    path: artworkPath,
-                    previewPath: previewPath,
-                    fallbackSeed: fallbackSeed,
-                    systemImage: systemImage
-                )
-                .scaleEffect(1.42)
-                .blur(radius: 76)
-                .saturation(1.18)
-                .opacity(0.78)
+                if showsArtworkInBackdrop {
+                    RemotePosterImage(
+                        path: artworkPath,
+                        previewPath: previewPath,
+                        fallbackSeed: fallbackSeed,
+                        systemImage: systemImage
+                    )
+                    .scaleEffect(1.42)
+                    .blur(radius: 76)
+                    .saturation(1.18)
+                    .opacity(0.78)
+                }
 
                 RadialGradient(
                     colors: [palette.primary.color.opacity(0.4), .clear],
@@ -96,7 +106,7 @@ struct ArtworkPaletteSurface<Content: View>: View {
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
-        } else {
+        } else if showsArtworkInBackdrop {
             ZStack {
                 PrismediaColor.background
 
@@ -123,11 +133,13 @@ struct ArtworkPaletteSurface<Content: View>: View {
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+        } else {
+            PrismediaBackdrop()
         }
     }
 
     private var artworkURLs: [URL] {
-        let candidates = [artworkPath, previewPath]
+        let candidates = [paletteArtworkPath, artworkPath, previewPath]
             .compactMap { environment.client?.assetURL(for: $0) }
         return candidates.reduce(into: []) { urls, url in
             if !urls.contains(url) {

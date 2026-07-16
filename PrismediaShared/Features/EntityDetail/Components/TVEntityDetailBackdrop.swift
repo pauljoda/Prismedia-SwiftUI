@@ -15,6 +15,7 @@ import SwiftUI
                 if let heroPath {
                     ArtworkPaletteSurface(
                         artworkPath: heroPath,
+                        paletteArtworkPath: posterPath ?? previewPath,
                         previewPath: posterPath ?? previewPath,
                         fallbackSeed: fallbackSeed,
                         systemImage: systemImage,
@@ -31,6 +32,18 @@ import SwiftUI
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .overlay(backdropGradients)
+                    }
+                } else if let paletteArtworkPath = posterPath ?? previewPath {
+                    ArtworkPaletteSurface(
+                        artworkPath: paletteArtworkPath,
+                        paletteArtworkPath: paletteArtworkPath,
+                        previewPath: previewPath,
+                        fallbackSeed: fallbackSeed,
+                        systemImage: systemImage,
+                        showsArtworkInBackdrop: false,
+                        palette: $palette
+                    ) {
+                        Color.clear
                     }
                 } else {
                     PrismediaBackdrop()
