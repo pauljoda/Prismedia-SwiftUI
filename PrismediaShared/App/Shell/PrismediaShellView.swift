@@ -360,7 +360,7 @@ public struct PrismediaShellView: View {
             user: UserAccount,
             client: PrismediaAPIClient
         ) -> some View {
-            MusicPlaybackHost(client: client) {
+            MusicPlaybackHost {
                 VideoPlaybackHost(
                     client: client, onRestore: restoreVideoPlayback,
                     content: { session in

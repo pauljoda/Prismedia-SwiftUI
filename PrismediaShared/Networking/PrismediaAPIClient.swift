@@ -718,4 +718,8 @@ public struct PrismediaAPIClient: Sendable {
     }
 }
 
-extension PrismediaAPIClient: MusicPlaybackServicing {}
+extension PrismediaAPIClient: MusicPlaybackServicing {
+    public func artworkURL(for path: String?) -> URL? {
+        assetURL(for: path)
+    }
+}

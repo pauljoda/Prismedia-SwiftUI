@@ -491,10 +491,16 @@
                     search: snapshot.activeSearch
                 )
                 guard !tracks.isEmpty else { return }
-                controller.play(
+                controller.preparePlayback(
                     tracks: tracks,
                     queueMode: queueMode
                 )
+                await MusicQueueArtworkPreloader(
+                    playbackService: client,
+                    artworkLoader: environment.artworkLoader
+                ).prewarm(queue: controller.queue)
+                guard !Task.isCancelled else { return }
+                controller.resume()
             } catch is CancellationError {
                 return
             } catch {

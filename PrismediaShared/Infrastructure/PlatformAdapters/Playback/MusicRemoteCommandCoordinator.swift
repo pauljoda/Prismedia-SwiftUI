@@ -9,7 +9,7 @@
 
         private let controller: MusicPlayerController
         private let engine: AVPlayerAudioPlaybackEngine
-        private let client: PrismediaAPIClient
+        private let artworkURL: (String?) -> URL?
         private let nowPlayingSession: MPNowPlayingSession
         private var artworkTask: Task<Void, Never>?
         nonisolated(unsafe) private var commandTargets: [(command: MPRemoteCommand, target: Any)] = []
@@ -19,11 +19,11 @@
         init(
             controller: MusicPlayerController,
             engine: AVPlayerAudioPlaybackEngine,
-            client: PrismediaAPIClient
+            artworkURL: @escaping (String?) -> URL?
         ) {
             self.controller = controller
             self.engine = engine
-            self.client = client
+            self.artworkURL = artworkURL
             nowPlayingSession = MPNowPlayingSession(players: [engine.player])
             nowPlayingSession.automaticallyPublishesNowPlayingInfo = false
             registerCommands()
@@ -124,17 +124,15 @@
             let duration = engine.duration > 0 ? engine.duration : track.duration
             if let duration { information[MPMediaItemPropertyPlaybackDuration] = duration }
             nowPlayingSession.nowPlayingInfoCenter.nowPlayingInfo = information
-            if controller.isPlaying {
-                nowPlayingSession.becomeActiveIfPossible(completion: nil)
-            }
+            nowPlayingSession.becomeActiveIfPossible(completion: nil)
 
-            if requiresArtwork { loadArtwork(for: track) }
+            if requiresArtwork || existingArtwork == nil { loadArtwork(for: track) }
             updateCommandAvailability()
         }
 
         private func loadArtwork(for track: MusicTrack) {
             artworkTask?.cancel()
-            guard let url = client.assetURL(for: track.artworkPath) else {
+            guard let url = artworkURL(track.artworkPath) else {
                 artworkTask = nil
                 return
             }

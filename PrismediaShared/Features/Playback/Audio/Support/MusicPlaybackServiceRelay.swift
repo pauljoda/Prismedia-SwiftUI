@@ -9,8 +9,18 @@
             self.service = service
         }
 
+        func disconnect() {
+            service = nil
+        }
+
+        var isPlaybackAvailable: Bool { service != nil }
+
         func audioStreamURL(for trackID: UUID) -> URL? {
             service?.audioStreamURL(for: trackID)
+        }
+
+        func artworkURL(for path: String?) -> URL? {
+            service?.artworkURL(for: path)
         }
 
         func recordAudioTrackPlay(id: UUID) async throws {

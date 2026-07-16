@@ -98,14 +98,12 @@ struct PrismediaButton: View {
     }
 
     private var standardLabel: some View {
-        HStack(spacing: PrismediaSpacing.small) {
+        Group {
             if isLoading {
                 ProgressView()
                     .controlSize(.small)
                     .accessibilityHidden(true)
-            }
-
-            if let systemImage {
+            } else if let systemImage {
                 Label(title, systemImage: systemImage)
             } else {
                 Text(title)

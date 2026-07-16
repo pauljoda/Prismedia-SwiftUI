@@ -31,6 +31,7 @@
                 service: serviceRelay,
                 stateStore: stateStore
             )
+            controller.restoreIfNeeded()
         }
 
         func prepareArtworkPalette(
@@ -51,7 +52,20 @@
 
         func connect(to service: any MusicPlaybackServicing) {
             serviceRelay.connect(to: service)
-            controller.restoreIfNeeded()
+            controller.playbackServiceDidConnect()
+        }
+
+        func disconnect() {
+            serviceRelay.disconnect()
+            controller.clearPlayback()
+        }
+
+        func artworkURL(for path: String?) -> URL? {
+            serviceRelay.artworkURL(for: path)
+        }
+
+        var playbackService: any MusicPlaybackServicing {
+            serviceRelay
         }
     }
 #endif

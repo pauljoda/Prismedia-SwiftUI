@@ -22,7 +22,7 @@ struct MusicLibraryQueueLoader: Sendable {
         if query.kind == .audioLibrary {
             return try await tracks(in: thumbnails, artist: nil)
         }
-        return try await hydrate(thumbnails)
+        return thumbnails.map { MusicTrack(thumbnail: $0) }
     }
 
     func hydrate(_ tracks: [EntityThumbnail]) async throws -> [MusicTrack] {

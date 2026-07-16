@@ -24,6 +24,8 @@ public final class MusicPlayerController {
     private var didAttemptRestoration = false
     private var audiobookCompleted = false
     private var pendingPlaybackReport: Task<Void, Never>?
+    private var loadedTrackID: MusicTrack.ID?
+    private var resumesWhenPlaybackBecomesAvailable = false
 
     public init(
         engine: any AudioPlaybackEngine,
@@ -51,7 +53,25 @@ public final class MusicPlayerController {
         context: MusicPlaybackContext? = nil,
         startSeconds: Double = 0
     ) {
+        preparePlayback(
+            tracks: tracks,
+            startingAt: trackID,
+            queueMode: queueMode,
+            context: context,
+            startSeconds: startSeconds
+        )
+        resume()
+    }
+
+    public func preparePlayback(
+        tracks: [MusicTrack],
+        startingAt trackID: UUID? = nil,
+        queueMode: MusicQueueStartMode = .preferred,
+        context: MusicPlaybackContext? = nil,
+        startSeconds: Double = 0
+    ) {
         reportAudiobookProgress(completed: false)
+        if currentTrack != nil { engine.pause() }
         var previousQueue = queue
         if previousQueue.currentTrack != nil {
             previousQueue.recordCurrentTrackInHistory()
@@ -70,13 +90,21 @@ public final class MusicPlayerController {
         queue.setRepeatMode(preferences.repeatMode)
         queue.setShuffled(shuffleEnabled(for: queueMode, context: context))
         elapsedTime = max(0, startSeconds.isFinite ? startSeconds : 0)
-        startCurrentTrack()
+        loadedTrackID = nil
+        resumesWhenPlaybackBecomesAvailable = false
+        isPlaying = false
+        publishNowPlayingState()
         persistState()
     }
 
     public func resume() {
         guard currentTrack != nil else { return }
         if context?.isAudiobook == true { audiobookCompleted = false }
+        guard prepareCurrentTrack() else {
+            resumesWhenPlaybackBecomesAvailable = !service.isPlaybackAvailable
+            return
+        }
+        resumesWhenPlaybackBecomesAvailable = false
         errorMessage = nil
         engine.play()
         isPlaying = true
@@ -85,6 +113,7 @@ public final class MusicPlayerController {
     }
 
     public func pause() {
+        resumesWhenPlaybackBecomesAvailable = false
         engine.pause()
         isPlaying = false
         reportAudiobookProgress(completed: false)
@@ -103,6 +132,8 @@ public final class MusicPlayerController {
         lastPersistedElapsedTime = 0
         audiobookCompleted = false
         playbackRate = 1
+        loadedTrackID = nil
+        resumesWhenPlaybackBecomesAvailable = false
         engine.setPlaybackRate(playbackRate)
         stateStore?.clear()
         publishNowPlayingState()
@@ -224,13 +255,20 @@ public final class MusicPlayerController {
         queue = MusicQueue(restoration: restoration)
         elapsedTime = restoration.elapsedTime
         lastPersistedElapsedTime = restoration.elapsedTime
-        guard let currentTrack,
-            let url = service.audioStreamURL(for: currentTrack.id)
-        else { return }
-        engine.load(url: url)
-        engine.setPlaybackRate(playbackRate)
-        if elapsedTime > 0 { engine.seek(to: elapsedTime) }
+        _ = prepareCurrentTrack()
         isPlaying = false
+        publishNowPlayingState()
+    }
+
+    public func playbackServiceDidConnect() {
+        guard currentTrack != nil else { return }
+        let shouldResume = resumesWhenPlaybackBecomesAvailable
+        guard prepareCurrentTrack() else { return }
+        resumesWhenPlaybackBecomesAvailable = false
+        if shouldResume {
+            engine.play()
+            isPlaying = true
+        }
         publishNowPlayingState()
     }
 
@@ -264,25 +302,40 @@ public final class MusicPlayerController {
     }
 
     private func startCurrentTrack() {
-        guard let currentTrack else {
+        guard currentTrack != nil else {
             isPlaying = false
             publishNowPlayingState()
             return
         }
-        guard let url = service.audioStreamURL(for: currentTrack.id) else {
-            errorMessage = "This track does not have a playable stream."
+        loadedTrackID = nil
+        guard prepareCurrentTrack() else {
+            resumesWhenPlaybackBecomesAvailable = !service.isPlaybackAvailable
             isPlaying = false
             publishNowPlayingState()
             return
         }
 
+        resumesWhenPlaybackBecomesAvailable = false
         errorMessage = nil
-        engine.load(url: url)
-        engine.setPlaybackRate(playbackRate)
-        if elapsedTime > 0 { engine.seek(to: elapsedTime) }
         engine.play()
         isPlaying = true
         publishNowPlayingState()
+    }
+
+    private func prepareCurrentTrack() -> Bool {
+        guard let currentTrack else { return false }
+        guard service.isPlaybackAvailable else { return false }
+        guard let url = service.audioStreamURL(for: currentTrack.id) else {
+            errorMessage = "This track does not have a playable stream."
+            loadedTrackID = nil
+            return false
+        }
+        guard loadedTrackID != currentTrack.id else { return true }
+        engine.load(url: url)
+        engine.setPlaybackRate(playbackRate)
+        if elapsedTime > 0 { engine.seek(to: elapsedTime) }
+        loadedTrackID = currentTrack.id
+        return true
     }
 
     private func publishNowPlayingState() {

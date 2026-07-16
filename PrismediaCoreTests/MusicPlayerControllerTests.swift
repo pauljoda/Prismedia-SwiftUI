@@ -18,6 +18,27 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrack, track)
     }
 
+    func testPreparingShuffledQueueDefersPlaybackUntilArtworkCanBeWarmed() {
+        let tracks = (1...12).map { makeTrack(idSuffix: $0) }
+        let engine = AudioPlaybackEngineSpy()
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(engine: engine, service: service)
+
+        controller.preparePlayback(tracks: tracks, queueMode: .shuffled)
+
+        XCTAssertTrue(controller.queue.isShuffled)
+        XCTAssertEqual(controller.currentTrack, tracks[0])
+        XCTAssertTrue(engine.loadedURLs.isEmpty)
+        XCTAssertEqual(engine.playCallCount, 0)
+        XCTAssertFalse(controller.isPlaying)
+
+        controller.resume()
+
+        XCTAssertEqual(engine.loadedURLs, [service.audioStreamURL(for: tracks[0].id)!])
+        XCTAssertEqual(engine.playCallCount, 1)
+        XCTAssertTrue(controller.isPlaying)
+    }
+
     func testPlaybackRateAppliesImmediatelyAndSurvivesTrackChanges() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
         let engine = AudioPlaybackEngineSpy()
@@ -193,6 +214,41 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(engine.seekPositions, [37.5])
         XCTAssertEqual(engine.playCallCount, 0)
         XCTAssertFalse(controller.isPlaying)
+    }
+
+    func testRemoteResumeWaitsForPlaybackServiceAfterColdRestoration() {
+        let track = makeTrack(idSuffix: 1)
+        let restoration = MusicPlaybackRestoration(
+            tracks: [track],
+            orderedTrackIDs: [track.id],
+            currentTrackID: track.id,
+            repeatMode: .off,
+            isShuffled: false,
+            elapsedTime: 37.5
+        )
+        let engine = AudioPlaybackEngineSpy()
+        let relay = MusicPlaybackServiceRelay()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: relay,
+            stateStore: MusicPlaybackStateStoreSpy(restoration: restoration)
+        )
+
+        controller.restoreIfNeeded()
+        controller.resume()
+
+        XCTAssertEqual(controller.currentTrack, track)
+        XCTAssertTrue(engine.loadedURLs.isEmpty)
+        XCTAssertEqual(engine.playCallCount, 0)
+
+        let service = MusicPlaybackServiceStub()
+        relay.connect(to: service)
+        controller.playbackServiceDidConnect()
+
+        XCTAssertEqual(engine.loadedURLs, [service.audioStreamURL(for: track.id)!])
+        XCTAssertEqual(engine.seekPositions, [37.5])
+        XCTAssertEqual(engine.playCallCount, 1)
+        XCTAssertTrue(controller.isPlaying)
     }
 
     func testPersistsQueueModesAndProgressInBoundedIntervals() {

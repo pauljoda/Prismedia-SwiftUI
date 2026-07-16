@@ -3,6 +3,16 @@ import XCTest
 @testable import PrismediaCore
 
 final class MusicQueueTests: XCTestCase {
+    func testArtworkWindowContainsCurrentTrackAndTenUpcomingTracks() {
+        let tracks = makeTracks(count: 15)
+        var queue = MusicQueue(tracks: tracks, startingAt: tracks[2].id)
+        queue.setRepeatMode(.all)
+
+        let window = MusicQueueArtworkWindow.tracks(in: queue)
+
+        XCTAssertEqual(window.map(\.id), Array(tracks[2...12]).map(\.id))
+    }
+
     func testNextAndPreviousFollowAlbumOrder() {
         let tracks = makeTracks(count: 3)
         var queue = MusicQueue(tracks: tracks)

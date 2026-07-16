@@ -4,6 +4,7 @@ import SwiftUI
 struct PrismediaiOSApp: App {
     @UIApplicationDelegateAdaptor(PrismediaAppDelegate.self) private var appDelegate
     @State private var environment = PrismediaAppEnvironment()
+    @State private var musicPlayback = MusicPlaybackComposition()
     #if DEBUG
         @State private var router = PrismediaUITestBootstrap.router() ?? PrismediaAppRouter()
     #else
@@ -12,9 +13,11 @@ struct PrismediaiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            PrismediaRootView()
-                .environment(environment)
-                .environment(router)
+            MusicPlaybackLifecycleHost(playback: musicPlayback) {
+                PrismediaRootView()
+                    .environment(router)
+            }
+            .environment(environment)
         }
     }
 }

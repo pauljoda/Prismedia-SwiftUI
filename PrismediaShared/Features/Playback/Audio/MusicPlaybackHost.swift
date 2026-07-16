@@ -6,21 +6,17 @@
     struct MusicPlaybackHost<Content: View>: View {
         @Environment(\.scenePhase) private var scenePhase
         @Environment(PrismediaAppEnvironment.self) private var environment
-        @State private var playback = MusicPlaybackComposition()
-        @State private var remoteCommands: MusicRemoteCommandCoordinator?
+        @Environment(MusicPlaybackComposition.self) private var playback
         @State private var miniPlayerVisibility = MusicMiniPlayerVisibility()
         @State private var nowPlayingPresented = false
         @Namespace private var nowPlayingTransitionNamespace
 
-        private let client: PrismediaAPIClient
         private let content: Content
 
         @MainActor
         init(
-            client: PrismediaAPIClient,
             @ViewBuilder content: () -> Content
         ) {
-            self.client = client
             self.content = content()
         }
 
@@ -40,12 +36,15 @@
                         )
                     )
                 }
-                .onAppear(perform: connectPlaybackSystem)
                 .task(id: controller.currentTrack?.id) {
                     let track = controller.currentTrack
+                    await MusicQueueArtworkPreloader(
+                        playbackService: playback.playbackService,
+                        artworkLoader: environment.artworkLoader
+                    ).prewarm(queue: controller.queue)
                     await playback.prepareArtworkPalette(
                         for: track,
-                        artworkURL: client.assetURL(for: track?.artworkPath),
+                        artworkURL: playback.artworkURL(for: track?.artworkPath),
                         loader: environment.artworkPaletteLoader
                     )
                 }
@@ -83,20 +82,6 @@
             )
         }
 
-        private func connectPlaybackSystem() {
-            playback.connect(to: client)
-            if remoteCommands == nil {
-                remoteCommands = MusicRemoteCommandCoordinator(
-                    controller: controller,
-                    engine: engine,
-                    client: client
-                )
-            }
-            engine.onPlaybackEnded = { [weak controller] in
-                Task { @MainActor in await controller?.handlePlaybackEnded() }
-            }
-        }
-
         private var engine: AVPlayerAudioPlaybackEngine { playback.engine }
         private var nowPlayingTransitionID: String { "music.now-playing.presentation" }
         private var controller: MusicPlayerController { playback.controller }
@@ -113,10 +98,9 @@
 
     #if DEBUG
         #Preview("Music Playback Host") {
+            @Previewable @State var playback = MusicPlaybackComposition()
             PreviewShell(signedIn: true) {
-                MusicPlaybackHost(
-                    client: PrismediaPreviewData.model(signedIn: true).client!
-                ) {
+                MusicPlaybackHost {
                     TabView {
                         Tab("Albums", systemImage: "square.stack") {
                             NavigationStack {
@@ -126,6 +110,7 @@
                         }
                     }
                 }
+                .environment(playback)
             }
         }
     #endif
