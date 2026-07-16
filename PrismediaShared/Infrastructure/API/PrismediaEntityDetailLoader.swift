@@ -2,6 +2,7 @@ import Foundation
 
 /// Infrastructure adapter for the feature-owned Entity Detail ports.
 public struct PrismediaEntityDetailLoader: EntityDetailLoading, EntityDetailMutating, EntityMetadataMutating,
+    EntityProgressMutating,
     CollectionItemsLoading,
     EntityImageSourceLoading, Sendable
 {
@@ -51,5 +52,12 @@ public struct PrismediaEntityDetailLoader: EntityDetailLoading, EntityDetailMuta
         request: EntityDetailMetadataUpdateRequest
     ) async throws -> EntityDetail {
         try await client.updateEntityMetadata(id: id, kind: kind, request: request)
+    }
+
+    public func updateProgress(
+        id: UUID,
+        request: EntityProgressUpdateRequest
+    ) async throws -> EntityDetail {
+        try await client.updateEntityProgress(id: id, request: request)
     }
 }

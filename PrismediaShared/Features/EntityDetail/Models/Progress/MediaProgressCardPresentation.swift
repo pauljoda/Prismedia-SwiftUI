@@ -1,4 +1,4 @@
-/// Display-only state for reading and audiobook progress on an entity detail page.
+/// Display-only state for watch, reading, and audiobook progress on an entity detail page.
 public struct MediaProgressCardPresentation: Hashable, Sendable {
     public let kind: MediaProgressKind
     public let status: MediaProgressStatus
@@ -45,14 +45,34 @@ public struct MediaProgressCardPresentation: Hashable, Sendable {
             isBusy: isBusy
         )
     }
+
+    init(
+        videoProgress: VideoContainerProgressPresentation,
+        isBusy: Bool = false,
+        canMutate: Bool = true
+    ) {
+        self.init(
+            kind: .watch,
+            status: videoProgress.status,
+            percent: videoProgress.percent,
+            positionLabel: videoProgress.positionLabel,
+            contextLabel: videoProgress.contextLabel,
+            showsResume: videoProgress.canContinue,
+            showsStartOver: canMutate,
+            showsCompletionToggle: canMutate,
+            isBusy: isBusy
+        )
+    }
 }
 
 extension MediaProgressCardPresentation {
     var statusTitle: String {
         switch (kind, status) {
         case (_, .notStarted): "Not Started"
+        case (.watch, .inProgress): "Watching"
         case (.read, .inProgress): "Reading"
         case (.listen, .inProgress): "Listening"
+        case (.watch, .completed): "Watched"
         case (.read, .completed): "Read"
         case (.listen, .completed): "Listened"
         }
@@ -60,6 +80,7 @@ extension MediaProgressCardPresentation {
 
     var progressAccessibilityLabel: String {
         switch kind {
+        case .watch: "Watch progress"
         case .read: "Reading progress"
         case .listen: "Listening progress"
         }
@@ -67,6 +88,7 @@ extension MediaProgressCardPresentation {
 
     var resumeTitle: String {
         switch kind {
+        case .watch: "Continue"
         case .read: "Continue Reading"
         case .listen: "Continue Listening"
         }
@@ -74,6 +96,7 @@ extension MediaProgressCardPresentation {
 
     var resumeSystemImage: String {
         switch kind {
+        case .watch: "play.fill"
         case .read: "book.fill"
         case .listen: "headphones"
         }
@@ -81,6 +104,7 @@ extension MediaProgressCardPresentation {
 
     var resumeAccessibilityHint: String {
         switch kind {
+        case .watch: "Continues with the current episode"
         case .read: "Continues reading from your saved position"
         case .listen: "Continues listening from your saved position"
         }
@@ -88,6 +112,7 @@ extension MediaProgressCardPresentation {
 
     var startOverAccessibilityHint: String {
         switch kind {
+        case .watch: "Restarts watching from the first episode"
         case .read: "Restarts reading from the beginning"
         case .listen: "Restarts listening from the beginning"
         }
@@ -95,6 +120,8 @@ extension MediaProgressCardPresentation {
 
     var completionTitle: String {
         switch (kind, status == .completed) {
+        case (.watch, false): "Mark Watched"
+        case (.watch, true): "Mark Unwatched"
         case (.read, false): "Mark Read"
         case (.read, true): "Mark Unread"
         case (.listen, false): "Mark Listened"
@@ -104,6 +131,8 @@ extension MediaProgressCardPresentation {
 
     var completionAccessibilityHint: String {
         switch (kind, status == .completed) {
+        case (.watch, false): "Marks this series or season as watched"
+        case (.watch, true): "Removes the watched status"
         case (.read, false): "Marks this media as read"
         case (.read, true): "Removes the read status"
         case (.listen, false): "Marks this media as listened"

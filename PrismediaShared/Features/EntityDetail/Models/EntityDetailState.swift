@@ -97,6 +97,12 @@ struct EntityDetailState: Sendable {
         mutationErrorMessage = nil
     }
 
+    mutating func replaceContent(with detail: EntityDetail) {
+        guard self.detail?.id == detail.id else { return }
+        generation += 1
+        phase = .content(detail)
+    }
+
     var favoriteToggleMutation: EntityDetailMutation? {
         guard let flags = currentFlags else { return nil }
         return .favorite(!(flags.isFavorite ?? false))

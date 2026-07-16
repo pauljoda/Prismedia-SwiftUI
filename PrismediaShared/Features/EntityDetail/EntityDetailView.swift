@@ -26,6 +26,9 @@ public struct EntityDetailView: View {
     @State private var areBookChaptersLoading = false
     @State private var bookChaptersErrorMessage: String?
     @State private var mappedBookChapters: [BookChapterMapping] = []
+    @State private var videoProgressEpisode: EntityDetail?
+    @State private var isVideoProgressMutating = false
+    @State private var videoProgressErrorMessage: String?
     @State private var artworkPalette: ArtworkPalette?
     @State private var editPresentation: EntityDetailEditPresentation?
     #if os(iOS)
@@ -37,6 +40,7 @@ public struct EntityDetailView: View {
     private let service: EntityDetailService
     private let readingService: EntityDetailReadingService
     private let collectionMembersService: CollectionMembersService
+    private let videoProgressService: VideoContainerProgressService
 
     public init(
         link: EntityLink,
@@ -53,6 +57,10 @@ public struct EntityDetailView: View {
         readingService = EntityDetailReadingService(reader: dependencies.readerService)
         collectionMembersService = CollectionMembersService(
             loader: dependencies.collectionItemsLoader
+        )
+        videoProgressService = VideoContainerProgressService(
+            loader: dependencies.detailLoader,
+            mutator: dependencies.progressMutator
         )
     }
 
@@ -429,6 +437,20 @@ public struct EntityDetailView: View {
                         }
 
                         VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                            EntityDetailVideoProgressView(
+                                presentation: videoProgressCardPresentation(for: detail),
+                                errorMessage: videoProgressErrorMessage,
+                                horizontalPadding: detailHorizontalPadding,
+                                onContinue: continueVideoProgress,
+                                onStartOver: {
+                                    Task { await startVideoProgressOver() }
+                                },
+                                onToggleCompletion: {
+                                    Task { await toggleVideoProgressCompletion() }
+                                },
+                                onDismissError: { videoProgressErrorMessage = nil }
+                            )
+
                             #if os(iOS) || os(macOS)
                                 EntityDetailBookProgressView(
                                     combinedProgress: combinedProgressPresentation(for: detail),
@@ -526,6 +548,7 @@ public struct EntityDetailView: View {
                 .refreshable {
                     await loadDetail()
                     if case .content(let refreshedDetail) = state.phase {
+                        await loadVideoProgress(for: refreshedDetail)
                         await loadReadingState(for: refreshedDetail)
                         await loadCollectionMembers(for: refreshedDetail, force: true)
                         await loadAudiobook(for: refreshedDetail)
@@ -533,6 +556,7 @@ public struct EntityDetailView: View {
                     }
                 }
                 .task(id: detail.id) {
+                    await loadVideoProgress(for: detail)
                     await loadReadingState(for: detail)
                     await loadCollectionMembers(for: detail)
                     await loadAudiobook(for: detail)
@@ -703,6 +727,100 @@ public struct EntityDetailView: View {
         guard let request = state.beginLoad() else { return }
         let outcome = await service.load(id: link.entityID, kind: link.kind)
         state.finishLoad(outcome, request: request)
+    }
+
+    private func loadVideoProgress(for detail: EntityDetail) async {
+        guard detail.kind == .videoSeries || detail.kind == .videoSeason else {
+            videoProgressEpisode = nil
+            videoProgressErrorMessage = nil
+            return
+        }
+
+        do {
+            videoProgressEpisode = try await videoProgressService.loadProgressEpisode(for: detail)
+            videoProgressErrorMessage = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            videoProgressEpisode = nil
+            videoProgressErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func videoProgressCardPresentation(
+        for detail: EntityDetail
+    ) -> MediaProgressCardPresentation? {
+        guard let progress: EntityProgressCapability = detail.capability(),
+            let videoProgress = VideoContainerProgressPresentation(
+                progress: progress,
+                episode: videoProgressEpisode.map(VideoProgressEpisode.init(detail:))
+            )
+        else { return nil }
+        return MediaProgressCardPresentation(
+            videoProgress: videoProgress,
+            isBusy: isVideoProgressMutating,
+            canMutate: videoProgressService.canMutate
+        )
+    }
+
+    private func continueVideoProgress() {
+        guard let episode = videoProgressEpisode else { return }
+        advancedEntityLink = EntityLink(
+            entityID: episode.id,
+            kind: .video,
+            parentEntityID: episode.parentEntityID,
+            parentKind: episode.parentEntityID == state.detail?.id
+                ? state.detail?.kind
+                : .videoSeason
+        )
+    }
+
+    private func toggleVideoProgressCompletion() async {
+        guard !isVideoProgressMutating,
+            let detail = state.detail,
+            let progress: EntityProgressCapability = detail.capability(),
+            let presentation = VideoContainerProgressPresentation(
+                progress: progress,
+                episode: videoProgressEpisode.map(VideoProgressEpisode.init(detail:))
+            )
+        else { return }
+
+        isVideoProgressMutating = true
+        videoProgressErrorMessage = nil
+        defer { isVideoProgressMutating = false }
+
+        do {
+            let updated = try await videoProgressService.toggleCompletion(
+                container: detail,
+                presentation: presentation
+            )
+            state.replaceContent(with: updated)
+            videoProgressEpisode = try await videoProgressService.loadProgressEpisode(for: updated)
+            dependencies.onEntityMutated()
+        } catch is CancellationError {
+            return
+        } catch {
+            videoProgressErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func startVideoProgressOver() async {
+        guard !isVideoProgressMutating, let detail = state.detail else { return }
+
+        isVideoProgressMutating = true
+        videoProgressErrorMessage = nil
+        defer { isVideoProgressMutating = false }
+
+        do {
+            let updated = try await videoProgressService.startOver(container: detail)
+            state.replaceContent(with: updated)
+            videoProgressEpisode = try await videoProgressService.loadProgressEpisode(for: updated)
+            dependencies.onEntityMutated()
+        } catch is CancellationError {
+            return
+        } catch {
+            videoProgressErrorMessage = error.localizedDescription
+        }
     }
 
     private func refreshAfterAcquisitionMutation() async {

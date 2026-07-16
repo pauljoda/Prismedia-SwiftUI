@@ -33,4 +33,24 @@ struct TVSeasonsUseCase: Sendable {
         let detail = try await loader.loadEntity(id: id)
         return detail.kind == .video ? detail : nil
     }
+
+    func loadProgressTarget() async throws -> (episodeID: UUID, seasonID: UUID)? {
+        guard let progress: EntityProgressCapability = rootDetail.capability(),
+            let episodeID = progress.currentEntityID
+        else { return nil }
+
+        if rootDetail.kind == .videoSeason {
+            guard TVSeasonsPresentation.episodes(in: rootDetail).contains(where: { $0.id == episodeID }) else {
+                return nil
+            }
+            return (episodeID, rootDetail.id)
+        }
+
+        guard rootDetail.kind == .videoSeries,
+            let episode = try await loadEpisode(id: episodeID),
+            let seasonID = episode.parentEntityID,
+            TVSeasonsPresentation.seasons(in: rootDetail).contains(where: { $0.id == seasonID })
+        else { return nil }
+        return (episodeID, seasonID)
+    }
 }

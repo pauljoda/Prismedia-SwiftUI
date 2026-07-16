@@ -9,6 +9,7 @@ import SwiftUI
         @State private var episodeLoadTask: Task<Void, Never>?
         @State private var hasLoaded = false
         @State private var hasAppliedRouteEpisode = false
+        @State private var initialFocusEpisodeID: UUID?
         @State private var fullscreenEpisodeID: UUID?
         @State private var fullscreenRequestID: UUID?
 
@@ -58,6 +59,7 @@ import SwiftUI
                 )
                 TVEpisodeRail(
                     episodes: snapshot.episodes,
+                    initialFocusEpisodeID: initialFocusEpisodeID,
                     previousSeason: adjacentSeasons.previous,
                     nextSeason: adjacentSeasons.next,
                     isLoading: snapshot.isLoadingSeason,
@@ -97,9 +99,11 @@ import SwiftUI
             guard !hasLoaded else { return }
             hasLoaded = true
             snapshot = useCase.initialSnapshot
+            let progressTarget = try? await useCase.loadProgressTarget()
+            initialFocusEpisodeID = routeEpisodeID ?? progressTarget?.episodeID
 
             if useCase.rootDetail.kind == .videoSeries {
-                if let selectedSeasonID = snapshot.selectedSeasonID {
+                if let selectedSeasonID = progressTarget?.seasonID ?? snapshot.selectedSeasonID {
                     await selectSeason(id: selectedSeasonID)
                     applyRouteEpisodeIfNeeded()
                 }
@@ -108,7 +112,10 @@ import SwiftUI
 
             guard useCase.rootDetail.kind == .videoSeason else { return }
             seasonCache[useCase.rootDetail.id] = useCase.rootDetail
-            snapshot.installSeason(useCase.rootDetail)
+            snapshot.installSeason(
+                useCase.rootDetail,
+                preferredEpisodeID: initialFocusEpisodeID
+            )
             applyRouteEpisodeIfNeeded()
             do {
                 guard let parent = try await useCase.loadParentSeries(), !Task.isCancelled else { return }
@@ -128,7 +135,10 @@ import SwiftUI
             episodeLoadTask?.cancel()
 
             if let cached = seasonCache[id] {
-                snapshot.installSeason(cached)
+                snapshot.installSeason(
+                    cached,
+                    preferredEpisodeID: preferredEpisodeID(in: id)
+                )
                 return
             }
 
@@ -147,7 +157,10 @@ import SwiftUI
                     snapshot.selectedSeasonID == id
                 else { return }
                 seasonCache[id] = detail
-                snapshot.installSeason(detail)
+                snapshot.installSeason(
+                    detail,
+                    preferredEpisodeID: preferredEpisodeID(in: id)
+                )
                 applyRouteEpisodeIfNeeded()
             } catch is CancellationError {
                 return
@@ -183,6 +196,23 @@ import SwiftUI
                 )
             else { return }
             applyEpisodeSelection(episode, intent: .activate)
+        }
+
+        private var routeEpisodeID: UUID? {
+            guard routeLink?.intent == .playback,
+                routeLink?.kind == .videoSeason
+            else { return nil }
+            return routeLink?.sourceThumbnail?.id
+        }
+
+        private func preferredEpisodeID(in seasonID: UUID) -> UUID? {
+            guard let initialFocusEpisodeID else { return nil }
+            if let source = routeLink?.sourceThumbnail,
+                source.id == initialFocusEpisodeID
+            {
+                return source.parentEntityID == seasonID ? initialFocusEpisodeID : nil
+            }
+            return initialFocusEpisodeID
         }
 
         private func handleAdvancedEpisode(_ link: EntityLink) {

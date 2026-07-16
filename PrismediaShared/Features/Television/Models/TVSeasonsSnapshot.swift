@@ -37,9 +37,12 @@ struct TVSeasonsSnapshot: Equatable, Sendable {
         seasonErrorMessage = nil
     }
 
-    mutating func installSeason(_ detail: EntityDetail) {
+    mutating func installSeason(
+        _ detail: EntityDetail,
+        preferredEpisodeID: UUID? = nil
+    ) {
         episodes = TVSeasonsPresentation.episodes(in: detail)
-        selectedEpisode = episodes.first
+        selectedEpisode = episodes.first { $0.id == preferredEpisodeID } ?? episodes.first
         selectedEpisodeDetail = nil
         seasonErrorMessage = nil
     }

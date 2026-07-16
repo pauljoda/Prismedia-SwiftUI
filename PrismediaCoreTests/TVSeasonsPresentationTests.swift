@@ -138,6 +138,31 @@ final class TVSeasonsPresentationTests: XCTestCase {
         }
     }
 
+    func testInstallingASeasonSelectsThePreferredProgressEpisode() {
+        let first = thumbnail(kind: .video, order: 1)
+        let progressEpisode = thumbnail(
+            id: "22222222-2222-2222-2222-222222222222",
+            kind: .video,
+            order: 2
+        )
+        let season = detail(
+            kind: .videoSeason,
+            children: [
+                EntityGroup(
+                    kind: .video,
+                    label: "Episodes",
+                    entities: [first, progressEpisode],
+                    code: nil
+                )
+            ]
+        )
+        var snapshot = TVSeasonsSnapshot()
+
+        snapshot.installSeason(season, preferredEpisodeID: progressEpisode.id)
+
+        XCTAssertEqual(snapshot.selectedEpisode?.id, progressEpisode.id)
+    }
+
     private func detail(
         kind: EntityKind,
         children: [EntityGroup]
@@ -181,6 +206,67 @@ final class TVSeasonsPresentationTests: XCTestCase {
 
 @MainActor
 final class TVSeasonsUseCaseTests: XCTestCase {
+    func testSeriesProgressTargetResolvesTheEpisodeSeason() async throws {
+        let seriesID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let seasonID = UUID(uuidString: "20000000-0000-0000-0000-000000000002")!
+        let episodeID = UUID(uuidString: "30000000-0000-0000-0000-000000000003")!
+        let seasonThumbnail = EntityThumbnail(
+            id: seasonID,
+            kind: .videoSeason,
+            title: "Season 2",
+            parentEntityID: seriesID,
+            sortOrder: 2
+        )
+        let series = EntityDetail(
+            id: seriesID,
+            kind: .videoSeries,
+            title: "Series",
+            parentEntityID: nil,
+            sortOrder: nil,
+            hasSourceMedia: false,
+            capabilities: [
+                .progress(
+                    EntityProgressCapability(
+                        currentEntityID: episodeID,
+                        unit: .item,
+                        index: 4,
+                        total: 12,
+                        mode: nil,
+                        completedAt: nil,
+                        updatedAt: nil,
+                        workIndex: nil,
+                        workTotal: nil,
+                        location: nil
+                    )
+                )
+            ],
+            childrenByKind: [
+                .init(kind: .videoSeason, label: "Seasons", entities: [seasonThumbnail], code: nil)
+            ],
+            relationships: []
+        )
+        let episode = EntityDetail(
+            id: episodeID,
+            kind: .video,
+            title: "Current Episode",
+            parentEntityID: seasonID,
+            sortOrder: 5,
+            hasSourceMedia: true,
+            capabilities: [],
+            childrenByKind: [],
+            relationships: []
+        )
+        let loader = TVSeasonsLoaderStub(values: [episodeID: episode])
+        let useCase = TVSeasonsUseCase(rootDetail: series, loader: loader)
+
+        let target = try await useCase.loadProgressTarget()
+        let requestedIDs = await loader.requestedIDs()
+
+        XCTAssertEqual(target?.episodeID, episodeID)
+        XCTAssertEqual(target?.seasonID, seasonID)
+        XCTAssertEqual(requestedIDs, [episodeID])
+    }
+
     func testOpeningASeasonLoadsItsParentSeriesWithoutReplacingUsableSeasonContent() async throws {
         let seriesID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
         let seasonID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!

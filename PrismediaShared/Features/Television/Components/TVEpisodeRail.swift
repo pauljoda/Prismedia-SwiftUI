@@ -3,10 +3,13 @@ import SwiftUI
 #if os(tvOS)
 
     struct TVEpisodeRail: View {
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @FocusState private var focusedTarget: TVEpisodeRailFocusTarget?
         @State private var pendingBoundaryDirection: TVSeasonBoundaryDirection?
+        @State private var hasAppliedInitialFocus = false
 
         let episodes: [EntityThumbnail]
+        let initialFocusEpisodeID: UUID?
         let previousSeason: EntityThumbnail?
         let nextSeason: EntityThumbnail?
         let isLoading: Bool
@@ -23,9 +26,6 @@ import SwiftUI
                     else { return }
                     onFocus(episode)
                 }
-                .onChange(of: episodes.map(\.id)) { _, episodeIDs in
-                    restoreFocusIfNeeded(episodeIDs: episodeIDs)
-                }
         }
 
         @ViewBuilder
@@ -40,42 +40,57 @@ import SwiftUI
                 ContentUnavailableView("No Episodes", systemImage: "rectangle.stack")
                     .frame(maxWidth: .infinity, minHeight: 250)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: PrismediaSpacing.section) {
-                        if let previousSeason {
-                            seasonBoundaryButton(
-                                season: previousSeason,
-                                direction: .previous,
-                                focusTarget: .previousSeason
-                            )
-                        }
-
-                        ForEach(episodes) { episode in
-                            Button {
-                                onActivate(episode)
-                            } label: {
-                                EntityThumbnailCardView(
-                                    item: episode,
-                                    layout: .rail,
-                                    preferredWidth: 300
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(alignment: .top, spacing: PrismediaSpacing.section) {
+                            if let previousSeason {
+                                seasonBoundaryButton(
+                                    season: previousSeason,
+                                    direction: .previous,
+                                    focusTarget: .previousSeason
                                 )
                             }
-                            .buttonStyle(.card)
-                            .focused($focusedTarget, equals: .episode(episode.id))
-                            .accessibilityHint("Updates the selected episode")
-                            .accessibilityIdentifier("tv.seasons-detail.episode.\(episode.id.uuidString)")
-                        }
 
-                        if let nextSeason {
-                            seasonBoundaryButton(
-                                season: nextSeason,
-                                direction: .next,
-                                focusTarget: .nextSeason
-                            )
+                            ForEach(episodes) { episode in
+                                Button {
+                                    onActivate(episode)
+                                } label: {
+                                    EntityThumbnailCardView(
+                                        item: episode,
+                                        layout: .rail,
+                                        preferredWidth: 300
+                                    )
+                                }
+                                .buttonStyle(.card)
+                                .focused($focusedTarget, equals: .episode(episode.id))
+                                .id(episode.id)
+                                .accessibilityHint("Updates the selected episode")
+                                .accessibilityIdentifier(
+                                    "tv.seasons-detail.episode.\(episode.id.uuidString)"
+                                )
+                            }
+
+                            if let nextSeason {
+                                seasonBoundaryButton(
+                                    season: nextSeason,
+                                    direction: .next,
+                                    focusTarget: .nextSeason
+                                )
+                            }
                         }
+                        .padding(.horizontal, 72)
+                        .padding(.vertical, PrismediaSpacing.medium)
                     }
-                    .padding(.horizontal, 72)
-                    .padding(.vertical, PrismediaSpacing.medium)
+                    .onChange(of: episodes.map(\.id), initial: true) { _, episodeIDs in
+                        restoreFocusIfNeeded(episodeIDs: episodeIDs, proxy: proxy)
+                        applyInitialFocusIfNeeded(episodeIDs: episodeIDs, proxy: proxy)
+                    }
+                    .onChange(of: initialFocusEpisodeID, initial: true) {
+                        applyInitialFocusIfNeeded(
+                            episodeIDs: episodes.map(\.id),
+                            proxy: proxy
+                        )
+                    }
                 }
                 .frame(height: 300)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -100,12 +115,36 @@ import SwiftUI
             .accessibilityIdentifier(direction.accessibilityIdentifier)
         }
 
-        private func restoreFocusIfNeeded(episodeIDs: [UUID]) {
+        private func restoreFocusIfNeeded(
+            episodeIDs: [UUID],
+            proxy: ScrollViewProxy
+        ) {
             guard !episodeIDs.isEmpty, let pendingBoundaryDirection else { return }
             self.pendingBoundaryDirection = nil
             let episodeID = pendingBoundaryDirection == .previous ? episodeIDs.last : episodeIDs.first
             guard let episodeID else { return }
 
+            scrollAndFocus(episodeID, proxy: proxy)
+        }
+
+        private func applyInitialFocusIfNeeded(
+            episodeIDs: [UUID],
+            proxy: ScrollViewProxy
+        ) {
+            guard !hasAppliedInitialFocus,
+                pendingBoundaryDirection == nil,
+                let initialFocusEpisodeID,
+                episodeIDs.contains(initialFocusEpisodeID)
+            else { return }
+            hasAppliedInitialFocus = true
+
+            scrollAndFocus(initialFocusEpisodeID, proxy: proxy)
+        }
+
+        private func scrollAndFocus(_ episodeID: UUID, proxy: ScrollViewProxy) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                proxy.scrollTo(episodeID, anchor: .center)
+            }
             Task { @MainActor in
                 await Task.yield()
                 focusedTarget = .episode(episodeID)
@@ -118,6 +157,7 @@ import SwiftUI
         PreviewShell {
             TVEpisodeRail(
                 episodes: [TVSeasonsPreviewData.episodeThumbnail],
+                initialFocusEpisodeID: TVSeasonsPreviewData.episodeThumbnail.id,
                 previousSeason: nil,
                 nextSeason: TVSeasonsPreviewData.seasonThumbnail,
                 isLoading: false,
@@ -134,6 +174,7 @@ import SwiftUI
         PreviewShell {
             TVEpisodeRail(
                 episodes: [],
+                initialFocusEpisodeID: nil,
                 previousSeason: nil,
                 nextSeason: nil,
                 isLoading: true,
@@ -149,6 +190,7 @@ import SwiftUI
         PreviewShell {
             TVEpisodeRail(
                 episodes: [],
+                initialFocusEpisodeID: nil,
                 previousSeason: nil,
                 nextSeason: nil,
                 isLoading: false,

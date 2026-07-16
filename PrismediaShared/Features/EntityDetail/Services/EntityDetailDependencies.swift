@@ -8,6 +8,7 @@ public struct EntityDetailDependencies: Sendable {
     public let detailLoader: any EntityDetailLoading
     public let mutator: (any EntityDetailMutating)?
     public let metadataMutator: (any EntityMetadataMutating)?
+    public let progressMutator: (any EntityProgressMutating)?
     public let collectionItemsLoader: (any CollectionItemsLoading)?
     public let entityGridLoader: (any EntityGridLoading)?
     public let readerService: (any BookReaderServicing)?
@@ -39,12 +40,14 @@ public struct EntityDetailDependencies: Sendable {
         trickplayFrameLoader: (any TrickplayFrameLoading)? = nil,
         entityGridLoader: (any EntityGridLoading)? = nil,
         metadataMutator: (any EntityMetadataMutating)? = nil,
+        progressMutator: (any EntityProgressMutating)? = nil,
         readerBookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
         readerLocatorStore: EPUBLocatorStore = .disabled
     ) {
         self.detailLoader = detailLoader
         self.mutator = mutator
         self.metadataMutator = metadataMutator
+        self.progressMutator = progressMutator
         self.collectionItemsLoader = collectionItemsLoader
         self.entityGridLoader = entityGridLoader
         self.readerService = readerService

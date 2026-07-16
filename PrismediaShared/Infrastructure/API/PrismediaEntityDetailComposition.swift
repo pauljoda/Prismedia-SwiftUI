@@ -47,6 +47,7 @@ enum PrismediaEntityDetailComposition {
             trickplayFrameLoader: PrismediaTrickplayFrameLoader(client: client),
             entityGridLoader: PrismediaEntityGridLoader(client: client),
             metadataMutator: adapter,
+            progressMutator: adapter,
             readerBookmarkStore: readerBookmarkStore,
             readerLocatorStore: readerLocatorStore
         )
