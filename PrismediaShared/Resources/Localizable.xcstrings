@@ -4,28 +4,11 @@
     "" : {
 
     },
-    "%.0f%%" : {
+    "@%@" : {
 
     },
-    "%@ %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@"
-          }
-        }
-      }
-    },
-    "%@ of %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ of %2$@"
-          }
-        }
-      }
+    "%.0f%%" : {
+
     },
     "%@ · %@" : {
       "localizations" : {
@@ -37,12 +20,32 @@
         }
       }
     },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
     "%@ → %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "%@ of %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@"
           }
         }
       }
@@ -77,22 +80,22 @@
         }
       }
     },
-    "%@. %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@. %2$@"
-          }
-        }
-      }
-    },
     "%@: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@"
           }
         }
       }
@@ -150,28 +153,13 @@
     "%lld%%" : {
 
     },
+    "−%@" : {
+
+    },
     "0.5×" : {
 
     },
     "2×" : {
-
-    },
-    "@%@" : {
-
-    },
-    "A Longer Adaptive Music Title" : {
-
-    },
-    "A Storm Blows In" : {
-
-    },
-    "A deliberately long summary that must wrap inside the narrow phone viewport instead of expanding the entire detail surface." : {
-
-    },
-    "A longer content card title that can wrap" : {
-
-    },
-    "API key" : {
 
     },
     "Accept" : {
@@ -201,13 +189,13 @@
     "Add %@" : {
 
     },
+    "Add a watched root in server settings." : {
+
+    },
     "Add Current Location" : {
 
     },
     "Add Role" : {
-
-    },
-    "Add a watched root in server settings." : {
 
     },
     "Add to Collection" : {
@@ -220,6 +208,9 @@
 
     },
     "Albums" : {
+
+    },
+    "Alignment" : {
 
     },
     "All Kinds" : {
@@ -246,9 +237,6 @@
     "Artwork" : {
 
     },
-    "Artwork accent" : {
-
-    },
     "Artwork for %@" : {
 
     },
@@ -271,6 +259,9 @@
 
     },
     "Audiobook parts play in order" : {
+
+    },
+    "Automatic" : {
 
     },
     "Availability" : {
@@ -346,6 +337,12 @@
     "Check your connection and try again." : {
 
     },
+    "Choose a different server" : {
+
+    },
+    "Choose an Item" : {
+
+    },
     "Choose Audio Output" : {
 
     },
@@ -355,22 +352,16 @@
     "Choose Provider" : {
 
     },
-    "Choose a different server" : {
-
-    },
-    "Choose an Item" : {
-
-    },
     "Classification" : {
 
     },
     "Clear" : {
 
     },
-    "Clear Toggle bookmark" : {
+    "Clear failures" : {
 
     },
-    "Clear failures" : {
+    "Clear Toggle bookmark" : {
 
     },
     "Clear transcode cache" : {
@@ -391,22 +382,22 @@
     "Collapsed" : {
 
     },
+    "Collapses the description" : {
+
+    },
+    "Columns" : {
+
+    },
     "Comic page, %@" : {
 
     },
     "Completed and skipped media will appear here." : {
 
     },
-    "Connection" : {
-
-    },
     "Contents" : {
 
     },
     "Context, %@" : {
-
-    },
-    "Continue watching" : {
 
     },
     "Couldn’t Add to Collection" : {
@@ -550,12 +541,6 @@
     "Downloaded" : {
 
     },
-    "EPUB reader" : {
-
-    },
-    "ETA" : {
-
-    },
     "Edit Entity" : {
 
     },
@@ -563,9 +548,6 @@
 
     },
     "Eligible for monitoring" : {
-
-    },
-    "Embedded field" : {
 
     },
     "Empty Folder" : {
@@ -580,6 +562,12 @@
     "Entity actions" : {
 
     },
+    "EPUB reader" : {
+
+    },
+    "ETA" : {
+
+    },
     "Events" : {
 
     },
@@ -589,7 +577,7 @@
     "Expanded" : {
 
     },
-    "Fallback accent" : {
+    "Fade Strength" : {
 
     },
     "Favorite" : {
@@ -629,9 +617,6 @@
     "First Page Is Cover" : {
 
     },
-    "Fixed media surface" : {
-
-    },
     "Flow" : {
 
     },
@@ -642,6 +627,9 @@
 
     },
     "From %@" : {
+
+    },
+    "Gentle" : {
 
     },
     "Has references" : {
@@ -657,6 +645,9 @@
 
     },
     "How your name appears" : {
+
+    },
+    "Hyphenation" : {
 
     },
     "Identify" : {
@@ -677,13 +668,10 @@
     "Images and sub-galleries will appear here when they’re added." : {
 
     },
-    "Immersive Media" : {
+    "Import into" : {
 
     },
     "Import Torrent" : {
-
-    },
-    "Import into" : {
 
     },
     "Imported Files" : {
@@ -693,9 +681,6 @@
 
     },
     "Increase" : {
-
-    },
-    "Inline Player" : {
 
     },
     "Install plugins on the server to use metadata and request providers." : {
@@ -713,6 +698,9 @@
     "Jump to Toggle bookmark" : {
 
     },
+    "Justified" : {
+
+    },
     "Kind" : {
 
     },
@@ -725,10 +713,13 @@
     "Layout" : {
 
     },
-    "Library" : {
+    "Leading" : {
 
     },
-    "Light" : {
+    "Letter Spacing" : {
+
+    },
+    "Library" : {
 
     },
     "Line Spacing" : {
@@ -741,9 +732,6 @@
 
     },
     "Loading %@…" : {
-
-    },
-    "Loading TV home…" : {
 
     },
     "Loading acquisition settings…" : {
@@ -782,9 +770,6 @@
     "Loading jobs…" : {
 
     },
-    "Loading library…" : {
-
-    },
     "Loading more results" : {
 
     },
@@ -818,7 +803,7 @@
     "Loading transcript…" : {
 
     },
-    "Loading your Prismedia library…" : {
+    "Loading TV home…" : {
 
     },
     "Loads %@" : {
@@ -854,9 +839,6 @@
     "Metadata" : {
 
     },
-    "Midnight Sessions" : {
-
-    },
     "Monitor" : {
 
     },
@@ -884,22 +866,7 @@
     "Movies, series, and the collections you love—ready for the biggest screen in the house." : {
 
     },
-    "Music Library" : {
-
-    },
     "Mute" : {
-
-    },
-    "NEXT CHAPTER" : {
-
-    },
-    "NO NEXT CHAPTER" : {
-
-    },
-    "NOW PLAYING" : {
-
-    },
-    "NSFW" : {
 
     },
     "Navigate" : {
@@ -923,7 +890,16 @@
     "Next Chapter" : {
 
     },
+    "NEXT CHAPTER" : {
+
+    },
+    "Next frame" : {
+
+    },
     "Next Image" : {
+
+    },
+    "Next page" : {
 
     },
     "Next Part" : {
@@ -933,12 +909,6 @@
 
     },
     "Next Track" : {
-
-    },
-    "Next frame" : {
-
-    },
-    "Next page" : {
 
     },
     "No %@" : {
@@ -962,7 +932,16 @@
     "No Compatible Plugins" : {
 
     },
+    "No enabled library supports %@. Add one in Settings first." : {
+
+    },
+    "No enabled metadata provider can track this entity yet. Identify it with a supported provider first." : {
+
+    },
     "No Episodes" : {
+
+    },
+    "No files reported yet." : {
 
     },
     "No Gallery Content" : {
@@ -974,7 +953,16 @@
     "No Job Runs" : {
 
     },
+    "No library items match “%@”." : {
+
+    },
     "No Library Roots" : {
+
+    },
+    "No more tracks in the queue" : {
+
+    },
+    "NO NEXT CHAPTER" : {
 
     },
     "No Playable Audio" : {
@@ -986,7 +974,16 @@
     "No Provider" : {
 
     },
+    "No references" : {
+
+    },
+    "No related details yet." : {
+
+    },
     "No Results" : {
+
+    },
+    "No roles selected" : {
 
     },
     "No Search Providers" : {
@@ -998,31 +995,13 @@
     "No Table of Contents" : {
 
     },
-    "No enabled library supports %@. Add one in Settings first." : {
-
-    },
-    "No enabled metadata provider can track this entity yet. Identify it with a supported provider first." : {
-
-    },
-    "No files reported yet." : {
-
-    },
-    "No library items match “%@”." : {
-
-    },
-    "No more tracks in the queue" : {
-
-    },
-    "No references" : {
-
-    },
-    "No related details yet." : {
-
-    },
-    "No roles selected" : {
-
-    },
     "No visible files or folders are here." : {
+
+    },
+    "Normalization applies the chosen weight consistently to headings and body text." : {
+
+    },
+    "Normalize Text Styles" : {
 
     },
     "Not organized" : {
@@ -1037,28 +1016,31 @@
     "Now Playing" : {
 
     },
+    "NOW PLAYING" : {
+
+    },
     "Now Playing, %@" : {
 
     },
-    "OK" : {
+    "NSFW" : {
 
     },
     "Off" : {
 
     },
+    "OK" : {
+
+    },
     "On" : {
+
+    },
+    "One" : {
 
     },
     "One Page" : {
 
     },
     "Open %@" : {
-
-    },
-    "Open Entity" : {
-
-    },
-    "Open Link" : {
 
     },
     "Open bookmark, %@, page %lld of %lld" : {
@@ -1071,10 +1053,7 @@
         }
       }
     },
-    "Open chapter" : {
-
-    },
-    "Open entity" : {
+    "Open Link" : {
 
     },
     "Opening EPUB…" : {
@@ -1131,21 +1110,6 @@
     "Organized" : {
 
     },
-    "PDF reader" : {
-
-    },
-    "PDF view options" : {
-
-    },
-    "PREPARING" : {
-
-    },
-    "PRESS PLAY" : {
-
-    },
-    "PRISMEDIA" : {
-
-    },
     "Page %lld of %lld" : {
       "localizations" : {
         "en" : {
@@ -1155,6 +1119,9 @@
           }
         }
       }
+    },
+    "Page Appearance" : {
+
     },
     "Page Fit" : {
 
@@ -1169,6 +1136,15 @@
 
     },
     "Paged" : {
+
+    },
+    "Paragraph focus keeps the text nearest the center fully visible and progressively fades surrounding passages. The guide settles beneath the center line after scrolling stops." : {
+
+    },
+    "Paragraph Indent" : {
+
+    },
+    "Paragraph Spacing" : {
 
     },
     "Password" : {
@@ -1189,6 +1165,12 @@
     "Paused" : {
 
     },
+    "PDF reader" : {
+
+    },
+    "PDF view options" : {
+
+    },
     "Peers" : {
 
     },
@@ -1207,6 +1189,9 @@
     "Playback Options" : {
 
     },
+    "Playback position" : {
+
+    },
     "Playback Position" : {
 
     },
@@ -1214,9 +1199,6 @@
 
     },
     "Playback Stats" : {
-
-    },
-    "Playback position" : {
 
     },
     "Playing" : {
@@ -1232,6 +1214,9 @@
 
     },
     "Prepares the video and begins playback" : {
+
+    },
+    "PREPARING" : {
 
     },
     "Preparing media…" : {
@@ -1255,16 +1240,19 @@
     "Preview" : {
 
     },
-    "Preview Account" : {
-
-    },
     "Previous" : {
 
     },
     "Previous Chapter" : {
 
     },
+    "Previous frame" : {
+
+    },
     "Previous Image" : {
+
+    },
+    "Previous page" : {
 
     },
     "Previous Part" : {
@@ -1276,19 +1264,16 @@
     "Previous Track" : {
 
     },
-    "Previous frame" : {
-
-    },
-    "Previous page" : {
-
-    },
     "Prismedia" : {
 
     },
-    "Prismedia Design System" : {
+    "PRISMEDIA" : {
 
     },
     "Prismedia will estimate the matching page from your current audiobook position." : {
+
+    },
+    "prismedia.example.com" : {
 
     },
     "Processed %lld of %lld" : {
@@ -1301,10 +1286,19 @@
         }
       }
     },
+    "Profile" : {
+
+    },
+    "Profiles are starting points. Changing any option creates a custom profile, saved for every book." : {
+
+    },
     "Progress" : {
 
     },
     "Progress Options" : {
+
+    },
+    "Progressive Paragraph Focus" : {
 
     },
     "Proposal Changed" : {
@@ -1319,7 +1313,7 @@
     "Providers" : {
 
     },
-    "Publisher" : {
+    "Publisher formatting can override spacing and paragraph controls. Turn it off for full control." : {
 
     },
     "Quality profile" : {
@@ -1346,19 +1340,31 @@
     "Read & Listen" : {
 
     },
+    "Reader settings" : {
+
+    },
     "Reader Settings" : {
 
     },
     "Reader Unavailable" : {
 
     },
-    "Reader settings" : {
-
-    },
     "Reading" : {
 
     },
+    "Reading Focus" : {
+
+    },
+    "Reading focus is available when Flow is set to Scroll." : {
+
+    },
+    "Reading Guide" : {
+
+    },
     "Reading Mode" : {
+
+    },
+    "Reading Profile" : {
 
     },
     "Reading Speed" : {
@@ -1374,9 +1380,6 @@
 
     },
     "Recent Runs" : {
-
-    },
-    "Recently added" : {
 
     },
     "References" : {
@@ -1439,10 +1442,19 @@
     "Restore Reader Defaults" : {
 
     },
-    "Retry Import" : {
+    "Resume %@" : {
+
+    },
+    "Resumes automatically after the countdown" : {
+
+    },
+    "Resuming automatically in %lld…" : {
 
     },
     "Retry and Allow Format Change" : {
+
+    },
+    "Retry Import" : {
 
     },
     "Return from Toggle bookmark" : {
@@ -1461,9 +1473,6 @@
 
     },
     "Rewind gestures" : {
-
-    },
-    "Sans Serif" : {
 
     },
     "Save" : {
@@ -1499,7 +1508,19 @@
     "Search Again" : {
 
     },
+    "Search again or import a torrent file manually." : {
+
+    },
+    "Search book" : {
+
+    },
     "Search Book" : {
+
+    },
+    "Search for a Match" : {
+
+    },
+    "Search library" : {
 
     },
     "Search PDF" : {
@@ -1517,18 +1538,6 @@
     "Search Unavailable" : {
 
     },
-    "Search again or import a torrent file manually." : {
-
-    },
-    "Search book" : {
-
-    },
-    "Search for a Match" : {
-
-    },
-    "Search library" : {
-
-    },
     "Search your library" : {
 
     },
@@ -1538,10 +1547,10 @@
     "Searching %@…" : {
 
     },
-    "Searching Prismedia…" : {
+    "Searching book…" : {
 
     },
-    "Searching book…" : {
+    "Searching Prismedia…" : {
 
     },
     "Searching with %@" : {
@@ -1577,16 +1586,7 @@
     "Selected %lld" : {
 
     },
-    "Selected Page" : {
-
-    },
     "Sepia" : {
-
-    },
-    "Serif" : {
-
-    },
-    "Server" : {
 
     },
     "Server URL" : {
@@ -1607,6 +1607,9 @@
     "Show History" : {
 
     },
+    "Show Less" : {
+
+    },
     "Show Now Playing" : {
 
     },
@@ -1619,19 +1622,19 @@
     "Show Queue" : {
 
     },
-    "Show details" : {
-
-    },
     "Show wanted entities" : {
 
     },
     "Shows playback and navigation actions" : {
 
     },
-    "Shows the full Now Playing view" : {
+    "Shows the full description" : {
 
     },
     "Shows the full episode description" : {
+
+    },
+    "Shows the full Now Playing view" : {
 
     },
     "Shows the playing queue" : {
@@ -1652,7 +1655,7 @@
     "Sort" : {
 
     },
-    "Spectral content layer" : {
+    "Spacing" : {
 
     },
     "Speed" : {
@@ -1673,7 +1676,13 @@
     "Start video playback to seek to this marker" : {
 
     },
+    "Starting playback…" : {
+
+    },
     "Starts playback" : {
+
+    },
+    "Starts the video from the beginning" : {
 
     },
     "State" : {
@@ -1688,31 +1697,28 @@
     "Storage" : {
 
     },
-    "Sub Galleries" : {
+    "Strong" : {
 
     },
-    "Subtitle Track" : {
+    "Sub Galleries" : {
 
     },
     "Subtitle style preview" : {
 
     },
+    "Subtitle Track" : {
+
+    },
     "Subtitles" : {
-
-    },
-    "System" : {
-
-    },
-    "System Background" : {
-
-    },
-    "System navigation and controls remain above the content background." : {
 
     },
     "Table of Contents" : {
 
     },
     "Text Size" : {
+
+    },
+    "Text Weight" : {
 
     },
     "That saved location is no longer available in this edition of the book." : {
@@ -1727,9 +1733,6 @@
     "Theme" : {
 
     },
-    "This PDF does not include an outline." : {
-
-    },
     "This audiobook position could not be matched to a readable chapter." : {
 
     },
@@ -1740,6 +1743,9 @@
 
     },
     "This collection no longer contains playable audio." : {
+
+    },
+    "This PDF does not include an outline." : {
 
     },
     "This publication does not include a readable contents list." : {
@@ -1757,10 +1763,10 @@
     "Title" : {
 
     },
-    "Toggle Playback" : {
+    "Toggle animation" : {
 
     },
-    "Toggle animation" : {
+    "Toggle Playback" : {
 
     },
     "Transfer" : {
@@ -1770,6 +1776,9 @@
 
     },
     "Try another provider or refine the search fields." : {
+
+    },
+    "Two" : {
 
     },
     "Two Pages" : {
@@ -1848,6 +1857,12 @@
     "Use as Toggle bookmark" : {
 
     },
+    "Use paragraph spacing for a modern layout, indentation for a traditional book layout, or combine them to taste." : {
+
+    },
+    "Use Publisher Formatting" : {
+
+    },
     "User Metadata" : {
 
     },
@@ -1861,9 +1876,6 @@
 
     },
     "Video Unavailable" : {
-
-    },
-    "Video library" : {
 
     },
     "View" : {
@@ -1887,7 +1899,13 @@
     "What would you like to request?" : {
 
     },
+    "Word Spacing" : {
+
+    },
     "Work" : {
+
+    },
+    "You’ll return to the Prismedia sign-in screen on this Apple TV." : {
 
     },
     "Your Library Is Ready" : {
@@ -1899,9 +1917,6 @@
     "Your progress" : {
 
     },
-    "You’ll return to the Prismedia sign-in screen on this Apple TV." : {
-
-    },
     "Zoom %lld percent" : {
 
     },
@@ -1909,12 +1924,6 @@
 
     },
     "Zoom Out" : {
-
-    },
-    "prismedia.example.com" : {
-
-    },
-    "−%@" : {
 
     }
   },
