@@ -38,9 +38,22 @@ public struct PrismediaSearchHubLoader: SearchHubLoading, Sendable {
         return EntityListResponse(items: items, totalCount: items.count)
     }
 
-    public func search(query: String, limit: Int, cursor: String?) async throws -> EntityListResponse {
-        try await client.listEntities(
-            EntityListQuery(cursor: cursor),
+    public func search(
+        query: String,
+        filters: SearchHubFilterState,
+        limit: Int,
+        cursor: String?
+    ) async throws -> EntityListResponse {
+        let orderedKinds =
+            filters.selectedKinds == SearchHubKindCatalog.allKinds
+            ? []
+            : SearchHubKindCatalog.kinds.filter(filters.selectedKinds.contains)
+        return try await client.listEntities(
+            EntityListQuery(
+                kinds: orderedKinds,
+                ratingMin: filters.minimumRating,
+                cursor: cursor
+            ),
             limit: limit,
             search: query
         )

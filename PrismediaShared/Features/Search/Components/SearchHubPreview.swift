@@ -3,6 +3,7 @@ import SwiftUI
 #if DEBUG
     struct SearchHubPreview: View {
         @State private var searchText: String
+        @State private var filters: SearchHubFilterState
 
         let loader: SearchHubPreviewLoader
         let user: UserAccount
@@ -10,11 +11,13 @@ import SwiftUI
 
         init(
             searchText: String = "",
+            filters: SearchHubFilterState = SearchHubFilterState(),
             loader: SearchHubPreviewLoader = SearchHubPreviewLoader(),
             user: UserAccount = PrismediaPreviewData.user,
             dynamicTypeSize: DynamicTypeSize? = nil
         ) {
             _searchText = State(initialValue: searchText)
+            _filters = State(initialValue: filters)
             self.loader = loader
             self.user = user
             self.dynamicTypeSize = dynamicTypeSize
@@ -33,6 +36,7 @@ import SwiftUI
                     onEntityMutated: {}
                 ),
                 searchText: $searchText,
+                filters: $filters,
                 modes: ModeCatalog.modes(for: user),
                 debounce: .milliseconds(10),
                 onSelectMode: { _ in },

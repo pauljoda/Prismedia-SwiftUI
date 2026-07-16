@@ -141,6 +141,24 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
+    func testAppRouterKeepsSearchFiltersAcrossSearchDetailNavigation() {
+        let router = PrismediaAppRouter(initialSearchSelected: true)
+        let filters = SearchHubFilterState(
+            selectedKinds: [.movie, .video],
+            minimumRating: 4,
+            dateFrom: Date(timeIntervalSince1970: 1_735_689_600)
+        )
+        router.searchText = "matrix"
+        router.searchFilters = filters
+
+        router.open(entity: EntityThumbnail(id: UUID(), kind: .movie, title: "The Matrix"))
+        _ = router.navigateBack(in: PrismediaAppRouter.searchPathID)
+
+        XCTAssertEqual(router.searchText, "matrix")
+        XCTAssertEqual(router.searchFilters, filters)
+    }
+
+    @MainActor
     func testAppRouterPerformsSynchronousPlaybackHandoffBeforeOpeningEntity() {
         let router = PrismediaAppRouter(initialMode: ModeCatalog.video, initialDestinationID: "movies")
         let entity = EntityThumbnail(id: UUID(), kind: .movie, title: "Arrival")

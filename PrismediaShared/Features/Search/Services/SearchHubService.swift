@@ -38,10 +38,16 @@ public struct SearchHubService {
 
     public func search(
         query: String,
+        filters: SearchHubFilterState = SearchHubFilterState(),
         debounce: Duration
     ) async throws -> SearchHubPage {
         try await search(
-            request: SearchHubSearchRequest(generation: 0, query: query, cursor: nil),
+            request: SearchHubSearchRequest(
+                generation: 0,
+                query: query,
+                filters: filters,
+                cursor: nil
+            ),
             debounce: debounce
         )
     }
@@ -56,23 +62,22 @@ public struct SearchHubService {
         try Task.checkCancellation()
         let response = try await loader.search(
             query: request.query,
+            filters: request.filters,
             limit: searchLimit,
             cursor: request.cursor
         )
         try Task.checkCancellation()
-        return safePage(from: response)
+        return safePage(from: response, filters: request.filters)
     }
 
-    private func safePage(from response: EntityListResponse) -> SearchHubPage {
-        guard !loader.allowsNsfwContent else {
-            return SearchHubPage(
-                items: response.items,
-                totalCount: response.totalCount,
-                nextCursor: response.nextCursor
-            )
+    private func safePage(
+        from response: EntityListResponse,
+        filters: SearchHubFilterState = SearchHubFilterState()
+    ) -> SearchHubPage {
+        let items = response.items.filter { item in
+            (loader.allowsNsfwContent || !item.isNsfw)
+                && filters.includes(item)
         }
-
-        let items = response.items.filter { !$0.isNsfw }
         let filteredCount = response.items.count - items.count
         let adjustedTotal = max(0, response.totalCount - filteredCount)
         return SearchHubPage(

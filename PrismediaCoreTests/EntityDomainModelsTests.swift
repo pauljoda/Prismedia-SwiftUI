@@ -44,6 +44,7 @@ final class EntityDomainModelsTests: XCTestCase {
               "latestAcquisitionStatus": "downloading",
               "acquisitionStatuses": ["searching", "downloading"],
               "wantedStatus": "downloading",
+              "createdAt": "2025-01-02T03:04:05.123Z",
               "rating": "4",
               "progress": "0.5",
               "resumeSeconds": "125.5",
@@ -59,6 +60,14 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(thumbnail.latestAcquisitionStatus?.rawValue, "downloading")
         XCTAssertEqual(thumbnail.acquisitionStatuses.map(\.rawValue), ["searching", "downloading"])
         XCTAssertEqual(thumbnail.wantedStatus?.rawValue, "downloading")
+        let expectedCreatedAt = try XCTUnwrap(
+            ISO8601DateFormatter().date(from: "2025-01-02T03:04:05Z")
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(thumbnail.createdAt).timeIntervalSince(expectedCreatedAt),
+            0.123,
+            accuracy: 0.001
+        )
         XCTAssertEqual(thumbnail.rating, 4)
         XCTAssertEqual(thumbnail.progress, 0.5)
         XCTAssertEqual(thumbnail.resumeSeconds, 125.5)

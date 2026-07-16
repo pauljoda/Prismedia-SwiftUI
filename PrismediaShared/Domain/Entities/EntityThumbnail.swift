@@ -24,6 +24,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
     public let latestAcquisitionStatus: AcquisitionStatus?
     public let acquisitionStatuses: [AcquisitionStatus]
     public let wantedStatus: AcquisitionStatus?
+    public let createdAt: Date?
     public let progress: Double?
     public let resumeSeconds: Double?
     public let playCount: Int?
@@ -81,6 +82,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         case latestAcquisitionStatus
         case acquisitionStatuses
         case wantedStatus
+        case createdAt
         case progress
         case resumeSeconds
         case playCount
@@ -112,6 +114,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         latestAcquisitionStatus: AcquisitionStatus? = nil,
         acquisitionStatuses: [AcquisitionStatus] = [],
         wantedStatus: AcquisitionStatus? = nil,
+        createdAt: Date? = nil,
         progress: Double? = nil,
         resumeSeconds: Double? = nil,
         playCount: Int? = nil,
@@ -141,6 +144,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         self.latestAcquisitionStatus = latestAcquisitionStatus
         self.acquisitionStatuses = acquisitionStatuses
         self.wantedStatus = wantedStatus
+        self.createdAt = createdAt
         self.progress = progress
         self.resumeSeconds = resumeSeconds
         self.playCount = playCount
@@ -181,6 +185,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         acquisitionStatuses =
             try container.decodeIfPresent([AcquisitionStatus].self, forKey: .acquisitionStatuses) ?? []
         wantedStatus = try container.decodeIfPresent(AcquisitionStatus.self, forKey: .wantedStatus)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
         progress = try container.decodeFlexibleDoubleIfPresent(forKey: .progress)
         resumeSeconds = try container.decodeFlexibleDoubleIfPresent(forKey: .resumeSeconds)
         playCount = try container.decodeFlexibleIntIfPresent(forKey: .playCount)

@@ -18,7 +18,12 @@ import SwiftUI
             try await response(recent, limit: limit)
         }
 
-        func search(query: String, limit: Int, cursor: String?) async throws -> EntityListResponse {
+        func search(
+            query: String,
+            filters: SearchHubFilterState,
+            limit: Int,
+            cursor: String?
+        ) async throws -> EntityListResponse {
             try await response(search, limit: limit)
         }
 

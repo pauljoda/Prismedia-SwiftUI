@@ -7,8 +7,11 @@ struct SearchHubView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @Binding private var searchText: String
+    @Binding private var filters: SearchHubFilterState
     @Binding private var navigationPath: [EntityLink]
     @State private var snapshot = SearchHubSnapshot()
+    @State private var expandedKinds = Set<EntityKind>()
+    @State private var filtersPresented = false
 
     private let service: SearchHubService
     private let debounce: Duration
@@ -22,6 +25,7 @@ struct SearchHubView: View {
         loader: any SearchHubLoading,
         detailDependencies: EntityDetailDependencies,
         searchText: Binding<String>,
+        filters: Binding<SearchHubFilterState> = .constant(SearchHubFilterState()),
         navigationPath: Binding<[EntityLink]> = .constant([]),
         modes: [AppMode],
         reloadRevision: Int = 0,
@@ -30,6 +34,7 @@ struct SearchHubView: View {
         onSelectDestination: @escaping (AppMode, AppDestination) -> Void
     ) {
         _searchText = searchText
+        _filters = filters
         _navigationPath = navigationPath
         service = SearchHubService(loader: loader)
         self.debounce = debounce
@@ -42,25 +47,19 @@ struct SearchHubView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            Group {
-                if isInitialSearchLoading {
-                    PrismediaLoadingView("Searching Prismedia…")
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: PrismediaSpacing.section) {
-                            if isSearchActive {
-                                searchResults
-                            } else {
-                                browseLanding
-                            }
-                        }
-                        .padding(.horizontal, PrismediaSpacing.extraLarge)
-                        .padding(.top, PrismediaSpacing.small)
-                        .padding(.bottom, PrismediaSpacing.section)
-                        .containerRelativeFrame(.horizontal, alignment: .center) { length, _ in
-                            min(length, 960)
-                        }
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: PrismediaSpacing.section) {
+                    if isSearchActive {
+                        searchResults
+                    } else {
+                        browseLanding
                     }
+                }
+                .padding(.horizontal, PrismediaSpacing.extraLarge)
+                .padding(.top, PrismediaSpacing.small)
+                .padding(.bottom, PrismediaSpacing.section)
+                .containerRelativeFrame(.horizontal, alignment: .center) { length, _ in
+                    min(length, 1_120)
                 }
             }
             .prismediaScreenBackground()
@@ -71,6 +70,26 @@ struct SearchHubView: View {
             .navigationTitle("Browse")
             .accessibilityIdentifier("shell.search")
             .prismediaEntityDestinations(dependencies: detailDependencies)
+            .toolbar {
+                if isSearchActive {
+                    ToolbarItem {
+                        Button {
+                            filtersPresented = true
+                        } label: {
+                            Label(
+                                filters.isDefault
+                                    ? "Filters"
+                                    : "Filters, \(filters.activeFilterCount) active",
+                                systemImage: filters.isDefault
+                                    ? "line.3.horizontal.decrease"
+                                    : "line.3.horizontal.decrease.circle.fill"
+                            )
+                        }
+                        .accessibilityHint("Shows rating, date, and entity-kind filters")
+                        .accessibilityIdentifier("shell.search.filters")
+                    }
+                }
+            }
         }
         #if os(iOS)
             .searchable(
@@ -84,10 +103,25 @@ struct SearchHubView: View {
                 prompt: "Movies, music, books, and more"
             )
         #endif
+        .onSubmit(of: .search) {
+            openTopResult()
+        }
+        .onKeyPress(.return) {
+            guard isSearchActive, topSearchResult != nil else { return .ignored }
+            openTopResult()
+            return .handled
+        }
+        .sheet(isPresented: $filtersPresented) {
+            NavigationStack {
+                SearchHubFilterControls(filters: $filters)
+            }
+            .presentationDetents([.medium, .large])
+        }
         .task(id: reloadRevision) {
             await loadRecent()
         }
-        .task(id: SearchHubTaskID(query: normalizedSearchText, revision: reloadRevision)) {
+        .task(id: searchTaskID) {
+            expandedKinds.removeAll()
             await updateSearch(for: normalizedSearchText, debounce: debounce)
         }
     }
@@ -96,13 +130,20 @@ struct SearchHubView: View {
         !normalizedSearchText.isEmpty
     }
 
-    private var isInitialSearchLoading: Bool {
-        guard isSearchActive, snapshot.searchResults.isEmpty else { return false }
-        return snapshot.searchState == .idle || snapshot.searchState == .loading
-    }
-
     private var normalizedSearchText: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var searchTaskID: SearchHubTaskID {
+        SearchHubTaskID(
+            query: normalizedSearchText,
+            filters: filters,
+            revision: reloadRevision
+        )
+    }
+
+    private var usesRegularLayout: Bool {
+        horizontalSizeClass != .compact
     }
 
     // MARK: - Browse landing
@@ -193,6 +234,8 @@ struct SearchHubView: View {
     private var searchResults: some View {
         let navigationMatches = availableNavigationMatches
 
+        searchControls
+
         if !navigationMatches.isEmpty {
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                 sectionTitle("Navigate")
@@ -239,6 +282,68 @@ struct SearchHubView: View {
         }
     }
 
+    private var searchControls: some View {
+        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+            HStack {
+                Text("Search In")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Button {
+                    filtersPresented = true
+                } label: {
+                    Label(
+                        filters.isDefault
+                            ? "Filters"
+                            : "Filters (\(filters.activeFilterCount))",
+                        systemImage: filters.isDefault
+                            ? "line.3.horizontal.decrease"
+                            : "line.3.horizontal.decrease.circle.fill"
+                    )
+                }
+                .accessibilityHint("Shows rating, date, and entity-kind filters")
+                .accessibilityIdentifier("shell.search.filter-sheet")
+            }
+
+            SearchHubKindSelector(filters: $filters, usesRegularLayout: usesRegularLayout)
+
+            if !filters.isDefault {
+                HStack(spacing: PrismediaSpacing.medium) {
+                    Label(filterSummary, systemImage: "line.3.horizontal.decrease.circle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+
+                    Spacer(minLength: PrismediaSpacing.small)
+
+                    Button("Reset") {
+                        filters.reset()
+                    }
+                    .accessibilityHint("Clears every Search filter")
+                }
+            }
+        }
+    }
+
+    private var filterSummary: String {
+        var parts: [String] = []
+        if filters.selectedKinds != SearchHubKindCatalog.allKinds {
+            parts.append("\(filters.selectedKinds.count) kinds")
+        }
+        if let minimumRating = filters.minimumRating {
+            parts.append("\(minimumRating)+ stars")
+        }
+        if let dateFrom = filters.dateFrom {
+            parts.append("from \(dateFrom.formatted(date: .abbreviated, time: .omitted))")
+        }
+        if let dateTo = filters.dateTo {
+            parts.append("through \(dateTo.formatted(date: .abbreviated, time: .omitted))")
+        }
+        return parts.joined(separator: " · ")
+    }
+
     private var availableNavigationMatches: [SearchHubNavigationTarget] {
         let allowedModeIDs = Set(modes.map(\.id))
         return SearchHubCatalog.navigationMatches(for: normalizedSearchText)
@@ -259,21 +364,16 @@ struct SearchHubView: View {
             }
 
             ForEach(sections) { section in
-                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                    sectionTitle(section.title)
-                        .accessibilityIdentifier("shell.search.section.\(section.kind.rawValue)")
-                    VStack(spacing: 0) {
-                        ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
-                            entityRow(item, identifierPrefix: "shell.search.result")
-
-                            if index < section.items.count - 1 {
-                                Divider()
-                                    .padding(.leading, 68)
-                            }
-                        }
-                    }
-                    if !showProgress && snapshot.searchTotalCount > section.items.count {
-                        Divider()
+                SearchHubResultGroup(
+                    section: section,
+                    isExpanded: expandedKinds.contains(section.kind),
+                    usesRegularLayout: usesRegularLayout,
+                    topResultID: topSearchResult?.id
+                ) {
+                    if expandedKinds.contains(section.kind) {
+                        expandedKinds.remove(section.kind)
+                    } else {
+                        expandedKinds.insert(section.kind)
                     }
                 }
             }
@@ -343,55 +443,19 @@ struct SearchHubView: View {
         .accessibilityIdentifier("shell.search.navigation.\(target.destination.id)")
     }
 
-    private func entityRow(_ item: EntityThumbnail, identifierPrefix: String) -> some View {
-        NavigationLink(value: EntityLink(thumbnail: item)) {
-            HStack(spacing: PrismediaSpacing.medium) {
-                RemotePosterImage(
-                    path: item.bestCoverPath,
-                    fallbackSeed: item.title,
-                    systemImage: systemImage(for: item.kind)
-                )
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.control, style: .continuous))
-                .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text(item.title)
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-
-                    Text(metadataLine(for: item))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: "chevron.forward")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
-            }
-            .padding(.vertical, PrismediaSpacing.small)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(item.title), \(metadataLine(for: item))")
-        .accessibilityHint("Opens details")
-        .accessibilityIdentifier("\(identifierPrefix).\(item.id.uuidString)")
+    private var topSearchResult: EntityThumbnail? {
+        SearchHubCatalog.groupedResults(
+            snapshot.searchResults,
+            query: normalizedSearchText
+        )
+        .first?
+        .items
+        .first
     }
 
-    private func metadataLine(for item: EntityThumbnail) -> String {
-        let firstMetadata = item.meta.first?.label
-        return [item.kind.displayLabel, firstMetadata]
-            .compactMap { $0 }
-            .joined(separator: " · ")
-    }
-
-    private func systemImage(for kind: EntityKind) -> String {
-        SearchHubCatalog.navigationTarget(for: kind)?.destination.systemImage ?? "photo"
+    private func openTopResult() {
+        guard let topSearchResult else { return }
+        navigationPath.append(EntityLink(thumbnail: topSearchResult))
     }
 
     private func sectionTitle(_ title: String) -> some View {
@@ -431,7 +495,7 @@ struct SearchHubView: View {
     }
 
     private func updateSearch(for query: String, debounce: Duration) async {
-        guard let request = snapshot.beginSearch(query: query) else { return }
+        guard let request = snapshot.beginSearch(query: query, filters: filters) else { return }
 
         do {
             let page = try await service.search(request: request, debounce: debounce)
@@ -563,6 +627,19 @@ struct SearchHubView: View {
             }
         }
 
+        #Preview("Browse · Active Search Filters") {
+            PreviewShell(signedIn: true) {
+                SearchHubPreview(
+                    searchText: "a",
+                    filters: SearchHubFilterState(
+                        selectedKinds: [.movie, .videoSeries, .video],
+                        minimumRating: 4
+                    ),
+                    loader: SearchHubPreviewLoader(search: .items(PrismediaPreviewData.allEntities))
+                )
+            }
+        }
+
         #Preview("Browse · Searching") {
             PreviewShell(signedIn: true) {
                 SearchHubPreview(
@@ -598,14 +675,14 @@ struct SearchHubView: View {
 
         #Preview("Browse · iPad") {
             PreviewShell(signedIn: true) {
-                SearchHubPreview()
+                SearchHubPreview(searchText: "a")
             }
             .frame(width: 1024, height: 1366)
         }
     #elseif os(macOS)
         #Preview("Browse · macOS") {
             PreviewShell(signedIn: true) {
-                SearchHubPreview()
+                SearchHubPreview(searchText: "a")
             }
             .frame(width: 980, height: 760)
         }

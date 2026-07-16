@@ -168,6 +168,7 @@ public struct PrismediaShellView: View {
             loader: PrismediaSearchHubLoader(client: client),
             detailDependencies: detailDependencies,
             searchText: $router.searchText,
+            filters: $router.searchFilters,
             navigationPath: pathBinding(
                 for: PrismediaAppRouter.searchPathID,
                 videoPlaybackSession: videoPlaybackSession

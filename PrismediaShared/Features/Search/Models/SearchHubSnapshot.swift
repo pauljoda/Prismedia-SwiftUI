@@ -15,6 +15,7 @@ public struct SearchHubSnapshot: Equatable, Sendable {
 
     private var recentGeneration: Int
     private var searchGeneration: Int
+    private var activeSearchFilters: SearchHubFilterState
 
     public init() {
         recentItems = []
@@ -28,6 +29,7 @@ public struct SearchHubSnapshot: Equatable, Sendable {
         searchNextCursor = nil
         recentGeneration = 0
         searchGeneration = 0
+        activeSearchFilters = SearchHubFilterState()
     }
 
     public func displayedItems(for query: String) -> [EntityThumbnail] {
@@ -70,21 +72,31 @@ public struct SearchHubSnapshot: Equatable, Sendable {
         recentState = recentItems.isEmpty ? .idle : .content
     }
 
-    public mutating func beginSearch(query: String) -> SearchHubSearchRequest? {
+    public mutating func beginSearch(
+        query: String,
+        filters: SearchHubFilterState = SearchHubFilterState()
+    ) -> SearchHubSearchRequest? {
         let normalizedQuery = Self.normalized(query)
         guard !normalizedQuery.isEmpty else {
             clearSearch()
             return nil
         }
 
+        let filtersChanged = activeSearchFilters != filters
         searchGeneration &+= 1
+        activeSearchFilters = filters
         searchState = .loading
         isLoadingNextSearchPage = false
         searchPaginationErrorMessage = nil
         searchNextCursor = nil
+        if filtersChanged {
+            searchResults = []
+            searchTotalCount = 0
+        }
         return SearchHubSearchRequest(
             generation: searchGeneration,
             query: normalizedQuery,
+            filters: filters,
             cursor: nil
         )
     }
@@ -104,6 +116,7 @@ public struct SearchHubSnapshot: Equatable, Sendable {
         return SearchHubSearchRequest(
             generation: searchGeneration,
             query: normalizedQuery,
+            filters: activeSearchFilters,
             cursor: searchNextCursor
         )
     }
@@ -118,7 +131,7 @@ public struct SearchHubSnapshot: Equatable, Sendable {
         searchResults = page.items
         searchTotalCount = page.totalCount
         searchNextCursor = page.nextCursor
-        searchState = page.items.isEmpty ? .empty : .content
+        searchState = page.items.isEmpty && page.nextCursor == nil ? .empty : .content
         return true
     }
 
@@ -134,6 +147,7 @@ public struct SearchHubSnapshot: Equatable, Sendable {
         searchNextCursor = page.nextCursor
         isLoadingNextSearchPage = false
         searchPaginationErrorMessage = nil
+        searchState = searchResults.isEmpty && searchNextCursor == nil ? .empty : .content
         return true
     }
 
@@ -187,6 +201,7 @@ public struct SearchHubSnapshot: Equatable, Sendable {
         isLoadingNextSearchPage = false
         searchPaginationErrorMessage = nil
         searchState = .idle
+        activeSearchFilters = SearchHubFilterState()
     }
 
     public mutating func reset() {
@@ -201,6 +216,7 @@ public struct SearchHubSnapshot: Equatable, Sendable {
         searchPaginationErrorMessage = nil
         recentState = .idle
         searchState = .idle
+        activeSearchFilters = SearchHubFilterState()
     }
 
     public static func isSearchActive(_ query: String) -> Bool {

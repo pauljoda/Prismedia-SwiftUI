@@ -133,6 +133,27 @@ final class SearchHubFeatureTests: XCTestCase {
     }
 
     @MainActor
+    func testChangingFiltersClearsResultsThatNoLongerMatchWhileLoading() async throws {
+        let result = thumbnail(id: 11, title: "Star Trek")
+        let loader = SearchHubLoaderStub(
+            searchResults: ["star": .success(EntityListResponse(items: [result]))]
+        )
+        let service = SearchHubService(loader: loader)
+        var snapshot = SearchHubSnapshot()
+        let initialRequest = try XCTUnwrap(snapshot.beginSearch(query: "star"))
+        let page = try await service.search(request: initialRequest, debounce: .zero)
+        snapshot.receiveSearch(page, for: initialRequest, currentQuery: "star")
+
+        _ = snapshot.beginSearch(
+            query: "star",
+            filters: SearchHubFilterState(selectedKinds: [.movie])
+        )
+
+        XCTAssertEqual(snapshot.searchState, .loading)
+        XCTAssertTrue(snapshot.searchResults.isEmpty)
+    }
+
+    @MainActor
     func testSearchPaginationAppendsUniqueResultsUsingTheServerCursor() async throws {
         let first = thumbnail(id: 20, title: "First")
         let duplicate = thumbnail(id: 20, title: "First")
@@ -307,6 +328,130 @@ final class SearchHubFeatureTests: XCTestCase {
         let maximumConcurrentRequests = await dataLoader.maximumConcurrentRequestCount()
         XCTAssertEqual(maximumConcurrentRequests, SearchHubCatalog.previewKinds.count)
     }
+
+    func testSearchKindTaxonomyMatchesTheWebOrderAndLabels() {
+        XCTAssertEqual(
+            SearchHubKindCatalog.kinds,
+            [
+                .movie, .videoSeries, .video, .person, .studio, .tag,
+                .gallery, .book, .image, .collection, .audioLibrary, .audioTrack,
+            ]
+        )
+        XCTAssertEqual(
+            SearchHubKindCatalog.kinds.map(SearchHubKindCatalog.label(for:)),
+            [
+                "Movies", "Series", "Videos", "People", "Studios", "Tags",
+                "Galleries", "Books", "Images", "Collections", "Audio Libraries", "Audio Tracks",
+            ]
+        )
+    }
+
+    func testSearchFiltersApplyKindRatingAndInclusiveAddedDateRange() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let start = Date(timeIntervalSince1970: 1_735_689_600)  // 2025-01-01 UTC
+        let end = Date(timeIntervalSince1970: 1_738_195_200)  // 2025-01-30 UTC
+        let filters = SearchHubFilterState(
+            selectedKinds: [.movie],
+            minimumRating: 4,
+            dateFrom: start,
+            dateTo: end
+        )
+        let included = EntityThumbnail(
+            id: UUID(),
+            kind: .movie,
+            title: "Included",
+            rating: 4,
+            createdAt: end.addingTimeInterval(23 * 60 * 60)
+        )
+        let tooLate = EntityThumbnail(
+            id: UUID(),
+            kind: .movie,
+            title: "Too Late",
+            rating: 5,
+            createdAt: end.addingTimeInterval(25 * 60 * 60)
+        )
+        let unrated = EntityThumbnail(
+            id: UUID(),
+            kind: .movie,
+            title: "Unrated",
+            createdAt: start
+        )
+        let wrongKind = EntityThumbnail(
+            id: UUID(),
+            kind: .video,
+            title: "Wrong Kind",
+            rating: 5,
+            createdAt: start
+        )
+
+        XCTAssertTrue(filters.includes(included, calendar: calendar))
+        XCTAssertFalse(filters.includes(tooLate, calendar: calendar))
+        XCTAssertFalse(filters.includes(unrated, calendar: calendar))
+        XCTAssertFalse(filters.includes(wrongKind, calendar: calendar))
+    }
+
+    @MainActor
+    func testDateFilteredEmptyPageKeepsCursorPaginationAvailable() async throws {
+        let oldItem = EntityThumbnail(
+            id: UUID(),
+            kind: .movie,
+            title: "Old",
+            rating: 5,
+            createdAt: Date(timeIntervalSince1970: 1_577_836_800)
+        )
+        let filters = SearchHubFilterState(
+            selectedKinds: [.movie],
+            dateFrom: Date(timeIntervalSince1970: 1_735_689_600)
+        )
+        let loader = SearchHubLoaderStub(
+            searchResults: [
+                "film": .success(
+                    EntityListResponse(items: [oldItem], nextCursor: "page-2", totalCount: 2)
+                )
+            ]
+        )
+        let service = SearchHubService(loader: loader)
+        var snapshot = SearchHubSnapshot()
+        let request = try XCTUnwrap(snapshot.beginSearch(query: "film", filters: filters))
+
+        let page = try await service.search(request: request, debounce: .zero)
+        snapshot.receiveSearch(page, for: request, currentQuery: "film")
+
+        XCTAssertTrue(snapshot.searchResults.isEmpty)
+        XCTAssertEqual(snapshot.searchState, .content)
+        XCTAssertTrue(snapshot.hasMoreSearchResults)
+        XCTAssertEqual(snapshot.beginNextSearchPage(currentQuery: "film")?.filters, filters)
+    }
+
+    func testPrismediaLoaderSendsSelectedKindsAndMinimumRatingToTheServer() async throws {
+        let dataLoader = SearchRecentHTTPDataLoader()
+        let client = PrismediaAPIClient(
+            serverURL: URL(string: "https://media.example.test")!,
+            accessToken: "token",
+            loader: dataLoader
+        )
+        let filters = SearchHubFilterState(
+            selectedKinds: [.movie, .video],
+            minimumRating: 4
+        )
+
+        _ = try await PrismediaSearchHubLoader(client: client).search(
+            query: "matrix",
+            filters: filters,
+            limit: 20,
+            cursor: nil
+        )
+
+        let requests = await dataLoader.recordedRequests()
+        let request = try XCTUnwrap(requests.last)
+        let components = try XCTUnwrap(
+            request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
+        )
+        let query = queryDictionary(components.queryItems ?? [])
+        XCTAssertEqual(query["kind"], "movie,video")
+        XCTAssertEqual(query["ratingMin"], "4")
+    }
 }
 
 @MainActor
@@ -366,7 +511,12 @@ private actor SearchHubLoaderStub: SearchHubLoading {
         return try recentResults.removeFirst().get()
     }
 
-    func search(query: String, limit: Int, cursor: String?) async throws -> EntityListResponse {
+    func search(
+        query: String,
+        filters: SearchHubFilterState,
+        limit: Int,
+        cursor: String?
+    ) async throws -> EntityListResponse {
         searches.append(SearchRequest(query: query, limit: limit, cursor: cursor))
         await nonCancellablePause(for: searchDelays[query] ?? .zero)
 

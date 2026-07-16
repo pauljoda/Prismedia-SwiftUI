@@ -3,7 +3,7 @@ import Observation
 
 /// App-wide navigation state retained independently of the shell's adaptive
 /// presentation. iPhone tabs can become an iPad or Mac sidebar without losing
-/// the selected mode, per-destination paths, search text, or playback restore
+/// the selected mode, per-destination paths, search task state, or playback restore
 /// destination.
 @Observable
 @MainActor
@@ -13,6 +13,7 @@ public final class PrismediaAppRouter {
     public private(set) var navigation: AppShellNavigation
     public private(set) var selectedTab: PrismediaTabSelection
     public var searchText: String
+    public var searchFilters: SearchHubFilterState
 
     /// Synchronous platform handoff invoked before a shared entity link mutates
     /// the active stack. The video host uses it to request PiP while its player
@@ -38,6 +39,7 @@ public final class PrismediaAppRouter {
             ? .search
             : .destination(navigation.destinationID)
         searchText = ""
+        searchFilters = SearchHubFilterState()
         navigationPaths = [:]
     }
 
