@@ -13,6 +13,7 @@ enum EPUBScrollFocusScript {
           const blockSelector = "p, li:not(:has(p)), blockquote:not(:has(p)), pre, h1, h2, h3, h4, h5, h6";
           const originalOpacity = new WeakMap();
           let blocks = [];
+          let endSpacer = null;
           let guide = null;
           let guideTimer = null;
           let frameRequest = null;
@@ -39,6 +40,35 @@ enum EPUBScrollFocusScript {
             blocks = Array.from(document.querySelectorAll(blockSelector));
           };
 
+          const updateEndSpacer = () => {
+            const shouldShow = state.focusEnabled || state.guideEnabled;
+            if (!shouldShow) {
+              endSpacer?.remove();
+              endSpacer = null;
+              return;
+            }
+            if (endSpacer?.isConnected) return;
+
+            endSpacer = document.createElement("div");
+            endSpacer.id = "prismedia-reading-focus-end-spacer";
+            endSpacer.setAttribute("aria-hidden", "true");
+            Object.assign(endSpacer.style, {
+              display: "block",
+              flex: "0 0 50vh",
+              width: "100%",
+              height: "50vh",
+              minHeight: "50vh",
+              margin: "0",
+              padding: "0",
+              border: "0",
+              clear: "both",
+              opacity: "0",
+              userSelect: "none",
+              pointerEvents: "none"
+            });
+            (document.body ?? document.documentElement).appendChild(endSpacer);
+          };
+
           const measureBlock = (element, viewportCenter) => {
             const rect = element.getBoundingClientRect();
             const isVisible = rect.bottom > 0 && rect.top < window.innerHeight;
@@ -54,13 +84,6 @@ enum EPUBScrollFocusScript {
 
           const activeMeasurement = (visibleMeasurements) => {
             if (visibleMeasurements.length === 0) return null;
-
-            const scrollElement = document.scrollingElement ?? document.documentElement;
-            const isAtScrollEnd = scrollElement.scrollTop + window.innerHeight
-              >= scrollElement.scrollHeight - 2;
-            if (isAtScrollEnd) {
-              return visibleMeasurements[visibleMeasurements.length - 1];
-            }
 
             const containingParagraph = visibleMeasurements.find(({ containsCenter }) => {
               return containsCenter;
@@ -84,7 +107,7 @@ enum EPUBScrollFocusScript {
             const viewportCenter = window.innerHeight / 2;
             const fadeRadius = Math.max(140, window.innerHeight * 0.52);
             const minimumOpacity = Math.max(0.2, 1 - state.strength);
-            const inactiveCeiling = 0.9;
+            const inactiveCeiling = minimumOpacity + (1 - minimumOpacity) * 0.35;
             const measurements = blocks.map((element) => measureBlock(element, viewportCenter));
             const visibleMeasurements = measurements.filter(({ isVisible }) => isVisible);
             const active = activeMeasurement(visibleMeasurements);
@@ -152,6 +175,7 @@ enum EPUBScrollFocusScript {
           window.prismediaReadingFocus = {
             update(configuration) {
               state = configuration;
+              updateEndSpacer();
               refreshBlocks();
               scheduleFocus();
               settleGuide();
