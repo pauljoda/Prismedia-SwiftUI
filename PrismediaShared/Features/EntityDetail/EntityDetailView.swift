@@ -287,7 +287,8 @@ public struct EntityDetailView: View {
                     detailScrollView(
                         detail,
                         presentation: presentation,
-                        showsHeroArtwork: false
+                        showsHeroArtwork: false,
+                        showsPageAtmosphere: false
                     )
                 }
             } else {
@@ -319,25 +320,26 @@ public struct EntityDetailView: View {
     private func detailScrollView(
         _ detail: EntityDetail,
         presentation: EntityDetailPresentation,
-        showsHeroArtwork: Bool = true
+        showsHeroArtwork: Bool = true,
+        showsPageAtmosphere: Bool = true
     ) -> some View {
         let playbackOwnerLink = activePlaybackOwnerLink
+        let paletteArtworkPath =
+            presentation.posterPath
+            ?? link.thumbnailPreview?.artworkPath
 
         return ZStack {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         EntityDetailArtworkSurface(
-                            artworkPath: presentation.heroPath
-                                ?? presentation.posterPath
-                                ?? link.thumbnailPreview?.artworkPath,
-                            paletteArtworkPath: presentation.posterPath
-                                ?? link.thumbnailPreview?.artworkPath,
+                            artworkPath: paletteArtworkPath,
+                            paletteArtworkPath: paletteArtworkPath,
                             previewPath: link.thumbnailPreview?.artworkPath,
                             fallbackSeed: detail.title,
                             systemImage: presentation.systemImage,
-                            showsAtmosphere: showsHeroArtwork,
-                            showsArtworkInBackdrop: presentation.heroPath != nil,
+                            showsAtmosphere: false,
+                            showsArtworkInBackdrop: false,
                             palette: $artworkPalette
                         ) {
                             VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
@@ -575,6 +577,23 @@ public struct EntityDetailView: View {
                     onAdvance: { _ in }
                 )
                 .id(playbackOwnerLink)
+            }
+        }
+        .background {
+            if showsPageAtmosphere {
+                ArtworkPaletteSurface(
+                    artworkPath: paletteArtworkPath,
+                    paletteArtworkPath: paletteArtworkPath,
+                    previewPath: link.thumbnailPreview?.artworkPath,
+                    fallbackSeed: detail.title,
+                    systemImage: presentation.systemImage,
+                    showsArtworkInBackdrop: false,
+                    palette: $artworkPalette
+                ) {
+                    Color.clear
+                }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
         }
     }

@@ -75,7 +75,7 @@ struct EntityDetailArtworkSurface<Content: View>: View {
     }
 
     private var activePalette: ArtworkPalette? {
-        showsAtmosphere ? palette : nil
+        palette
     }
 }
 
