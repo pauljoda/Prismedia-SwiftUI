@@ -741,6 +741,10 @@ final class PrismediaAPIClientTests: XCTestCase {
         let directProfiles = try XCTUnwrap(profile["DirectPlayProfiles"] as? [[String: Any]])
         XCTAssertTrue(directProfiles.contains { ($0["Container"] as? String)?.contains("mp4") == true })
         XCTAssertTrue(directProfiles.contains { ($0["VideoCodec"] as? String)?.contains("h264") == true })
+        XCTAssertFalse(
+            directProfiles.contains { ($0["Container"] as? String)?.contains("mov") == true },
+            "QuickTime containers must be remuxed or transcoded because the extension alone does not guarantee decodable tracks."
+        )
     }
 
     func testCrossOriginTranscodePlanDoesNotForwardSessionCredentials() async throws {
