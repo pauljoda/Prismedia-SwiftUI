@@ -12,6 +12,7 @@ struct EntityDetailReferencedContentView: View {
                 supportsSearch: true,
                 pageSize: 48,
                 minimumColumnWidth: minimumColumnWidth,
+                availableDisplayModes: [.grid, .list],
                 preferencesID: presentation.preferencesID
             ),
             loader: loader,

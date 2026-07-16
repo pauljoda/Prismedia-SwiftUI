@@ -458,6 +458,45 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(items?.first?["entityId"] as? String, albumID.uuidString)
     }
 
+    func testRemovesOneCollectionMembershipUsingTheServerItemIdentifier() async throws {
+        let collectionID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
+        let itemID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let loader = MockHTTPDataLoader(responses: [.json(#"{"count":1}"#)])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let removed = try await client.removeCollectionItem(
+            collectionID: collectionID,
+            itemID: itemID
+        )
+
+        XCTAssertTrue(removed)
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(
+            request.url?.path,
+            "/api/collections/\(collectionID.uuidString.lowercased())/items/remove"
+        )
+        XCTAssertEqual(request.httpMethod, "POST")
+        let body = try JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+        XCTAssertEqual(body?["itemIds"] as? [String], [itemID.uuidString])
+    }
+
+    func testRemovesWantedPlaceholderThroughDurableRequestEndpoint() async throws {
+        let entityID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"removed":1,"failures":[]}"#)
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let response = try await client.removeWanted(entityID: entityID)
+
+        XCTAssertEqual(response.removed, 1)
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(request.url?.path, "/api/requests/remove-wanted")
+        XCTAssertEqual(request.httpMethod, "POST")
+        let body = try JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+        XCTAssertEqual(body?["entityIds"] as? [String], [entityID.uuidString])
+    }
+
     func testFetchCollectionItemsDecodesMixedEntitiesInServerOrderAndAppliesVisibility() async throws {
         let collectionID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
         let movieID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!

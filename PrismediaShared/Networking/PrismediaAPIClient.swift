@@ -313,6 +313,20 @@ public struct PrismediaAPIClient: Sendable {
         return response.entities
     }
 
+    public func fetchCollectionMemberIDs(
+        collectionID: UUID
+    ) async throws -> [UUID: UUID] {
+        let response = try await send(
+            CollectionItemsResponse.self,
+            path: "/api/collections/\(collectionID.uuidString.lowercased())/items",
+            queryItems: [nsfwVisibilityQueryItem]
+        )
+        return response.items.reduce(into: [:]) { result, item in
+            guard let itemID = item.id else { return }
+            result[item.entityID ?? item.entity.id] = itemID
+        }
+    }
+
     public func fetchPlaybackStatistics(
         _ query: PlaybackStatisticsQuery
     ) async throws -> PlaybackStatisticsResponse {
@@ -341,6 +355,28 @@ public struct PrismediaAPIClient: Sendable {
             body: CollectionAddItemsRequest(items: items)
         )
         return response.count
+    }
+
+    public func removeCollectionItem(
+        collectionID: UUID,
+        itemID: UUID
+    ) async throws -> Bool {
+        let response = try await send(
+            CollectionItemMutationResponse.self,
+            path: "/api/collections/\(collectionID.uuidString.lowercased())/items/remove",
+            method: "POST",
+            body: CollectionRemoveItemsRequest(itemIds: [itemID])
+        )
+        return response.count == 1
+    }
+
+    public func removeWanted(entityID: UUID) async throws -> WantedRemovalResponse {
+        try await send(
+            WantedRemovalResponse.self,
+            path: "/api/requests/remove-wanted",
+            method: "POST",
+            body: WantedRemovalRequest(entityIds: [entityID])
+        )
     }
 
     public func audioStreamURL(for trackID: UUID) -> URL? {

@@ -9,6 +9,8 @@ struct EntityMediaFeedView: View {
     private let items: [EntityThumbnail]
     private let mediaSequence: EntityMediaSequence
     private let videoAspectRatioLoader: (any EntityImageVideoAspectRatioLoading)?
+    private let selection: EntityGridSelectionState
+    private let onToggleSelection: (UUID) -> Void
     private let onOpen: (EntityThumbnail, EntityMediaSequence) -> Void
     private let onItemAppear: (UUID) -> Void
 
@@ -16,12 +18,16 @@ struct EntityMediaFeedView: View {
         items: [EntityThumbnail],
         mediaSequence: EntityMediaSequence,
         dependencies: EntityMediaFeedDependencies,
+        selection: EntityGridSelectionState = EntityGridSelectionState(),
+        onToggleSelection: @escaping (UUID) -> Void = { _ in },
         onOpen: @escaping (EntityThumbnail, EntityMediaSequence) -> Void,
         onItemAppear: @escaping (UUID) -> Void
     ) {
         self.items = items
         self.mediaSequence = mediaSequence
         videoAspectRatioLoader = dependencies.videoAspectRatioLoader
+        self.selection = selection
+        self.onToggleSelection = onToggleSelection
         self.onOpen = onOpen
         self.onItemAppear = onItemAppear
         _contentLoader = State(
@@ -57,15 +63,22 @@ struct EntityMediaFeedView: View {
 
         LazyVStack(alignment: .leading, spacing: EntityMediaFeedLayout.interItemSpacing) {
             ForEach(Array(preparedItems.enumerated()), id: \.element.id) { index, preparedItem in
-                EntityMediaFeedItemView(
-                    preparedItem: preparedItem,
-                    mediaSequence: mediaSequence,
-                    contentLoader: contentLoader,
-                    isPlaybackActive: preparedItem.id == playbackItemID,
-                    isPrewarmEligible: prewarmItemIDs.contains(preparedItem.id),
-                    onOpen: onOpen
-                ) { isVisible in
-                    visibilityDidChange(for: preparedItem.id, isVisible: isVisible)
+                EntityGridSelectionSurface(
+                    item: preparedItem.item,
+                    isSelectionActive: selection.isActive,
+                    isSelected: selection.selectedIDs.contains(preparedItem.id),
+                    onToggle: { onToggleSelection(preparedItem.id) }
+                ) {
+                    EntityMediaFeedItemView(
+                        preparedItem: preparedItem,
+                        mediaSequence: mediaSequence,
+                        contentLoader: contentLoader,
+                        isPlaybackActive: !selection.isActive && preparedItem.id == playbackItemID,
+                        isPrewarmEligible: prewarmItemIDs.contains(preparedItem.id),
+                        onOpen: onOpen
+                    ) { isVisible in
+                        visibilityDidChange(for: preparedItem.id, isVisible: isVisible)
+                    }
                 }
                 .onAppear {
                     onItemAppear(preparedItem.id)

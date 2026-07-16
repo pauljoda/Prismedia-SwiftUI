@@ -66,18 +66,14 @@ import SwiftUI
                 }
             } else if let query = tab.query {
                 let isSearch = tab.id == "search"
-                let presentsVideoList = query.kind == .video
                 let dependencies = detailDependencies
                 EntityGridView(
-                    configuration: EntityGridConfiguration(
+                    configuration: EntityGridConfiguration.library(
+                        destinationID: tab.id,
                         title: tab.title,
                         query: query,
                         supportsSearch: isSearch,
-                        minimumColumnWidth: 270,
-                        defaultDisplayMode: presentsVideoList ? .list : .grid,
-                        availableDisplayModes: presentsVideoList
-                            ? [.list]
-                            : EntityGridDisplayMode.allCases
+                        minimumColumnWidth: 270
                     ),
                     loader: PrismediaEntityGridLoader(client: client),
                     feedMediaDependencies: EntityMediaFeedDependencies(

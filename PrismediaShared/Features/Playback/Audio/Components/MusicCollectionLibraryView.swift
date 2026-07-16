@@ -4,11 +4,15 @@
     struct MusicCollectionLibraryView: View {
         let configuration: EntityGridConfiguration
         let loader: MusicCollectionCatalogLoader
+        let actionPolicy: EntityGridActionPolicy
+        let mutationService: (any EntityGridMutationServicing)?
 
         var body: some View {
             EntityGridView(
                 configuration: configuration,
-                loader: loader
+                loader: loader,
+                actionPolicy: actionPolicy,
+                mutationService: mutationService
             ) { item, layout in
                 EntityThumbnailNavigationSurface(
                     item: item,
@@ -33,7 +37,9 @@
                             items: [MusicCollectionPreviewLoader.collection]
                         ),
                         collectionItemsLoader: preview
-                    )
+                    ),
+                    actionPolicy: .disabled,
+                    mutationService: nil
                 )
             }
         }

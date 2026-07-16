@@ -686,6 +686,7 @@ public struct EntityDetailView: View {
 
         if detail.kind == .collection {
             CollectionMembersView(
+                collectionID: detail.id,
                 phase: collectionMembersState.phase,
                 horizontalPadding: detailHorizontalPadding,
                 retry: {

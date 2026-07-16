@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(macOS)
     import SwiftUI
 
     /// Collection picker for entity grids, detail pages, and compact actions.
@@ -7,6 +7,7 @@
         @Environment(PrismediaAppEnvironment.self) private var environment
 
         let items: [CollectionEntityReference]
+        let onCompletion: (EntityGridMutationResult) -> Void
         private let loadsCollections: Bool
 
         @State private var collections: [EntityThumbnail] = []
@@ -16,8 +17,12 @@
         @State private var addedCollectionIDs = Set<UUID>()
         @State private var errorMessage: String?
 
-        init(items: [CollectionEntityReference]) {
+        init(
+            items: [CollectionEntityReference],
+            onCompletion: @escaping (EntityGridMutationResult) -> Void = { _ in }
+        ) {
             self.items = items
+            self.onCompletion = onCompletion
             loadsCollections = true
         }
 
@@ -28,6 +33,7 @@
                 previewIsLoading: Bool = false
             ) {
                 self.items = items
+                onCompletion = { _ in }
                 loadsCollections = false
                 _collections = State(initialValue: previewCollections)
                 _loading = State(initialValue: previewIsLoading)
@@ -50,7 +56,9 @@
                     }
                 }
                 .navigationTitle("Add to Collection")
-                .navigationBarTitleDisplayMode(.inline)
+                #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                #endif
                 .searchable(text: $searchText, prompt: "Filter collections")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -103,6 +111,7 @@
                 }
                 .buttonStyle(.plain)
                 .disabled(pendingCollectionID != nil || addedCollectionIDs.contains(collection.id))
+                .accessibilityIdentifier("add-to-collection.option.\(collection.id.uuidString)")
             }
             .listStyle(.plain)
         }
@@ -126,7 +135,7 @@
                 return
             }
             do {
-                collections = try await client.listCollections().items.sorted {
+                collections = try await client.loadCollectionOptions().sorted {
                     $0.title.localizedStandardCompare($1.title) == .orderedAscending
                 }
             } catch {
@@ -140,11 +149,47 @@
             pendingCollectionID = collection.id
             defer { pendingCollectionID = nil }
             do {
-                _ = try await client.addToCollection(collectionID: collection.id, items: items)
-                addedCollectionIDs.insert(collection.id)
-            } catch {
-                errorMessage = error.localizedDescription
+                var succeededIDs = Set<UUID>()
+                var failures: [EntityGridMutationFailure] = []
+                for item in items {
+                    do {
+                        if try await client.addToCollection(collectionID: collection.id, item: item) {
+                            succeededIDs.insert(item.entityID)
+                        } else {
+                            failures.append(failure(for: item, message: "The server did not add this item."))
+                        }
+                    } catch {
+                        failures.append(failure(for: item, message: error.localizedDescription))
+                    }
+                }
+                let result = EntityGridMutationResult(
+                    succeededIDs: succeededIDs,
+                    failures: failures
+                )
+                onCompletion(result)
+                if failures.isEmpty {
+                    addedCollectionIDs.insert(collection.id)
+                } else {
+                    errorMessage = failureMessage(failures)
+                }
             }
+        }
+
+        private func failure(
+            for item: CollectionEntityReference,
+            message: String
+        ) -> EntityGridMutationFailure {
+            EntityGridMutationFailure(
+                entityID: item.entityID,
+                title: item.entityType.displayLabel,
+                message: message
+            )
+        }
+
+        private func failureMessage(_ failures: [EntityGridMutationFailure]) -> String {
+            let count = failures.count
+            let details = failures.prefix(3).map { "\($0.title): \($0.message)" }.joined(separator: "\n")
+            return "\(count) item\(count == 1 ? "" : "s") could not be added.\n\(details)"
         }
     }
 

@@ -281,7 +281,8 @@ public struct PrismediaShellView: View {
         #if os(iOS) || os(macOS)
             if destination.id == "audio-collections" {
                 MusicCollectionLibraryView(
-                    configuration: EntityGridConfiguration(
+                    configuration: EntityGridConfiguration.library(
+                        destinationID: destination.id,
                         title: destination.title,
                         query: entityList.query,
                         supportsSearch: entityList.supportsSearch,
@@ -290,11 +291,14 @@ public struct PrismediaShellView: View {
                     loader: MusicCollectionCatalogLoader(
                         catalogLoader: PrismediaEntityGridLoader(client: client),
                         collectionItemsLoader: PrismediaEntityDetailLoader(client: client)
-                    )
+                    ),
+                    actionPolicy: libraryActionPolicy,
+                    mutationService: client
                 )
             } else if ["albums", "artists", "tracks"].contains(destination.id) {
                 MusicLibraryView(
-                    configuration: EntityGridConfiguration(
+                    configuration: EntityGridConfiguration.library(
+                        destinationID: destination.id,
                         title: destination.title,
                         query: entityList.query,
                         supportsSearch: entityList.supportsSearch
@@ -328,15 +332,12 @@ public struct PrismediaShellView: View {
         client: PrismediaAPIClient,
         detailDependencies: EntityDetailDependencies
     ) -> some View {
-        let presentsVideoList = entityList.query.kind == .video
-
         return EntityGridView(
-            configuration: EntityGridConfiguration(
+            configuration: EntityGridConfiguration.library(
+                destinationID: destination.id,
                 title: destination.title,
                 query: entityList.query,
-                supportsSearch: entityList.supportsSearch,
-                defaultDisplayMode: presentsVideoList ? .list : .grid,
-                availableDisplayModes: presentsVideoList ? [.list] : EntityGridDisplayMode.allCases
+                supportsSearch: entityList.supportsSearch
             ),
             loader: PrismediaEntityGridLoader(client: client),
             feedMediaDependencies: EntityMediaFeedDependencies(
@@ -350,10 +351,17 @@ public struct PrismediaShellView: View {
                     within: item.kind == .image ? mediaSequence : nil
                 )
             },
+            actionPolicy: libraryActionPolicy,
+            mutationService: client,
             itemContent: { item, layout in
                 EntityThumbnailNavigationSurface(item: item, layout: layout)
             }
         )
+    }
+
+    private var libraryActionPolicy: EntityGridActionPolicy {
+        guard let user = environment.session?.user else { return .disabled }
+        return .library(user: user)
     }
 
     #if os(iOS)

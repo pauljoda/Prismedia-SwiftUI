@@ -11,6 +11,12 @@ public struct EntityGridView<ItemContent: View>: View {
     @State private var presets: [EntityGridPreset]
     @State private var presetName = ""
     @State private var savePresetPresented = false
+    @State private var selection = EntityGridSelectionState()
+    @State private var actionInFlight: EntityGridSelectionAction?
+    @State private var actionConfirmation: EntityGridActionConfirmation?
+    @State private var mutationFailures: [EntityGridMutationFailure] = []
+    @State private var mutationFailureAlertPresented = false
+    @State private var collectionSheetPresented = false
     #if os(tvOS)
         @Environment(TVTabFocusCoordinator.self) private var tabFocusCoordinator
         @FocusState private var tvGridFocus: TVGridFocus?
@@ -24,6 +30,8 @@ public struct EntityGridView<ItemContent: View>: View {
     private let horizontalContentPadding: CGFloat
     private let feedMediaDependencies: EntityMediaFeedDependencies?
     private let onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)?
+    private let actionPolicy: EntityGridActionPolicy
+    private let mutationService: (any EntityGridMutationServicing)?
     private let itemContent: (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
 
     public init(
@@ -34,6 +42,8 @@ public struct EntityGridView<ItemContent: View>: View {
         horizontalContentPadding: CGFloat? = nil,
         feedMediaDependencies: EntityMediaFeedDependencies? = nil,
         onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)? = nil,
+        actionPolicy: EntityGridActionPolicy = .disabled,
+        mutationService: (any EntityGridMutationServicing)? = nil,
         @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
     ) {
         self.configuration = configuration
@@ -46,6 +56,8 @@ public struct EntityGridView<ItemContent: View>: View {
             ?? (presentation == .screen ? PrismediaSpacing.extraLarge : 0)
         self.feedMediaDependencies = feedMediaDependencies
         self.onOpenFeedItem = onOpenFeedItem
+        self.actionPolicy = actionPolicy
+        self.mutationService = mutationService
         self.itemContent = itemContent
         let restoredPreferences = preferencesStore.load(for: configuration.preferencesID)
         let restoredControls = restoredPreferences?.controls(baselineQuery: configuration.query)
@@ -67,6 +79,23 @@ public struct EntityGridView<ItemContent: View>: View {
 
     public var body: some View {
         presentedContent
+            #if os(iOS)
+                .safeAreaInset(edge: .bottom) {
+                    if presentation == .screen, selection.isActive {
+                        selectionControls(style: .bottomBar)
+                        .padding(.horizontal, PrismediaSpacing.large)
+                        .padding(.vertical, PrismediaSpacing.small)
+                        .background(.regularMaterial)
+                    }
+                }
+            #endif
+            #if os(macOS)
+                .onExitCommand {
+                    if selection.isActive, actionInFlight == nil {
+                        exitSelection()
+                    }
+                }
+            #endif
             .sheet(isPresented: $filtersPresented) {
                 EntityGridControlsView(
                     controls: snapshot.controls,
@@ -83,6 +112,35 @@ public struct EntityGridView<ItemContent: View>: View {
             } message: {
                 Text("Save the current sort, filters, layout, density, and page size.")
             }
+            .confirmationDialog(
+                actionConfirmation?.title ?? "Confirm Action",
+                isPresented: actionConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                if let confirmation = actionConfirmation {
+                    Button(
+                        confirmation.isDestructive ? "Continue" : "Apply",
+                        role: confirmation.isDestructive ? .destructive : nil
+                    ) {
+                        Task { await perform(confirmation.action) }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                }
+            } message: {
+                Text(actionConfirmation?.message ?? "")
+            }
+            .alert("Some Items Couldn’t Be Updated", isPresented: mutationFailurePresented) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(mutationFailureMessage)
+            }
+            #if os(iOS) || os(macOS)
+                .sheet(isPresented: $collectionSheetPresented) {
+                    AddToCollectionSheet(items: selectedCollectionReferences) { result in
+                        receiveMutationResult(result)
+                    }
+                }
+            #endif
             .task(id: searchText) {
                 guard configuration.supportsSearch else { return }
                 try? await Task.sleep(for: .milliseconds(300))
@@ -138,6 +196,11 @@ public struct EntityGridView<ItemContent: View>: View {
                                 .padding(.horizontal, horizontalContentPadding)
                         }
 
+                        if !mutationFailures.isEmpty {
+                            EntityGridMutationFailureBanner(failures: mutationFailures)
+                                .padding(.horizontal, horizontalContentPadding)
+                        }
+
                         stateContent
                     }
                     .padding(.vertical, PrismediaSpacing.extraLarge)
@@ -159,9 +222,21 @@ public struct EntityGridView<ItemContent: View>: View {
         .toolbar {
             #if !os(tvOS)
                 ToolbarItemGroup(placement: .primaryAction) {
-                    displayMenu
-                    sortMenu
-                    filterButton
+                    #if os(macOS)
+                        if selection.isActive {
+                            selectionControls(style: .compact)
+                        }
+                    #endif
+
+                    if actionPolicy.selectionEnabled {
+                        selectionToggleButton
+                    }
+
+                    if !selection.isActive {
+                        displayMenu
+                        sortMenu
+                        filterButton
+                    }
                 }
             #endif
         }
@@ -181,8 +256,18 @@ public struct EntityGridView<ItemContent: View>: View {
             embeddedHeader
                 .padding(.horizontal, horizontalContentPadding)
 
+            if selection.isActive {
+                selectionControls(style: .bottomBar)
+                    .padding(.horizontal, horizontalContentPadding)
+            }
+
             if let errorMessage = snapshot.errorMessage {
                 errorBanner(errorMessage)
+                    .padding(.horizontal, horizontalContentPadding)
+            }
+
+            if !mutationFailures.isEmpty {
+                EntityGridMutationFailureBanner(failures: mutationFailures)
                     .padding(.horizontal, horizontalContentPadding)
             }
 
@@ -214,6 +299,9 @@ public struct EntityGridView<ItemContent: View>: View {
             displayMenu
             sortMenu
             filterButton
+            if actionPolicy.selectionEnabled {
+                selectionToggleButton
+            }
         }
         .controlSize(.small)
     }
@@ -252,7 +340,7 @@ public struct EntityGridView<ItemContent: View>: View {
             contentGrid
         } else if snapshot.state == .empty {
             ContentUnavailableView {
-                Label("No \(configuration.title)", systemImage: "square.grid.2x2")
+                Label(configuration.emptyTitle, systemImage: "square.grid.2x2")
             } description: {
                 Text(emptyDescription)
             }
@@ -314,6 +402,8 @@ public struct EntityGridView<ItemContent: View>: View {
                     pageSize: pageSize
                 ),
                 dependencies: feedMediaDependencies,
+                selection: selection,
+                onToggleSelection: toggleSelection,
                 onOpen: onOpenFeedItem,
                 onItemAppear: itemDidAppear
             )
@@ -328,11 +418,18 @@ public struct EntityGridView<ItemContent: View>: View {
                 displayMode: displayMode,
                 density: density
             ) { item, layout in
-                itemContent(item, layout)
-                    #if os(tvOS)
-                        .focused($tvGridFocus, equals: .item(item.id))
-                    #endif
-                    .onAppear { itemDidAppear(item.id) }
+                EntityGridSelectionSurface(
+                    item: item,
+                    isSelectionActive: selection.isActive,
+                    isSelected: selection.selectedIDs.contains(item.id),
+                    onToggle: { toggleSelection(item.id) }
+                ) {
+                    itemContent(item, layout)
+                }
+                #if os(tvOS)
+                    .focused($tvGridFocus, equals: .item(item.id))
+                #endif
+                .onAppear { itemDidAppear(item.id) }
             }
         }
     }
@@ -396,6 +493,44 @@ public struct EntityGridView<ItemContent: View>: View {
 
     private var itemCountLabel: String {
         "\(snapshot.totalCount) item\(snapshot.totalCount == 1 ? "" : "s")"
+    }
+
+    @ViewBuilder
+    private var selectionToggleButton: some View {
+        let button = Button(
+            selection.isActive ? "Done" : "Select", systemImage: selection.isActive ? "checkmark" : "checkmark.circle"
+        ) {
+            if selection.isActive {
+                exitSelection()
+            } else {
+                selection.enter()
+            }
+        }
+        .disabled(actionInFlight != nil)
+        .accessibilityIdentifier("entity.grid.selection.toggle")
+
+        #if os(macOS)
+            button.keyboardShortcut("s", modifiers: [.command, .shift])
+        #else
+            button
+        #endif
+    }
+
+    private func selectionControls(
+        style: EntityGridSelectionControlsStyle
+    ) -> some View {
+        EntityGridSelectionControls(
+            selectedCount: selection.selectedIDs.count,
+            collectionEligibleCount: selectedCollectionReferences.count,
+            availableBuiltInActions: availableBuiltInActions,
+            customActions: availableCustomActions,
+            markNsfwValue: actionPolicy.nsfwMutationValue(for: selectedItems),
+            isProcessing: actionInFlight != nil,
+            style: style,
+            onSelectAll: selectAllVisible,
+            onClear: clearSelection,
+            onAction: requestAction
+        )
     }
 
     private var sortMenu: some View {
@@ -613,7 +748,7 @@ public struct EntityGridView<ItemContent: View>: View {
 
     private var emptyDescription: String {
         guard let activeSearch = snapshot.activeSearch else {
-            return "Items will appear here when they’re added to your library."
+            return configuration.emptyDescription
         }
         return "No items match “\(activeSearch)”."
     }
@@ -710,7 +845,9 @@ public struct EntityGridView<ItemContent: View>: View {
                 snapshot.cancel(request)
                 return
             }
-            snapshot.receiveFirstPage(page, for: request)
+            if snapshot.receiveFirstPage(page, for: request) {
+                selection.reconcile(withAvailableIDs: Set(snapshot.items.map(\.id)))
+            }
         } catch is CancellationError {
             snapshot.cancel(request)
         } catch {
@@ -778,6 +915,154 @@ public struct EntityGridView<ItemContent: View>: View {
         .prismediaPanel()
     }
 
+    private var selectedItems: [EntityThumbnail] {
+        snapshot.items.filter { selection.selectedIDs.contains($0.id) }
+    }
+
+    private var selectedCollectionReferences: [CollectionEntityReference] {
+        actionPolicy.collectionReferences(in: selectedItems)
+    }
+
+    private var availableBuiltInActions: Set<EntityGridBuiltInAction> {
+        guard mutationService != nil else { return [] }
+        return actionPolicy.availableBuiltInActions(for: selectedItems)
+    }
+
+    private var availableCustomActions: [EntityGridCustomAction] {
+        actionPolicy.availableCustomActions(for: selectedItems)
+    }
+
+    private var actionConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: { actionConfirmation != nil },
+            set: { if !$0 { actionConfirmation = nil } }
+        )
+    }
+
+    private var mutationFailurePresented: Binding<Bool> {
+        Binding(
+            get: { mutationFailureAlertPresented },
+            set: { mutationFailureAlertPresented = $0 }
+        )
+    }
+
+    private var mutationFailureMessage: String {
+        let count = mutationFailures.count
+        let details = mutationFailures.prefix(4)
+            .map { "\($0.title): \($0.message)" }
+            .joined(separator: "\n")
+        return "\(count) item\(count == 1 ? "" : "s") remain selected so you can retry.\n\(details)"
+    }
+
+    private func toggleSelection(_ entityID: UUID) {
+        selection.toggle(entityID)
+    }
+
+    private func selectAllVisible() {
+        selection.selectAllVisible(snapshot.items.map(\.id))
+    }
+
+    private func clearSelection() {
+        selection.clear()
+        mutationFailures.removeAll()
+    }
+
+    private func exitSelection() {
+        selection.exit()
+        mutationFailures.removeAll()
+    }
+
+    private func requestAction(_ action: EntityGridSelectionAction) {
+        guard actionInFlight == nil, !selectedItems.isEmpty else { return }
+        switch action {
+        case .addToCollection:
+            #if os(iOS) || os(macOS)
+                collectionSheetPresented = true
+            #endif
+        case .markNsfw(let value):
+            actionConfirmation = EntityGridActionConfirmation(
+                action: action,
+                title: value ? "Mark Selected Items NSFW?" : "Mark Selected Items SFW?",
+                message:
+                    "This updates the safety classification for \(selectedItems.count) selected item\(selectedItems.count == 1 ? "" : "s").",
+                isDestructive: false
+            )
+        case .removeWanted:
+            actionConfirmation = EntityGridActionConfirmation(
+                action: action,
+                title: "Remove Selected Wanted Items?",
+                message:
+                    "This stops acquisition work, removes fileless placeholders, and keeps them out of automatic discovery until they are explicitly requested again.",
+                isDestructive: true
+            )
+        case .custom(let id):
+            guard let custom = actionPolicy.customActions.first(where: { $0.id == id }) else { return }
+            if let title = custom.confirmationTitle {
+                actionConfirmation = EntityGridActionConfirmation(
+                    action: action,
+                    title: title,
+                    message: custom.confirmationMessage ?? "Apply this action to the selected items?",
+                    isDestructive: custom.isDestructive
+                )
+            } else {
+                Task { await perform(action) }
+            }
+        }
+    }
+
+    private func perform(_ action: EntityGridSelectionAction) async {
+        guard actionInFlight == nil else { return }
+        let targets = selectedItems
+        guard !targets.isEmpty else { return }
+        actionConfirmation = nil
+        actionInFlight = action
+        let result: EntityGridMutationResult
+        switch action {
+        case .addToCollection:
+            actionInFlight = nil
+            return
+        case .markNsfw(let value):
+            result = await actionService?.markNsfw(value, items: targets) ?? unavailableResult(targets)
+        case .removeWanted:
+            result = await actionService?.removeWanted(items: targets) ?? unavailableResult(targets)
+        case .custom(let id):
+            guard let custom = actionPolicy.customActions.first(where: { $0.id == id }) else {
+                actionInFlight = nil
+                return
+            }
+            result = await custom.perform(with: targets)
+        }
+        actionInFlight = nil
+        receiveMutationResult(result)
+    }
+
+    private var actionService: EntityGridActionService? {
+        mutationService.map(EntityGridActionService.init(mutations:))
+    }
+
+    private func receiveMutationResult(_ result: EntityGridMutationResult) {
+        selection.remove(result.succeededIDs)
+        mutationFailures = result.failures
+        mutationFailureAlertPresented = !result.failures.isEmpty
+        if !result.succeededIDs.isEmpty {
+            environment.entityDidMutate()
+        }
+    }
+
+    private func unavailableResult(
+        _ items: [EntityThumbnail]
+    ) -> EntityGridMutationResult {
+        EntityGridMutationResult(
+            failures: items.map {
+                EntityGridMutationFailure(
+                    entityID: $0.id,
+                    title: $0.title,
+                    message: "The server mutation service is unavailable."
+                )
+            }
+        )
+    }
+
     private static var pageSizeOptions: [Int] { [24, 48, 96] }
 }
 
@@ -788,12 +1073,16 @@ extension EntityGridView where ItemContent == EntityThumbnailCardView {
     public init(
         configuration: EntityGridConfiguration,
         loader: any EntityGridLoading,
-        preferencesStore: EntityGridPreferencesStore = .standard
+        preferencesStore: EntityGridPreferencesStore = .standard,
+        actionPolicy: EntityGridActionPolicy = .disabled,
+        mutationService: (any EntityGridMutationServicing)? = nil
     ) {
         self.init(
             configuration: configuration,
             loader: loader,
-            preferencesStore: preferencesStore
+            preferencesStore: preferencesStore,
+            actionPolicy: actionPolicy,
+            mutationService: mutationService
         ) { item, layout in
             EntityThumbnailCardView(item: item, layout: layout)
         }

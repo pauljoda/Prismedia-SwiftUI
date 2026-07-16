@@ -50,7 +50,7 @@ struct EntityDetailChildGroupsView: View {
     }
 
     private func gridConfiguration(for group: EntityGroup) -> EntityGridConfiguration {
-        let presentsEpisodes = group.kind == .video
+        let presentation = groupPresentation(for: group.kind)
         let itemKinds = Array(Set(group.entities.map(\.kind))).sorted {
             $0.rawValue < $1.rawValue
         }
@@ -64,9 +64,24 @@ struct EntityDetailChildGroupsView: View {
             query: query,
             pageSize: 48,
             minimumColumnWidth: minimumColumnWidth,
-            defaultDisplayMode: presentsEpisodes ? .list : .grid,
-            availableDisplayModes: presentsEpisodes ? [.list] : EntityGridDisplayMode.allCases
+            defaultDisplayMode: presentation.defaultMode,
+            availableDisplayModes: presentation.availableModes
         )
+    }
+
+    private func groupPresentation(
+        for kind: EntityKind
+    ) -> (defaultMode: EntityGridDisplayMode, availableModes: [EntityGridDisplayMode]) {
+        switch kind {
+        case .video:
+            return (.list, [.list])
+        case .image:
+            return (.wall, [.wall, .grid])
+        case .gallery:
+            return (.grid, [.grid, .list, .feed])
+        default:
+            return (.grid, [.grid, .list])
+        }
     }
 
     private var minimumColumnWidth: CGFloat {

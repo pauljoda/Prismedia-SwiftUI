@@ -22,6 +22,7 @@ struct GalleryChildGroupsPresentation: Equatable, Sendable {
             title: "Images",
             query: EntityListQuery(kind: .image),
             defaultDisplayMode: .wall,
+            availableDisplayModes: [.wall, .grid, .feed],
             preferencesID: "gallery-\(galleryID.uuidString.lowercased())-images"
         )
     }
