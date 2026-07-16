@@ -101,6 +101,7 @@ import SwiftUI
                     startPoint: .top,
                     endPoint: .bottom
                 )
+                .allowsHitTesting(false)
 
                 if isInteractive {
                     transportControls

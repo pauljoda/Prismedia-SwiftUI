@@ -34,4 +34,9 @@ public enum EntityGridDisplayMode: String, CaseIterable, Codable, Identifiable, 
         case .wall: .mediaOnly
         }
     }
+
+    public func thumbnailLayout(for kind: EntityKind) -> EntityThumbnailLayout {
+        if self == .list, kind == .video { return .rail }
+        return thumbnailLayout
+    }
 }

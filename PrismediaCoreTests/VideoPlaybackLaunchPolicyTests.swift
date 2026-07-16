@@ -20,6 +20,14 @@ final class VideoPlaybackLaunchPolicyTests: XCTestCase {
             ))
     }
 
+    func testFullscreenLaunchOnlyPausesForAValidResumeChoice() {
+        XCTAssertTrue(VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(resumeSeconds: nil))
+        XCTAssertTrue(VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(resumeSeconds: 0))
+        XCTAssertTrue(VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(resumeSeconds: .infinity))
+        XCTAssertFalse(VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(resumeSeconds: 84))
+        XCTAssertTrue(VideoPlaybackLaunchPolicy.shouldOfferResumeChoice(resumeSeconds: 84))
+    }
+
     func testSeasonEpisodePlaybackTransfersToFullscreenWithoutChangingOtherOwnership() {
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episode = EntityThumbnail(

@@ -11,6 +11,19 @@ public enum VideoPlaybackLaunchPolicy {
         !isValidationPlaybackPaused
     }
 
+    public static func shouldOfferResumeChoice(
+        resumeSeconds: Double?
+    ) -> Bool {
+        guard let resumeSeconds else { return false }
+        return resumeSeconds.isFinite && resumeSeconds > 0
+    }
+
+    public static func shouldAutoStartFullscreen(
+        resumeSeconds: Double?
+    ) -> Bool {
+        !shouldOfferResumeChoice(resumeSeconds: resumeSeconds)
+    }
+
     public static func presentationMode(
         for ownerLink: EntityLink
     ) -> VideoPlaybackPresentationMode {

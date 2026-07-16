@@ -31,30 +31,41 @@ struct EntityThumbnailGrid<ItemContent: View>: View {
         switch displayMode {
         case .list:
             LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                itemsView(layout: displayMode.thumbnailLayout)
+                itemsView
             }
         case .feed:
             LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                itemsView(layout: displayMode.thumbnailLayout)
+                itemsView
             }
             .frame(maxWidth: .infinity)
         case .wall:
             LazyVGrid(columns: columns, alignment: .leading, spacing: PrismediaSpacing.large) {
-                itemsView(layout: displayMode.thumbnailLayout)
+                itemsView
             }
         case .grid:
             LazyVGrid(columns: columns, alignment: .leading, spacing: PrismediaSpacing.large) {
-                itemsView(layout: displayMode.thumbnailLayout)
+                itemsView
             }
         }
     }
 
-    private func itemsView(layout: EntityThumbnailLayout) -> some View {
+    private var itemsView: some View {
         ForEach(items) { item in
+            let layout = displayMode.thumbnailLayout(for: item.kind)
             itemContent(item, layout)
                 .environment(\.entityMediaSequence, mediaSequence)
+                .modifier(
+                    EntityThumbnailSurfaceWidthModifier(
+                        preferredWidth: preferredListItemWidth(layout: layout)
+                    )
+                )
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+    }
+
+    private func preferredListItemWidth(layout: EntityThumbnailLayout) -> CGFloat? {
+        guard displayMode == .list, layout == .rail else { return nil }
+        return density.minimumColumnWidth(default: minimumColumnWidth) * 2
     }
 
     private var columns: [GridItem] {
@@ -101,6 +112,19 @@ extension EntityThumbnailGrid {
         ScrollView {
             EntityThumbnailGrid(items: PrismediaPreviewData.videos, minimumColumnWidth: 150) {
                 EntityThumbnailCardView(item: $0)
+            }
+            .padding()
+        }
+    }
+
+    #Preview("Video List Uses Rail Cards") {
+        ScrollView {
+            EntityThumbnailGrid(
+                items: PrismediaPreviewData.videos,
+                minimumColumnWidth: 150,
+                displayMode: .list
+            ) {
+                EntityThumbnailCardView(item: $0, layout: $1)
             }
             .padding()
         }

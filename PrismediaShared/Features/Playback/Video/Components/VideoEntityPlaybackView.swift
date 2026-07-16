@@ -62,10 +62,12 @@ struct VideoEntityPlaybackView: View {
                                 controller: presentedPlaybackController,
                                 title: presentedVideoDetail?.title ?? playbackTitle,
                                 isInteractive: fullscreenPlayerIsInteractive,
-                                requiresExplicitPlay: true,
+                                requiresExplicitPlay: fullscreenRequiresResumeChoice,
                                 preparationPhase: preparation.phase,
                                 playRequested: preparation.playRequested,
-                                onPlay: { startPlayback() },
+                                resumeSeconds: preparation.requestedResumeSeconds,
+                                onResume: { startPlayback() },
+                                onRestart: { startPlayback(at: 0) },
                                 onDismiss: { fullscreenPresentationDidChange(false) }
                             )
                         )
@@ -117,10 +119,13 @@ struct VideoEntityPlaybackView: View {
                     }
                 #endif
             }
-            .onChange(of: preparation.phase) {
-                guard preparation.phase == .idle else { return }
-                videoDetail = nil
-                playbackController = nil
+            .onChange(of: preparation.phase, initial: true) {
+                if preparation.phase == .idle {
+                    videoDetail = nil
+                    playbackController = nil
+                } else if preparation.phase == .ready {
+                    startFullscreenPlaybackIfAppropriate()
+                }
             }
             .alert("Couldn’t Play Video", isPresented: fullscreenPreparationErrorPresented) {
                 Button("Try Again") { warmPlayback() }
@@ -310,6 +315,23 @@ struct VideoEntityPlaybackView: View {
         private var fullscreenPlayerIsInteractive: Bool {
             guard let controller = presentedPlaybackController else { return false }
             return controller.isReadyToPlay
+        }
+
+        private var fullscreenRequiresResumeChoice: Bool {
+            presentationMode == .fullscreenOnly
+                && VideoPlaybackLaunchPolicy.shouldOfferResumeChoice(
+                    resumeSeconds: preparation.requestedResumeSeconds
+                )
+        }
+
+        private func startFullscreenPlaybackIfAppropriate() {
+            guard presentationMode == .fullscreenOnly,
+                !preparation.playRequested,
+                VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(
+                    resumeSeconds: preparation.requestedResumeSeconds
+                )
+            else { return }
+            startPlayback()
         }
 
         private var presentedVideoDetail: EntityDetail? {

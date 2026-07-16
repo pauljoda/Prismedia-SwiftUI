@@ -5,10 +5,14 @@ struct VideoFullscreenPreparationView: View {
     let phase: VideoPlaybackPreparationPhase
     let isReadyToPlay: Bool
     let playRequested: Bool
-    let onPlay: () -> Void
+    let resumeSeconds: Double?
+    let onResume: () -> Void
+    let onRestart: () -> Void
     let onDismiss: () -> Void
 
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
+    @State private var resumeCountdown = 3
+    @State private var hasSelectedPlaybackAction = false
 
     var body: some View {
         ZStack {
@@ -22,22 +26,29 @@ struct VideoFullscreenPreparationView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PrismediaColor.onMedia.opacity(0.82))
                 }
+            } else if isReadyToPlay, let resumeSeconds, resumeSeconds > 0 {
+                VStack(spacing: PrismediaSpacing.medium) {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: PrismediaSpacing.medium) {
+                            resumeButton(resumeSeconds: resumeSeconds)
+                            restartButton
+                        }
+
+                        VStack(spacing: PrismediaSpacing.small) {
+                            resumeButton(resumeSeconds: resumeSeconds)
+                            restartButton
+                        }
+                    }
+
+                    Text("Resuming automatically in \(resumeCountdown)…")
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(PrismediaColor.onMedia.opacity(0.82))
+                }
             } else {
                 VStack(spacing: PrismediaSpacing.medium) {
-                    Button(action: onPlay) {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundStyle(PrismediaColor.onMedia)
-                            .frame(width: 62, height: 62)
-                            .contentShape(Circle())
-                    }
-                    .buttonBorderShape(.circle)
-                    .buttonStyle(.glass(.clear))
-                    .disabled(!isReadyToPlay)
-                    .accessibilityLabel("Play")
-                    .accessibilityHint(statusText)
-                    .accessibilityIdentifier("video-detail.play")
-
+                    ProgressView()
+                        .tint(artworkPrimaryAccent)
                     Text(statusText)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PrismediaColor.onMedia.opacity(0.82))
@@ -70,19 +81,81 @@ struct VideoFullscreenPreparationView: View {
             }
             .padding(20)
         }
+        .task(id: resumeCountdownIsActive) {
+            guard resumeCountdownIsActive else { return }
+            resumeCountdown = 3
+            do {
+                for remaining in stride(from: 3, through: 1, by: -1) {
+                    resumeCountdown = remaining
+                    try await Task.sleep(for: .seconds(1))
+                }
+            } catch {
+                return
+            }
+            guard resumeCountdownIsActive else { return }
+            selectResume()
+        }
         .accessibilityIdentifier("video-player.surface")
+    }
+
+    private func resumeButton(resumeSeconds: Double) -> some View {
+        Button(action: selectResume) {
+            Label(
+                "Resume \(VideoPlaybackPresentation.clockTime(resumeSeconds))",
+                systemImage: "play.fill"
+            )
+            .font(.headline.weight(.semibold))
+            .frame(minWidth: 150, minHeight: 44)
+            .contentShape(Capsule())
+        }
+        .buttonBorderShape(.capsule)
+        .buttonStyle(.glass(.clear))
+        .accessibilityHint("Resumes automatically after the countdown")
+        .accessibilityIdentifier("video-detail.resume")
+    }
+
+    private var restartButton: some View {
+        Button(action: selectRestart) {
+            Label("Start Over", systemImage: "arrow.counterclockwise")
+                .font(.headline.weight(.semibold))
+                .frame(minWidth: 150, minHeight: 44)
+                .contentShape(Capsule())
+        }
+        .buttonBorderShape(.capsule)
+        .buttonStyle(.glass(.clear))
+        .accessibilityHint("Starts the video from the beginning")
+        .accessibilityIdentifier("video-detail.play-from-beginning")
+    }
+
+    private var resumeCountdownIsActive: Bool {
+        isReadyToPlay
+            && !playRequested
+            && !hasSelectedPlaybackAction
+            && VideoPlaybackLaunchPolicy.shouldOfferResumeChoice(resumeSeconds: resumeSeconds)
+    }
+
+    private func selectResume() {
+        guard !hasSelectedPlaybackAction else { return }
+        hasSelectedPlaybackAction = true
+        onResume()
+    }
+
+    private func selectRestart() {
+        guard !hasSelectedPlaybackAction else { return }
+        hasSelectedPlaybackAction = true
+        onRestart()
     }
 
     private var statusText: String {
         if playRequested { return "Starting playback…" }
         if case .failure = phase { return "Playback unavailable" }
-        return isReadyToPlay ? "Press play to begin" : "Preparing video…"
+        return "Preparing video…"
     }
 
     private var statusEyebrow: String {
         if playRequested { return "STARTING" }
         if case .failure = phase { return "UNAVAILABLE" }
-        return isReadyToPlay ? "READY" : "PREPARING"
+        return isReadyToPlay ? "CHOOSE PLAYBACK" : "PREPARING"
     }
 }
 
@@ -93,7 +166,9 @@ struct VideoFullscreenPreparationView: View {
             phase: .ready,
             isReadyToPlay: true,
             playRequested: false,
-            onPlay: {},
+            resumeSeconds: 734,
+            onResume: {},
+            onRestart: {},
             onDismiss: {}
         )
     }

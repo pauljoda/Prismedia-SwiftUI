@@ -71,6 +71,12 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         }
     }
 
+    func testVideoListModeReusesTheRailCardWhileOtherKindsKeepListPresentation() {
+        XCTAssertEqual(EntityGridDisplayMode.list.thumbnailLayout(for: .video), .rail)
+        XCTAssertEqual(EntityGridDisplayMode.list.thumbnailLayout(for: .movie), .list)
+        XCTAssertEqual(EntityGridDisplayMode.grid.thumbnailLayout(for: .video), .grid)
+    }
+
     private func decodeThumbnail(descriptionMember: String) throws -> EntityThumbnail {
         let data = Data(
             """

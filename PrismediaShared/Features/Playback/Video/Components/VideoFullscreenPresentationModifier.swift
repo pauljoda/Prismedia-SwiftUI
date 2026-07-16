@@ -8,7 +8,9 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     var requiresExplicitPlay = false
     var preparationPhase: VideoPlaybackPreparationPhase = .idle
     var playRequested = false
-    var onPlay: () -> Void = {}
+    var resumeSeconds: Double? = nil
+    var onResume: () -> Void = {}
+    var onRestart: () -> Void = {}
     var onDismiss: () -> Void = {}
     @State private var usesRotatedLandscapeFallback = false
     @State private var orientationController = VideoFullscreenOrientationController()
@@ -79,7 +81,9 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                     phase: preparationPhase,
                     isReadyToPlay: controller != nil && isInteractive,
                     playRequested: false,
-                    onPlay: onPlay,
+                    resumeSeconds: resumeSeconds,
+                    onResume: onResume,
+                    onRestart: onRestart,
                     onDismiss: requestDismissal
                 )
             } else if let controller {
@@ -98,7 +102,9 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                     phase: preparationPhase,
                     isReadyToPlay: false,
                     playRequested: playRequested,
-                    onPlay: onPlay,
+                    resumeSeconds: resumeSeconds,
+                    onResume: onResume,
+                    onRestart: onRestart,
                     onDismiss: requestDismissal
                 )
             }
@@ -135,7 +141,9 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                     requiresExplicitPlay: true,
                     preparationPhase: .ready,
                     playRequested: false,
-                    onPlay: {}
+                    resumeSeconds: 734,
+                    onResume: {},
+                    onRestart: {}
                 )
             )
     }
