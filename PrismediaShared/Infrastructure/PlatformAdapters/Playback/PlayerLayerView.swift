@@ -9,12 +9,35 @@
             override class var layerClass: AnyClass { AVPlayerLayer.self }
             var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
             weak var playbackController: VideoPlaybackController?
+            var onReadyForDisplayChange: ((Bool) -> Void)? {
+                didSet { observeReadyForDisplay() }
+            }
+            private var readyForDisplayObservation: NSKeyValueObservation?
+
+            private func observeReadyForDisplay() {
+                readyForDisplayObservation?.invalidate()
+                guard onReadyForDisplayChange != nil else { return }
+                readyForDisplayObservation = playerLayer.observe(
+                    \.isReadyForDisplay,
+                    options: [.initial, .new]
+                ) { [weak self] layer, _ in
+                    let isReadyForDisplay = layer.isReadyForDisplay
+                    Task { @MainActor [weak self] in
+                        self?.onReadyForDisplayChange?(isReadyForDisplay)
+                    }
+                }
+            }
         }
     #elseif canImport(AppKit)
         import AppKit
 
         final class PlayerLayerView: NSView {
             let playerLayer = AVPlayerLayer()
+            weak var playbackController: VideoPlaybackController?
+            var onReadyForDisplayChange: ((Bool) -> Void)? {
+                didSet { observeReadyForDisplay() }
+            }
+            private var readyForDisplayObservation: NSKeyValueObservation?
             override init(frame frameRect: NSRect) {
                 super.init(frame: frameRect)
                 wantsLayer = true
@@ -25,6 +48,20 @@
             override func layout() {
                 super.layout()
                 playerLayer.frame = bounds
+            }
+
+            private func observeReadyForDisplay() {
+                readyForDisplayObservation?.invalidate()
+                guard onReadyForDisplayChange != nil else { return }
+                readyForDisplayObservation = playerLayer.observe(
+                    \.isReadyForDisplay,
+                    options: [.initial, .new]
+                ) { [weak self] layer, _ in
+                    let isReadyForDisplay = layer.isReadyForDisplay
+                    Task { @MainActor [weak self] in
+                        self?.onReadyForDisplayChange?(isReadyForDisplay)
+                    }
+                }
             }
         }
     #endif

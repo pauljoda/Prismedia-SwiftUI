@@ -253,7 +253,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         let personID = UUID(uuidString: "97bea9e6-c1cb-4c0a-8ab3-d77b822e581a")!
         let loader = MockHTTPDataLoader(responses: [
             .json(creditDetailJSON(id: movieID, kind: "movie", personID: personID, character: "Louise Banks")),
-            .json(creditDetailJSON(id: seriesID, kind: "video-series", personID: personID, character: "Rebecca Welton")),
+            .json(
+                creditDetailJSON(id: seriesID, kind: "video-series", personID: personID, character: "Rebecca Welton")),
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, loader: loader)
             .authenticated(with: "token")
@@ -715,8 +716,11 @@ final class PrismediaAPIClientTests: XCTestCase {
                     "Id":"source-1","Path":"/media/movie.mkv","Protocol":"File","Container":"mkv",
                     "SupportsDirectPlay":false,"SupportsDirectStream":true,"SupportsTranscoding":true,
                     "TranscodingUrl":"/Videos/\(videoID)/hls/remux/stream.m3u8?PlaySessionId=session-1",
-                    "MediaStreams":[],
-                    "TranscodingInfo":{"Container":"mp4","VideoCodec":"hevc","AudioCodec":"aac","Protocol":"hls","IsVideoDirect":true,"IsAudioDirect":false}
+                    "MediaStreams":[
+                      {"Index":0,"Type":"Video","Codec":"hevc","CodecTag":"hev1","VideoRangeType":"HDR10"},
+                      {"Index":1,"Type":"Audio","Codec":"truehd","IsDefault":true}
+                    ],
+                    "TranscodingInfo":{"Container":"mp4","VideoCodec":"hevc","AudioCodec":"aac","Protocol":"hls","IsVideoDirect":true,"IsAudioDirect":false,"TranscodeReasons":["AudioCodecNotSupported"]}
                   }]
                 }
                 """)
@@ -728,6 +732,13 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(plan.delivery, .remux)
         XCTAssertEqual(plan.url.path, "/Videos/\(videoID)/hls/remux/stream.m3u8")
         XCTAssertEqual(plan.httpHeaders["Authorization"], "Bearer token")
+        XCTAssertEqual(plan.diagnostics?.sourceContainer, "mkv")
+        XCTAssertEqual(plan.diagnostics?.sourceVideoCodec, "hevc")
+        XCTAssertEqual(plan.diagnostics?.sourceVideoCodecTag, "hev1")
+        XCTAssertEqual(plan.diagnostics?.sourceAudioCodec, "truehd")
+        XCTAssertEqual(plan.diagnostics?.outputVideoCodec, "hevc")
+        XCTAssertEqual(plan.diagnostics?.outputAudioCodec, "aac")
+        XCTAssertEqual(plan.diagnostics?.transcodeReasons, ["AudioCodecNotSupported"])
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/Items/\(videoID.uuidString.lowercased())/PlaybackInfo")
         XCTAssertEqual(request.httpMethod, "POST")
@@ -741,10 +752,40 @@ final class PrismediaAPIClientTests: XCTestCase {
         let directProfiles = try XCTUnwrap(profile["DirectPlayProfiles"] as? [[String: Any]])
         XCTAssertTrue(directProfiles.contains { ($0["Container"] as? String)?.contains("mp4") == true })
         XCTAssertTrue(directProfiles.contains { ($0["VideoCodec"] as? String)?.contains("h264") == true })
-        XCTAssertFalse(
-            directProfiles.contains { ($0["Container"] as? String)?.contains("mov") == true },
-            "QuickTime containers must be remuxed or transcoded because the extension alone does not guarantee decodable tracks."
+        let movProfile = try XCTUnwrap(
+            directProfiles.first { ($0["Container"] as? String) == "mov" }
         )
+        let movCodecs = Set(
+            (try XCTUnwrap(movProfile["VideoCodec"] as? String))
+                .split(separator: ",")
+                .map(String.init)
+        )
+        XCTAssertTrue(movCodecs.isSuperset(of: ["h264", "mpeg4", "mjpeg"]))
+        XCTAssertFalse(movCodecs.contains("av1"))
+        XCTAssertFalse(movCodecs.contains("vp9"))
+
+        let codecProfiles = try XCTUnwrap(profile["CodecProfiles"] as? [[String: Any]])
+        let h264Profile = try XCTUnwrap(codecProfiles.first { ($0["Codec"] as? String) == "h264" })
+        let h264Conditions = try XCTUnwrap(h264Profile["Conditions"] as? [[String: Any]])
+        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "IsAnamorphic" })
+        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "IsInterlaced" })
+        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "VideoProfile" })
+        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "VideoLevel" })
+        let hevcProfile = try XCTUnwrap(codecProfiles.first { ($0["Codec"] as? String) == "hevc" })
+        let hevcConditions = try XCTUnwrap(hevcProfile["Conditions"] as? [[String: Any]])
+        XCTAssertTrue(
+            hevcConditions.contains {
+                ($0["Property"] as? String) == "VideoCodecTag"
+                    && ($0["Value"] as? String) == "hvc1"
+            })
+
+        let transcodingProfiles = try XCTUnwrap(profile["TranscodingProfiles"] as? [[String: Any]])
+        XCTAssertTrue(
+            transcodingProfiles.contains {
+                ($0["Container"] as? String) == "mp4"
+                    && ($0["Protocol"] as? String) == "hls"
+                    && ($0["VideoCodec"] as? String)?.contains("h264") == true
+            })
     }
 
     func testCrossOriginTranscodePlanDoesNotForwardSessionCredentials() async throws {
@@ -800,6 +841,38 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(body["EnableDirectStream"] as? Bool, false)
     }
 
+    func testDirectStreamFallbackDisablesDirectPlayButStillAllowsRemuxing() async throws {
+        let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                """
+                {
+                  "PlaySessionId":"session-1",
+                  "MediaSources":[{
+                    "Id":"source-1","SupportsDirectPlay":false,"SupportsDirectStream":true,
+                    "SupportsTranscoding":true,
+                    "TranscodingUrl":"/Videos/\(videoID)/hls/remux/stream.m3u8?PlaySessionId=session-1",
+                    "MediaStreams":[],
+                    "TranscodingInfo":{"VideoCodec":"h264","AudioCodec":"aac","IsVideoDirect":true}
+                  }]
+                }
+                """)
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let plan = try await client.negotiateVideoPlayback(
+            videoID: videoID,
+            mode: .directStream
+        )
+
+        XCTAssertEqual(plan.delivery, .remux)
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: XCTUnwrap(loader.requests[0].httpBody)) as? [String: Any]
+        )
+        XCTAssertEqual(body["EnableDirectPlay"] as? Bool, false)
+        XCTAssertEqual(body["EnableDirectStream"] as? Bool, true)
+    }
+
     func testDirectVideoPlanUsesAuthenticatedRangeStream() async throws {
         let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let loader = MockHTTPDataLoader(responses: [
@@ -824,6 +897,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(plan.url.path, "/Videos/\(videoID.uuidString.lowercased())/stream")
         XCTAssertEqual(queryItem("MediaSourceId", in: URLRequest(url: plan.url)), "source-1")
         XCTAssertEqual(queryItem("api_key", in: URLRequest(url: plan.url)), "opaque-token")
+        XCTAssertTrue(plan.requiresNativePlayabilityCheck)
     }
 
     func testSelectingAudioStreamIsSentToNegotiationAndDirectStreamURL() async throws {
@@ -1006,33 +1080,33 @@ final class PrismediaAPIClientTests: XCTestCase {
 
     private func creditDetailJSON(id: UUID, kind: String, personID: UUID, character: String) -> String {
         """
+        {
+          "id": "\(id.uuidString)",
+          "kind": "\(kind)",
+          "title": "Credit Detail",
+          "capabilities": [],
+          "childrenByKind": [],
+          "relationships": [
             {
-              "id": "\(id.uuidString)",
-              "kind": "\(kind)",
-              "title": "Credit Detail",
-              "capabilities": [],
-              "childrenByKind": [],
-              "relationships": [
-                {
-                  "kind": "person",
-                  "label": "Cast",
-                  "code": "cast",
-                  "entities": [
-                    { "id": "\(personID.uuidString)", "kind": "person", "title": "Actor" }
-                  ]
-                }
-              ],
-              "creditMetadata": [
-                {
-                  "personId": "\(personID.uuidString)",
-                  "role": "actor",
-                  "character": "\(character)",
-                  "roles": ["actor"],
-                  "characters": ["\(character)"]
-                }
+              "kind": "person",
+              "label": "Cast",
+              "code": "cast",
+              "entities": [
+                { "id": "\(personID.uuidString)", "kind": "person", "title": "Actor" }
               ]
             }
-            """
+          ],
+          "creditMetadata": [
+            {
+              "personId": "\(personID.uuidString)",
+              "role": "actor",
+              "character": "\(character)",
+              "roles": ["actor"],
+              "characters": ["\(character)"]
+            }
+          ]
+        }
+        """
     }
 }
 

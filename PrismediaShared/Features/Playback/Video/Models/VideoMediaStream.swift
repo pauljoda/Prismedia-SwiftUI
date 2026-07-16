@@ -2,6 +2,7 @@ struct VideoMediaStream: Decodable {
     let index: Int?
     let type: String
     let codec: String?
+    let codecTag: String?
     let width: Int?
     let height: Int?
     let channels: Int?
@@ -14,6 +15,7 @@ struct VideoMediaStream: Decodable {
         case index = "Index"
         case type = "Type"
         case codec = "Codec"
+        case codecTag = "CodecTag"
         case width = "Width"
         case height = "Height"
         case channels = "Channels"

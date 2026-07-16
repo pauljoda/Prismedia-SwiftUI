@@ -406,6 +406,15 @@ private actor RetryVideoPlaybackService: VideoPlaybackServicing {
         )
     }
 
+    func negotiateVideoPlayback(
+        videoID: UUID,
+        mode: VideoPlaybackNegotiationMode,
+        audioStreamIndex: Int?
+    ) async throws -> VideoPlaybackPlan {
+        guard mode == .automatic else { throw RetryVideoPlaybackError.fallbackFailed }
+        return try await negotiateVideoPlayback(videoID: videoID, forceTranscode: false)
+    }
+
     func mediaData(for path: String) async throws -> Data { Data() }
     nonisolated func authenticatedMediaURL(for path: String) -> URL? { URL(string: path) }
 }

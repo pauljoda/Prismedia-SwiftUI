@@ -16,6 +16,8 @@ public final class VideoPlaybackController {
     public private(set) var isWaiting = false
     public private(set) var bufferedRanges: [CMTimeRange] = []
     public private(set) var badges: [VideoPlaybackBadge] = []
+    public private(set) var diagnostics: VideoPlaybackDiagnostics?
+    public private(set) var playbackFailureDetails: [String] = []
     public private(set) var audioChoices: [VideoMediaSelectionChoice] = []
     public private(set) var subtitleChoices: [VideoMediaSelectionChoice] = []
     public private(set) var selectedAudioChoiceID: String?
@@ -45,7 +47,6 @@ public final class VideoPlaybackController {
     @ObservationIgnored private var bufferObservation: AnyCancellable?
     @ObservationIgnored private var playerStateObservation: AnyCancellable?
     @ObservationIgnored private var timeObserver: Any?
-    @ObservationIgnored private var usedSafeFallback = false
     @ObservationIgnored private var audioSelectionGroup: AVMediaSelectionGroup?
     @ObservationIgnored private var subtitleSelectionGroup: AVMediaSelectionGroup?
     @ObservationIgnored private var audioOptionsByID: [String: AVMediaSelectionOption] = [:]
@@ -57,6 +58,13 @@ public final class VideoPlaybackController {
     @ObservationIgnored private var sidecarSubtitleByID: [String: EntitySubtitle] = [:]
     @ObservationIgnored private var activeSubtitleCues: [VideoSubtitleCue] = []
     @ObservationIgnored private var pendingInitialResumeSeconds: Double?
+    @ObservationIgnored private var renderReadinessTask: Task<Void, Never>?
+    @ObservationIgnored private var isVideoSurfaceAttached = false
+    @ObservationIgnored private var isVideoReadyForDisplay = false
+    @ObservationIgnored private var negotiationMode: VideoPlaybackNegotiationMode = .automatic
+    @ObservationIgnored private var hasRequestedPlayback = false
+    @ObservationIgnored private var pendingTransportFailure: Error?
+    @ObservationIgnored private var transportRetryTask: Task<Void, Never>?
     @ObservationIgnored private var subtitleSettings: VideoSubtitleSettings = .default
     @ObservationIgnored private var hasExplicitSubtitleSelection = false
     #if os(tvOS)
@@ -110,24 +118,37 @@ public final class VideoPlaybackController {
     }
 
     isolated deinit {
+        renderReadinessTask?.cancel()
+        transportRetryTask?.cancel()
         if let timeObserver { player.removeTimeObserver(timeObserver) }
     }
 
     public func load(resumeAt: Double = 0) async {
         guard player.currentItem == nil, !isLoading else { return }
-        usedSafeFallback = false
         hasExplicitSubtitleSelection = false
+        hasRequestedPlayback = false
+        pendingTransportFailure = nil
+        playbackFailureDetails = []
         isLoading = true
         defer { isLoading = false }
         async let audioSessionReady: Void = prepareAudioSession()
         async let loadedSubtitleSettings = try? service.videoSubtitleSettings()
         do {
-            let plan = try await service.negotiateVideoPlayback(videoID: videoID, forceTranscode: false)
+            let initialPlan = try await service.negotiateVideoPlayback(
+                videoID: videoID,
+                mode: .automatic,
+                audioStreamIndex: nil
+            )
+            let resolvedPlayback = try await resolveNativePlayability(of: initialPlan)
             await audioSessionReady
             let subtitleSettings = await loadedSubtitleSettings ?? .default
             self.subtitleSettings = subtitleSettings
             subtitleAppearance = subtitleSettings.appearance
-            install(plan, resumeAt: resumeAt)
+            install(
+                resolvedPlayback.plan,
+                resumeAt: resumeAt,
+                mode: resolvedPlayback.mode
+            )
             #if os(tvOS)
                 #if DEBUG
                     if let subtitleChoiceID = PrismediaUITestBootstrap.videoSubtitleChoiceID() {
@@ -193,11 +214,16 @@ public final class VideoPlaybackController {
         {
             player.pause()
         } else {
-            player.playImmediately(atRate: playbackRate)
+            play()
         }
     }
 
     func play() {
+        hasRequestedPlayback = true
+        if pendingTransportFailure != nil {
+            retryDeferredTransportFailure()
+            return
+        }
         player.playImmediately(atRate: playbackRate)
     }
 
@@ -219,6 +245,26 @@ public final class VideoPlaybackController {
         videoScalingMode = mode
     }
 
+    func videoSurfaceDidAttach(isReadyForDisplay: Bool) {
+        let didChange = !isVideoSurfaceAttached || self.isVideoReadyForDisplay != isReadyForDisplay
+        isVideoSurfaceAttached = true
+        self.isVideoReadyForDisplay = isReadyForDisplay
+        if didChange { scheduleRenderReadinessCheckIfNeeded() }
+    }
+
+    func videoSurfaceDidDetach() {
+        isVideoSurfaceAttached = false
+        isVideoReadyForDisplay = false
+        renderReadinessTask?.cancel()
+        renderReadinessTask = nil
+    }
+
+    func videoSurfaceReadinessChanged(_ isReadyForDisplay: Bool) {
+        guard isVideoReadyForDisplay != isReadyForDisplay else { return }
+        self.isVideoReadyForDisplay = isReadyForDisplay
+        scheduleRenderReadinessCheckIfNeeded()
+    }
+
     public func selectAudio(id: String) async {
         if let group = audioSelectionGroup, let option = audioOptionsByID[id] {
             player.currentItem?.select(option, in: group)
@@ -231,12 +277,12 @@ public final class VideoPlaybackController {
         do {
             let plan = try await service.negotiateVideoPlayback(
                 videoID: videoID,
-                forceTranscode: false,
+                mode: .directStream,
                 audioStreamIndex: streamIndex
             )
-            install(plan, resumeAt: resumeAt)
+            install(plan, resumeAt: resumeAt, mode: .directStream)
             selectedAudioChoiceID = id
-            if shouldResume { player.playImmediately(atRate: playbackRate) }
+            if shouldResume { play() }
         } catch {
             errorMessage = "The selected audio track could not be loaded."
         }
@@ -385,6 +431,7 @@ public final class VideoPlaybackController {
 
     public func dismissError() {
         errorMessage = nil
+        pendingTransportFailure = nil
     }
 
     /// Clears an installed failed item before beginning a fresh negotiation.
@@ -430,17 +477,16 @@ public final class VideoPlaybackController {
         arePlaybackOptionsReady = false
     }
 
-    private func install(_ plan: VideoPlaybackPlan, resumeAt: Double) {
+    private func install(
+        _ plan: VideoPlaybackPlan,
+        resumeAt: Double,
+        mode: VideoPlaybackNegotiationMode
+    ) {
         playbackReporter.install(plan: plan, positionSeconds: resumeAt)
         // HLS child playlists and segments do not inherit the query string from
         // the master playlist URL. Supplying the bearer header on AVURLAsset
         // keeps every request in the native playback chain authenticated.
-        let asset = AVURLAsset(
-            url: plan.url,
-            options: plan.httpHeaders.isEmpty
-                ? nil
-                : ["AVURLAssetHTTPHeaderFieldsKey": plan.httpHeaders]
-        )
+        let asset = makeAsset(for: plan)
         let item = AVPlayerItem(asset: asset)
         audioSelectionGroup = nil
         subtitleSelectionGroup = nil
@@ -448,7 +494,9 @@ public final class VideoPlaybackController {
         subtitleOptionsByID = [:]
         configureSidecarChoices()
         delivery = plan.delivery
+        negotiationMode = effectiveNegotiationMode(requestedMode: mode, delivery: plan.delivery)
         badges = plan.badges
+        diagnostics = plan.diagnostics
         serverAudioIndexByID = Dictionary(
             uniqueKeysWithValues: plan.audioStreams.map {
                 ("server-audio-\($0.index)", $0.index)
@@ -462,6 +510,9 @@ public final class VideoPlaybackController {
             } ?? audioChoices.first?.id
         duration = plan.durationSeconds
         isReadyToPlay = false
+        isVideoReadyForDisplay = false
+        renderReadinessTask?.cancel()
+        renderReadinessTask = nil
         pendingInitialResumeSeconds = resumeAt > 0 ? resumeAt : nil
         arePlaybackOptionsReady = false
         bufferedRanges = []
@@ -473,6 +524,49 @@ public final class VideoPlaybackController {
             guard let self, let item else { return }
             await self.loadMediaSelectionOptions(for: item)
         }
+    }
+
+    private func resolveNativePlayability(
+        of plan: VideoPlaybackPlan
+    ) async throws -> (plan: VideoPlaybackPlan, mode: VideoPlaybackNegotiationMode) {
+        let initialMode = effectiveNegotiationMode(requestedMode: .automatic, delivery: plan.delivery)
+        guard plan.delivery == .direct, plan.requiresNativePlayabilityCheck else {
+            return (plan, initialMode)
+        }
+
+        let asset = makeAsset(for: plan)
+        let isPlayable: Bool
+        do {
+            isPlayable = try await asset.load(.isPlayable)
+        } catch {
+            // Capability rejection is a useful remux signal; a transport error
+            // is not. Install the direct plan so normal deferred retry handling
+            // can distinguish a network problem from an incompatible asset.
+            return (plan, .automatic)
+        }
+        guard isPlayable else {
+            let detail = "AVFoundation rejected the direct source during its native playability check."
+            playbackFailureDetails.append(detail)
+            #if DEBUG
+                print("Video playback recovery: \(detail)")
+            #endif
+            let fallbackPlan = try await service.negotiateVideoPlayback(
+                videoID: videoID,
+                mode: .directStream,
+                audioStreamIndex: nil
+            )
+            return (fallbackPlan, .directStream)
+        }
+        return (plan, .automatic)
+    }
+
+    private func makeAsset(for plan: VideoPlaybackPlan) -> AVURLAsset {
+        AVURLAsset(
+            url: plan.url,
+            options: plan.httpHeaders.isEmpty
+                ? nil
+                : ["AVURLAssetHTTPHeaderFieldsKey": plan.httpHeaders]
+        )
     }
 
     private func observeStatus(of item: AVPlayerItem) {
@@ -545,8 +639,30 @@ public final class VideoPlaybackController {
                     if self.isPlaying {
                         self.playbackReporter.playbackStarted(positionSeconds: self.currentTime)
                     }
+                    self.scheduleRenderReadinessCheckIfNeeded()
                 }
             }
+    }
+
+    private func scheduleRenderReadinessCheckIfNeeded() {
+        renderReadinessTask?.cancel()
+        renderReadinessTask = nil
+        guard isVideoSurfaceAttached, !isVideoReadyForDisplay, isPlaying, !isWaiting else { return }
+        let startingPosition = currentTime
+        let observedItem = player.currentItem
+        renderReadinessTask = Task { [weak self, weak observedItem] in
+            try? await Task.sleep(for: VideoRenderReadinessPolicy.deadline)
+            guard !Task.isCancelled, let self, observedItem === self.player.currentItem else { return }
+            let shouldRecover = VideoRenderReadinessPolicy.shouldRecover(
+                isSurfaceAttached: self.isVideoSurfaceAttached,
+                isReadyForDisplay: self.isVideoReadyForDisplay,
+                isPlaying: self.isPlaying,
+                isWaiting: self.isWaiting,
+                playbackAdvance: self.currentTime - startingPosition
+            )
+            guard shouldRecover else { return }
+            await self.recover(from: VideoPlaybackError.videoOutputUnavailable)
+        }
     }
 
     private func loadMediaSelectionOptions(for item: AVPlayerItem) async {
@@ -669,20 +785,97 @@ public final class VideoPlaybackController {
     }
 
     private func recover(from error: Error?) async {
-        guard !usedSafeFallback else {
+        capturePlaybackFailure(error)
+        guard VideoPlaybackRecoveryPolicy.shouldAttemptFallback(after: error) else {
+            guard hasRequestedPlayback else {
+                pendingTransportFailure = error
+                return
+            }
+            errorMessage = error?.localizedDescription ?? "The video could not be loaded."
+            return
+        }
+        guard let mode = nextRecoveryMode else {
             errorMessage = error?.localizedDescription ?? "The video could not be played."
             return
         }
-        usedSafeFallback = true
         let resumeAt = currentTime
         do {
-            let plan = try await service.negotiateVideoPlayback(videoID: videoID, forceTranscode: true)
-            install(plan, resumeAt: resumeAt)
-            player.play()
+            let plan = try await service.negotiateVideoPlayback(
+                videoID: videoID,
+                mode: mode,
+                audioStreamIndex: nil
+            )
+            install(plan, resumeAt: resumeAt, mode: mode)
+            play()
         } catch {
             playbackReporter.stop(positionSeconds: currentTime)
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func retryDeferredTransportFailure() {
+        guard transportRetryTask == nil else { return }
+        pendingTransportFailure = nil
+        let resumeAt = currentTime
+        let mode = negotiationMode
+        transportRetryTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.transportRetryTask = nil }
+            do {
+                let plan = try await self.service.negotiateVideoPlayback(
+                    videoID: self.videoID,
+                    mode: mode,
+                    audioStreamIndex: nil
+                )
+                self.install(plan, resumeAt: resumeAt, mode: mode)
+                self.player.playImmediately(atRate: self.playbackRate)
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func capturePlaybackFailure(_ error: Error?) {
+        var details = [error?.localizedDescription].compactMap { $0 }
+        if let events = player.currentItem?.errorLog()?.events {
+            details += events.map { event in
+                let resourcePath = event.uri.flatMap { URL(string: $0)?.path }
+                return [
+                    event.errorDomain,
+                    String(event.errorStatusCode),
+                    event.errorComment,
+                    resourcePath,
+                ]
+                .compactMap { $0 }
+                .joined(separator: " · ")
+            }
+        }
+        if let event = player.currentItem?.accessLog()?.events.last {
+            details.append(
+                "requests=\(event.numberOfMediaRequests) droppedFrames=\(event.numberOfDroppedVideoFrames) observedBitrate=\(event.observedBitrate)"
+            )
+        }
+        playbackFailureDetails += details
+        #if DEBUG
+            details.forEach { print("Video playback recovery: \($0)") }
+        #endif
+    }
+
+    private var nextRecoveryMode: VideoPlaybackNegotiationMode? {
+        switch negotiationMode {
+        case .automatic: .directStream
+        case .directStream: .transcode
+        case .transcode: nil
+        }
+    }
+
+    private func effectiveNegotiationMode(
+        requestedMode: VideoPlaybackNegotiationMode,
+        delivery: VideoPlaybackDelivery
+    ) -> VideoPlaybackNegotiationMode {
+        if requestedMode == .transcode || delivery == .transcode { return .transcode }
+        if requestedMode == .directStream || delivery == .remux { return .directStream }
+        return .automatic
     }
 
     private func observe(time: CMTime) {

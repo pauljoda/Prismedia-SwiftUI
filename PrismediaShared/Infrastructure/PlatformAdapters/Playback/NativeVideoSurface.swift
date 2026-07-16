@@ -15,6 +15,10 @@
                 view.playerLayer.videoGravity = scalingMode == .fit ? .resizeAspect : .resizeAspectFill
                 view.playerLayer.player = controller.player
                 view.playbackController = controller
+                view.onReadyForDisplayChange = { [weak controller] isReady in
+                    controller?.videoSurfaceReadinessChanged(isReady)
+                }
+                controller.videoSurfaceDidAttach(isReadyForDisplay: view.playerLayer.isReadyForDisplay)
                 controller.attachPictureInPicture(to: view.playerLayer)
                 return view
             }
@@ -22,6 +26,10 @@
             func updateUIView(_ view: PlayerLayerView, context: Context) {
                 view.playerLayer.player = controller.player
                 view.playbackController = controller
+                view.onReadyForDisplayChange = { [weak controller] isReady in
+                    controller?.videoSurfaceReadinessChanged(isReady)
+                }
+                controller.videoSurfaceDidAttach(isReadyForDisplay: view.playerLayer.isReadyForDisplay)
                 view.playerLayer.videoGravity = scalingMode == .fit ? .resizeAspect : .resizeAspectFill
                 controller.attachPictureInPicture(to: view.playerLayer)
             }
@@ -29,7 +37,10 @@
             static func dismantleUIView(_ view: PlayerLayerView, coordinator: Void) {
                 // Detach only the transient visual surface. The page-owned controller
                 // keeps its AVPlayer alive and reattaches when the surface returns.
+                view.playbackController?.videoSurfaceDidDetach()
                 view.playbackController?.detachPictureInPicture(from: view.playerLayer)
+                view.onReadyForDisplayChange = nil
+                view.playbackController = nil
             }
         }
 
@@ -41,15 +52,29 @@
             let scalingMode: VideoScalingMode
 
             func makeNSView(context: Context) -> PlayerLayerView {
-                PlayerLayerView()
+                let view = PlayerLayerView()
+                configure(view)
+                return view
             }
 
             func updateNSView(_ view: PlayerLayerView, context: Context) {
+                configure(view)
+            }
+
+            private func configure(_ view: PlayerLayerView) {
                 view.playerLayer.player = controller.player
                 view.playerLayer.videoGravity = scalingMode == .fit ? .resizeAspect : .resizeAspectFill
+                view.playbackController = controller
+                view.onReadyForDisplayChange = { [weak controller] isReady in
+                    controller?.videoSurfaceReadinessChanged(isReady)
+                }
+                controller.videoSurfaceDidAttach(isReadyForDisplay: view.playerLayer.isReadyForDisplay)
             }
 
             static func dismantleNSView(_ view: PlayerLayerView, coordinator: Void) {
+                view.playbackController?.videoSurfaceDidDetach()
+                view.onReadyForDisplayChange = nil
+                view.playbackController = nil
                 view.playerLayer.player = nil
             }
         }

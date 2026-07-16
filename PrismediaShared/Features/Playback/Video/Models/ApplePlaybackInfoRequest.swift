@@ -15,13 +15,13 @@ struct ApplePlaybackInfoRequest: Encodable {
         case audioStreamIndex = "AudioStreamIndex"
     }
 
-    init(forceTranscode: Bool, audioStreamIndex: Int? = nil) {
+    init(mode: VideoPlaybackNegotiationMode, audioStreamIndex: Int? = nil) {
         // The raw direct-play endpoint serves the whole source file and cannot
         // honor AudioStreamIndex. When AVFoundation cannot switch locally,
         // retain native video decode through server remux/direct stream while
         // asking the server to select the requested audio stream.
-        enableDirectPlay = !forceTranscode && audioStreamIndex == nil
-        enableDirectStream = !forceTranscode
+        enableDirectPlay = mode.allowsDirectPlay && audioStreamIndex == nil
+        enableDirectStream = mode.allowsDirectStream
         deviceProfile = .current
         supportedVideoRangeTypes = AppleDeviceProfile.supportedVideoRangeTypes
         self.audioStreamIndex = audioStreamIndex

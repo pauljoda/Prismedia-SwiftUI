@@ -395,7 +395,7 @@ public struct PrismediaAPIClient: Sendable {
     ) async throws -> VideoPlaybackPlan {
         try await negotiateVideoPlayback(
             videoID: videoID,
-            forceTranscode: forceTranscode,
+            mode: forceTranscode ? .transcode : .automatic,
             audioStreamIndex: nil
         )
     }
@@ -405,12 +405,24 @@ public struct PrismediaAPIClient: Sendable {
         forceTranscode: Bool,
         audioStreamIndex: Int? = nil
     ) async throws -> VideoPlaybackPlan {
+        try await negotiateVideoPlayback(
+            videoID: videoID,
+            mode: forceTranscode ? .transcode : .automatic,
+            audioStreamIndex: audioStreamIndex
+        )
+    }
+
+    public func negotiateVideoPlayback(
+        videoID: UUID,
+        mode: VideoPlaybackNegotiationMode,
+        audioStreamIndex: Int? = nil
+    ) async throws -> VideoPlaybackPlan {
         let response = try await send(
             VideoPlaybackInfoResponse.self,
             path: "/Items/\(videoID.uuidString.lowercased())/PlaybackInfo",
             method: "POST",
             body: ApplePlaybackInfoRequest(
-                forceTranscode: forceTranscode,
+                mode: mode,
                 audioStreamIndex: audioStreamIndex
             )
         )
@@ -420,7 +432,7 @@ public struct PrismediaAPIClient: Sendable {
 
         let delivery: VideoPlaybackDelivery
         let url: URL?
-        if source.supportsDirectPlay && !forceTranscode {
+        if source.supportsDirectPlay && mode.allowsDirectPlay && audioStreamIndex == nil {
             delivery = .direct
             let audioQuery = audioStreamIndex.map { "&AudioStreamIndex=\($0)" } ?? ""
             url = tokenAuthenticatedURL(
@@ -435,6 +447,13 @@ public struct PrismediaAPIClient: Sendable {
         }
 
         guard let url else { throw VideoPlaybackError.noPlayableSource }
+        let sourceVideo = source.mediaStreams.first {
+            $0.type.caseInsensitiveCompare("Video") == .orderedSame
+        }
+        let sourceAudioStreams = source.mediaStreams.filter {
+            $0.type.caseInsensitiveCompare("Audio") == .orderedSame
+        }
+        let sourceAudio = sourceAudioStreams.first(where: { $0.isDefault == true }) ?? sourceAudioStreams.first
         return VideoPlaybackPlan(
             videoID: videoID,
             url: url,
@@ -447,7 +466,17 @@ public struct PrismediaAPIClient: Sendable {
             httpHeaders:
                 isSameOrigin(url)
                 ? accessToken.map { ["Authorization": "Bearer \($0)"] } ?? [:]
-                : [:]
+                : [:],
+            diagnostics: VideoPlaybackDiagnostics(
+                sourceContainer: source.container,
+                sourceVideoCodec: sourceVideo?.codec,
+                sourceVideoCodecTag: sourceVideo?.codecTag,
+                sourceAudioCodec: sourceAudio?.codec,
+                outputVideoCodec: source.transcodingInfo?.videoCodec ?? sourceVideo?.codec,
+                outputAudioCodec: source.transcodingInfo?.audioCodec ?? sourceAudio?.codec,
+                transcodeReasons: source.transcodingInfo?.transcodeReasons ?? []
+            ),
+            requiresNativePlayabilityCheck: delivery == .direct
         )
     }
 

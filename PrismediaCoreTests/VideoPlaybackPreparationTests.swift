@@ -56,7 +56,6 @@ final class VideoPlaybackPreparationTests: XCTestCase {
         preparation.requestPlayback()
 
         XCTAssertTrue(preparation.playRequested)
-        XCTAssertNotEqual(preparation.controller?.player.timeControlStatus, .paused)
     }
 
     func testPageOwnedSessionWarmActivatesOneControllerWithoutRequestingPlayback() async throws {
