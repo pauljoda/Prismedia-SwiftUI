@@ -79,16 +79,6 @@ public struct EntityGridView<ItemContent: View>: View {
 
     public var body: some View {
         presentedContent
-            #if os(iOS)
-                .safeAreaInset(edge: .bottom) {
-                    if presentation == .screen, selection.isActive {
-                        selectionControls(style: .bottomBar)
-                        .padding(.horizontal, PrismediaSpacing.large)
-                        .padding(.vertical, PrismediaSpacing.small)
-                        .background(.regularMaterial)
-                    }
-                }
-            #endif
             #if os(macOS)
                 .onExitCommand {
                     if selection.isActive, actionInFlight == nil {
@@ -221,13 +211,21 @@ public struct EntityGridView<ItemContent: View>: View {
         .prismediaInlineNavigationTitle()
         .toolbar {
             #if !os(tvOS)
-                ToolbarItemGroup(placement: .primaryAction) {
-                    #if os(macOS)
-                        if selection.isActive {
-                            selectionControls(style: .compact)
-                        }
-                    #endif
+                if selection.isActive {
+                    EntityGridSelectionToolbar(
+                        selectedCount: selection.selectedIDs.count,
+                        collectionEligibleCount: selectedCollectionReferences.count,
+                        availableBuiltInActions: availableBuiltInActions,
+                        customActions: availableCustomActions,
+                        markNsfwValue: actionPolicy.nsfwMutationValue(for: selectedItems),
+                        isProcessing: actionInFlight != nil,
+                        onSelectAll: selectAllVisible,
+                        onClear: clearSelection,
+                        onAction: requestAction
+                    )
+                }
 
+                ToolbarItemGroup(placement: .primaryAction) {
                     if actionPolicy.selectionEnabled {
                         selectionToggleButton
                     }
@@ -255,11 +253,6 @@ public struct EntityGridView<ItemContent: View>: View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
             embeddedHeader
                 .padding(.horizontal, horizontalContentPadding)
-
-            if selection.isActive {
-                selectionControls(style: .bottomBar)
-                    .padding(.horizontal, horizontalContentPadding)
-            }
 
             if let errorMessage = snapshot.errorMessage {
                 errorBanner(errorMessage)
@@ -497,9 +490,7 @@ public struct EntityGridView<ItemContent: View>: View {
 
     @ViewBuilder
     private var selectionToggleButton: some View {
-        let button = Button(
-            selection.isActive ? "Done" : "Select", systemImage: selection.isActive ? "checkmark" : "checkmark.circle"
-        ) {
+        let button = Button(selection.isActive ? "Done" : "Select") {
             if selection.isActive {
                 exitSelection()
             } else {
@@ -514,23 +505,6 @@ public struct EntityGridView<ItemContent: View>: View {
         #else
             button
         #endif
-    }
-
-    private func selectionControls(
-        style: EntityGridSelectionControlsStyle
-    ) -> some View {
-        EntityGridSelectionControls(
-            selectedCount: selection.selectedIDs.count,
-            collectionEligibleCount: selectedCollectionReferences.count,
-            availableBuiltInActions: availableBuiltInActions,
-            customActions: availableCustomActions,
-            markNsfwValue: actionPolicy.nsfwMutationValue(for: selectedItems),
-            isProcessing: actionInFlight != nil,
-            style: style,
-            onSelectAll: selectAllVisible,
-            onClear: clearSelection,
-            onAction: requestAction
-        )
     }
 
     private var sortMenu: some View {
