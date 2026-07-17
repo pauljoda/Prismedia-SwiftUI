@@ -1,6 +1,27 @@
 import Foundation
 
 extension VideoMediaSource {
+    func playbackDisplayMetadata(
+        delivery: VideoPlaybackDelivery
+    ) -> VideoPlaybackDisplayMetadata? {
+        guard let video = mediaStreams.first(where: {
+            $0.type.caseInsensitiveCompare("Video") == .orderedSame
+        }) else { return nil }
+        let preservesSourceVideo = delivery != .transcode || transcodingInfo?.isVideoDirect == true
+        let dynamicRange = preservesSourceVideo ? video.playbackDynamicRange : .sdr
+        let frameRate = [video.averageFrameRate, video.realFrameRate]
+            .compactMap { $0 }
+            .first(where: { $0.isFinite && $0 > 0 })
+        return VideoPlaybackDisplayMetadata(
+            dynamicRange: dynamicRange,
+            frameRate: frameRate,
+            width: video.width,
+            height: video.height,
+            codec: preservesSourceVideo ? video.codec : transcodingInfo?.videoCodec,
+            dolbyVisionProfile: dynamicRange == .dolbyVision ? video.dolbyVisionProfile : nil
+        )
+    }
+
     var playbackAudioStreams: [VideoPlaybackStreamChoice] {
         mediaStreams.compactMap { stream in
             guard stream.type.caseInsensitiveCompare("Audio") == .orderedSame,
@@ -123,4 +144,17 @@ extension VideoMediaSource {
     }
 
     private var premiumAudioCodecs: Set<String> { ["eac3", "ac3", "truehd", "dts"] }
+}
+
+extension VideoMediaStream {
+    fileprivate var playbackDynamicRange: VideoPlaybackDynamicRange {
+        let range = videoRangeType?.uppercased() ?? ""
+        if range.contains("DOVI") { return .dolbyVision }
+        if range.contains("HLG") { return .hlg }
+        if range.contains("HDR") { return .hdr10 }
+        let transfer = colorTransfer?.uppercased() ?? ""
+        if transfer.contains("HLG") { return .hlg }
+        if transfer.contains("2084") || transfer.contains("PQ") { return .hdr10 }
+        return .sdr
+    }
 }

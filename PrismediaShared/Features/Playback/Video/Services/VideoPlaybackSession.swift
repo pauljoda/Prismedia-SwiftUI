@@ -19,6 +19,8 @@ final class VideoPlaybackSession {
     @ObservationIgnored
     private let systemPlayback: VideoSystemPlaybackIntegration
     @ObservationIgnored
+    private let displayCriteria: VideoDisplayCriteriaIntegration
+    @ObservationIgnored
     private var activeVideoID: UUID?
     @ObservationIgnored
     private var activeRestoreLink: EntityLink?
@@ -32,11 +34,13 @@ final class VideoPlaybackSession {
     init(
         service: any VideoPlaybackServicing,
         pictureInPictureHandoff: VideoPictureInPictureHandoff = .live,
-        systemPlayback: VideoSystemPlaybackIntegration = .inactive
+        systemPlayback: VideoSystemPlaybackIntegration = .inactive,
+        displayCriteria: VideoDisplayCriteriaIntegration = .inactive
     ) {
         self.service = service
         self.pictureInPictureHandoff = pictureInPictureHandoff
         self.systemPlayback = systemPlayback
+        self.displayCriteria = displayCriteria
     }
 
     func activate(
@@ -70,7 +74,9 @@ final class VideoPlaybackSession {
         let controller = VideoPlaybackController(
             videoID: videoDetail.id,
             service: service,
-            sidecarSubtitles: Self.subtitles(in: videoDetail)
+            audioSession: SystemVideoAudioSession(),
+            sidecarSubtitles: Self.subtitles(in: videoDetail),
+            displayCriteria: displayCriteria
         )
         controller.pictureInPicture.onRestore = { [weak self] in
             guard let self, let restoreLink = self.activeRestoreLink else { return }

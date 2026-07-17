@@ -756,7 +756,11 @@ final class PrismediaAPIClientTests: XCTestCase {
                     "SupportsDirectPlay":false,"SupportsDirectStream":true,"SupportsTranscoding":true,
                     "TranscodingUrl":"/Videos/\(videoID)/hls/remux/stream.m3u8?PlaySessionId=session-1",
                     "MediaStreams":[
-                      {"Index":0,"Type":"Video","Codec":"hevc","CodecTag":"hev1","VideoRangeType":"HDR10"},
+                      {
+                        "Index":0,"Type":"Video","Codec":"hevc","CodecTag":"dvh1",
+                        "Width":3840,"Height":2160,"AverageFrameRate":23.976,
+                        "VideoRangeType":"DOVIWithHDR10","ColorTransfer":"smpte2084","DvProfile":8
+                      },
                       {"Index":1,"Type":"Audio","Codec":"truehd","IsDefault":true}
                     ],
                     "TranscodingInfo":{"Container":"mp4","VideoCodec":"hevc","AudioCodec":"aac","Protocol":"hls","IsVideoDirect":true,"IsAudioDirect":false,"TranscodeReasons":["AudioCodecNotSupported"]}
@@ -773,11 +777,16 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(plan.httpHeaders["Authorization"], "Bearer token")
         XCTAssertEqual(plan.diagnostics?.sourceContainer, "mkv")
         XCTAssertEqual(plan.diagnostics?.sourceVideoCodec, "hevc")
-        XCTAssertEqual(plan.diagnostics?.sourceVideoCodecTag, "hev1")
+        XCTAssertEqual(plan.diagnostics?.sourceVideoCodecTag, "dvh1")
         XCTAssertEqual(plan.diagnostics?.sourceAudioCodec, "truehd")
         XCTAssertEqual(plan.diagnostics?.outputVideoCodec, "hevc")
         XCTAssertEqual(plan.diagnostics?.outputAudioCodec, "aac")
         XCTAssertEqual(plan.diagnostics?.transcodeReasons, ["AudioCodecNotSupported"])
+        XCTAssertEqual(plan.displayMetadata?.dynamicRange, .dolbyVision)
+        XCTAssertEqual(plan.displayMetadata?.frameRate, 23.976)
+        XCTAssertEqual(plan.displayMetadata?.width, 3_840)
+        XCTAssertEqual(plan.displayMetadata?.height, 2_160)
+        XCTAssertEqual(plan.displayMetadata?.dolbyVisionProfile, 8)
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/Items/\(videoID.uuidString.lowercased())/PlaybackInfo")
         XCTAssertEqual(request.httpMethod, "POST")

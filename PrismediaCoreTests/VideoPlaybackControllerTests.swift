@@ -88,6 +88,43 @@ final class VideoPlaybackControllerTests: XCTestCase {
             })
     }
 
+    func testDisplayCriteriaArePreparedBeforePlayerItemInstallationAndResetOnStop() async {
+        let videoID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+        let metadata = VideoPlaybackDisplayMetadata(
+            dynamicRange: .dolbyVision,
+            frameRate: 23.976,
+            width: 3_840,
+            height: 2_160,
+            dolbyVisionProfile: 8
+        )
+        let service = DisplayMetadataVideoPlaybackService(videoID: videoID, metadata: metadata)
+        var controller: VideoPlaybackController!
+        var preparedMetadata: VideoPlaybackDisplayMetadata?
+        var didReset = false
+        let displayCriteria = VideoDisplayCriteriaIntegration(
+            prepare: { value in
+                preparedMetadata = value
+                XCTAssertNil(controller.player.currentItem)
+            },
+            reset: { didReset = true }
+        )
+        controller = VideoPlaybackController(
+            videoID: videoID,
+            service: service,
+            audioSession: FailingVideoAudioSession(),
+            displayCriteria: displayCriteria
+        )
+
+        await controller.load()
+
+        XCTAssertEqual(preparedMetadata, metadata)
+        XCTAssertNotNil(controller.player.currentItem)
+
+        controller.stop()
+
+        XCTAssertTrue(didReset)
+    }
+
     private func waitForNegotiationCount(
         _ count: Int,
         service: StagedFallbackVideoPlaybackService
@@ -98,6 +135,31 @@ final class VideoPlaybackControllerTests: XCTestCase {
         }
         XCTFail("Timed out waiting for \(count) playback negotiations")
     }
+}
+
+private actor DisplayMetadataVideoPlaybackService: VideoPlaybackServicing {
+    private let videoID: UUID
+    private let metadata: VideoPlaybackDisplayMetadata
+
+    init(videoID: UUID, metadata: VideoPlaybackDisplayMetadata) {
+        self.videoID = videoID
+        self.metadata = metadata
+    }
+
+    func negotiateVideoPlayback(videoID: UUID, forceTranscode: Bool) async throws -> VideoPlaybackPlan {
+        VideoPlaybackPlan(
+            videoID: self.videoID,
+            url: URL(string: "https://media.example.test/dolby-vision.m3u8")!,
+            delivery: .remux,
+            playSessionID: "display-session",
+            mediaSourceID: "display-source",
+            durationSeconds: 120,
+            displayMetadata: metadata
+        )
+    }
+
+    func mediaData(for path: String) async throws -> Data { Data() }
+    nonisolated func authenticatedMediaURL(for path: String) -> URL? { URL(string: path) }
 }
 
 private struct FailingVideoAudioSession: VideoAudioSessionPreparing {

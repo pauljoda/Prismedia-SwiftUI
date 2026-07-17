@@ -39,6 +39,7 @@ public final class VideoPlaybackController {
     private let videoID: UUID
     private let service: any VideoPlaybackServicing
     private let audioSession: any VideoAudioSessionPreparing
+    private let displayCriteria: VideoDisplayCriteriaIntegration
     private let sidecarSubtitles: [EntitySubtitle]
     private let playbackReporter: VideoPlaybackReporter
     @ObservationIgnored private var statusObservation: AnyCancellable?
@@ -72,37 +73,30 @@ public final class VideoPlaybackController {
         @ObservationIgnored private var tvSubtitleSelectionGeneration = 0
     #endif
 
-    public init(
+    public convenience init(
         videoID: UUID,
         service: any VideoPlaybackServicing,
         sidecarSubtitles: [EntitySubtitle] = []
     ) {
-        self.videoID = videoID
-        self.service = service
-        self.sidecarSubtitles = sidecarSubtitles
-        audioSession = SystemVideoAudioSession()
-        playbackReporter = VideoPlaybackReporter(
-            service: service as? any VideoPlaybackReporting
+        self.init(
+            videoID: videoID,
+            service: service,
+            audioSession: SystemVideoAudioSession(),
+            sidecarSubtitles: sidecarSubtitles
         )
-        configureSidecarChoices()
-        timeObserver = player.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
-            queue: .main
-        ) { [weak self] time in
-            Task { @MainActor in self?.observe(time: time) }
-        }
-        observePlayerState()
     }
 
     init(
         videoID: UUID,
         service: any VideoPlaybackServicing,
         audioSession: any VideoAudioSessionPreparing,
-        sidecarSubtitles: [EntitySubtitle] = []
+        sidecarSubtitles: [EntitySubtitle] = [],
+        displayCriteria: VideoDisplayCriteriaIntegration = .inactive
     ) {
         self.videoID = videoID
         self.service = service
         self.audioSession = audioSession
+        self.displayCriteria = displayCriteria
         self.sidecarSubtitles = sidecarSubtitles
         playbackReporter = VideoPlaybackReporter(
             service: service as? any VideoPlaybackReporting
@@ -144,7 +138,7 @@ public final class VideoPlaybackController {
             let subtitleSettings = await loadedSubtitleSettings ?? .default
             self.subtitleSettings = subtitleSettings
             subtitleAppearance = subtitleSettings.appearance
-            install(
+            await install(
                 resolvedPlayback.plan,
                 resumeAt: resumeAt,
                 mode: resolvedPlayback.mode
@@ -280,7 +274,7 @@ public final class VideoPlaybackController {
                 mode: .directStream,
                 audioStreamIndex: streamIndex
             )
-            install(plan, resumeAt: resumeAt, mode: .directStream)
+            await install(plan, resumeAt: resumeAt, mode: .directStream)
             selectedAudioChoiceID = id
             if shouldResume { play() }
         } catch {
@@ -448,6 +442,7 @@ public final class VideoPlaybackController {
         playbackReporter.stop(positionSeconds: currentTime)
         player.pause()
         player.replaceCurrentItem(with: nil)
+        displayCriteria.reset()
         mediaSelectionTask?.cancel()
         mediaSelectionTask = nil
         #if os(tvOS)
@@ -481,7 +476,11 @@ public final class VideoPlaybackController {
         _ plan: VideoPlaybackPlan,
         resumeAt: Double,
         mode: VideoPlaybackNegotiationMode
-    ) {
+    ) async {
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        await displayCriteria.prepare(plan.displayMetadata)
+        guard !Task.isCancelled else { return }
         playbackReporter.install(plan: plan, positionSeconds: resumeAt)
         // HLS child playlists and segments do not inherit the query string from
         // the master playlist URL. Supplying the bearer header on AVURLAsset
@@ -805,7 +804,7 @@ public final class VideoPlaybackController {
                 mode: mode,
                 audioStreamIndex: nil
             )
-            install(plan, resumeAt: resumeAt, mode: mode)
+            await install(plan, resumeAt: resumeAt, mode: mode)
             play()
         } catch {
             playbackReporter.stop(positionSeconds: currentTime)
@@ -827,7 +826,7 @@ public final class VideoPlaybackController {
                     mode: mode,
                     audioStreamIndex: nil
                 )
-                self.install(plan, resumeAt: resumeAt, mode: mode)
+                await self.install(plan, resumeAt: resumeAt, mode: mode)
                 self.player.playImmediately(atRate: self.playbackRate)
             } catch {
                 self.errorMessage = error.localizedDescription

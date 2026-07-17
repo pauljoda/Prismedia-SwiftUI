@@ -5,9 +5,13 @@ struct VideoMediaStream: Decodable {
     let codecTag: String?
     let width: Int?
     let height: Int?
+    let averageFrameRate: Double?
+    let realFrameRate: Double?
     let channels: Int?
     let isDefault: Bool?
     let videoRangeType: String?
+    let colorTransfer: String?
+    let dolbyVisionProfile: Int?
     let language: String?
     let displayTitle: String?
 
@@ -18,9 +22,13 @@ struct VideoMediaStream: Decodable {
         case codecTag = "CodecTag"
         case width = "Width"
         case height = "Height"
+        case averageFrameRate = "AverageFrameRate"
+        case realFrameRate = "RealFrameRate"
         case channels = "Channels"
         case isDefault = "IsDefault"
         case videoRangeType = "VideoRangeType"
+        case colorTransfer = "ColorTransfer"
+        case dolbyVisionProfile = "DvProfile"
         case language = "Language"
         case displayTitle = "DisplayTitle"
     }

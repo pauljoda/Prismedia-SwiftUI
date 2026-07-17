@@ -15,10 +15,16 @@ struct VideoPlaybackHost<Content: View>: View {
         #else
             let systemPlayback = VideoSystemPlaybackIntegration.inactive
         #endif
+        #if os(tvOS)
+            let displayCriteria = TVVideoDisplayCriteriaCoordinator().integration
+        #else
+            let displayCriteria = VideoDisplayCriteriaIntegration.inactive
+        #endif
         _session = State(
             initialValue: VideoPlaybackSession(
                 service: client,
-                systemPlayback: systemPlayback
+                systemPlayback: systemPlayback,
+                displayCriteria: displayCriteria
             )
         )
         self.onRestore = onRestore

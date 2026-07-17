@@ -512,6 +512,7 @@ public struct PrismediaAPIClient: Sendable {
                 outputAudioCodec: source.transcodingInfo?.audioCodec ?? sourceAudio?.codec,
                 transcodeReasons: source.transcodingInfo?.transcodeReasons ?? []
             ),
+            displayMetadata: source.playbackDisplayMetadata(delivery: delivery),
             requiresNativePlayabilityCheck: delivery == .direct
         )
     }

@@ -17,7 +17,7 @@
 
         func makeUIViewController(context: Context) -> AVPlayerViewController {
             let playerController = AVPlayerViewController()
-            playerController.appliesPreferredDisplayCriteriaAutomatically = true
+            playerController.appliesPreferredDisplayCriteriaAutomatically = false
             playerController.player = controller.player
             playerController.showsPlaybackControls = true
             playerController.delegate = context.coordinator
