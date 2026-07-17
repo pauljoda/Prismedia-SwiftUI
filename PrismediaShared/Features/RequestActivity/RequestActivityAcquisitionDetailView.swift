@@ -188,10 +188,13 @@ import UniformTypeIdentifiers
         @ToolbarContentBuilder
         private var toolbarContent: some ToolbarContent {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Done", action: dismiss.callAsFunction)
+                Button(action: dismiss.callAsFunction) {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
             }
             ToolbarItem(placement: .primaryAction) {
-                Menu("Actions", systemImage: "ellipsis.circle") {
+                Menu {
                     Button("Search Again", systemImage: "arrow.clockwise") {
                         Task { await research() }
                     }
@@ -208,7 +211,10 @@ import UniformTypeIdentifiers
                     Button("Cancel Acquisition", systemImage: "xmark.circle", role: .destructive) {
                         Task { await cancel() }
                     }
+                } label: {
+                    Image(systemName: "ellipsis")
                 }
+                .accessibilityLabel("Acquisition Actions")
                 .disabled(
                     isActing || detail.map { RequestActivityStatusPolicy.isTransitionLocked($0.summary.status) } == true
                 )

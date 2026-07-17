@@ -2,6 +2,10 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     public struct RequestActivitySurface: View {
+        #if os(iOS)
+            @Environment(\.editMode) private var editMode
+        #endif
+
         @State private var downloads: [RequestActivityDownload] = []
         @State private var wantedPage: RequestActivityWantedPage?
         @State private var history: [RequestActivityHistoryEntry] = []
@@ -45,7 +49,7 @@ import SwiftUI
         public var body: some View {
             content
                 .searchable(text: $query, prompt: searchPrompt)
-                .navigationTitle(section.title)
+                .navigationTitle(selectedIDs.isEmpty ? section.title : "\(selectedIDs.count) Selected")
                 .toolbar { toolbarContent }
                 .refreshable { await refresh() }
                 .overlay { overlayContent }
@@ -214,19 +218,26 @@ import SwiftUI
         @ToolbarContentBuilder
         private var toolbarContent: some ToolbarContent {
             if section == .downloads || section == .missing || section == .cutoffUnmet {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: trailingToolbarPlacement) {
                     filterMenu
                 }
             }
-            if !selectedIDs.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    selectionMenu
-                }
-            }
+
             #if os(iOS)
                 if section != .history {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        EditButton()
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    ToolbarItemGroup(placement: trailingToolbarPlacement) {
+                        if !selectedIDs.isEmpty {
+                            selectionMenu
+                        }
+                        selectionToggleButton
+                    }
+                }
+            #else
+                if !selectedIDs.isEmpty {
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    ToolbarItem(placement: trailingToolbarPlacement) {
+                        selectionMenu
                     }
                 }
             #endif
@@ -260,8 +271,9 @@ import SwiftUI
                     }
                 }
             } label: {
-                Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
+                Image(systemName: "line.3.horizontal.decrease")
             }
+            .accessibilityLabel("Filters")
             .accessibilityIdentifier("request-activity.filters")
         }
 
@@ -282,8 +294,36 @@ import SwiftUI
                     }
                 }
             } label: {
-                Label("Selected \(selectedIDs.count)", systemImage: "checkmark.circle")
+                Image(systemName: "ellipsis")
             }
+            .accessibilityLabel("Selected Item Actions")
+            .accessibilityValue("\(selectedIDs.count) selected")
+        }
+
+        #if os(iOS)
+            private var selectionToggleButton: some View {
+                Button {
+                    withAnimation {
+                        if editMode?.wrappedValue.isEditing == true {
+                            editMode?.wrappedValue = .inactive
+                            selectedIDs.removeAll()
+                        } else {
+                            editMode?.wrappedValue = .active
+                        }
+                    }
+                } label: {
+                    Image(systemName: editMode?.wrappedValue.isEditing == true ? "checkmark" : "checkmark.circle")
+                }
+                .accessibilityLabel(editMode?.wrappedValue.isEditing == true ? "Done Selecting" : "Select Items")
+            }
+        #endif
+
+        private var trailingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarTrailing
+            #else
+                .primaryAction
+            #endif
         }
 
         private var visibleDownloads: [RequestActivityDownload] {

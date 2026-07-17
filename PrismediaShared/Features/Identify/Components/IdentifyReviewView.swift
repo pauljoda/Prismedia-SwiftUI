@@ -97,10 +97,17 @@ import SwiftUI
 
         @ToolbarContentBuilder private var reviewNavigation: some ToolbarContent {
             ToolbarItemGroup {
-                Button("Previous", systemImage: "chevron.left", action: session.selectPrevious).disabled(
-                    session.reviewableIDs.count < 2)
-                Button("Next", systemImage: "chevron.right", action: session.selectNext).disabled(
-                    session.reviewableIDs.count < 2)
+                Button(action: session.selectPrevious) {
+                    Image(systemName: "chevron.left")
+                }
+                .accessibilityLabel("Previous")
+                .disabled(session.reviewableIDs.count < 2)
+
+                Button(action: session.selectNext) {
+                    Image(systemName: "chevron.right")
+                }
+                .accessibilityLabel("Next")
+                .disabled(session.reviewableIDs.count < 2)
             }
         }
     }

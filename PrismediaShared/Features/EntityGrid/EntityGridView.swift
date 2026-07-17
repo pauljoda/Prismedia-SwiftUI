@@ -206,7 +206,7 @@ public struct EntityGridView<ItemContent: View>: View {
         #if os(tvOS)
             .navigationTitle("")
         #else
-            .navigationTitle(configuration.title)
+            .navigationTitle(selection.isActive ? "\(selection.selectedIDs.count) Selected" : configuration.title)
         #endif
         .prismediaInlineNavigationTitle()
         .toolbar {
@@ -223,14 +223,22 @@ public struct EntityGridView<ItemContent: View>: View {
                         onClear: clearSelection,
                         onAction: requestAction
                     )
-                }
 
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if actionPolicy.selectionEnabled {
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+
+                    ToolbarItem(placement: trailingToolbarPlacement) {
                         selectionToggleButton
                     }
+                } else {
+                    if actionPolicy.selectionEnabled {
+                        ToolbarItem(placement: trailingToolbarPlacement) {
+                            selectionToggleButton
+                        }
 
-                    if !selection.isActive {
+                        ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    }
+
+                    ToolbarItemGroup(placement: trailingToolbarPlacement) {
                         displayMenu
                         sortMenu
                         filterButton
@@ -490,20 +498,31 @@ public struct EntityGridView<ItemContent: View>: View {
 
     @ViewBuilder
     private var selectionToggleButton: some View {
-        let button = Button(selection.isActive ? "Done" : "Select") {
+        let button = Button {
             if selection.isActive {
                 exitSelection()
             } else {
                 selection.enter()
             }
+        } label: {
+            Image(systemName: selection.isActive ? "checkmark" : "checkmark.circle")
         }
         .disabled(actionInFlight != nil)
+        .accessibilityLabel(selection.isActive ? "Done Selecting" : "Select Items")
         .accessibilityIdentifier("entity.grid.selection.toggle")
 
         #if os(macOS)
             button.keyboardShortcut("s", modifiers: [.command, .shift])
         #else
             button
+        #endif
+    }
+
+    private var trailingToolbarPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+            .topBarTrailing
+        #else
+            .primaryAction
         #endif
     }
 

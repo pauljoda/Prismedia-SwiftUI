@@ -2,6 +2,10 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifyQueueView: View {
+        #if os(iOS)
+            @Environment(\.editMode) private var editMode
+        #endif
+
         @Bindable var session: IdentifySession
         var presentsReviewInNavigationStack = false
 
@@ -36,13 +40,15 @@ import SwiftUI
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Review All", systemImage: "rectangle.stack", action: session.reviewAll)
-                        .disabled(session.reviewableIDs.isEmpty)
-                }
-                if !session.selectedQueueIDs.isEmpty {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu("Selected", systemImage: "checkmark.circle") {
+                ToolbarItemGroup(placement: trailingToolbarPlacement) {
+                    Button(action: session.reviewAll) {
+                        Image(systemName: "rectangle.stack")
+                    }
+                    .accessibilityLabel("Review All")
+                    .disabled(session.reviewableIDs.isEmpty)
+
+                    if !session.selectedQueueIDs.isEmpty {
+                        Menu {
                             Button("Accept Selected", systemImage: "checkmark") {
                                 Task { await session.acceptSelected() }
                             }
@@ -50,19 +56,48 @@ import SwiftUI
                             Button("Reject Selected", systemImage: "trash", role: .destructive) {
                                 Task { await session.rejectSelected() }
                             }
+                        } label: {
+                            Image(systemName: "ellipsis")
                         }
+                        .accessibilityLabel("Selected Item Actions")
                     }
                 }
-                ToolbarItem(placement: .secondaryAction) {
-                    #if os(iOS)
-                        EditButton()
-                    #else
-                        EmptyView()
-                    #endif
-                }
+
+                #if os(iOS)
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    ToolbarItem(placement: trailingToolbarPlacement) {
+                        selectionToggleButton
+                    }
+                #endif
             }
             .refreshable { await session.load() }
             .accessibilityIdentifier("identify.queue")
+        }
+
+        #if os(iOS)
+            private var selectionToggleButton: some View {
+                Button {
+                    withAnimation {
+                        if editMode?.wrappedValue.isEditing == true {
+                            editMode?.wrappedValue = .inactive
+                            session.selectedQueueIDs.removeAll()
+                        } else {
+                            editMode?.wrappedValue = .active
+                        }
+                    }
+                } label: {
+                    Image(systemName: editMode?.wrappedValue.isEditing == true ? "checkmark" : "checkmark.circle")
+                }
+                .accessibilityLabel(editMode?.wrappedValue.isEditing == true ? "Done Selecting" : "Select Items")
+            }
+        #endif
+
+        private var trailingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarTrailing
+            #else
+                .primaryAction
+            #endif
         }
 
         @ViewBuilder

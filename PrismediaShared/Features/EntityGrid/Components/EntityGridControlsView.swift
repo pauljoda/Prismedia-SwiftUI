@@ -89,18 +89,28 @@ struct EntityGridControlsView: View {
             .prismediaInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Cancel")
                 }
                 ToolbarItem(placement: resetToolbarPlacement) {
-                    Button("Reset") { draft.filters = EntityGridFilters() }
-                        .disabled(draft.filters.activeCount == 0)
+                    Button {
+                        draft.filters = EntityGridFilters()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .accessibilityLabel("Reset Filters")
+                    .disabled(draft.filters.activeCount == 0)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
+                    Button {
                         onApply(draft)
                         dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
-                    .fontWeight(.semibold)
+                    .accessibilityLabel("Apply Filters")
                 }
             }
         }

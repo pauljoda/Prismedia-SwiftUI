@@ -6,8 +6,8 @@ import SwiftUI
         private let hidesNsfw: Bool
         private let onNavigateToEntity: (RequestEntityNavigationIntent) -> Void
 
+        @Binding private var kind: RequestKindDefinition
         @State private var reviewRoute: RequestReviewRoute?
-        @State private var kind = RequestKindDefinition.movie
         @State private var providers: [AdministrativePlugin] = []
         @State private var selectedProviderID = ""
         @State private var fieldValues: [String: String] = [:]
@@ -21,20 +21,24 @@ import SwiftUI
 
         public init(
             service: any AdministrationServicing,
+            kind: Binding<RequestKindDefinition> = .constant(.movie),
             hidesNsfw: Bool = true,
             onNavigateToEntity: @escaping (RequestEntityNavigationIntent) -> Void = { _ in }
         ) {
             self.service = AdministrationRequestFeatureService(administration: service)
+            _kind = kind
             self.hidesNsfw = hidesNsfw
             self.onNavigateToEntity = onNavigateToEntity
         }
 
         init(
             requestService: any RequestFeatureServicing,
+            kind: Binding<RequestKindDefinition> = .constant(.movie),
             hidesNsfw: Bool = true,
             onNavigateToEntity: @escaping (RequestEntityNavigationIntent) -> Void = { _ in }
         ) {
             service = requestService
+            _kind = kind
             self.hidesNsfw = hidesNsfw
             self.onNavigateToEntity = onNavigateToEntity
         }
@@ -62,17 +66,6 @@ import SwiftUI
                 onClear: invalidateSearch,
                 onCandidateActivate: activateCandidate
             )
-            .navigationTitle("Discover")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Picker("Content Type", selection: $kind) {
-                        ForEach(RequestKindDefinition.allCases) { kind in
-                            Text(kind.label).tag(kind)
-                        }
-                    }
-                    .accessibilityIdentifier("request.kind")
-                }
-            }
             .task { await loadProviders() }
             .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
                 Task { await loadProviders(force: true) }
