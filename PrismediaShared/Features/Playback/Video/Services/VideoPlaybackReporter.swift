@@ -66,7 +66,15 @@ final class VideoPlaybackReporter {
         guard !isTerminal, let context else { return }
         hasStarted = true
         isTerminal = true
-        record(.stopped, context: context, positionSeconds: 0, isPaused: true)
+        let completionPosition = context.durationSeconds.isFinite && context.durationSeconds > 0
+            ? max(context.durationSeconds, lastReportedPosition)
+            : lastReportedPosition
+        record(
+            .stopped,
+            context: context,
+            positionSeconds: completionPosition,
+            isPaused: true
+        )
         markPlayed(videoID: context.videoID)
     }
 

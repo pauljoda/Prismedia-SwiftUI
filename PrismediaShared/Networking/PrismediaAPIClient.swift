@@ -393,6 +393,25 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
+    public func recordEntityPlaybackEvent(
+        id: UUID,
+        kind: PlaybackEventKind,
+        positionSeconds: Double?,
+        durationSeconds: Double?
+    ) async throws {
+        _ = try await send(
+            EntityThumbnail.self,
+            path: "/api/entities/\(id.uuidString.lowercased())/playback/events",
+            method: "POST",
+            body: EntityPlaybackEventCreateRequest(
+                kind: kind,
+                occurredAt: nil,
+                positionSeconds: positionSeconds,
+                durationSeconds: durationSeconds
+            )
+        )
+    }
+
     public func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
         _ = try await send(
             EntityThumbnail.self,

@@ -27,6 +27,20 @@
             try await service?.recordAudioTrackPlay(id: id)
         }
 
+        func recordEntityPlaybackEvent(
+            id: UUID,
+            kind: PlaybackEventKind,
+            positionSeconds: Double?,
+            durationSeconds: Double?
+        ) async throws {
+            try await service?.recordEntityPlaybackEvent(
+                id: id,
+                kind: kind,
+                positionSeconds: positionSeconds,
+                durationSeconds: durationSeconds
+            )
+        }
+
         func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
             try await service?.updateEntityPlayback(
                 id: id,

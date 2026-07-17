@@ -136,6 +136,64 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.isPlaying)
     }
 
+    func testQuickNextRecordsSkippedPlaybackEventForPreviousTrack() async {
+        let tracks = [
+            makeTrack(idSuffix: 1, duration: 180),
+            makeTrack(idSuffix: 2, duration: 240),
+        ]
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(tracks: tracks)
+        controller.updateElapsedTime(4)
+
+        controller.skipToNext()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(service.skippedTrackIDs, [tracks[0].id])
+        XCTAssertEqual(service.skippedPositions, [4])
+        XCTAssertEqual(service.skippedDurations, [180])
+    }
+
+    func testQueueJumpUsesQuickSkipWindowAndAudiobooksStayExcluded() async {
+        let tracks = [
+            makeTrack(idSuffix: 1, duration: 180),
+            makeTrack(idSuffix: 2, duration: 240),
+            makeTrack(idSuffix: 3, duration: 300),
+        ]
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(tracks: tracks)
+        clock.advance(by: 11)
+
+        controller.skipToUpcomingTrack(id: tracks[2].id)
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertTrue(service.skippedTrackIDs.isEmpty)
+
+        controller.play(
+            tracks: tracks,
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book
+            )
+        )
+        controller.skipToUpcomingTrack(id: tracks[2].id)
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertTrue(service.skippedTrackIDs.isEmpty)
+    }
+
     func testCompletionAtQueueEndStopsWithoutReloading() async {
         let track = makeTrack(idSuffix: 1)
         let engine = AudioPlaybackEngineSpy()
@@ -295,7 +353,7 @@ final class MusicPlayerControllerTests: XCTestCase {
     }
 
     func testElapsedTimeCheckpointsDoNotRewriteTheQueueRestoration() {
-        let tracks = (1...1_000).map(makeTrack(idSuffix:))
+        let tracks = (1...1_000).map { makeTrack(idSuffix: $0) }
         let store = MusicPlaybackStateStoreSpy()
         let controller = MusicPlayerController(
             engine: AudioPlaybackEngineSpy(),
@@ -423,12 +481,13 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.queue.isShuffled)
     }
 
-    private func makeTrack(idSuffix: Int) -> MusicTrack {
+    private func makeTrack(idSuffix: Int, duration: Double? = nil) -> MusicTrack {
         MusicTrack(
             id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", idSuffix))!,
             title: "Track \(idSuffix)",
             artist: "Artist",
             album: "Album",
+            duration: duration,
             sortOrder: idSuffix - 1
         )
     }
@@ -497,6 +556,9 @@ private final class AudioPlaybackEngineSpy: AudioPlaybackEngine {
 private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private let missingStreamIDs: Set<UUID>
     private(set) var recordedTrackIDs: [UUID] = []
+    private(set) var skippedTrackIDs: [UUID] = []
+    private(set) var skippedPositions: [Double?] = []
+    private(set) var skippedDurations: [Double?] = []
 
     init(missingStreamIDs: Set<UUID> = []) {
         self.missingStreamIDs = missingStreamIDs
@@ -511,7 +573,30 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
         recordedTrackIDs.append(id)
     }
 
+    func recordEntityPlaybackEvent(
+        id: UUID,
+        kind: PlaybackEventKind,
+        positionSeconds: Double?,
+        durationSeconds: Double?
+    ) async throws {
+        guard kind == .skipped else { return }
+        skippedTrackIDs.append(id)
+        skippedPositions.append(positionSeconds)
+        skippedDurations.append(durationSeconds)
+    }
+
     func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {}
+}
+
+private final class TestMusicPlaybackClock: MusicPlaybackClock, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedNow: TimeInterval = 0
+
+    var now: TimeInterval { lock.withLock { storedNow } }
+
+    func advance(by interval: TimeInterval) {
+        lock.withLock { storedNow += interval }
+    }
 }
 
 @MainActor

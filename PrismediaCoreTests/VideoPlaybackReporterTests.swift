@@ -108,7 +108,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
         XCTAssertEqual(reports.last?.report.positionTicks, 310_000_000)
     }
 
-    func testCompletionStopsAtZeroMarksPlayedAndDoesNotStopAgain() async {
+    func testCompletionStopsAtDurationMarksPlayedAndDoesNotStopAgain() async {
         let service = ReportingSpy()
         let reporter = VideoPlaybackReporter(service: service, clock: TestVideoPlaybackClock())
         reporter.install(plan: makePlan(), positionSeconds: 0)
@@ -121,8 +121,23 @@ final class VideoPlaybackReporterTests: XCTestCase {
         let reports = await service.reports
         let playedVideoIDs = await service.playedVideoIDs
         XCTAssertEqual(reports.map(\.event), [.started, .stopped])
-        XCTAssertEqual(reports.last?.report.positionTicks, 0)
+        XCTAssertEqual(reports.last?.report.positionTicks, 1_200_000_000)
         XCTAssertEqual(playedVideoIDs, [makePlan().videoID])
+    }
+
+    func testCompletionKeepsFinalStopAtDurationAfterThresholdProgress() async {
+        let service = ReportingSpy()
+        let reporter = VideoPlaybackReporter(service: service, clock: TestVideoPlaybackClock())
+        reporter.install(plan: makePlan(), positionSeconds: 0)
+        reporter.playbackStarted(positionSeconds: 0)
+        reporter.didSeek(positionSeconds: 110)
+
+        reporter.complete()
+        await reporter.waitForPendingReports()
+
+        let reports = await service.reports
+        XCTAssertEqual(reports.map(\.event), [.started, .progress, .stopped])
+        XCTAssertEqual(reports.last?.report.positionTicks, 1_200_000_000)
     }
 
     func testCompletionStillMarksPlayedWhenPlayerStateNotificationWasMissed() async {
@@ -136,7 +151,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
         let reports = await service.reports
         let playedVideoIDs = await service.playedVideoIDs
         XCTAssertEqual(reports.map(\.event), [.stopped])
-        XCTAssertEqual(reports.first?.report.positionTicks, 0)
+        XCTAssertEqual(reports.first?.report.positionTicks, 1_200_000_000)
         XCTAssertEqual(playedVideoIDs, [makePlan().videoID])
     }
 

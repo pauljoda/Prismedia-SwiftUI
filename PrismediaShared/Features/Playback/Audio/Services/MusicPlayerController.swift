@@ -18,6 +18,7 @@ public final class MusicPlayerController {
 
     private let engine: any AudioPlaybackEngine
     private let service: any MusicPlaybackServicing
+    private let playbackClock: any MusicPlaybackClock
     private let stateStore: (any MusicPlaybackStatePersisting)?
     private var preferences: MusicPlaybackPreferences
     private var lastPersistedElapsedTime = 0.0
@@ -27,16 +28,38 @@ public final class MusicPlayerController {
     private var loadedTrackID: MusicTrack.ID?
     private var resumesWhenPlaybackBecomesAvailable = false
     private var activeQueueID = UUID()
+    private var currentTrackRequestedAt: TimeInterval?
 
-    public init(
+    private static let quickSkipThreshold: TimeInterval = 10
+
+    public convenience init(
         engine: any AudioPlaybackEngine,
         service: any MusicPlaybackServicing,
         queue: MusicQueue = MusicQueue(tracks: []),
         stateStore: (any MusicPlaybackStatePersisting)? = nil,
         context: MusicPlaybackContext? = nil
     ) {
+        self.init(
+            engine: engine,
+            service: service,
+            playbackClock: SystemMusicPlaybackClock(),
+            queue: queue,
+            stateStore: stateStore,
+            context: context
+        )
+    }
+
+    init(
+        engine: any AudioPlaybackEngine,
+        service: any MusicPlaybackServicing,
+        playbackClock: any MusicPlaybackClock,
+        queue: MusicQueue = MusicQueue(tracks: []),
+        stateStore: (any MusicPlaybackStatePersisting)? = nil,
+        context: MusicPlaybackContext? = nil
+    ) {
         self.engine = engine
         self.service = service
+        self.playbackClock = playbackClock
         self.queue = queue
         self.stateStore = stateStore
         self.context = context
@@ -103,6 +126,7 @@ public final class MusicPlayerController {
         }
         elapsedTime = max(0, startSeconds.isFinite ? startSeconds : 0)
         loadedTrackID = nil
+        currentTrackRequestedAt = nil
         resumesWhenPlaybackBecomesAvailable = false
         isPlaying = false
         publishNowPlayingState()
@@ -163,6 +187,7 @@ public final class MusicPlayerController {
         audiobookCompleted = false
         playbackRate = 1
         loadedTrackID = nil
+        currentTrackRequestedAt = nil
         resumesWhenPlaybackBecomesAvailable = false
         engine.setPlaybackRate(playbackRate)
         stateStore?.clear()
@@ -186,7 +211,10 @@ public final class MusicPlayerController {
 
     public func skipToNext() {
         reportAudiobookProgress(completed: false)
+        let skippedTrack = currentTrack
+        let skippedPosition = elapsedTime
         guard queue.advance(reason: .user) != nil else { return }
+        reportQuickSkipIfNeeded(track: skippedTrack, positionSeconds: skippedPosition)
         elapsedTime = 0
         startCurrentTrack()
         persistState()
@@ -202,7 +230,10 @@ public final class MusicPlayerController {
 
     public func skipToUpcomingTrack(id trackID: UUID) {
         reportAudiobookProgress(completed: false)
+        let skippedTrack = currentTrack
+        let skippedPosition = elapsedTime
         guard queue.moveToUpcomingTrack(id: trackID) != nil else { return }
+        reportQuickSkipIfNeeded(track: skippedTrack, positionSeconds: skippedPosition)
         elapsedTime = 0
         startCurrentTrack()
         persistState()
@@ -339,6 +370,7 @@ public final class MusicPlayerController {
             return
         }
         loadedTrackID = nil
+        currentTrackRequestedAt = nil
         guard prepareCurrentTrack() else {
             resumesWhenPlaybackBecomesAvailable = !service.isPlaybackAvailable
             isPlaying = false
@@ -363,6 +395,7 @@ public final class MusicPlayerController {
         }
         guard loadedTrackID != currentTrack.id else { return true }
         engine.load(url: url)
+        currentTrackRequestedAt = playbackClock.now
         engine.setPlaybackRate(playbackRate)
         if elapsedTime > 0 { engine.seek(to: elapsedTime) }
         loadedTrackID = currentTrack.id
@@ -443,15 +476,41 @@ public final class MusicPlayerController {
                 trackID: currentTrack.id,
                 trackOffsetSeconds: trackOffsetSeconds ?? elapsedTime
             )
-        let previous = pendingPlaybackReport
-        let service = self.service
-        pendingPlaybackReport = Task {
-            await previous?.value
+        enqueuePlaybackReport { service in
             try? await service.updateEntityPlayback(
                 id: ownerID,
                 resumeSeconds: resumeSeconds,
                 completed: completed
             )
+        }
+    }
+
+    private func reportQuickSkipIfNeeded(track: MusicTrack?, positionSeconds: Double) {
+        guard context?.isAudiobook != true,
+            let track,
+            let currentTrackRequestedAt,
+            positionSeconds <= Self.quickSkipThreshold,
+            playbackClock.now - currentTrackRequestedAt <= Self.quickSkipThreshold
+        else { return }
+
+        enqueuePlaybackReport { service in
+            try? await service.recordEntityPlaybackEvent(
+                id: track.id,
+                kind: .skipped,
+                positionSeconds: positionSeconds,
+                durationSeconds: track.duration
+            )
+        }
+    }
+
+    private func enqueuePlaybackReport(
+        _ operation: @escaping @MainActor @Sendable (any MusicPlaybackServicing) async -> Void
+    ) {
+        let previous = pendingPlaybackReport
+        let service = self.service
+        pendingPlaybackReport = Task {
+            await previous?.value
+            await operation(service)
         }
     }
 }

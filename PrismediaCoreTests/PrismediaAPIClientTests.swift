@@ -1029,6 +1029,33 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(body["completed"] as? Bool, false)
     }
 
+    func testRecordSkippedPlaybackEventUsesEntityHistoryEndpointAndSyncFields() async throws {
+        let trackID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let loader = MockHTTPDataLoader(responses: [.json(entityDetailJSON(id: trackID, rating: nil))])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        try await client.recordEntityPlaybackEvent(
+            id: trackID,
+            kind: .skipped,
+            positionSeconds: 4,
+            durationSeconds: 181
+        )
+
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(
+            request.url?.path,
+            "/api/entities/\(trackID.uuidString.lowercased())/playback/events"
+        )
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+        )
+        XCTAssertEqual(body["kind"] as? String, "skipped")
+        XCTAssertEqual(body["positionSeconds"] as? Double, 4)
+        XCTAssertEqual(body["durationSeconds"] as? Double, 181)
+    }
+
     func testLogoutPostsToAuthLogout() async throws {
         let loader = MockHTTPDataLoader(responses: [.json("", statusCode: 204)])
         let client = PrismediaAPIClient(serverURL: serverURL, loader: loader)
