@@ -17,6 +17,7 @@ public final class VideoPlaybackController {
     public private(set) var bufferedRanges: [CMTimeRange] = []
     public private(set) var badges: [VideoPlaybackBadge] = []
     public private(set) var diagnostics: VideoPlaybackDiagnostics?
+    public private(set) var renderer: VideoPlaybackRenderer = .native
     public private(set) var playbackFailureDetails: [String] = []
     public private(set) var audioChoices: [VideoMediaSelectionChoice] = []
     public private(set) var subtitleChoices: [VideoMediaSelectionChoice] = []
@@ -63,8 +64,13 @@ public final class VideoPlaybackController {
     @ObservationIgnored private var isVideoSurfaceAttached = false
     @ObservationIgnored private var isVideoReadyForDisplay = false
     @ObservationIgnored private var negotiationMode: VideoPlaybackNegotiationMode = .automatic
-    @ObservationIgnored private var hasRequestedPlayback = false
+    @ObservationIgnored private(set) var hasRequestedPlayback = false
     @ObservationIgnored private var pendingTransportFailure: Error?
+    @ObservationIgnored private var compatibilityPlaybackCommands: VideoCompatibilityPlaybackCommands?
+    private(set) var compatibilityPlaybackRequest: VideoCompatibilityPlaybackRequest?
+    var hasInstalledPlayback: Bool {
+        player.currentItem != nil || compatibilityPlaybackRequest != nil
+    }
     @ObservationIgnored private var transportRetryTask: Task<Void, Never>?
     @ObservationIgnored private var subtitleSettings: VideoSubtitleSettings = .default
     @ObservationIgnored private var hasExplicitSubtitleSelection = false
@@ -118,7 +124,7 @@ public final class VideoPlaybackController {
     }
 
     public func load(resumeAt: Double = 0) async {
-        guard player.currentItem == nil, !isLoading else { return }
+        guard player.currentItem == nil, compatibilityPlaybackRequest == nil, !isLoading else { return }
         hasExplicitSubtitleSelection = false
         hasRequestedPlayback = false
         pendingTransportFailure = nil
@@ -187,6 +193,13 @@ public final class VideoPlaybackController {
         completion: @escaping @MainActor (Bool) -> Void
     ) {
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
+        if renderer == .compatibility {
+            compatibilityPlaybackCommands?.seek(target)
+            playbackReporter.didSeek(positionSeconds: target)
+            currentTime = target
+            completion(true)
+            return
+        }
         player.seek(
             to: CMTime(seconds: target, preferredTimescale: 600),
             toleranceBefore: .zero,
@@ -202,6 +215,10 @@ public final class VideoPlaybackController {
 
     public func togglePlayback() {
         guard isReadyToPlay else { return }
+        if renderer == .compatibility {
+            isPlaying ? pause() : play()
+            return
+        }
         if player.timeControlStatus == .playing
             || player.timeControlStatus == .waitingToPlayAtSpecifiedRate
             || player.rate != 0
@@ -218,10 +235,18 @@ public final class VideoPlaybackController {
             retryDeferredTransportFailure()
             return
         }
+        if renderer == .compatibility {
+            compatibilityPlaybackCommands?.play(playbackRate)
+            return
+        }
         player.playImmediately(atRate: playbackRate)
     }
 
     func pause() {
+        if renderer == .compatibility {
+            compatibilityPlaybackCommands?.pause()
+            return
+        }
         player.pause()
     }
 
@@ -232,6 +257,10 @@ public final class VideoPlaybackController {
     public func setPlaybackRate(_ rate: Float) {
         guard VideoPlaybackSettings.availableRates.contains(rate) else { return }
         playbackRate = rate
+        if renderer == .compatibility {
+            compatibilityPlaybackCommands?.setRate(rate)
+            return
+        }
         if isPlaying || isWaiting { player.playImmediately(atRate: rate) }
     }
 
@@ -266,6 +295,11 @@ public final class VideoPlaybackController {
             return
         }
         guard let streamIndex = serverAudioIndexByID[id] else { return }
+        if renderer == .compatibility {
+            compatibilityPlaybackCommands?.selectAudioStream(streamIndex)
+            selectedAudioChoiceID = id
+            return
+        }
         let resumeAt = currentTime
         let shouldResume = isPlaying || isWaiting
         do {
@@ -374,7 +408,10 @@ public final class VideoPlaybackController {
         return contents
     }
 
-    public func startPictureInPicture() { pictureInPicture.start() }
+    public func startPictureInPicture() {
+        guard renderer == .native else { return }
+        pictureInPicture.start()
+    }
     public func stopPictureInPicture() { pictureInPicture.stop() }
     func attachPictureInPicture(to layer: AVPlayerLayer) { pictureInPicture.attach(to: layer) }
     func detachPictureInPicture(from layer: AVPlayerLayer) { pictureInPicture.detach(from: layer) }
@@ -440,6 +477,10 @@ public final class VideoPlaybackController {
     public func stop() {
         endShuttle()
         playbackReporter.stop(positionSeconds: currentTime)
+        compatibilityPlaybackCommands?.stop()
+        compatibilityPlaybackCommands = nil
+        compatibilityPlaybackRequest = nil
+        renderer = .native
         player.pause()
         player.replaceCurrentItem(with: nil)
         displayCriteria.reset()
@@ -479,14 +520,14 @@ public final class VideoPlaybackController {
     ) async {
         player.pause()
         player.replaceCurrentItem(with: nil)
-        await displayCriteria.prepare(plan.displayMetadata)
+        renderer = plan.renderer
+        if renderer == .native {
+            await displayCriteria.prepare(plan.displayMetadata)
+        } else {
+            displayCriteria.reset()
+        }
         guard !Task.isCancelled else { return }
         playbackReporter.install(plan: plan, positionSeconds: resumeAt)
-        // HLS child playlists and segments do not inherit the query string from
-        // the master playlist URL. Supplying the bearer header on AVURLAsset
-        // keeps every request in the native playback chain authenticated.
-        let asset = makeAsset(for: plan)
-        let item = AVPlayerItem(asset: asset)
         audioSelectionGroup = nil
         subtitleSelectionGroup = nil
         audioOptionsByID = [:]
@@ -516,6 +557,24 @@ public final class VideoPlaybackController {
         arePlaybackOptionsReady = false
         bufferedRanges = []
         errorMessage = nil
+        if renderer == .compatibility {
+            compatibilityPlaybackRequest = VideoCompatibilityPlaybackRequest(
+                url: plan.url,
+                resumeTime: resumeAt,
+                playbackRate: playbackRate,
+                audioStreams: plan.audioStreams
+            )
+            pendingInitialResumeSeconds = nil
+            isReadyToPlay = true
+            arePlaybackOptionsReady = true
+            return
+        }
+        compatibilityPlaybackRequest = nil
+        // HLS child playlists and segments do not inherit the query string from
+        // the master playlist URL. Supplying the bearer header on AVURLAsset
+        // keeps every request in the native playback chain authenticated.
+        let asset = makeAsset(for: plan)
+        let item = AVPlayerItem(asset: asset)
         observeStatus(of: item)
         player.replaceCurrentItem(with: item)
         mediaSelectionTask?.cancel()
@@ -641,6 +700,44 @@ public final class VideoPlaybackController {
                     self.scheduleRenderReadinessCheckIfNeeded()
                 }
             }
+    }
+
+    func attachCompatibilityPlayback(_ commands: VideoCompatibilityPlaybackCommands) {
+        compatibilityPlaybackCommands = commands
+    }
+
+    func detachCompatibilityPlayback() {
+        compatibilityPlaybackCommands = nil
+        isPlaying = false
+        isWaiting = false
+    }
+
+    func compatibilityPlaybackDidUpdate(
+        currentTime: Double,
+        duration: Double,
+        isPlaying: Bool,
+        isWaiting: Bool
+    ) {
+        self.currentTime = max(0, currentTime)
+        if duration.isFinite, duration > 0 { self.duration = duration }
+        self.isPlaying = isPlaying
+        self.isWaiting = isWaiting
+        playbackReporter.observePlayback(positionSeconds: self.currentTime, isPlaying: isPlaying)
+        activeSubtitleContent = WebVTTSubtitleParser.activeContent(
+            at: self.currentTime,
+            cues: activeSubtitleCues
+        )
+    }
+
+    func compatibilityPlaybackDidFinish() {
+        playbackReporter.complete()
+        onPlaybackCompleted?()
+    }
+
+    func compatibilityPlaybackDidFail(_ message: String) {
+        isPlaying = false
+        isWaiting = false
+        errorMessage = message
     }
 
     private func scheduleRenderReadinessCheckIfNeeded() {

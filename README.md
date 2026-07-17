@@ -26,6 +26,10 @@ The shared source tree is organized vertically:
 
 See [Docs/Architecture.md](Docs/Architecture.md) for the dependency rules, feature template, playback boundaries, and validation contract. `AGENTS.md` is the enforceable engineering and native-design contract.
 
+Before building the tvOS target for the first time, run
+`Scripts/bootstrap-tvvlckit.sh` to install the pinned compatibility-player
+framework under the ignored `Carthage/Build` directory.
+
 ## Native design
 
 - One system `TabView` adapts into sidebar presentation where the platform and width support it while preserving router state.

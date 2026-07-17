@@ -12,6 +12,7 @@ struct VideoMediaStream: Decodable {
     let videoRangeType: String?
     let colorTransfer: String?
     let dolbyVisionProfile: Int?
+    let bitDepth: Int?
     let language: String?
     let displayTitle: String?
 
@@ -29,6 +30,7 @@ struct VideoMediaStream: Decodable {
         case videoRangeType = "VideoRangeType"
         case colorTransfer = "ColorTransfer"
         case dolbyVisionProfile = "DvProfile"
+        case bitDepth = "BitDepth"
         case language = "Language"
         case displayTitle = "DisplayTitle"
     }

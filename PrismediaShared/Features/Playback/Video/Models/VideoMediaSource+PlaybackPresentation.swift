@@ -18,7 +18,18 @@ extension VideoMediaSource {
             width: video.width,
             height: video.height,
             codec: preservesSourceVideo ? video.codec : transcodingInfo?.videoCodec,
-            dolbyVisionProfile: dynamicRange == .dolbyVision ? video.dolbyVisionProfile : nil
+            dolbyVisionProfile: dynamicRange == .dolbyVision ? video.dolbyVisionProfile : nil,
+            bitDepth: preservesSourceVideo ? video.bitDepth : 8
+        )
+    }
+
+    func playbackRenderer(delivery: VideoPlaybackDelivery) -> VideoPlaybackRenderer {
+        guard let metadata = playbackDisplayMetadata(delivery: delivery) else { return .native }
+        return VideoPlaybackRendererPolicy.renderer(
+            delivery: delivery,
+            dynamicRange: metadata.dynamicRange,
+            bitDepth: metadata.bitDepth,
+            supportsCompatibilityRenderer: VideoPlaybackRendererPolicy.platformSupportsCompatibilityRenderer
         )
     }
 

@@ -5,6 +5,7 @@ public struct VideoPlaybackDisplayMetadata: Sendable, Equatable {
     public let height: Int?
     public let codec: String?
     public let dolbyVisionProfile: Int?
+    public let bitDepth: Int?
 
     public init(
         dynamicRange: VideoPlaybackDynamicRange,
@@ -12,7 +13,8 @@ public struct VideoPlaybackDisplayMetadata: Sendable, Equatable {
         width: Int? = nil,
         height: Int? = nil,
         codec: String? = nil,
-        dolbyVisionProfile: Int? = nil
+        dolbyVisionProfile: Int? = nil,
+        bitDepth: Int? = nil
     ) {
         self.dynamicRange = dynamicRange
         self.frameRate = frameRate
@@ -20,5 +22,6 @@ public struct VideoPlaybackDisplayMetadata: Sendable, Equatable {
         self.height = height
         self.codec = codec
         self.dolbyVisionProfile = dolbyVisionProfile
+        self.bitDepth = bitDepth
     }
 }

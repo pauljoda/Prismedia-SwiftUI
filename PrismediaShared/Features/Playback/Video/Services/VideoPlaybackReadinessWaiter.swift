@@ -18,7 +18,7 @@ struct VideoPlaybackReadinessWaiter {
             try Task.checkCancellation()
             if let message = controller.errorMessage { throw ReadinessError.failed(message) }
             if controller.isReadyToPlay { return }
-            if !controller.isLoading, controller.player.currentItem == nil { throw CancellationError() }
+            if !controller.isLoading, !controller.hasInstalledPlayback { throw CancellationError() }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
     }

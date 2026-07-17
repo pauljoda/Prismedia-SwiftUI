@@ -5,6 +5,7 @@ struct ApplePlaybackInfoRequest: Encodable {
     let supportedVideoRangeTypes: [String]
     let deviceProfile: AppleDeviceProfile
     let audioStreamIndex: Int?
+    let enableClientToneMapping: Bool
 
     enum CodingKeys: String, CodingKey {
         case enableDirectPlay = "EnableDirectPlay"
@@ -13,6 +14,7 @@ struct ApplePlaybackInfoRequest: Encodable {
         case supportedVideoRangeTypes = "SupportedVideoRangeTypes"
         case deviceProfile = "DeviceProfile"
         case audioStreamIndex = "AudioStreamIndex"
+        case enableClientToneMapping = "EnableClientToneMapping"
     }
 
     init(mode: VideoPlaybackNegotiationMode, audioStreamIndex: Int? = nil) {
@@ -25,5 +27,6 @@ struct ApplePlaybackInfoRequest: Encodable {
         deviceProfile = .current
         supportedVideoRangeTypes = AppleDeviceProfile.supportedVideoRangeTypes
         self.audioStreamIndex = audioStreamIndex
+        enableClientToneMapping = VideoPlaybackRendererPolicy.platformSupportsCompatibilityRenderer
     }
 }

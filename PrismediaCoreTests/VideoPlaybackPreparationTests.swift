@@ -129,7 +129,7 @@ final class VideoPlaybackPreparationTests: XCTestCase {
 
         XCTAssertEqual(preparation.phase, .ready)
         XCTAssertTrue(preparation.playRequested)
-        XCTAssertNotEqual(preparation.controller?.player.timeControlStatus, .paused)
+        XCTAssertEqual(preparation.controller?.hasRequestedPlayback, true)
     }
 
     func testStartOverOverridesPreparedResumePositionBeforePlaybackBegins() async throws {

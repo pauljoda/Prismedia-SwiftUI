@@ -13,13 +13,15 @@ public struct VideoPlaybackPlan: Sendable {
     public let diagnostics: VideoPlaybackDiagnostics?
     public let displayMetadata: VideoPlaybackDisplayMetadata?
     public let requiresNativePlayabilityCheck: Bool
+    public let renderer: VideoPlaybackRenderer
 
     public init(
         videoID: UUID, url: URL, delivery: VideoPlaybackDelivery, playSessionID: String, mediaSourceID: String,
         durationSeconds: Double, badges: [VideoPlaybackBadge] = [], audioStreams: [VideoPlaybackStreamChoice] = [],
         httpHeaders: [String: String] = [:], diagnostics: VideoPlaybackDiagnostics? = nil,
         displayMetadata: VideoPlaybackDisplayMetadata? = nil,
-        requiresNativePlayabilityCheck: Bool = false
+        requiresNativePlayabilityCheck: Bool = false,
+        renderer: VideoPlaybackRenderer = .native
     ) {
         self.videoID = videoID
         self.url = url
@@ -33,5 +35,6 @@ public struct VideoPlaybackPlan: Sendable {
         self.diagnostics = diagnostics
         self.displayMetadata = displayMetadata
         self.requiresNativePlayabilityCheck = requiresNativePlayabilityCheck
+        self.renderer = renderer
     }
 }

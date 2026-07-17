@@ -8,7 +8,8 @@ struct VideoPictureInPictureHandoff {
 
     static let live = Self(
         shouldRequest: { controller in
-            VideoPlaybackVisibilityPolicy.shouldEnterPictureInPicture(
+            guard controller.renderer == .native else { return false }
+            return VideoPlaybackVisibilityPolicy.shouldEnterPictureInPicture(
                 isPlaying: controller.isPlaying,
                 isWaiting: controller.isWaiting,
                 playerRate: controller.player.rate

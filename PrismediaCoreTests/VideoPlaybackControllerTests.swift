@@ -125,6 +125,43 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertTrue(didReset)
     }
 
+    func testCompatibilityPlanSkipsAVPlayerAndRoutesTransportCommands() async {
+        let videoID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
+        let service = CompatibilityVideoPlaybackService(videoID: videoID)
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: service,
+            audioSession: FailingVideoAudioSession()
+        )
+        var playedRate: Float?
+        var seekTime: Double?
+        var stopped = false
+
+        await controller.load(resumeAt: 42)
+        controller.attachCompatibilityPlayback(
+            VideoCompatibilityPlaybackCommands(
+                play: { playedRate = $0 },
+                pause: {},
+                seek: { seekTime = $0 },
+                stop: { stopped = true },
+                setRate: { _ in },
+                selectAudioStream: { _ in }
+            )
+        )
+
+        XCTAssertEqual(controller.renderer, .compatibility)
+        XCTAssertNil(controller.player.currentItem)
+        XCTAssertEqual(controller.compatibilityPlaybackRequest?.resumeTime, 42)
+
+        controller.play()
+        controller.seek(to: 73)
+        controller.stop()
+
+        XCTAssertEqual(playedRate, 1)
+        XCTAssertEqual(seekTime, 73)
+        XCTAssertTrue(stopped)
+    }
+
     private func waitForNegotiationCount(
         _ count: Int,
         service: StagedFallbackVideoPlaybackService
@@ -135,6 +172,29 @@ final class VideoPlaybackControllerTests: XCTestCase {
         }
         XCTFail("Timed out waiting for \(count) playback negotiations")
     }
+}
+
+private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing {
+    private let videoID: UUID
+
+    init(videoID: UUID) {
+        self.videoID = videoID
+    }
+
+    func negotiateVideoPlayback(videoID: UUID, forceTranscode: Bool) async throws -> VideoPlaybackPlan {
+        VideoPlaybackPlan(
+            videoID: self.videoID,
+            url: URL(string: "https://media.example.test/malformed-hdr.mkv?api_key=token")!,
+            delivery: .direct,
+            playSessionID: "compatibility-session",
+            mediaSourceID: "compatibility-source",
+            durationSeconds: 120,
+            renderer: .compatibility
+        )
+    }
+
+    func mediaData(for path: String) async throws -> Data { Data() }
+    nonisolated func authenticatedMediaURL(for path: String) -> URL? { URL(string: path) }
 }
 
 private actor DisplayMetadataVideoPlaybackService: VideoPlaybackServicing {

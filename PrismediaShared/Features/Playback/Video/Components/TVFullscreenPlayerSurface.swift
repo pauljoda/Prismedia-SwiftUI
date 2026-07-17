@@ -6,14 +6,22 @@
         let onRequestDismiss: () -> Void
 
         var body: some View {
-            TVFullscreenPlayerController(
-                controller: controller,
-                transportMenuSignature: transportMenuSignature,
-                assSubtitleContents: controller.activeAssSubtitleContents,
-                subtitleContent: controller.activeSubtitleContent,
-                subtitleAppearance: controller.subtitleAppearance,
-                onRequestDismiss: onRequestDismiss
-            )
+            if let request = controller.compatibilityPlaybackRequest {
+                TVCompatibilityPlayerView(
+                    controller: controller,
+                    request: request,
+                    onRequestDismiss: onRequestDismiss
+                )
+            } else {
+                TVFullscreenPlayerController(
+                    controller: controller,
+                    transportMenuSignature: transportMenuSignature,
+                    assSubtitleContents: controller.activeAssSubtitleContents,
+                    subtitleContent: controller.activeSubtitleContent,
+                    subtitleAppearance: controller.subtitleAppearance,
+                    onRequestDismiss: onRequestDismiss
+                )
+            }
         }
 
         private var transportMenuSignature: String {

@@ -490,6 +490,7 @@ public struct PrismediaAPIClient: Sendable {
             $0.type.caseInsensitiveCompare("Audio") == .orderedSame
         }
         let sourceAudio = sourceAudioStreams.first(where: { $0.isDefault == true }) ?? sourceAudioStreams.first
+        let renderer = source.playbackRenderer(delivery: delivery)
         return VideoPlaybackPlan(
             videoID: videoID,
             url: url,
@@ -513,7 +514,8 @@ public struct PrismediaAPIClient: Sendable {
                 transcodeReasons: source.transcodingInfo?.transcodeReasons ?? []
             ),
             displayMetadata: source.playbackDisplayMetadata(delivery: delivery),
-            requiresNativePlayabilityCheck: delivery == .direct
+            requiresNativePlayabilityCheck: delivery == .direct && renderer == .native,
+            renderer: renderer
         )
     }
 
