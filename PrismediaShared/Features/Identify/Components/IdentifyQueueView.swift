@@ -36,18 +36,28 @@ import SwiftUI
                 }
             }
             .toolbar {
-                ToolbarItemGroup {
+                ToolbarItem(placement: .primaryAction) {
                     Button("Review All", systemImage: "rectangle.stack", action: session.reviewAll)
                         .disabled(session.reviewableIDs.isEmpty)
-                    Button("Accept", systemImage: "checkmark", action: { Task { await session.acceptSelected() } })
-                        .disabled(!session.canAcceptQueueSelection)
-                    Button(
-                        "Reject", systemImage: "trash", role: .destructive,
-                        action: { Task { await session.rejectSelected() } }
-                    )
-                    .disabled(session.selectedQueueIDs.isEmpty)
+                }
+                if !session.selectedQueueIDs.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu("Selected", systemImage: "checkmark.circle") {
+                            Button("Accept Selected", systemImage: "checkmark") {
+                                Task { await session.acceptSelected() }
+                            }
+                            .disabled(!session.canAcceptQueueSelection)
+                            Button("Reject Selected", systemImage: "trash", role: .destructive) {
+                                Task { await session.rejectSelected() }
+                            }
+                        }
+                    }
+                }
+                ToolbarItem(placement: .secondaryAction) {
                     #if os(iOS)
                         EditButton()
+                    #else
+                        EmptyView()
                     #endif
                 }
             }

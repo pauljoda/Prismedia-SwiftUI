@@ -24,6 +24,44 @@ import Foundation
             applyHint: "Applies to the next scheduler window."
         )
 
+        static let stringListSetting = AdministrativeSetting(
+            key: "subtitles.preferredLanguages",
+            groupKey: "subtitles",
+            label: "Preferred languages",
+            description: "Languages used when choosing subtitle tracks.",
+            type: "stringList",
+            value: .stringList(["en", "eng"]),
+            defaultValue: .stringList(["en"]),
+            isDefault: false,
+            order: 0,
+            constraints: AdministrativeSettingConstraints(
+                minimum: nil,
+                maximum: nil,
+                step: nil,
+                minItems: 1,
+                maxItems: 6
+            ),
+            options: [],
+            inputKind: nil,
+            applyHint: nil
+        )
+
+        static let autoIdentifyKindSetting = AdministrativeSetting(
+            key: "autoIdentify.entityKinds",
+            groupKey: "autoIdentify",
+            label: "Identify these kinds",
+            description: "Which kinds of scanned media Auto Identify applies to.",
+            type: "stringList",
+            value: .stringList(["movie", "video", "book"]),
+            defaultValue: .stringList(["video", "gallery", "image", "audio", "book"]),
+            isDefault: false,
+            order: 0,
+            constraints: nil,
+            options: [],
+            inputKind: nil,
+            applyHint: nil
+        )
+
         static let fileRootID = UUID(
             uuidString: "11111111-1111-1111-1111-111111111111"
         )!

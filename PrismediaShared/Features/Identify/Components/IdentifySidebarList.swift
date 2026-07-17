@@ -6,49 +6,62 @@ import SwiftUI
         let usesNavigationLinks: Bool
 
         var body: some View {
-            List {
-                Section("Work") {
-                    if usesNavigationLinks {
-                        NavigationLink {
-                            IdentifyQueueView(
-                                session: session,
-                                presentsReviewInNavigationStack: true
-                            )
-                        } label: {
-                            queueLabel
-                        }
-                    } else {
-                        Button {
-                            session.selectedKind = nil
-                            session.selectedItemID = nil
-                        } label: {
-                            queueLabel
-                        }
-                        .contentShape(.rect)
-                    }
-                }
-
-                Section("Library") {
-                    ForEach(session.kindSummaries) { summary in
-                        if usesNavigationLinks {
+            Group {
+                if usesNavigationLinks {
+                    List {
+                        Section("Work") {
                             NavigationLink {
-                                IdentifyKindBrowseView(session: session, kind: summary.kind)
+                                IdentifyQueueView(
+                                    session: session,
+                                    presentsReviewInNavigationStack: true
+                                )
                             } label: {
-                                kindLabel(summary)
+                                queueLabel
                             }
-                        } else {
-                            Button {
-                                session.selectedKind = summary.kind
-                            } label: {
-                                kindLabel(summary)
+                        }
+
+                        Section("Library") {
+                            ForEach(session.kindSummaries) { summary in
+                                NavigationLink {
+                                    IdentifyKindBrowseView(session: session, kind: summary.kind)
+                                } label: {
+                                    kindLabel(summary)
+                                }
                             }
-                            .contentShape(.rect)
+                        }
+                    }
+                } else {
+                    List(selection: destinationSelection) {
+                        Section("Work") {
+                            queueLabel
+                                .tag("queue")
+                        }
+
+                        Section("Library") {
+                            ForEach(session.kindSummaries) { summary in
+                                kindLabel(summary)
+                                    .tag(summary.kind.rawValue)
+                            }
                         }
                     }
                 }
             }
             .prismediaScreenBackground()
             .navigationTitle("Identify")
+        }
+
+        private var destinationSelection: Binding<String?> {
+            Binding(
+                get: { session.selectedKind?.rawValue ?? "queue" },
+                set: { selection in
+                    guard let selection, selection != "queue" else {
+                        session.selectedKind = nil
+                        session.selectedItemID = nil
+                        return
+                    }
+                    session.selectedKind = EntityKind(rawValue: selection)
+                }
+            )
         }
 
         private var queueLabel: some View {

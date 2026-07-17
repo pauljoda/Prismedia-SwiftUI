@@ -40,38 +40,39 @@ import SwiftUI
         }
 
         public var body: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                    kindPicker
-
-                    PluginSearchSurface(
-                        title: "Discover \(kind.pluralLabel)",
-                        description: "Search your installed metadata providers",
-                        noProvidersMessage: noProviderMessage,
-                        entityKind: kind.pluginEntityKind,
-                        hidesNsfw: hidesNsfw,
-                        providers: providers,
-                        selectedProviderID: $selectedProviderID,
-                        values: $fieldValues,
-                        candidates: candidates,
-                        hasSearched: hasSearched,
-                        isSearching: isSearching || isLoadingProviders,
-                        errorMessage: errorMessage,
-                        searchStatus: providerWarnings.isEmpty
-                            ? nil
-                            : "\(providerWarnings.count) provider warning\(providerWarnings.count == 1 ? "" : "s")",
-                        onProviderChange: { _ in invalidateSearch() },
-                        onSearch: search,
-                        onClear: invalidateSearch,
-                        onCandidateActivate: activateCandidate
-                    )
-
-                    RequestProviderWarningsView(warnings: providerWarnings)
+            PluginSearchSurface(
+                title: "Discover \(kind.pluralLabel)",
+                description: "Choose a source, enter its search fields, then review a match.",
+                noProvidersMessage: noProviderMessage,
+                entityKind: kind.pluginEntityKind,
+                hidesNsfw: hidesNsfw,
+                providers: providers,
+                selectedProviderID: $selectedProviderID,
+                values: $fieldValues,
+                candidates: candidates,
+                hasSearched: hasSearched,
+                isSearching: isSearching || isLoadingProviders,
+                errorMessage: errorMessage,
+                searchStatus: providerWarnings.isEmpty
+                    ? nil
+                    : "\(providerWarnings.count) provider warning\(providerWarnings.count == 1 ? "" : "s")",
+                notices: providerWarnings.map { "\($0.displayName): \($0.message)" },
+                onProviderChange: { _ in invalidateSearch() },
+                onSearch: search,
+                onClear: invalidateSearch,
+                onCandidateActivate: activateCandidate
+            )
+            .navigationTitle("Discover")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Picker("Content Type", selection: $kind) {
+                        ForEach(RequestKindDefinition.allCases) { kind in
+                            Text(kind.label).tag(kind)
+                        }
+                    }
+                    .accessibilityIdentifier("request.kind")
                 }
-                .padding()
             }
-            .navigationTitle("Request")
-            .prismediaScreenBackground()
             .task { await loadProviders() }
             .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
                 Task { await loadProviders(force: true) }
@@ -98,23 +99,6 @@ import SwiftUI
                 }
             }
             .accessibilityIdentifier("request.feature")
-        }
-
-        private var kindPicker: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Label("What would you like to request?", systemImage: "sparkle.magnifyingglass")
-                    .font(.headline)
-                Picker("Media type", selection: $kind) {
-                    ForEach(RequestKindDefinition.allCases) { kind in
-                        Text(kind.label).tag(kind)
-                    }
-                }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("request.kind")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
         }
 
         private var candidates: [AdministrativeEntitySearchCandidate] {

@@ -3,6 +3,7 @@ import SwiftUI
 struct AdministrativeSettingsView: View {
     @State private var catalog = AdministrativeSettingsCatalog(groups: [])
     @State private var cacheStatus: AdministrativeTranscodeCacheStatus?
+    @State private var plugins: [AdministrativePlugin] = []
     @State private var isWorking = true
     @State private var message: String?
     private let service: any AdministrationServicing
@@ -79,6 +80,7 @@ struct AdministrativeSettingsView: View {
                 AdministrativeSettingsDetailView(
                     section: currentSection(id: section.id) ?? section,
                     cacheStatus: cacheStatus,
+                    plugins: plugins,
                     onSave: save,
                     onClearCache: clearCache,
                     onCreateBackup: createBackup
@@ -140,6 +142,7 @@ struct AdministrativeSettingsView: View {
         guard user.isAdmin else {
             catalog = AdministrativeSettingsCatalog(groups: [])
             cacheStatus = nil
+            plugins = []
             return
         }
         do {
@@ -147,6 +150,7 @@ struct AdministrativeSettingsView: View {
             async let loadedCache = service.transcodeCacheStatus()
             catalog = try await loadedCatalog
             cacheStatus = try await loadedCache
+            plugins = (try? await service.plugins()) ?? []
         } catch { message = error.localizedDescription }
     }
 

@@ -33,4 +33,62 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
         XCTAssertEqual(setting.controlKind, .select)
         XCTAssertEqual(setting.value.stringValue, "outline")
     }
+
+    func testAutoIdentifyKindsUseTheFixedNativeSelectionCatalog() throws {
+        let setting = try decodeSetting(
+            key: "autoIdentify.entityKinds",
+            value: #"["video","book"]"#
+        )
+
+        let options = AdministrativeStringListOptionCatalog.options(for: setting, plugins: [])
+
+        XCTAssertEqual(options.map(\.value), ["movie", "video", "gallery", "image", "audio", "book"])
+        XCTAssertEqual(options.map(\.label), ["Movies", "Videos", "Galleries", "Images", "Audio", "Books"])
+    }
+
+    func testAutoIdentifyProviderOptionsIncludeOnlyInstalledEnabledPlugins() throws {
+        let setting = try decodeSetting(
+            key: "autoIdentify.providers",
+            value: #"["tmdb"]"#
+        )
+        let plugins = [
+            plugin(id: "disabled", name: "Disabled", installed: true, enabled: false),
+            plugin(id: "missing", name: "Missing", installed: false, enabled: true),
+            plugin(id: "tmdb", name: "The Movie Database", installed: true, enabled: true),
+        ]
+
+        let options = AdministrativeStringListOptionCatalog.options(for: setting, plugins: plugins)
+
+        XCTAssertEqual(options.map(\.value), ["tmdb"])
+        XCTAssertEqual(options.map(\.label), ["The Movie Database"])
+    }
+
+    private func decodeSetting(key: String, value: String) throws -> AdministrativeSetting {
+        let data = Data(
+            """
+            {"key":"\(key)","groupKey":"autoIdentify","label":"Selection","description":"Description","type":"stringList","value":\(value),"defaultValue":[],"isDefault":false,"order":1,"constraints":null,"options":[],"inputKind":null,"applyHint":null}
+            """.utf8
+        )
+        return try JSONDecoder().decode(AdministrativeSetting.self, from: data)
+    }
+
+    private func plugin(
+        id: String,
+        name: String,
+        installed: Bool,
+        enabled: Bool
+    ) -> AdministrativePlugin {
+        AdministrativePlugin(
+            id: id,
+            name: name,
+            version: "1.0.0",
+            installed: installed,
+            enabled: enabled,
+            isNsfw: false,
+            supports: [],
+            missingAuthKeys: [],
+            updateAvailable: false,
+            availableVersion: nil
+        )
+    }
 }

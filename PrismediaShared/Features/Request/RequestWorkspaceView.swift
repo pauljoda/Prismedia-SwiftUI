@@ -15,13 +15,7 @@ import SwiftUI
 
         var body: some View {
             NavigationStack(path: navigationPath) {
-                VStack(spacing: 0) {
-                    sectionPicker
-                        .padding(.horizontal)
-                        .padding(.vertical, PrismediaSpacing.medium)
-
-                    Divider()
-
+                Group {
                     switch section {
                     case .discover:
                         RequestFeatureView(
@@ -43,6 +37,9 @@ import SwiftUI
                 .prismediaScreenBackground()
                 .prismediaEntityDestinations(dependencies: detailDependencies)
                 .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        sectionPicker
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button("Settings", systemImage: "gearshape") {
                             showsAcquisitionSettings = true
@@ -63,7 +60,6 @@ import SwiftUI
                     sectionOptions
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Picker("Request Section", selection: $section) {
                     sectionOptions

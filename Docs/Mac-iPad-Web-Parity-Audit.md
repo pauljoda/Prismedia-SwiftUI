@@ -16,6 +16,15 @@ The target is behavioral and information-architecture parity translated into nat
 - Operate combines Files, Identify, Request, Plugins, Jobs, and Settings, matching the web information architecture while continuing to enforce the existing native admin gate.
 - Sidebar selection reuses `PrismediaAppRouter`, so existing per-destination navigation paths, deep links, media handoff, and restoration remain intact.
 
+## Settings, Request, and Identify follow-up
+
+Date: 2026-07-17
+
+- Settings no longer presents array values as comma-separated text. Fixed catalogs use checkmark multi-selection, Auto Identify derives its provider choices from installed enabled plugins, selected provider priority is preserved, and open-ended values use an ordered Add/Delete/Move editor.
+- Request keeps the web app's Discover, Downloads, Missing, Cutoff Unmet, and History anatomy. Native presentation now uses the system toolbar for section navigation and a sectioned `List` for provider fields, warnings, search actions, and candidates instead of stacked custom panels.
+- Identify keeps its native compact stack and regular-width three-column split view. Sidebar selection, queue selection actions, provider search, and proposal actions now use native list selection, menus, control groups, and standard rows.
+- Intentional platform adaptations remain: the web Identify dashboard combines kind cards and the review queue in one scrolling page, while native keeps those destinations in the sidebar; the web kind page uses a card grid, while native uses a selectable list that better supports keyboard, pointer, and bulk selection across window sizes.
+
 ## Page parity matrix
 
 | Area | Current parity | Important differences | Next direction |

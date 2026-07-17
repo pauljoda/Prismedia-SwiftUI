@@ -5,10 +5,16 @@ struct AdministrativeSettingControl: View {
     @State private var draftNumber: Double
     @State private var isSaving = false
     let setting: AdministrativeSetting
+    let stringListOptions: [AdministrativeSettingOption]
     let onSave: (AdministrativeJSONValue) async -> Bool
 
-    init(setting: AdministrativeSetting, onSave: @escaping (AdministrativeJSONValue) async -> Bool) {
+    init(
+        setting: AdministrativeSetting,
+        stringListOptions: [AdministrativeSettingOption] = [],
+        onSave: @escaping (AdministrativeJSONValue) async -> Bool
+    ) {
         self.setting = setting
+        self.stringListOptions = stringListOptions
         self.onSave = onSave
         _draftText = State(initialValue: Self.textValue(for: setting.value))
         _draftNumber = State(initialValue: setting.value.numberValue ?? setting.constraints?.minimum ?? 0)
@@ -74,7 +80,7 @@ struct AdministrativeSettingControl: View {
             } label: {
                 settingLabel
             }
-        case .text, .stringList:
+        case .text:
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                 settingLabel
                 #if os(tvOS)
@@ -84,7 +90,7 @@ struct AdministrativeSettingControl: View {
                         .disabled(isSaving)
                 #else
                     TextField(setting.label, text: $draftText, axis: .vertical)
-                        .lineLimit(setting.controlKind == .stringList ? 2...4 : 1...2)
+                        .lineLimit(1...2)
                         .prismediaTextInputStyle(surface: .embedded)
                         .onSubmit { Task { await saveText() } }
                         .disabled(isSaving)
@@ -92,6 +98,12 @@ struct AdministrativeSettingControl: View {
                 Button("Save \(setting.label)") { Task { await saveText() } }
                     .disabled(isSaving || draftValue == setting.value)
             }
+        case .stringList:
+            AdministrativeStringListControl(
+                setting: setting,
+                options: stringListOptions,
+                onSave: onSave
+            )
         case .unsupported:
             LabeledContent(setting.label, value: setting.value.displayValue)
                 .foregroundStyle(.secondary)
@@ -159,9 +171,6 @@ struct AdministrativeSettingControl: View {
     #endif
 
     private var draftValue: AdministrativeJSONValue {
-        if setting.controlKind == .stringList {
-            return .stringList(Self.stringList(from: draftText))
-        }
         return .string(draftText.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
@@ -182,16 +191,11 @@ struct AdministrativeSettingControl: View {
     private static func textValue(for value: AdministrativeJSONValue) -> String {
         switch value {
         case .string(let value): value
-        case .stringList(let value): value.joined(separator: ", ")
+        case .stringList: ""
         default: ""
         }
     }
 
-    private static func stringList(from text: String) -> [String] {
-        text.components(separatedBy: CharacterSet(charactersIn: ",\n"))
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-    }
 }
 
 #if DEBUG

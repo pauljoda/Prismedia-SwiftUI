@@ -80,7 +80,6 @@ import SwiftUI
                                 .accessibilityHidden(true)
                         }
                     }
-                    .padding(PrismediaSpacing.medium)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                 }
@@ -91,26 +90,14 @@ import SwiftUI
                 .accessibilityAddTraits(isActive ? .isSelected : [])
 
                 if let onPreview, candidate.posterURL != nil {
-                    PrismediaButton(
+                    Button(
                         "Preview artwork for \(candidate.title)",
                         systemImage: "photo.badge.magnifyingglass",
-                        form: .compactIcon,
                         action: onPreview
                     )
+                    .labelStyle(.iconOnly)
                     .disabled(isDisabled)
                 }
-            }
-            .padding(PrismediaSpacing.extraSmall)
-            .background(
-                isActive ? PrismediaColor.controlFill : PrismediaColor.elevatedContentBackground,
-                in: RoundedRectangle(cornerRadius: PrismediaRadius.card, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: PrismediaRadius.card, style: .continuous)
-                    .stroke(
-                        isActive ? PrismediaColor.accent : PrismediaColor.borderSubtle,
-                        lineWidth: PrismediaLayout.hairline
-                    )
             }
         }
 
