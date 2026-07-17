@@ -25,6 +25,32 @@ struct MusicLibraryQueueLoader: Sendable {
         return thumbnails.map { MusicTrack(thumbnail: $0) }
     }
 
+    func shuffledTrackBatches(
+        matching query: EntityListQuery,
+        search: String?,
+        pageSize: Int = 100,
+        seed: Int = EntityGridControls.nextRandomSeed()
+    ) -> AsyncThrowingStream<[MusicTrack], Error> {
+        precondition(pageSize > 0, "A music queue page size must be positive.")
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    try await loadShuffledTrackBatches(
+                        matching: query,
+                        search: search,
+                        pageSize: pageSize,
+                        seed: seed,
+                        continuation: continuation
+                    )
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     func hydrate(_ tracks: [EntityThumbnail]) async throws -> [MusicTrack] {
         let albumIDs = unique(tracks.compactMap(\.parentEntityID))
         let albums = try await thumbnails(ids: albumIDs)
@@ -62,6 +88,76 @@ struct MusicLibraryQueueLoader: Sendable {
             indexedTracks += batch
         }
         return indexedTracks.sorted { $0.0 < $1.0 }.flatMap(\.1)
+    }
+
+    private func loadShuffledTrackBatches(
+        matching query: EntityListQuery,
+        search: String?,
+        pageSize: Int,
+        seed: Int,
+        continuation: AsyncThrowingStream<[MusicTrack], Error>.Continuation
+    ) async throws {
+        var query = query
+        query.sort = EntityGridSort.random.rawValue
+        query.sortDescending = false
+        query.seed = seed
+        query.cursor = nil
+        var cursor: String?
+        var visitedCursors = Set<String>()
+        var seenTrackIDs = Set<UUID>()
+
+        while true {
+            try Task.checkCancellation()
+            query.cursor = cursor
+            let response = try await client.listEntities(query, limit: pageSize, search: search)
+            if query.kind == .audioLibrary {
+                try await yieldAlbumTrackBatches(
+                    response.items,
+                    seenTrackIDs: &seenTrackIDs,
+                    continuation: continuation
+                )
+            } else {
+                let tracks = uniqueTracks(
+                    response.items.map { MusicTrack(thumbnail: $0) },
+                    seenTrackIDs: &seenTrackIDs
+                )
+                if !tracks.isEmpty { continuation.yield(tracks) }
+            }
+
+            guard let nextCursor = response.nextCursor,
+                visitedCursors.insert(nextCursor).inserted
+            else { return }
+            cursor = nextCursor
+        }
+    }
+
+    private func yieldAlbumTrackBatches(
+        _ albums: [EntityThumbnail],
+        seenTrackIDs: inout Set<UUID>,
+        continuation: AsyncThrowingStream<[MusicTrack], Error>.Continuation
+    ) async throws {
+        for batchStart in stride(from: 0, to: albums.count, by: 6) {
+            let batchEnd = min(batchStart + 6, albums.count)
+            try await withThrowingTaskGroup(of: [MusicTrack].self) { group in
+                for album in albums[batchStart..<batchEnd] {
+                    group.addTask {
+                        let detail = try await client.fetchEntity(id: album.id)
+                        return MusicEntityProjection.tracks(in: detail, artist: nil)
+                    }
+                }
+                for try await albumTracks in group {
+                    let tracks = uniqueTracks(albumTracks, seenTrackIDs: &seenTrackIDs)
+                    if !tracks.isEmpty { continuation.yield(tracks) }
+                }
+            }
+        }
+    }
+
+    private func uniqueTracks(
+        _ tracks: [MusicTrack],
+        seenTrackIDs: inout Set<UUID>
+    ) -> [MusicTrack] {
+        tracks.filter { seenTrackIDs.insert($0.id).inserted }
     }
 
     private func thumbnails(ids: [UUID]) async throws -> [EntityThumbnail] {

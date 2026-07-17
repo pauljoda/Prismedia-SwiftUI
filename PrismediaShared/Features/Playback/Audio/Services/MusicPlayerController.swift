@@ -26,6 +26,7 @@ public final class MusicPlayerController {
     private var pendingPlaybackReport: Task<Void, Never>?
     private var loadedTrackID: MusicTrack.ID?
     private var resumesWhenPlaybackBecomesAvailable = false
+    private var activeQueueID = UUID()
 
     public init(
         engine: any AudioPlaybackEngine,
@@ -46,6 +47,10 @@ public final class MusicPlayerController {
         queue.currentTrack
     }
 
+    public var currentQueueID: UUID {
+        activeQueueID
+    }
+
     public func play(
         tracks: [MusicTrack],
         startingAt trackID: UUID? = nil,
@@ -63,13 +68,14 @@ public final class MusicPlayerController {
         resume()
     }
 
+    @discardableResult
     public func preparePlayback(
         tracks: [MusicTrack],
         startingAt trackID: UUID? = nil,
         queueMode: MusicQueueStartMode = .preferred,
         context: MusicPlaybackContext? = nil,
         startSeconds: Double = 0
-    ) {
+    ) -> UUID {
         reportAudiobookProgress(completed: false)
         if currentTrack != nil { engine.pause() }
         var previousQueue = queue
@@ -81,6 +87,7 @@ public final class MusicPlayerController {
             startingAt: trackID,
             history: previousQueue.history
         )
+        activeQueueID = UUID()
         self.context = context
         if context?.isAudiobook != true, playbackRate != 1 {
             playbackRate = 1
@@ -88,12 +95,34 @@ public final class MusicPlayerController {
         }
         audiobookCompleted = false
         queue.setRepeatMode(preferences.repeatMode)
-        queue.setShuffled(shuffleEnabled(for: queueMode, context: context))
+        let shouldShuffle = shuffleEnabled(for: queueMode, context: context)
+        if queueMode == .shuffled, shouldShuffle {
+            queue.shuffleAll()
+        } else {
+            queue.setShuffled(shouldShuffle)
+        }
         elapsedTime = max(0, startSeconds.isFinite ? startSeconds : 0)
         loadedTrackID = nil
         resumesWhenPlaybackBecomesAvailable = false
         isPlaying = false
         publishNowPlayingState()
+        persistState()
+        return activeQueueID
+    }
+
+    @discardableResult
+    public func appendUpcomingTracks(_ tracks: [MusicTrack], to queueID: UUID) -> Bool {
+        guard queueID == activeQueueID else { return false }
+        let previousCount = queue.tracks.count
+        let couldGoNext = queue.canGoNext
+        queue.appendUpcomingTracks(tracks)
+        guard queue.tracks.count != previousCount else { return true }
+        if queue.canGoNext != couldGoNext { publishNowPlayingState() }
+        return true
+    }
+
+    public func finishQueueExpansion(_ queueID: UUID) {
+        guard queueID == activeQueueID else { return }
         persistState()
     }
 
@@ -125,6 +154,7 @@ public final class MusicPlayerController {
         reportAudiobookProgress(completed: false)
         engine.pause()
         queue = MusicQueue(tracks: [])
+        activeQueueID = UUID()
         isPlaying = false
         errorMessage = nil
         context = nil
@@ -253,6 +283,7 @@ public final class MusicPlayerController {
         context = restoration.context
         audiobookCompleted = restoration.audiobookCompleted ?? false
         queue = MusicQueue(restoration: restoration)
+        activeQueueID = UUID()
         elapsedTime = restoration.elapsedTime
         lastPersistedElapsedTime = restoration.elapsedTime
         _ = prepareCurrentTrack()

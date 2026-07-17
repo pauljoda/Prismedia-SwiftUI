@@ -18,7 +18,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrack, track)
     }
 
-    func testPreparingShuffledQueueDefersPlaybackUntilArtworkCanBeWarmed() {
+    func testPreparingShuffledQueueDefersPlaybackUntilResume() {
         let tracks = (1...12).map { makeTrack(idSuffix: $0) }
         let engine = AudioPlaybackEngineSpy()
         let service = MusicPlaybackServiceStub()
@@ -27,16 +27,36 @@ final class MusicPlayerControllerTests: XCTestCase {
         controller.preparePlayback(tracks: tracks, queueMode: .shuffled)
 
         XCTAssertTrue(controller.queue.isShuffled)
-        XCTAssertEqual(controller.currentTrack, tracks[0])
+        let preparedTrack = controller.currentTrack
+        XCTAssertNotNil(preparedTrack)
         XCTAssertTrue(engine.loadedURLs.isEmpty)
         XCTAssertEqual(engine.playCallCount, 0)
         XCTAssertFalse(controller.isPlaying)
 
         controller.resume()
 
-        XCTAssertEqual(engine.loadedURLs, [service.audioStreamURL(for: tracks[0].id)!])
+        XCTAssertEqual(engine.loadedURLs, [service.audioStreamURL(for: preparedTrack!.id)!])
         XCTAssertEqual(engine.playCallCount, 1)
         XCTAssertTrue(controller.isPlaying)
+    }
+
+    func testIncrementalQueueExpansionCannotAppendToAReplacementQueue() {
+        let initialTracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
+        let replacementTracks = [makeTrack(idSuffix: 3), makeTrack(idSuffix: 4)]
+        let lateTrack = makeTrack(idSuffix: 5)
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: MusicPlaybackServiceStub()
+        )
+
+        let initialQueueID = controller.preparePlayback(tracks: initialTracks, queueMode: .shuffled)
+        let replacementQueueID = controller.preparePlayback(tracks: replacementTracks)
+
+        XCTAssertFalse(controller.appendUpcomingTracks([lateTrack], to: initialQueueID))
+        XCTAssertEqual(controller.queue.tracks, replacementTracks)
+
+        XCTAssertTrue(controller.appendUpcomingTracks([lateTrack], to: replacementQueueID))
+        XCTAssertEqual(controller.queue.tracks, replacementTracks + [lateTrack])
     }
 
     func testPlaybackRateAppliesImmediatelyAndSurvivesTrackChanges() {

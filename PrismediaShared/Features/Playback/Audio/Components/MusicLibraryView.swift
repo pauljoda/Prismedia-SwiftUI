@@ -11,6 +11,7 @@
         @State private var artistNamesByID: [UUID: String] = [:]
         @State private var visibleTracksByID: [UUID: MusicTrack] = [:]
         @State private var playbackError: String?
+        @State private var playbackRequestID: UUID?
 
         private let configuration: EntityGridConfiguration
         private let layout: MusicLibraryLayout
@@ -483,28 +484,60 @@
         private func playLibrary(queueMode: MusicQueueStartMode) async {
             guard let client = environment.client else { return }
             guard loadingQueueMode == nil else { return }
+            let requestID = UUID()
+            let queueIDAtRequestStart = controller.currentQueueID
+            playbackRequestID = requestID
             loadingQueueMode = queueMode
-            defer { loadingQueueMode = nil }
+            var expandingQueueID: UUID?
+            defer {
+                if playbackRequestID == requestID {
+                    playbackRequestID = nil
+                    loadingQueueMode = nil
+                }
+                if let expandingQueueID {
+                    controller.finishQueueExpansion(expandingQueueID)
+                }
+            }
             do {
-                let tracks = try await MusicLibraryQueueLoader(client: client).tracks(
-                    matching: snapshot.controls.applying(to: configuration.query),
-                    search: snapshot.activeSearch
-                )
+                let loader = MusicLibraryQueueLoader(client: client)
+                let query = snapshot.controls.applying(to: configuration.query)
+                if queueMode == .shuffled {
+                    for try await tracks in loader.shuffledTrackBatches(
+                        matching: query,
+                        search: snapshot.activeSearch
+                    ) {
+                        try Task.checkCancellation()
+                        if let expandingQueueID {
+                            guard controller.appendUpcomingTracks(tracks, to: expandingQueueID)
+                            else { return }
+                            continue
+                        }
+
+                        guard controller.currentQueueID == queueIDAtRequestStart else { return }
+                        expandingQueueID = controller.preparePlayback(
+                            tracks: tracks,
+                            queueMode: .shuffled
+                        )
+                        controller.resume()
+                        if playbackRequestID == requestID {
+                            loadingQueueMode = nil
+                        }
+                    }
+                    return
+                }
+
+                let tracks = try await loader.tracks(matching: query, search: snapshot.activeSearch)
                 guard !tracks.isEmpty else { return }
-                controller.preparePlayback(
+                controller.play(
                     tracks: tracks,
                     queueMode: queueMode
                 )
-                await MusicQueueArtworkPreloader(
-                    playbackService: client,
-                    artworkLoader: environment.artworkLoader
-                ).prewarm(queue: controller.queue)
-                guard !Task.isCancelled else { return }
-                controller.resume()
             } catch is CancellationError {
                 return
             } catch {
-                playbackError = error.localizedDescription
+                if expandingQueueID == nil, playbackRequestID == requestID {
+                    playbackError = error.localizedDescription
+                }
             }
         }
 
