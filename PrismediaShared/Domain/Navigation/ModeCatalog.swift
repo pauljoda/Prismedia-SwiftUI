@@ -11,7 +11,6 @@ public enum ModeCatalog {
             destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
             entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
             destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
-            destination("account", "Account", "person.crop.circle", content: .account),
         ]
     )
 

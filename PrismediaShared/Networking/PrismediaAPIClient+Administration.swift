@@ -274,7 +274,8 @@ extension PrismediaAPIClient {
     }
 
     public func listAdministrativeLibraryRoots() async throws -> [AdministrativeLibraryRoot] {
-        try await send([AdministrativeLibraryRoot].self, path: "/api/libraries")
+        let roots = try await send([AdministrativeLibraryRoot].self, path: "/api/libraries")
+        return allowsNsfwContent ? roots : roots.filter { !$0.isNsfw }
     }
 
     public func listAdministrativeAcquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] {

@@ -5,6 +5,7 @@ import SwiftUI
 public struct PrismediaShellView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
     @Environment(PrismediaAppRouter.self) private var router
+    @State private var isAccountPresented = false
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -35,6 +36,11 @@ public struct PrismediaShellView: View {
         .onAppear { router.reconcile(with: availableModes) }
         .onChange(of: availableModes) { _, _ in
             router.reconcile(with: availableModes)
+        }
+        .sheet(isPresented: $isAccountPresented) {
+            if let user = environment.session?.user, let client = environment.client {
+                AccountView(user: user, service: AccountService(client: client))
+            }
         }
     }
 
@@ -232,9 +238,6 @@ public struct PrismediaShellView: View {
                     videoPlaybackSession: videoPlaybackSession
                 )
             )
-
-        case .account:
-            AccountView(user: user, service: AccountService(client: client))
 
         case .administration(let administration):
             AdministrativeDestinationView(
@@ -518,9 +521,8 @@ public struct PrismediaShellView: View {
 
     private func accountAction(videoPlaybackSession: VideoPlaybackSession) -> () -> Void {
         {
-            guard let account = ModeCatalog.overview.destination(id: "account") else { return }
             videoPlaybackSession.inlinePlaybackWillNavigate()
-            router.select(mode: ModeCatalog.overview, destination: account)
+            isAccountPresented = true
         }
     }
 

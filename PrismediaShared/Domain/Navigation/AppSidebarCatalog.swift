@@ -24,7 +24,6 @@ public enum AppSidebarCatalog {
                     selection: .search
                 ),
                 item(in: ModeCatalog.overview, destinationID: "stats"),
-                item(in: ModeCatalog.overview, destinationID: "account"),
             ]
         ),
         AppSidebarSection(

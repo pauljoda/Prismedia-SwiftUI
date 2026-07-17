@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AccountView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
+    @Environment(\.dismiss) private var dismiss
     let user: UserAccount
     let service: any AccountServicing
 
@@ -32,6 +33,11 @@ struct AccountView: View {
             }
             .prismediaScreenBackground()
             .navigationTitle("Account")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
         .accessibilityIdentifier("account")
     }

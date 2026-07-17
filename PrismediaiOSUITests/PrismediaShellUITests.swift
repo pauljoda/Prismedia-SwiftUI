@@ -4,7 +4,13 @@ import XCTest
 final class PrismediaShellUITests: XCTestCase {
     @MainActor
     func testAccountProfileAndSessionFixtureFlow() throws {
-        let app = signedInApplication(initialModeID: "overview", destinationID: "account")
+        let app = signedInApplication(initialModeID: "overview", destinationID: "dashboard")
+
+        let accountMenu = app.buttons.matching(identifier: "shell.account").firstMatch
+        XCTAssertTrue(accountMenu.waitForExistence(timeout: 10))
+        accountMenu.tap()
+        XCTAssertTrue(app.buttons["Account"].waitForExistence(timeout: 5))
+        app.buttons["Account"].tap()
 
         XCTAssertTrue(element("account", in: app).waitForExistence(timeout: 10))
         let displayName = app.textFields["Display name"]
