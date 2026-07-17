@@ -8,6 +8,7 @@ struct AdministrativeSettingsView: View {
     @State private var message: String?
     private let service: any AdministrationServicing
     private let user: UserAccount
+    private let hidesNsfw: Bool
     private let libraryService: any LibraryAdministrationServicing
     private let userService: any UserAdministrationServicing
     private let diagnosticsService: any DiagnosticsServicing
@@ -17,6 +18,7 @@ struct AdministrativeSettingsView: View {
     init(
         service: any AdministrationServicing,
         user: UserAccount,
+        hidesNsfw: Bool,
         libraryService: any LibraryAdministrationServicing,
         userService: any UserAdministrationServicing,
         diagnosticsService: any DiagnosticsServicing,
@@ -25,6 +27,7 @@ struct AdministrativeSettingsView: View {
     ) {
         self.service = service
         self.user = user
+        self.hidesNsfw = hidesNsfw
         self.libraryService = libraryService
         self.userService = userService
         self.diagnosticsService = diagnosticsService
@@ -81,6 +84,7 @@ struct AdministrativeSettingsView: View {
                     section: currentSection(id: section.id) ?? section,
                     cacheStatus: cacheStatus,
                     plugins: plugins,
+                    hidesNsfw: hidesNsfw,
                     onSave: save,
                     onClearCache: clearCache,
                     onCreateBackup: createBackup
@@ -200,6 +204,7 @@ struct AdministrativeSettingsView: View {
         AdministrativeSettingsView(
             service: AdministrativePreviewService(),
             user: PrismediaPreviewData.user,
+            hidesNsfw: true,
             libraryService: Step3AdministrationPreviewService(),
             userService: Step3AdministrationPreviewService(),
             diagnosticsService: Step3AdministrationPreviewService(),

@@ -63,6 +63,39 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
         XCTAssertEqual(options.map(\.label), ["The Movie Database"])
     }
 
+    func testAutoIdentifyProviderOptionsExcludeNsfwPluginsWhenContentIsHidden() throws {
+        let setting = try decodeSetting(
+            key: "autoIdentify.providers",
+            value: #"["adult","tmdb"]"#
+        )
+        let plugins = [
+            plugin(id: "adult", name: "Adult Provider", installed: true, enabled: true, isNsfw: true),
+            plugin(id: "tmdb", name: "The Movie Database", installed: true, enabled: true),
+        ]
+
+        let hiddenOptions = AdministrativeStringListOptionCatalog.options(
+            for: setting,
+            plugins: plugins,
+            hidesNsfw: true
+        )
+        let visibleOptions = AdministrativeStringListOptionCatalog.options(
+            for: setting,
+            plugins: plugins,
+            hidesNsfw: false
+        )
+
+        XCTAssertEqual(hiddenOptions.map(\.value), ["tmdb"])
+        XCTAssertEqual(visibleOptions.map(\.value), ["adult", "tmdb"])
+        XCTAssertEqual(
+            AdministrativeStringListOptionCatalog.selectedValues(for: setting, options: hiddenOptions),
+            ["tmdb"]
+        )
+        XCTAssertEqual(
+            AdministrativeStringListOptionCatalog.selectedValues(for: setting, options: visibleOptions),
+            ["adult", "tmdb"]
+        )
+    }
+
     private func decodeSetting(key: String, value: String) throws -> AdministrativeSetting {
         let data = Data(
             """
@@ -76,7 +109,8 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
         id: String,
         name: String,
         installed: Bool,
-        enabled: Bool
+        enabled: Bool,
+        isNsfw: Bool = false
     ) -> AdministrativePlugin {
         AdministrativePlugin(
             id: id,
@@ -84,7 +118,7 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
             version: "1.0.0",
             installed: installed,
             enabled: enabled,
-            isNsfw: false,
+            isNsfw: isNsfw,
             supports: [],
             missingAuthKeys: [],
             updateAvailable: false,

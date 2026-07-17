@@ -7,14 +7,14 @@ struct AdministrativeStringListControl: View {
 
     var body: some View {
         NavigationLink {
-            if options.isEmpty {
-                AdministrativeOrderedStringListEditor(setting: setting, onSave: onSave)
-            } else {
+            if AdministrativeStringListOptionCatalog.usesFixedOptions(for: setting) {
                 AdministrativeMultiSelectionView(
                     setting: setting,
                     options: options,
                     onSave: onSave
                 )
+            } else {
+                AdministrativeOrderedStringListEditor(setting: setting, onSave: onSave)
             }
         } label: {
             LabeledContent {
@@ -33,12 +33,12 @@ struct AdministrativeStringListControl: View {
     }
 
     private var values: [String] {
-        setting.value.stringListValue ?? []
+        AdministrativeStringListOptionCatalog.selectedValues(for: setting, options: options)
     }
 
     private var summary: String {
         guard !values.isEmpty else { return "None" }
-        if !options.isEmpty {
+        if AdministrativeStringListOptionCatalog.usesFixedOptions(for: setting) {
             return "\(values.count) selected"
         }
         return "\(values.count) value\(values.count == 1 ? "" : "s")"

@@ -46,6 +46,7 @@ struct AdministrativeDestinationView: View {
             AdministrativeSettingsView(
                 service: service,
                 user: user,
+                hidesNsfw: hidesNsfw,
                 libraryService: LibraryAdministrationService(client: client),
                 userService: UserAdministrationService(client: client),
                 diagnosticsService: DiagnosticsService(client: client),

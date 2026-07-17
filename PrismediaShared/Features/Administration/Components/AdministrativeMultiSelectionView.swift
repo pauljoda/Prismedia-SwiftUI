@@ -18,7 +18,12 @@ struct AdministrativeMultiSelectionView: View {
         self.setting = setting
         self.options = options
         self.onSave = onSave
-        _selectedValues = State(initialValue: setting.value.stringListValue ?? [])
+        _selectedValues = State(
+            initialValue: AdministrativeStringListOptionCatalog.selectedValues(
+                for: setting,
+                options: options
+            )
+        )
     }
 
     var body: some View {

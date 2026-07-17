@@ -1,9 +1,26 @@
 import Foundation
 
 enum AdministrativeStringListOptionCatalog {
+    static func usesFixedOptions(for setting: AdministrativeSetting) -> Bool {
+        !setting.options.isEmpty
+            || setting.key == "autoIdentify.entityKinds"
+            || setting.key == "autoIdentify.providers"
+    }
+
+    static func selectedValues(
+        for setting: AdministrativeSetting,
+        options: [AdministrativeSettingOption]
+    ) -> [String] {
+        let values = setting.value.stringListValue ?? []
+        guard usesFixedOptions(for: setting) else { return values }
+        let visibleValues = Set(options.map(\.value))
+        return values.filter(visibleValues.contains)
+    }
+
     static func options(
         for setting: AdministrativeSetting,
-        plugins: [AdministrativePlugin]
+        plugins: [AdministrativePlugin],
+        hidesNsfw: Bool = false
     ) -> [AdministrativeSettingOption] {
         if !setting.options.isEmpty { return setting.options }
 
@@ -11,7 +28,12 @@ enum AdministrativeStringListOptionCatalog {
         case "autoIdentify.entityKinds":
             return entityKindOptions
         case "autoIdentify.providers":
-            return pluginOptions(from: plugins)
+            return pluginOptions(
+                from: AdministrativePluginVisibilityPolicy.visiblePlugins(
+                    plugins,
+                    hidesNsfw: hidesNsfw
+                )
+            )
         default:
             return []
         }

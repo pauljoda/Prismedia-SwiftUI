@@ -5,6 +5,7 @@ struct AdministrativeSettingsDetailView: View {
     @State private var cacheStatus: AdministrativeTranscodeCacheStatus?
     @State private var isPerformingAction = false
     let plugins: [AdministrativePlugin]
+    let hidesNsfw: Bool
     let onSave: (AdministrativeSetting, AdministrativeJSONValue) async -> AdministrativeSettingsSection?
     let onClearCache: () async -> AdministrativeTranscodeCacheStatus?
     let onCreateBackup: () async -> Bool
@@ -13,6 +14,7 @@ struct AdministrativeSettingsDetailView: View {
         section: AdministrativeSettingsSection,
         cacheStatus: AdministrativeTranscodeCacheStatus?,
         plugins: [AdministrativePlugin] = [],
+        hidesNsfw: Bool = true,
         onSave: @escaping (AdministrativeSetting, AdministrativeJSONValue) async -> AdministrativeSettingsSection?,
         onClearCache: @escaping () async -> AdministrativeTranscodeCacheStatus?,
         onCreateBackup: @escaping () async -> Bool
@@ -20,6 +22,7 @@ struct AdministrativeSettingsDetailView: View {
         _section = State(initialValue: section)
         _cacheStatus = State(initialValue: cacheStatus)
         self.plugins = plugins
+        self.hidesNsfw = hidesNsfw
         self.onSave = onSave
         self.onClearCache = onClearCache
         self.onCreateBackup = onCreateBackup
@@ -38,7 +41,8 @@ struct AdministrativeSettingsDetailView: View {
                             setting: setting,
                             stringListOptions: AdministrativeStringListOptionCatalog.options(
                                 for: setting,
-                                plugins: plugins
+                                plugins: plugins,
+                                hidesNsfw: hidesNsfw
                             )
                         ) { value in
                             guard let updated = await onSave(setting, value) else { return false }
