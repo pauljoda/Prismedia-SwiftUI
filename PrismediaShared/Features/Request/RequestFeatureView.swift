@@ -73,6 +73,9 @@ import SwiftUI
             .navigationTitle("Request")
             .prismediaScreenBackground()
             .task { await loadProviders() }
+            .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
+                Task { await loadProviders(force: true) }
+            }
             .onChange(of: kind) { _, _ in resetForKindChange() }
             .sheet(
                 isPresented: Binding(
@@ -126,8 +129,8 @@ import SwiftUI
         }
 
         @MainActor
-        private func loadProviders() async {
-            guard providers.isEmpty, !isLoadingProviders else { return }
+        private func loadProviders(force: Bool = false) async {
+            guard force || providers.isEmpty, !isLoadingProviders else { return }
             isLoadingProviders = true
             errorMessage = nil
             do {

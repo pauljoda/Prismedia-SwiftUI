@@ -170,5 +170,13 @@
             arguments.contains("-prismedia-ui-testing")
                 && environment["PRISMEDIA_UI_TEST_DISABLE_HERO_AUTO_ADVANCE"] == "1"
         }
+
+        static func usesStep4AdministrationFixtures(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Bool {
+            arguments.contains("-prismedia-ui-testing")
+                && environment["PRISMEDIA_UI_TEST_STEP4_FIXTURES"] == "1"
+        }
     }
 #endif

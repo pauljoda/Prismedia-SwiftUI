@@ -4,14 +4,42 @@ import SwiftUI
     struct ManageDestinationView: View {
         let destination: ManageDestination
         let service: any AdministrationServicing
+        let fileService: any FileAdministrationServicing
         let client: PrismediaAPIClient
         let detailDependencies: EntityDetailDependencies
         let navigationPath: Binding<[EntityLink]>
 
+        init(
+            destination: ManageDestination,
+            service: any AdministrationServicing,
+            client: PrismediaAPIClient,
+            detailDependencies: EntityDetailDependencies,
+            navigationPath: Binding<[EntityLink]>,
+            fileService: (any FileAdministrationServicing)? = nil
+        ) {
+            self.destination = destination
+            self.service = service
+            self.client = client
+            self.detailDependencies = detailDependencies
+            self.navigationPath = navigationPath
+            if let fileService {
+                self.fileService = fileService
+            } else {
+                #if DEBUG
+                    self.fileService =
+                        PrismediaUITestBootstrap.usesStep4AdministrationFixtures()
+                        ? Step4AdministrationPreviewService()
+                        : FileAdministrationService(client: client)
+                #else
+                    self.fileService = FileAdministrationService(client: client)
+                #endif
+            }
+        }
+
         var body: some View {
             Group {
                 switch destination {
-                case .files: AdministrativeFilesView(service: service)
+                case .files: AdministrativeFilesView(service: fileService)
                 case .identify:
                     IdentifyView(
                         session: IdentifySession(
@@ -48,7 +76,8 @@ import SwiftUI
                     videoPlaybackService: VideoPlaybackPreviewService(),
                     onEntityMutated: {}
                 ),
-                navigationPath: .constant([])
+                navigationPath: .constant([]),
+                fileService: Step4AdministrationPreviewService()
             )
         }
     #endif

@@ -110,6 +110,15 @@ import Observation
             } catch { errorMessage = error.localizedDescription }
         }
 
+        func refreshProviders() async {
+            do {
+                providers = try await service.identifyProviders(kind: nil)
+                reconcileProvider()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+
         func open(entityID: UUID) async {
             cancelPolling()
             do {

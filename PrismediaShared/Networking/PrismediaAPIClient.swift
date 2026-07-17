@@ -716,6 +716,22 @@ public struct PrismediaAPIClient: Sendable {
         }
     }
 
+    func sendRawRequest(_ request: URLRequest) async throws -> Data {
+        let (data, response) = try await loader.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw PrismediaAPIError.invalidResponse
+        }
+        if 300..<400 ~= httpResponse.statusCode {
+            let location = httpResponse.value(forHTTPHeaderField: "Location").flatMap(URL.init(string:))
+            throw PrismediaAPIError.redirectedToSignIn(location)
+        }
+        guard 200..<300 ~= httpResponse.statusCode else {
+            let problem = try? PrismediaJSON.decoder().decode(APIProblem.self, from: data)
+            throw PrismediaAPIError.httpStatus(httpResponse.statusCode, problem)
+        }
+        return data
+    }
+
     private func perform(
         path: String,
         method: String,

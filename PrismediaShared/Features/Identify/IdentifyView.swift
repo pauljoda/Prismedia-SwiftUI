@@ -32,6 +32,9 @@ import SwiftUI
                 }
             }
             .task { if automaticallyLoads { await session.load() } }
+            .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
+                Task { await session.refreshProviders() }
+            }
             .onDisappear { session.cancelPolling() }
             .alert(
                 "Identify Unavailable",

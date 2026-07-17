@@ -3,6 +3,105 @@ import XCTest
 /// Broad cross-boundary smoke tests backed by Scripts/mock-server.py on localhost:8899.
 final class PrismediaShellUITests: XCTestCase {
     @MainActor
+    func testStep4FilesFixtureWorkspace() throws {
+        let app = signedInApplication(
+            initialModeID: "manage",
+            destinationID: "files",
+            step4Fixtures: true
+        )
+
+        XCTAssertTrue(element("administration.files", in: app).waitForExistence(timeout: 10))
+        let root = element("administration.files.root.11111111-1111-1111-1111-111111111111", in: app)
+        if root.waitForExistence(timeout: 2) {
+            root.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.5)).tap()
+        }
+
+        let folder = element("administration.files.row.Arrival", in: app)
+        XCTAssertTrue(folder.waitForExistence(timeout: 5))
+        attachScreenshot(named: "Step 4 Files root", app: app)
+        if app.frame.width > 700 {
+            folder.tap()
+        } else {
+            folder.coordinate(withNormalizedOffset: CGVector(dx: 0.82, dy: 0.5)).tap()
+        }
+
+        XCTAssertTrue(element("administration.files.row.Arrival/Arrival.mkv", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["File Actions"].exists)
+        app.buttons["File Actions"].tap()
+        XCTAssertTrue(app.buttons["New Folder"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Upload Files"].exists)
+        XCTAssertTrue(app.buttons["Download Folder"].exists)
+        attachScreenshot(named: "Step 4 Files actions", app: app)
+    }
+
+    @MainActor
+    func testStep4PluginsFixtureWorkspace() throws {
+        let app = signedInApplication(
+            initialModeID: "operate",
+            destinationID: "plugins",
+            step4Fixtures: true
+        )
+
+        XCTAssertTrue(element("administration.plugins", in: app).waitForExistence(timeout: 10))
+        let tmdb = element("administration.plugins.row.tmdb", in: app)
+        XCTAssertTrue(tmdb.waitForExistence(timeout: 5))
+        tmdb.coordinate(withNormalizedOffset: CGVector(dx: 0.82, dy: 0.5)).tap()
+
+        for _ in 0..<2 where !app.buttons["Configure Credentials"].exists {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.43))
+                .press(
+                    forDuration: 0.05,
+                    thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+                )
+        }
+        XCTAssertTrue(app.buttons["Configure Credentials"].waitForExistence(timeout: 5))
+        attachScreenshot(named: "Step 4 Plugin installed detail", app: app)
+
+        app.buttons["Configure Credentials"].tap()
+        let apiKey = app.secureTextFields["API Key"]
+        XCTAssertTrue(apiKey.waitForExistence(timeout: 5))
+        XCTAssertTrue(element(containingLabel: "Stored credentials are never read back", in: app).exists)
+        attachScreenshot(named: "Step 4 Plugin credentials", app: app)
+        apiKey.tap()
+        apiKey.typeText("fixture-secret")
+        app.buttons["Save"].tap()
+        XCTAssertTrue(app.buttons["Configure Credentials"].waitForExistence(timeout: 5))
+
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["Update to 1.2.0"].waitForExistence(timeout: 5))
+        app.buttons["Update to 1.2.0"].tap()
+        XCTAssertTrue(app.buttons["Remove Provider"].waitForExistence(timeout: 5))
+        app.buttons["Remove Provider"].tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.alerts.buttons["Remove Provider"].exists)
+        app.alerts.buttons["Cancel"].tap()
+        app.buttons["Done"].tap()
+
+        let pluginsBackButton = app.buttons.matching(identifier: "BackButton").firstMatch
+        if pluginsBackButton.exists {
+            pluginsBackButton.tap()
+        }
+        XCTAssertTrue(app.buttons["Prismedia Community"].waitForExistence(timeout: 5))
+        app.buttons["Prismedia Community"].tap()
+        app.swipeDown()
+        let search = app.searchFields.firstMatch
+        if !search.waitForExistence(timeout: 2), app.buttons["Search"].exists {
+            app.navigationBars["Prismedia Community"].buttons["Search"].tap()
+        }
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("Open Library")
+        let openLibrary = element("administration.plugins.row.open-library", in: app)
+        XCTAssertTrue(openLibrary.waitForExistence(timeout: 5))
+        attachScreenshot(named: "Step 4 Plugin catalog search", app: app)
+        openLibrary.coordinate(withNormalizedOffset: CGVector(dx: 0.82, dy: 0.5)).tap()
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["Install Provider"].waitForExistence(timeout: 5))
+        app.buttons["Install Provider"].tap()
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testAccountProfileAndSessionFixtureFlow() throws {
         let app = signedInApplication(initialModeID: "overview", destinationID: "dashboard")
 
@@ -245,11 +344,18 @@ final class PrismediaShellUITests: XCTestCase {
     }
 
     @MainActor
-    private func signedInApplication(initialModeID: String, destinationID: String) -> XCUIApplication {
+    private func signedInApplication(
+        initialModeID: String,
+        destinationID: String,
+        step4Fixtures: Bool = false
+    ) -> XCUIApplication {
         let app = launchedApplication(preauthenticated: true, launch: false)
         app.launchEnvironment["PRISMEDIA_UI_TEST_DISABLE_HERO_AUTO_ADVANCE"] = "1"
         app.launchEnvironment["PRISMEDIA_UI_TEST_MODE_ID"] = initialModeID
         app.launchEnvironment["PRISMEDIA_UI_TEST_DESTINATION_ID"] = destinationID
+        if step4Fixtures {
+            app.launchEnvironment["PRISMEDIA_UI_TEST_STEP4_FIXTURES"] = "1"
+        }
         app.launch()
         return app
     }
