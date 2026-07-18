@@ -160,7 +160,7 @@
                     .frame(maxWidth: .infinity)
                     .disabled(!controller.queue.canGoNext)
             }
-            .buttonStyle(.glass(.clear))
+            .buttonStyle(.glass)
             .buttonBorderShape(.capsule)
         }
 
@@ -191,7 +191,7 @@
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.glass(.clear))
+            .buttonStyle(.glass)
             .buttonBorderShape(.roundedRectangle(radius: PrismediaRadius.control))
             .disabled(isFindingReadingPosition)
             .accessibilityIdentifier("epub-reader.audiobook-find-page")

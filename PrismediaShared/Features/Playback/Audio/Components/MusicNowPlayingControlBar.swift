@@ -34,7 +34,7 @@
                     .tint(selectedTint)
             } else {
                 shuffleControl
-                    .buttonStyle(.glass(.clear))
+                    .buttonStyle(.glass)
             }
         }
 
@@ -42,7 +42,7 @@
         private var repeatButton: some View {
             if controller.queue.repeatMode == .off {
                 repeatControl
-                    .buttonStyle(.glass(.clear))
+                    .buttonStyle(.glass)
             } else {
                 repeatControl
                     .buttonStyle(.glassProminent)
@@ -92,7 +92,7 @@
             }
             .foregroundStyle(presentation == .queue ? selectedTint : .primary)
             .buttonBorderShape(.circle)
-            .buttonStyle(.glass(.clear))
+            .buttonStyle(.glass)
             .accessibilityLabel(presentation == .queue ? "Show Now Playing" : "Show Queue")
             .accessibilityIdentifier("music.queue-button")
         }

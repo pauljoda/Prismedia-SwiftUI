@@ -97,7 +97,7 @@
                     .contentShape(Circle())
             }
             .buttonBorderShape(.circle)
-            .buttonStyle(.glass(.clear))
+            .buttonStyle(.glass)
             .accessibilityLabel(label)
         }
     }

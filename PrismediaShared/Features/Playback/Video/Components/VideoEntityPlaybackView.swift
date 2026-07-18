@@ -162,7 +162,7 @@ struct VideoEntityPlaybackView: View {
                                 )
                             }
                             .buttonBorderShape(.capsule)
-                            .buttonStyle(.glass(.clear))
+                            .buttonStyle(.glass)
                             .controlSize(tvLayout == .compact ? .small : .regular)
                             .accessibilityIdentifier(identifier(for: action))
                         }

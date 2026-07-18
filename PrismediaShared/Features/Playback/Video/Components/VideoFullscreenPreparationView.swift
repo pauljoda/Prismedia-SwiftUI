@@ -109,7 +109,7 @@ struct VideoFullscreenPreparationView: View {
             .contentShape(Capsule())
         }
         .buttonBorderShape(.capsule)
-        .buttonStyle(.glass(.clear))
+        .buttonStyle(.glass)
         .accessibilityHint("Resumes automatically after the countdown")
         .accessibilityIdentifier("video-detail.resume")
     }
@@ -122,7 +122,7 @@ struct VideoFullscreenPreparationView: View {
                 .contentShape(Capsule())
         }
         .buttonBorderShape(.capsule)
-        .buttonStyle(.glass(.clear))
+        .buttonStyle(.glass)
         .accessibilityHint("Starts the video from the beginning")
         .accessibilityIdentifier("video-detail.play-from-beginning")
     }

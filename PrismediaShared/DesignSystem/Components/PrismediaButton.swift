@@ -42,24 +42,24 @@ struct PrismediaButton: View {
     private var styledButton: some View {
         switch variant {
         case .standard:
-            clearGlassButton
+            standardGlassButton
         case .prominent:
             if let primaryTint {
                 configuredButton
                     .buttonStyle(.glassProminent)
                     .tint(primaryTint)
             } else {
-                clearGlassButton
+                standardGlassButton
             }
         case .destructive:
-            clearGlassButton
+            standardGlassButton
                 .foregroundStyle(PrismediaColor.destructive)
         }
     }
 
-    private var clearGlassButton: some View {
+    private var standardGlassButton: some View {
         configuredButton
-            .buttonStyle(.glass(.clear))
+            .buttonStyle(.glass)
     }
 
     private var configuredButton: some View {
