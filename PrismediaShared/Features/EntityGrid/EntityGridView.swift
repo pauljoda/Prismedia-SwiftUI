@@ -17,6 +17,7 @@ public struct EntityGridView<ItemContent: View>: View {
     @State private var mutationFailures: [EntityGridMutationFailure] = []
     @State private var mutationFailureAlertPresented = false
     @State private var collectionSheetPresented = false
+    @State private var collectionSheetReferences: [CollectionEntityReference] = []
     #if os(tvOS)
         @Environment(TVTabFocusCoordinator.self) private var tabFocusCoordinator
         @FocusState private var tvGridFocus: TVGridFocus?
@@ -124,9 +125,9 @@ public struct EntityGridView<ItemContent: View>: View {
             } message: {
                 Text(mutationFailureMessage)
             }
-            #if os(iOS) || os(macOS)
+            #if os(iOS) || os(macOS) || os(tvOS)
                 .sheet(isPresented: $collectionSheetPresented) {
-                    AddToCollectionSheet(items: selectedCollectionReferences) { result in
+                    AddToCollectionSheet(items: collectionSheetReferences) { result in
                         receiveMutationResult(result)
                     }
                 }
@@ -297,12 +298,25 @@ public struct EntityGridView<ItemContent: View>: View {
 
             Spacer(minLength: PrismediaSpacing.medium)
 
-            displayMenu
-            sortMenu
-            filterButton
-            if actionPolicy.selectionEnabled {
-                selectionToggleButton
-            }
+            #if os(tvOS)
+                displayMenu
+                    .buttonStyle(.glass)
+                sortMenu
+                    .buttonStyle(.glass)
+                filterButton
+                    .buttonStyle(.glass)
+                if actionPolicy.selectionEnabled {
+                    selectionToggleButton
+                        .buttonStyle(.glass)
+                }
+            #else
+                displayMenu
+                sortMenu
+                filterButton
+                if actionPolicy.selectionEnabled {
+                    selectionToggleButton
+                }
+            #endif
         }
         .controlSize(.small)
     }
@@ -316,15 +330,12 @@ public struct EntityGridView<ItemContent: View>: View {
 
                 sortMenu
                     .buttonStyle(.glass)
-                    .tint(PrismediaColor.onMedia)
                     .focused($tvGridFocus, equals: .sort)
                 filterButton
                     .buttonStyle(.glass)
-                    .tint(PrismediaColor.onMedia)
                     .focused($tvGridFocus, equals: .filter)
                 displayMenu
                     .buttonStyle(.glass)
-                    .tint(PrismediaColor.onMedia)
                     .focused($tvGridFocus, equals: .display)
 
                 Spacer(minLength: 0)
@@ -423,7 +434,8 @@ public struct EntityGridView<ItemContent: View>: View {
                     item: item,
                     isSelectionActive: selection.isActive,
                     isSelected: selection.selectedIDs.contains(item.id),
-                    onToggle: { toggleSelection(item.id) }
+                    onToggle: { toggleSelection(item.id) },
+                    onAddToCollection: addToCollectionAction(for: item)
                 ) {
                     itemContent(item, layout)
                 }
@@ -969,8 +981,8 @@ public struct EntityGridView<ItemContent: View>: View {
         guard actionInFlight == nil, !selectedItems.isEmpty else { return }
         switch action {
         case .addToCollection:
-            #if os(iOS) || os(macOS)
-                collectionSheetPresented = true
+            #if os(iOS) || os(macOS) || os(tvOS)
+                presentCollectionSheet(with: selectedCollectionReferences)
             #endif
         case .markNsfw(let value):
             actionConfirmation = EntityGridActionConfirmation(
@@ -1040,6 +1052,23 @@ public struct EntityGridView<ItemContent: View>: View {
         if !result.succeededIDs.isEmpty {
             environment.entityDidMutate()
         }
+    }
+
+    private func addToCollectionAction(for item: EntityThumbnail) -> (() -> Void)? {
+        guard
+            mutationService != nil,
+            let reference = actionPolicy.collectionReferences(in: [item]).first
+        else { return nil }
+
+        return {
+            presentCollectionSheet(with: [reference])
+        }
+    }
+
+    private func presentCollectionSheet(with references: [CollectionEntityReference]) {
+        guard !references.isEmpty else { return }
+        collectionSheetReferences = references
+        collectionSheetPresented = true
     }
 
     private func unavailableResult(

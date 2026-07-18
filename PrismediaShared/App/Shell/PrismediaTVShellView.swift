@@ -87,6 +87,8 @@ import SwiftUI
                             within: item.kind == .image ? mediaSequence : nil
                         )
                     },
+                    actionPolicy: .library(user: user),
+                    mutationService: client,
                     itemContent: { item, layout in
                         EntityThumbnailNavigationSurface(item: item, layout: layout)
                     }

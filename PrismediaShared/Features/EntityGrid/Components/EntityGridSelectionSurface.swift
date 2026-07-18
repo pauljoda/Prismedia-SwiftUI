@@ -5,9 +5,47 @@ struct EntityGridSelectionSurface<Content: View>: View {
     let isSelectionActive: Bool
     let isSelected: Bool
     let onToggle: () -> Void
-    @ViewBuilder let content: Content
+    let onAddToCollection: (() -> Void)?
+    let content: Content
 
+    init(
+        item: EntityThumbnail,
+        isSelectionActive: Bool,
+        isSelected: Bool,
+        onToggle: @escaping () -> Void,
+        onAddToCollection: (() -> Void)? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.item = item
+        self.isSelectionActive = isSelectionActive
+        self.isSelected = isSelected
+        self.onToggle = onToggle
+        self.onAddToCollection = onAddToCollection
+        self.content = content()
+    }
+
+    @ViewBuilder
     var body: some View {
+        #if os(tvOS)
+            if let onAddToCollection {
+                selectionSurface
+                    .contextMenu {
+                        Button("Add to Collection", systemImage: "rectangle.stack.badge.plus") {
+                            onAddToCollection()
+                        }
+                    }
+                    .accessibilityAction(named: "Add to Collection") {
+                        onAddToCollection()
+                    }
+            } else {
+                selectionSurface
+            }
+        #else
+            selectionSurface
+        #endif
+    }
+
+    private var selectionSurface: some View {
         content
             .allowsHitTesting(!isSelectionActive)
             .overlay {
