@@ -334,6 +334,13 @@ public final class MusicPlayerController {
         publishNowPlayingState()
     }
 
+    func playbackServiceDidDisconnect() {
+        guard currentTrack != nil else { return }
+        pause()
+        loadedTrackID = nil
+        currentTrackRequestedAt = nil
+    }
+
     public func updateElapsedTime(_ seconds: Double) {
         guard seconds.isFinite, seconds >= 0 else { return }
         elapsedTime = seconds

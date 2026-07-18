@@ -5,9 +5,10 @@ import Observation
 @MainActor
 final class MusicMiniPlayerVisibility {
     private var suppressingSurfaceIDs: Set<UUID> = []
+    private var isHiddenByUser = false
 
     var isSuppressed: Bool {
-        !suppressingSurfaceIDs.isEmpty
+        isHiddenByUser || !suppressingSurfaceIDs.isEmpty
     }
 
     func suppress(id: UUID) {
@@ -16,5 +17,13 @@ final class MusicMiniPlayerVisibility {
 
     func restore(id: UUID) {
         suppressingSurfaceIDs.remove(id)
+    }
+
+    func hideByUser() {
+        isHiddenByUser = true
+    }
+
+    func revealForPlaybackActivity() {
+        isHiddenByUser = false
     }
 }

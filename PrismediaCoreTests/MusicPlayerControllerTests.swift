@@ -329,6 +329,31 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.isPlaying)
     }
 
+    func testPlaybackServiceDisconnectPausesAndPreservesQueueRestoration() {
+        let track = makeTrack(idSuffix: 1)
+        let engine = AudioPlaybackEngineSpy()
+        let store = MusicPlaybackStateStoreSpy()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: MusicPlaybackServiceStub(),
+            stateStore: store
+        )
+        controller.play(tracks: [track])
+
+        controller.playbackServiceDidDisconnect()
+
+        XCTAssertEqual(controller.currentTrack, track)
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertEqual(engine.pauseCallCount, 1)
+        XCTAssertEqual(store.clearCallCount, 0)
+
+        controller.playbackServiceDidConnect()
+
+        XCTAssertEqual(engine.loadedURLs.count, 2)
+        XCTAssertEqual(engine.playCallCount, 1)
+        XCTAssertFalse(controller.isPlaying)
+    }
+
     func testPersistsQueueModesAndProgressInBoundedIntervals() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
         let store = MusicPlaybackStateStoreSpy()

@@ -602,9 +602,6 @@
     "Close" : {
 
     },
-    "Close Player" : {
-
-    },
     "Close reader" : {
 
     },
@@ -1036,6 +1033,9 @@
 
     },
     "Hide Password" : {
+
+    },
+    "Hide Player" : {
 
     },
     "History" : {

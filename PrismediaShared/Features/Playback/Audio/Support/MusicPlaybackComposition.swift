@@ -56,8 +56,8 @@
         }
 
         func disconnect() {
+            controller.playbackServiceDidDisconnect()
             serviceRelay.disconnect()
-            controller.clearPlayback()
         }
 
         func artworkURL(for path: String?) -> URL? {
