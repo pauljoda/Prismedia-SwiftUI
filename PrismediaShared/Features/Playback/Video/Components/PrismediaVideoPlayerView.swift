@@ -162,7 +162,7 @@ import SwiftUI
                     .contentShape(Circle())
             }
             .buttonBorderShape(.circle)
-            .buttonStyle(.glass(.clear))
+            .buttonStyle(.glass)
         }
 
         private var expandedHeader: some View {

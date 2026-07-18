@@ -7,6 +7,16 @@
     "@%@" : {
 
     },
+    "@%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "@%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "%.0f%%" : {
 
     },
@@ -39,6 +49,9 @@
           }
         }
       }
+    },
+    "%@ Credentials" : {
+
     },
     "%@ of %@" : {
       "localizations" : {
@@ -103,17 +116,70 @@
     "%lld" : {
 
     },
+    "%lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
     "%lld active" : {
 
+    },
+    "%lld active job%@ not included in recent runs." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld active job%2$@ not included in recent runs."
+          }
+        }
+      }
     },
     "%lld barren" : {
 
     },
+    "%lld failed job%@ not included in recent runs." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld failed job%2$@ not included in recent runs."
+          }
+        }
+      }
+    },
     "%lld found" : {
 
     },
+    "%lld item%@ still need attention" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld item%2$@ still need attention"
+          }
+        }
+      }
+    },
     "%lld items" : {
 
+    },
+    "%lld loaded results" : {
+
+    },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
     },
     "%lld percent" : {
 
@@ -131,7 +197,23 @@
         }
       }
     },
+    "%lld queued" : {
+
+    },
+    "%lld queued job%@ waiting." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld queued job%2$@ waiting."
+          }
+        }
+      }
+    },
     "%lld seeders" : {
+
+    },
+    "%lld selected" : {
 
     },
     "%lld star%@" : {
@@ -165,10 +247,25 @@
     "Accept" : {
 
     },
+    "Accept & Next" : {
+
+    },
+    "Accept Selected" : {
+
+    },
+    "Account" : {
+
+    },
+    "Account enabled" : {
+
+    },
     "Account, %@" : {
 
     },
     "Acquisition Action Failed" : {
+
+    },
+    "Acquisition Actions" : {
 
     },
     "Acquisition Settings" : {
@@ -180,31 +277,64 @@
     "Actions" : {
 
     },
+    "Active %@" : {
+
+    },
+    "Activity" : {
+
+    },
     "Activity in progress" : {
 
     },
     "Actual Size" : {
 
     },
+    "Add" : {
+
+    },
     "Add %@" : {
 
     },
-    "Add a watched root in server settings." : {
+    "Add a mounted server folder to begin scanning media." : {
+
+    },
+    "Add a watched root in Libraries settings." : {
 
     },
     "Add Current Location" : {
 
     },
+    "Add Library" : {
+
+    },
+    "Add one value at a time. Drag to change priority; the first value is preferred." : {
+
+    },
     "Add Role" : {
+
+    },
+    "Add Selected to Queue" : {
 
     },
     "Add to Collection" : {
 
     },
-    "Add to Queue" : {
+    "Add User" : {
+
+    },
+    "Add Value" : {
+
+    },
+    "Admin" : {
+
+    },
+    "Administrator" : {
 
     },
     "Administrator Access Required" : {
+
+    },
+    "Administrators always have access to every library." : {
 
     },
     "Albums" : {
@@ -213,10 +343,22 @@
     "Alignment" : {
 
     },
+    "All Capabilities" : {
+
+    },
+    "All current data will be replaced. Prismedia will restart and this app will discard its current session token." : {
+
+    },
     "All Kinds" : {
 
     },
     "All Media" : {
+
+    },
+    "All Quiet" : {
+
+    },
+    "Allow NSFW content" : {
 
     },
     "Allow NSFW Content" : {
@@ -225,13 +367,19 @@
     "Any" : {
 
     },
+    "Any rating" : {
+
+    },
+    "API" : {
+
+    },
     "Apply" : {
 
     },
     "Apply %@" : {
 
     },
-    "Applying related metadata" : {
+    "Apply Filters" : {
 
     },
     "Artwork" : {
@@ -249,6 +397,9 @@
     "At %@" : {
 
     },
+    "At least one kind must remain included" : {
+
+    },
     "Attempt to Find This Passage" : {
 
     },
@@ -261,10 +412,28 @@
     "Audiobook parts play in order" : {
 
     },
+    "Auto ID" : {
+
+    },
+    "Auto Identify" : {
+
+    },
+    "Auto Identify tries selected plugins from top to bottom." : {
+
+    },
     "Automatic" : {
 
     },
+    "Automatic retention" : {
+
+    },
     "Availability" : {
+
+    },
+    "Available" : {
+
+    },
+    "Available Update" : {
 
     },
     "Back" : {
@@ -273,7 +442,25 @@
     "Back 15 Seconds" : {
 
     },
+    "Back to Search" : {
+
+    },
     "Back up database now" : {
+
+    },
+    "Backfill Missing Fingerprints" : {
+
+    },
+    "Backup directory" : {
+
+    },
+    "Backup Files" : {
+
+    },
+    "Backup Now" : {
+
+    },
+    "Backup records" : {
 
     },
     "Best Match" : {
@@ -294,10 +481,28 @@
     "Bookmarks you add will include this book’s chapter, page, date, and time." : {
 
     },
+    "Books" : {
+
+    },
     "Browse" : {
 
     },
+    "Browse %@ items" : {
+
+    },
+    "Browse by Kind" : {
+
+    },
+    "Browse Options" : {
+
+    },
+    "Browse Server Folders" : {
+
+    },
     "Building the canonical proposal…" : {
+
+    },
+    "Can create libraries" : {
 
     },
     "Cancel" : {
@@ -309,10 +514,19 @@
     "Candidates" : {
 
     },
+    "Capabilities" : {
+
+    },
+    "Change Password" : {
+
+    },
     "Change Server" : {
 
     },
     "Changes queue order" : {
+
+    },
+    "Changing your password keeps this device signed in and signs out every other session." : {
 
     },
     "Chapter %lld" : {
@@ -332,6 +546,9 @@
 
     },
     "Character or contribution" : {
+
+    },
+    "Check Again" : {
 
     },
     "Check your connection and try again." : {
@@ -358,7 +575,16 @@
     "Clear" : {
 
     },
-    "Clear failures" : {
+    "Clear %@ failures" : {
+
+    },
+    "Clear Failures" : {
+
+    },
+    "Clear saved value" : {
+
+    },
+    "Clear Selection" : {
 
     },
     "Clear Toggle bookmark" : {
@@ -368,6 +594,9 @@
 
     },
     "Clearing prepared streams is safe; Prismedia recreates them when needed." : {
+
+    },
+    "Clears every Search filter" : {
 
     },
     "Close" : {
@@ -394,10 +623,31 @@
     "Completed and skipped media will appear here." : {
 
     },
+    "Completed backup" : {
+
+    },
+    "Configure Credentials" : {
+
+    },
+    "Confirm new password" : {
+
+    },
+    "Confirm password" : {
+
+    },
+    "Content" : {
+
+    },
+    "Content Kind" : {
+
+    },
     "Contents" : {
 
     },
     "Context, %@" : {
+
+    },
+    "Continue" : {
 
     },
     "Couldn’t Add to Collection" : {
@@ -469,6 +719,12 @@
     "Creates a manual server-side backup using the configured backup storage." : {
 
     },
+    "Credentials" : {
+
+    },
+    "Credentials Not Saved" : {
+
+    },
     "Credentials required" : {
 
     },
@@ -479,6 +735,9 @@
 
     },
     "Current cue" : {
+
+    },
+    "Current password" : {
 
     },
     "Current position, %@" : {
@@ -499,13 +758,37 @@
     "Dashboard" : {
 
     },
+    "Database Backups" : {
+
+    },
+    "Database restore" : {
+
+    },
+    "Date Added" : {
+
+    },
+    "Date filters use the date an item was added to the Prismedia library." : {
+
+    },
     "Decrease" : {
 
     },
     "Delete" : {
 
     },
+    "Delete %@?" : {
+
+    },
+    "Delete Permanently" : {
+
+    },
+    "Delete permanently?" : {
+
+    },
     "Delete Preset" : {
+
+    },
+    "Delete User" : {
 
     },
     "Descending" : {
@@ -514,7 +797,31 @@
     "Description" : {
 
     },
+    "Destination" : {
+
+    },
+    "Destructive Restore" : {
+
+    },
     "Detail section" : {
+
+    },
+    "Details Unavailable" : {
+
+    },
+    "Diagnostic Summary" : {
+
+    },
+    "Diagnostics" : {
+
+    },
+    "Disable" : {
+
+    },
+    "Disabled" : {
+
+    },
+    "Discover" : {
 
     },
     "Discovers new child items from its provider" : {
@@ -535,22 +842,52 @@
     "Done" : {
 
     },
+    "Done Selecting" : {
+
+    },
+    "Download" : {
+
+    },
+    "Download Folder" : {
+
+    },
     "Download progress" : {
 
     },
     "Downloaded" : {
 
     },
+    "Edit" : {
+
+    },
     "Edit Entity" : {
 
     },
+    "Edit Library" : {
+
+    },
     "Edit section" : {
+
+    },
+    "Edit User" : {
 
     },
     "Eligible for monitoring" : {
 
     },
     "Empty Folder" : {
+
+    },
+    "Enable" : {
+
+    },
+    "Enable Provider" : {
+
+    },
+    "Enabled" : {
+
+    },
+    "Ending date" : {
 
     },
     "Enter a word or phrase to find it in the publication." : {
@@ -562,6 +899,12 @@
     "Entity actions" : {
 
     },
+    "Entity Kind" : {
+
+    },
+    "Entity Kinds" : {
+
+    },
     "EPUB reader" : {
 
     },
@@ -571,13 +914,40 @@
     "Events" : {
 
     },
+    "Every video, image, book page, and audio track will be queued for preview regeneration." : {
+
+    },
+    "Exclude" : {
+
+    },
+    "Exclude from library scans?" : {
+
+    },
+    "Exclude proposal" : {
+
+    },
+    "Excluded" : {
+
+    },
+    "Excluded from scans" : {
+
+    },
+    "Excluded paths are intentionally unlinked." : {
+
+    },
     "Exit Full Screen" : {
 
     },
     "Expanded" : {
 
     },
+    "Export Summary" : {
+
+    },
     "Fade Strength" : {
+
+    },
+    "Failed items remain selected. Review the details and retry the action." : {
 
     },
     "Favorite" : {
@@ -599,10 +969,22 @@
     "Featured media" : {
 
     },
+    "File" : {
+
+    },
+    "File Actions" : {
+
+    },
     "Files" : {
 
     },
     "Files Unavailable" : {
+
+    },
+    "Filesystem actions stay inside the selected watched root." : {
+
+    },
+    "Filter Capabilities" : {
 
     },
     "Filter collections" : {
@@ -611,7 +993,16 @@
     "Filters" : {
 
     },
+    "Filters (%lld)" : {
+
+    },
     "Filters cues using all entered words" : {
+
+    },
+    "Filters, %lld active" : {
+
+    },
+    "Finished" : {
 
     },
     "First Page Is Cover" : {
@@ -620,10 +1011,16 @@
     "Flow" : {
 
     },
+    "Force Rebuild All Previews" : {
+
+    },
     "Forward 30 Seconds" : {
 
     },
     "Forward gestures" : {
+
+    },
+    "From" : {
 
     },
     "From %@" : {
@@ -656,13 +1053,22 @@
     "Identify Queue" : {
 
     },
+    "Identify Scope" : {
+
+    },
     "Identify Unavailable" : {
+
+    },
+    "Identifying related metadata" : {
 
     },
     "Identity" : {
 
     },
     "Image viewer" : {
+
+    },
+    "Images" : {
 
     },
     "Images and sub-galleries will appear here when they’re added." : {
@@ -680,16 +1086,40 @@
     "In progress" : {
 
     },
+    "Include proposal" : {
+
+    },
+    "Include subfolders" : {
+
+    },
+    "Included" : {
+
+    },
+    "Included in scans" : {
+
+    },
+    "Includes every entity kind and clears rating and date filters" : {
+
+    },
     "Increase" : {
 
     },
-    "Install plugins on the server to use metadata and request providers." : {
+    "Install" : {
+
+    },
+    "Install Provider" : {
+
+    },
+    "Installed" : {
 
     },
     "Item Size" : {
 
     },
     "Items needing metadata review will appear here." : {
+
+    },
+    "Job Control" : {
 
     },
     "Jobs" : {
@@ -701,10 +1131,25 @@
     "Justified" : {
 
     },
+    "Kill All" : {
+
+    },
     "Kind" : {
 
     },
+    "Label" : {
+
+    },
     "Last %@" : {
+
+    },
+    "Last heartbeat" : {
+
+    },
+    "Last scanned %@" : {
+
+    },
+    "Last sign-in %@" : {
 
     },
     "Latest Acquisition" : {
@@ -722,7 +1167,16 @@
     "Library" : {
 
     },
+    "Library Access" : {
+
+    },
+    "Library Root" : {
+
+    },
     "Line Spacing" : {
+
+    },
+    "Linked Library Entities" : {
 
     },
     "Listening" : {
@@ -755,7 +1209,16 @@
     "Loading dashboard…" : {
 
     },
+    "Loading database backups…" : {
+
+    },
     "Loading details…" : {
+
+    },
+    "Loading devices…" : {
+
+    },
+    "Loading diagnostics…" : {
 
     },
     "Loading episodes…" : {
@@ -785,7 +1248,7 @@
     "Loading playback options" : {
 
     },
-    "Loading plugins…" : {
+    "Loading plugin catalog…" : {
 
     },
     "Loading profiles and libraries…" : {
@@ -800,13 +1263,25 @@
     "Loading settings…" : {
 
     },
+    "Loading Stash Community…" : {
+
+    },
     "Loading transcript…" : {
 
     },
     "Loading TV home…" : {
 
     },
+    "Loading users…" : {
+
+    },
+    "Loading watched libraries…" : {
+
+    },
     "Loads %@" : {
+
+    },
+    "Location" : {
 
     },
     "Maintenance" : {
@@ -818,7 +1293,13 @@
     "Mark Listened" : {
 
     },
+    "Mark NSFW" : {
+
+    },
     "Mark Read" : {
+
+    },
+    "Mark SFW" : {
 
     },
     "Mark Unlistened" : {
@@ -833,10 +1314,19 @@
     "Media" : {
 
     },
-    "Media type" : {
+    "Member" : {
+
+    },
+    "Member Access" : {
 
     },
     "Metadata" : {
+
+    },
+    "Minimum rating" : {
+
+    },
+    "Minimum Rating" : {
 
     },
     "Monitor" : {
@@ -860,13 +1350,31 @@
     "More actions for %@" : {
 
     },
+    "Move" : {
+
+    },
+    "Move %@" : {
+
+    },
+    "Move Failed" : {
+
+    },
     "Movies, music, books, and more" : {
 
     },
     "Movies, series, and the collections you love—ready for the biggest screen in the house." : {
 
     },
+    "Moving…" : {
+
+    },
     "Mute" : {
+
+    },
+    "Name" : {
+
+    },
+    "Names cannot contain slashes and must stay inside the selected library root." : {
 
     },
     "Navigate" : {
@@ -878,13 +1386,31 @@
     "Need help signing in?" : {
 
     },
+    "Needs Attention · %lld" : {
+
+    },
+    "Never scanned" : {
+
+    },
+    "New Folder" : {
+
+    },
     "New media and playback activity will appear here." : {
+
+    },
+    "New password" : {
+
+    },
+    "New value" : {
 
     },
     "Next" : {
 
     },
     "Next %@" : {
+
+    },
+    "Next automatic backup" : {
 
     },
     "Next Chapter" : {
@@ -908,6 +1434,9 @@
     "Next Result" : {
 
     },
+    "Next sibling" : {
+
+    },
     "Next Track" : {
 
     },
@@ -915,6 +1444,12 @@
 
     },
     "No %@ profile yet. Permissive defaults will apply." : {
+
+    },
+    "No Active Sessions" : {
+
+    },
+    "No Backups" : {
 
     },
     "No Bookmarks" : {
@@ -927,9 +1462,6 @@
 
     },
     "No Collections" : {
-
-    },
-    "No Compatible Plugins" : {
 
     },
     "No enabled library supports %@. Add one in Settings first." : {
@@ -950,13 +1482,16 @@
     "No Items" : {
 
     },
-    "No Job Runs" : {
-
-    },
     "No library items match “%@”." : {
 
     },
     "No Library Roots" : {
+
+    },
+    "No linked entities." : {
+
+    },
+    "No Matching Plugins" : {
 
     },
     "No more tracks in the queue" : {
@@ -969,6 +1504,9 @@
 
     },
     "No Playback History Yet" : {
+
+    },
+    "No Plugins" : {
 
     },
     "No Provider" : {
@@ -989,13 +1527,13 @@
     "No Search Providers" : {
 
     },
-    "No Settings Available" : {
-
-    },
     "No Table of Contents" : {
 
     },
-    "No visible files or folders are here." : {
+    "No Users" : {
+
+    },
+    "No Watched Libraries" : {
 
     },
     "Normalization applies the chosen weight consistently to headings and body text." : {
@@ -1023,6 +1561,9 @@
 
     },
     "NSFW" : {
+
+    },
+    "NSFW Library" : {
 
     },
     "Off" : {
@@ -1053,6 +1594,9 @@
         }
       }
     },
+    "Open Credential Provider" : {
+
+    },
     "Open Link" : {
 
     },
@@ -1081,6 +1625,9 @@
 
     },
     "Opens details for %@" : {
+
+    },
+    "Opens folder" : {
 
     },
     "Opens in your default browser" : {
@@ -1150,6 +1697,9 @@
     "Password" : {
 
     },
+    "Passwords do not match." : {
+
+    },
     "Path" : {
 
     },
@@ -1172,6 +1722,9 @@
 
     },
     "Peers" : {
+
+    },
+    "Permissions" : {
 
     },
     "Play" : {
@@ -1240,6 +1793,9 @@
     "Preview" : {
 
     },
+    "Preview artwork for %@" : {
+
+    },
     "Previous" : {
 
     },
@@ -1261,6 +1817,9 @@
     "Previous Result" : {
 
     },
+    "Previous sibling" : {
+
+    },
     "Previous Track" : {
 
     },
@@ -1268,6 +1827,9 @@
 
     },
     "PRISMEDIA" : {
+
+    },
+    "Prismedia removes this root and its indexed database entities. Media files and folders on disk are not deleted." : {
 
     },
     "Prismedia will estimate the matching page from your current audiobook position." : {
@@ -1310,6 +1872,12 @@
     "Provider" : {
 
     },
+    "Provider ID" : {
+
+    },
+    "Provider Warnings" : {
+
+    },
     "Providers" : {
 
     },
@@ -1322,10 +1890,13 @@
     "Queue Is Clear" : {
 
     },
-    "Queued and recent background work will appear here." : {
+    "Queue Rebuild" : {
 
     },
-    "Queues" : {
+    "Queued" : {
+
+    },
+    "Queued · %lld" : {
 
     },
     "Rate %lld" : {
@@ -1347,6 +1918,9 @@
 
     },
     "Reader Unavailable" : {
+
+    },
+    "Readiness" : {
 
     },
     "Reading" : {
@@ -1373,22 +1947,46 @@
     "Reading the EPUB contents…" : {
 
     },
-    "Rebuild previews" : {
+    "Rebuild every generated preview?" : {
 
     },
     "Recent Events" : {
 
     },
-    "Recent Runs" : {
+    "Recently Completed" : {
+
+    },
+    "Recursive Size" : {
 
     },
     "References" : {
+
+    },
+    "Refresh" : {
+
+    },
+    "Refresh Devices" : {
+
+    },
+    "Refresh Jobs" : {
+
+    },
+    "Refresh the community catalog or change visibility settings." : {
 
     },
     "Regular" : {
 
     },
     "Reject" : {
+
+    },
+    "Reject & Next" : {
+
+    },
+    "Reject Selected" : {
+
+    },
+    "Relative path including name" : {
 
     },
     "Release Candidates" : {
@@ -1409,7 +2007,34 @@
     "Remove %@ value" : {
 
     },
+    "Remove %@?" : {
+
+    },
+    "Remove Configuration" : {
+
+    },
+    "Remove Exclusion" : {
+
+    },
+    "Remove Library" : {
+
+    },
+    "Remove Provider" : {
+
+    },
+    "Remove scan exclusion?" : {
+
+    },
     "Remove Selected" : {
+
+    },
+    "Remove Wanted" : {
+
+    },
+    "Remove watched library?" : {
+
+    },
+    "Rename" : {
 
     },
     "Request" : {
@@ -1418,28 +2043,49 @@
     "Request Options" : {
 
     },
-    "Request Section" : {
-
-    },
-    "Required" : {
+    "Request View" : {
 
     },
     "Rescan" : {
 
     },
+    "Rescanning" : {
+
+    },
     "Reset" : {
+
+    },
+    "Reset All Filters" : {
+
+    },
+    "Reset Filters" : {
 
     },
     "Reset Grid Settings" : {
 
     },
+    "Reset Password" : {
+
+    },
     "Reset Sort and Filters" : {
+
+    },
+    "Resetting the password signs %@ out everywhere, including this device if it is their account." : {
 
     },
     "Reshuffle" : {
 
     },
+    "Restore and Restart" : {
+
+    },
+    "Restore destroys the current database, applies the selected completed backup, restarts Prismedia, and requires a fresh sign-in. Type the confirmation exactly." : {
+
+    },
     "Restore Reader Defaults" : {
+
+    },
+    "Restore this backup?" : {
 
     },
     "Resume %@" : {
@@ -1451,6 +2097,9 @@
     "Resuming automatically in %lld…" : {
 
     },
+    "Retention" : {
+
+    },
     "Retry and Allow Format Change" : {
 
     },
@@ -1460,19 +2109,58 @@
     "Return from Toggle bookmark" : {
 
     },
+    "Return to Sign In" : {
+
+    },
     "Review" : {
+
+    },
+    "Review Actions" : {
 
     },
     "Review All" : {
 
     },
+    "Review Queue" : {
+
+    },
     "Review Request" : {
+
+    },
+    "Review this proposal" : {
 
     },
     "Review Unavailable" : {
 
     },
+    "Revoke" : {
+
+    },
+    "Revoke this session?" : {
+
+    },
     "Rewind gestures" : {
+
+    },
+    "Role" : {
+
+    },
+    "Run" : {
+
+    },
+    "Run %@" : {
+
+    },
+    "Run a job from the controls above to get started." : {
+
+    },
+    "Running Now · %lld" : {
+
+    },
+    "Runtime" : {
+
+    },
+    "Runtime Health" : {
 
     },
     "Save" : {
@@ -1487,10 +2175,28 @@
     "Save Grid Preset" : {
 
     },
+    "Save Profile" : {
+
+    },
     "Save the current sort, filters, layout, density, and page size." : {
 
     },
     "Saved Locations" : {
+
+    },
+    "Saving securely…" : {
+
+    },
+    "Saving…" : {
+
+    },
+    "Scan Status" : {
+
+    },
+    "Scanning" : {
+
+    },
+    "Scans" : {
 
     },
     "Score %@" : {
@@ -1517,13 +2223,22 @@
     "Search Book" : {
 
     },
+    "Search Filters" : {
+
+    },
     "Search for a Match" : {
+
+    },
+    "Search In" : {
 
     },
     "Search library" : {
 
     },
     "Search PDF" : {
+
+    },
+    "Search plugins" : {
 
     },
     "Search Selected" : {
@@ -1538,6 +2253,9 @@
     "Search Unavailable" : {
 
     },
+    "Search users" : {
+
+    },
     "Search your library" : {
 
     },
@@ -1550,13 +2268,16 @@
     "Searching book…" : {
 
     },
-    "Searching Prismedia…" : {
-
-    },
     "Searching with %@" : {
 
     },
     "Searching…" : {
+
+    },
+    "Seek All" : {
+
+    },
+    "Seeking" : {
 
     },
     "Seeks playback by one preview frame" : {
@@ -1574,7 +2295,19 @@
     "Select %@" : {
 
     },
+    "Select a backup" : {
+
+    },
+    "Select a Library Root" : {
+
+    },
+    "Select All" : {
+
+    },
     "Select an identify queue item to search or review metadata." : {
+
+    },
+    "Select Items" : {
 
     },
     "Select this candidate for review." : {
@@ -1583,10 +2316,22 @@
     "Selected" : {
 
     },
-    "Selected %lld" : {
+    "Selected · Tried in Order" : {
+
+    },
+    "Selected Item Actions" : {
+
+    },
+    "Selection Actions" : {
 
     },
     "Sepia" : {
+
+    },
+    "Server" : {
+
+    },
+    "Server path" : {
 
     },
     "Server URL" : {
@@ -1601,7 +2346,13 @@
     "Shares a local copy without exposing your Prismedia session" : {
 
     },
+    "Show %lld More" : {
+
+    },
     "Show Details" : {
+
+    },
+    "Show Fewer" : {
 
     },
     "Show History" : {
@@ -1625,7 +2376,13 @@
     "Show wanted entities" : {
 
     },
+    "Shows file details and actions" : {
+
+    },
     "Shows playback and navigation actions" : {
+
+    },
+    "Shows rating, date, and entity-kind filters" : {
 
     },
     "Shows the full description" : {
@@ -1646,13 +2403,28 @@
     "Sign Out" : {
 
     },
+    "Sign out this device?" : {
+
+    },
     "Sign Out?" : {
+
+    },
+    "Signed-in Devices" : {
+
+    },
+    "Size" : {
+
+    },
+    "Some Items Couldn’t Be Updated" : {
 
     },
     "Some providers could not be searched" : {
 
     },
     "Sort" : {
+
+    },
+    "Source" : {
 
     },
     "Spacing" : {
@@ -1676,6 +2448,12 @@
     "Start video playback to seek to this marker" : {
 
     },
+    "Started" : {
+
+    },
+    "Starting date" : {
+
+    },
     "Starting playback…" : {
 
     },
@@ -1691,10 +2469,19 @@
     "Status" : {
 
     },
+    "Stop" : {
+
+    },
+    "Stop %@" : {
+
+    },
     "Stop monitoring this item?" : {
 
     },
     "Storage" : {
+
+    },
+    "Stored credentials are never read back. Leave a field blank to keep its saved value, enter a replacement, or explicitly clear it." : {
 
     },
     "Strong" : {
@@ -1727,10 +2514,22 @@
     "The provider changed this proposal after you reviewed it. Reload and confirm the selection again." : {
 
     },
-    "The server did not return any administrative settings." : {
+    "The selected device will need the account password to sign in again." : {
+
+    },
+    "The server does not expose a disable-only command. Installing an existing disabled provider enables it; removing it clears installed configuration while preserving plugin files." : {
+
+    },
+    "The server moves the filesystem item and rewrites known linked source paths. Existing destinations are rejected, not overwritten." : {
+
+    },
+    "Their sessions, watch history, favorites, and library access are removed. The server prevents deletion of the last enabled administrator." : {
 
     },
     "Theme" : {
+
+    },
+    "These actions enqueue background work. Preview regeneration is a heavy operation and does not delete source media." : {
 
     },
     "This audiobook position could not be matched to a readable chapter." : {
@@ -1739,10 +2538,16 @@
     "This book does not include a readable chapter list." : {
 
     },
+    "This changes library scan configuration only. It does not move or delete the server file." : {
+
+    },
     "This collection is empty." : {
 
     },
     "This collection no longer contains playable audio." : {
+
+    },
+    "This device" : {
 
     },
     "This PDF does not include an outline." : {
@@ -1751,10 +2556,16 @@
     "This publication does not include a readable contents list." : {
 
     },
+    "This removes installed configuration and immediately removes the provider from Request and Identify choices. Plugin files remain on the server." : {
+
+    },
     "This removes its acquisition and downloads. A fileless wanted placeholder may also be removed from the library." : {
 
     },
     "This removes the selected download data from the client. Monitored items remain Wanted and can search again." : {
+
+    },
+    "Through" : {
 
     },
     "Timeframe" : {
@@ -1769,7 +2580,22 @@
     "Toggle Playback" : {
 
     },
+    "Toggles this entity kind in search results" : {
+
+    },
+    "Top" : {
+
+    },
+    "Top result" : {
+
+    },
+    "Top result. Opens details" : {
+
+    },
     "Transfer" : {
+
+    },
+    "Try a different search or capability filter." : {
 
     },
     "Try Again" : {
@@ -1784,6 +2610,12 @@
     "Two Pages" : {
 
     },
+    "Type" : {
+
+    },
+    "Type %@" : {
+
+    },
     "Typeface" : {
 
     },
@@ -1794,6 +2626,9 @@
 
     },
     "Unable to Load Acquisition" : {
+
+    },
+    "Unable to Save" : {
 
     },
     "Unmonitor" : {
@@ -1814,10 +2649,19 @@
     "Unwatched" : {
 
     },
+    "Up" : {
+
+    },
     "Up Next" : {
 
     },
     "Up Next Parts" : {
+
+    },
+    "Up to %@" : {
+
+    },
+    "Update" : {
 
     },
     "Update to %@" : {
@@ -1835,13 +2679,22 @@
     "Updating items…" : {
 
     },
-    "Updating jobs…" : {
-
-    },
     "Updating progress" : {
 
     },
+    "Updating provider…" : {
+
+    },
     "Updating results" : {
+
+    },
+    "Upload Files" : {
+
+    },
+    "Upload files or create a folder here." : {
+
+    },
+    "Upload Folder" : {
 
     },
     "Use %@ artwork from %@" : {
@@ -1857,10 +2710,16 @@
     "Use as Toggle bookmark" : {
 
     },
+    "Use at least 8 characters." : {
+
+    },
     "Use paragraph spacing for a modern layout, indentation for a traditional book layout, or combine them to taste." : {
 
     },
     "Use Publisher Formatting" : {
+
+    },
+    "User Actions" : {
 
     },
     "User Metadata" : {
@@ -1869,13 +2728,34 @@
     "Username" : {
 
     },
+    "Users" : {
+
+    },
+    "v%@" : {
+
+    },
+    "v%@ available" : {
+
+    },
     "Value" : {
+
+    },
+    "Values · Priority Order" : {
+
+    },
+    "Version" : {
+
+    },
+    "Version %@" : {
 
     },
     "Video Size" : {
 
     },
     "Video Unavailable" : {
+
+    },
+    "Videos" : {
 
     },
     "View" : {
@@ -1890,19 +2770,31 @@
     "Watched" : {
 
     },
+    "Watched Libraries" : {
+
+    },
     "Webtoon" : {
 
     },
     "Webtoon reader, %@" : {
 
     },
-    "What would you like to request?" : {
-
-    },
     "Word Spacing" : {
 
     },
     "Work" : {
+
+    },
+    "Worker" : {
+
+    },
+    "Worker Activity" : {
+
+    },
+    "Worker ID" : {
+
+    },
+    "You" : {
 
     },
     "You’ll return to the Prismedia sign-in screen on this Apple TV." : {
@@ -1915,6 +2807,9 @@
 
     },
     "Your progress" : {
+
+    },
+    "ZIP and CBZ files can appear as both books and image galleries." : {
 
     },
     "Zoom %lld percent" : {
