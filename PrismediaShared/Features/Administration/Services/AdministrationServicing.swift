@@ -52,8 +52,10 @@ public protocol AdministrationServicing: Sendable {
     func libraryRoots() async throws -> [AdministrativeLibraryRoot]
     func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile]
     func jobs() async throws -> AdministrativeJobListResponse
+    func createJob(type: String) async throws -> AdministrativeJobRun
     func cancelJob(id: UUID) async throws -> Int
-    func clearFailures(type: String) async throws -> Int
+    func cancelJobs(type: String?) async throws -> Int
+    func clearFailures(type: String?) async throws -> Int
     func rebuildPreviews() async throws -> AdministrativeBulkJobResponse
     func settings() async throws -> AdministrativeSettingsCatalog
     func updateSetting(key: String, value: AdministrativeJSONValue) async throws -> AdministrativeSetting

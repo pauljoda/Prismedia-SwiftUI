@@ -76,8 +76,10 @@ import Foundation
         func libraryRoots() async throws -> [AdministrativeLibraryRoot] { throw CancellationError() }
         func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] { throw CancellationError() }
         func jobs() async throws -> AdministrativeJobListResponse { throw CancellationError() }
+        func createJob(type: String) async throws -> AdministrativeJobRun { throw CancellationError() }
         func cancelJob(id: UUID) async throws -> Int { throw CancellationError() }
-        func clearFailures(type: String) async throws -> Int { throw CancellationError() }
+        func cancelJobs(type: String?) async throws -> Int { throw CancellationError() }
+        func clearFailures(type: String?) async throws -> Int { throw CancellationError() }
         func rebuildPreviews() async throws -> AdministrativeBulkJobResponse { throw CancellationError() }
         func settings() async throws -> AdministrativeSettingsCatalog { throw CancellationError() }
         func updateSetting(key: String, value: AdministrativeJSONValue) async throws -> AdministrativeSetting {

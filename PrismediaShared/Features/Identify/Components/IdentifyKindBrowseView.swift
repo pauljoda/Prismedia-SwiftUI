@@ -7,9 +7,30 @@ import SwiftUI
 
         var body: some View {
             List(selection: $session.selectedBrowseIDs) {
-                ForEach(session.browseItems) { item in
-                    Label(item.title, systemImage: item.isOrganized ? "checkmark.circle" : "questionmark.circle")
-                        .tag(item.id)
+                Section("Browse Options") {
+                    Picker("Visibility", selection: $session.browseFilter) {
+                        ForEach(IdentifyBrowseFilter.allCases) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Picker("Provider", selection: $session.selectedProviderID) {
+                        Text("Choose Provider").tag("")
+                        ForEach(eligibleProviders) { Text($0.name).tag($0.id) }
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                Section {
+                    ForEach(session.browseItems) { item in
+                        Label(item.title, systemImage: item.isOrganized ? "checkmark.circle" : "questionmark.circle")
+                            .tag(item.id)
+                    }
+                } header: {
+                    HStack {
+                        Text(kind.displayLabel)
+                        Spacer()
+                        Text(session.browseItems.count, format: .number)
+                    }
                 }
             }
             .prismediaScreenBackground()
@@ -23,14 +44,11 @@ import SwiftUI
                 }
             }
             .navigationTitle(kind.displayLabel)
+            #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
             .searchable(text: $session.browseSearch, prompt: "Search library")
             .toolbar {
-                ToolbarItem(placement: trailingToolbarPlacement) {
-                    filterMenu
-                }
-
-                ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
-
                 ToolbarItem(placement: trailingToolbarPlacement) {
                     Button {
                         Task { await session.queueSelectedBrowseItems() }
@@ -45,21 +63,6 @@ import SwiftUI
                 await session.browse(kind: kind)
             }
             .accessibilityIdentifier("identify.browse")
-        }
-
-        private var filterMenu: some View {
-            Menu {
-                Picker("Visibility", selection: $session.browseFilter) {
-                    ForEach(IdentifyBrowseFilter.allCases) { Text($0.label).tag($0) }
-                }
-                Picker("Provider", selection: $session.selectedProviderID) {
-                    Text("Choose Provider").tag("")
-                    ForEach(eligibleProviders) { Text($0.name).tag($0.id) }
-                }
-            } label: {
-                Image(systemName: "line.3.horizontal.decrease")
-            }
-            .accessibilityLabel("Browse Options")
         }
 
         private var trailingToolbarPlacement: ToolbarItemPlacement {

@@ -140,10 +140,16 @@ public struct AdministrationService: AdministrationServicing {
         try await client.listAdministrativeAcquisitionProfiles()
     }
     public func jobs() async throws -> AdministrativeJobListResponse { try await client.listAdministrativeJobs() }
+    public func createJob(type: String) async throws -> AdministrativeJobRun {
+        try await client.createAdministrativeJob(type: type).job
+    }
     public func cancelJob(id: UUID) async throws -> Int {
         try await client.cancelAdministrativeJob(id: id).cancelled ?? 0
     }
-    public func clearFailures(type: String) async throws -> Int {
+    public func cancelJobs(type: String?) async throws -> Int {
+        try await client.cancelAdministrativeJobs(type: type).cancelled ?? 0
+    }
+    public func clearFailures(type: String?) async throws -> Int {
         try await client.clearAdministrativeJobFailures(type: type).cleared ?? 0
     }
     public func rebuildPreviews() async throws -> AdministrativeBulkJobResponse {

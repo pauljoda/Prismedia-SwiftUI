@@ -45,8 +45,8 @@ import SwiftUI
 
         public var body: some View {
             PluginSearchSurface(
-                title: "Discover \(kind.pluralLabel)",
-                description: "Choose a source, enter its search fields, then review a match.",
+                title: "Search",
+                description: "Choose a source, enter the provider fields, then review a \(kind.label.lowercased()) match.",
                 noProvidersMessage: noProviderMessage,
                 entityKind: kind.pluginEntityKind,
                 hidesNsfw: hidesNsfw,

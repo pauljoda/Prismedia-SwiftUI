@@ -105,6 +105,7 @@ import SwiftUI
             let items = visibleDownloads
             return List(selection: $selectedIDs) {
                 errorSection
+                downloadFilterSection
                 ForEach(items) { item in
                     RequestActivityDownloadRow(
                         item: item,
@@ -132,6 +133,7 @@ import SwiftUI
             let totalPages = max(1, Int(ceil(Double(wantedPage?.total ?? 0) / 50)))
             return List(selection: $selectedIDs) {
                 errorSection
+                wantedFilterSection
                 ForEach(items) { item in
                     RequestActivityWantedRow(
                         item: item,
@@ -217,12 +219,6 @@ import SwiftUI
 
         @ToolbarContentBuilder
         private var toolbarContent: some ToolbarContent {
-            if section == .downloads || section == .missing || section == .cutoffUnmet {
-                ToolbarItem(placement: trailingToolbarPlacement) {
-                    filterMenu
-                }
-            }
-
             #if os(iOS)
                 if section != .history {
                     ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
@@ -243,37 +239,43 @@ import SwiftUI
             #endif
         }
 
-        private var filterMenu: some View {
-            Menu {
-                if section == .downloads {
-                    Picker("Status", selection: $selectedStatus) {
-                        ForEach(RequestActivityStatusFilter.allCases) { filter in
-                            Text(filter.title).tag(filter)
-                        }
-                    }
-                    Picker("Kind", selection: $selectedDownloadKind) {
-                        Text("All Kinds").tag(nil as EntityKind?)
-                        ForEach(downloadKinds) { kind in
-                            Text(kind.displayLabel).tag(kind as EntityKind?)
-                        }
-                    }
-                    Picker("Sort", selection: $sort) {
-                        ForEach(RequestActivitySort.allCases) { option in
-                            Text(option.title).tag(option)
-                        }
-                    }
-                } else {
-                    Picker("Kind", selection: $selectedWantedKind) {
-                        Text("All Kinds").tag(nil as EntityKind?)
-                        ForEach(RequestActivityKindCatalog.wanted) { kind in
-                            Text(kind.displayLabel).tag(kind as EntityKind?)
-                        }
+        private var downloadFilterSection: some View {
+            Section("Filters") {
+                Picker("Status", selection: $selectedStatus) {
+                    ForEach(RequestActivityStatusFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
                     }
                 }
-            } label: {
-                Image(systemName: "line.3.horizontal.decrease")
+                .pickerStyle(.menu)
+
+                Picker("Kind", selection: $selectedDownloadKind) {
+                    Text("All Kinds").tag(nil as EntityKind?)
+                    ForEach(downloadKinds) { kind in
+                        Text(kind.displayLabel).tag(kind as EntityKind?)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Picker("Sort", selection: $sort) {
+                    ForEach(RequestActivitySort.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
             }
-            .accessibilityLabel("Filters")
+            .accessibilityIdentifier("request-activity.filters")
+        }
+
+        private var wantedFilterSection: some View {
+            Section("Filters") {
+                Picker("Kind", selection: $selectedWantedKind) {
+                    Text("All Kinds").tag(nil as EntityKind?)
+                    ForEach(RequestActivityKindCatalog.wanted) { kind in
+                        Text(kind.displayLabel).tag(kind as EntityKind?)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
             .accessibilityIdentifier("request-activity.filters")
         }
 

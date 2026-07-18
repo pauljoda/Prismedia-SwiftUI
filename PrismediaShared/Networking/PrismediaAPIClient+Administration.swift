@@ -286,6 +286,15 @@ extension PrismediaAPIClient {
         try await send(AdministrativeJobListResponse.self, path: "/api/jobs/")
     }
 
+    public func createAdministrativeJob(type: String) async throws -> AdministrativeJobCreateResponse {
+        let encodedType = type.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? type
+        return try await send(
+            AdministrativeJobCreateResponse.self,
+            path: "/api/jobs/\(encodedType)",
+            method: "POST"
+        )
+    }
+
     public func cancelAdministrativeJob(id: UUID) async throws -> AdministrativeCountResponse {
         try await send(
             AdministrativeCountResponse.self,
@@ -294,21 +303,21 @@ extension PrismediaAPIClient {
         )
     }
 
-    public func cancelAdministrativeJobs(type: String) async throws -> AdministrativeCountResponse {
+    public func cancelAdministrativeJobs(type: String? = nil) async throws -> AdministrativeCountResponse {
         try await send(
             AdministrativeCountResponse.self,
             path: "/api/jobs/",
             method: "DELETE",
-            queryItems: [URLQueryItem(name: "type", value: type)]
+            queryItems: type.map { [URLQueryItem(name: "type", value: $0)] } ?? []
         )
     }
 
-    public func clearAdministrativeJobFailures(type: String) async throws -> AdministrativeCountResponse {
+    public func clearAdministrativeJobFailures(type: String? = nil) async throws -> AdministrativeCountResponse {
         try await send(
             AdministrativeCountResponse.self,
             path: "/api/jobs/failures/clear",
             method: "POST",
-            queryItems: [URLQueryItem(name: "type", value: type)]
+            queryItems: type.map { [URLQueryItem(name: "type", value: $0)] } ?? []
         )
     }
 

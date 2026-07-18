@@ -36,18 +36,12 @@ import SwiftUI
                     }
                 }
                 .prismediaScreenBackground()
-                .navigationTitle(section.title)
-                .toolbarTitleMenu {
-                    sectionPicker
-
-                    if section == .discover {
-                        Picker("Content Type", selection: $kind) {
-                            ForEach(RequestKindDefinition.allCases) { kind in
-                                Text(kind.label).tag(kind)
-                            }
-                        }
-                        .accessibilityIdentifier("request.kind")
-                    }
+                .navigationTitle("Request")
+                #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    workspaceControls
                 }
                 .prismediaEntityDestinations(dependencies: detailDependencies)
                 .toolbar {
@@ -72,6 +66,34 @@ import SwiftUI
             Picker("Request View", selection: $section) {
                 sectionOptions
             }
+            .pickerStyle(.segmented)
+            .fixedSize(horizontal: true, vertical: false)
+            .accessibilityIdentifier("request.section")
+        }
+
+        private var workspaceControls: some View {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                ScrollView(.horizontal) {
+                    sectionPicker
+                }
+                .scrollIndicators(.hidden)
+
+                if section == .discover {
+                    LabeledContent("Content Kind") {
+                        Picker("Content Kind", selection: $kind) {
+                            ForEach(RequestKindDefinition.allCases) { kind in
+                                Text(kind.label).tag(kind)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .accessibilityIdentifier("request.kind")
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, PrismediaSpacing.medium)
+            .background(.bar)
         }
 
         @ViewBuilder

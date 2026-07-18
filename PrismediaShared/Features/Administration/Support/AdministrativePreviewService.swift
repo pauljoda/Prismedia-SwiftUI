@@ -156,8 +156,10 @@ import Foundation
         func jobs() async throws -> AdministrativeJobListResponse {
             AdministrativeJobListResponse(items: [], counts: [])
         }
+        func createJob(type: String) async throws -> AdministrativeJobRun { throw CancellationError() }
         func cancelJob(id: UUID) async throws -> Int { 0 }
-        func clearFailures(type: String) async throws -> Int { 0 }
+        func cancelJobs(type: String?) async throws -> Int { 0 }
+        func clearFailures(type: String?) async throws -> Int { 0 }
         func rebuildPreviews() async throws -> AdministrativeBulkJobResponse {
             AdministrativeBulkJobResponse(enqueued: 0, skipped: 0)
         }

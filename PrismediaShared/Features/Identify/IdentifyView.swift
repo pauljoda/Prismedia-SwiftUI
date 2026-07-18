@@ -15,7 +15,10 @@ import SwiftUI
             Group {
                 if horizontalSizeClass == .compact {
                     NavigationStack {
-                        IdentifySidebarList(session: session, usesNavigationLinks: true)
+                        compactContent
+                            .safeAreaInset(edge: .top, spacing: 0) {
+                                compactScopePicker
+                            }
                     }
                 } else {
                     NavigationSplitView {
@@ -47,6 +50,43 @@ import SwiftUI
                 Text(session.errorMessage ?? "Unknown error")
             }
             .accessibilityIdentifier("identify.root")
+        }
+
+        @ViewBuilder
+        private var compactContent: some View {
+            if let kind = session.selectedKind {
+                IdentifyKindBrowseView(session: session, kind: kind)
+            } else {
+                IdentifySidebarList(session: session, usesNavigationLinks: true)
+            }
+        }
+
+        private var compactScopePicker: some View {
+            ScrollView(.horizontal) {
+                Picker("Identify Scope", selection: scopeSelection) {
+                    Label("Dashboard", systemImage: "house").tag("dashboard")
+                    ForEach(session.kindSummaries) { summary in
+                        Text(summary.kind.displayLabel).tag(summary.kind.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityIdentifier("identify.scope")
+            }
+            .scrollIndicators(.hidden)
+            .padding(.horizontal)
+            .padding(.vertical, PrismediaSpacing.medium)
+            .background(.bar)
+        }
+
+        private var scopeSelection: Binding<String> {
+            Binding(
+                get: { session.selectedKind?.rawValue ?? "dashboard" },
+                set: { selection in
+                    session.selectedBrowseIDs.removeAll()
+                    session.selectedKind = selection == "dashboard" ? nil : EntityKind(rawValue: selection)
+                }
+            )
         }
     }
 

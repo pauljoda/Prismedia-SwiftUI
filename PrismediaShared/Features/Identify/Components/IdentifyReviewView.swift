@@ -3,19 +3,13 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct IdentifyReviewView: View {
         @Bindable var session: IdentifySession
+        @State private var proposalPath: [String] = []
 
         var body: some View {
             if let item = session.selectedItem {
                 Group {
                     if let proposal = item.proposal, !session.showsSearchForProposal {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-                                header(item)
-                                MetadataProposalReviewView(proposal: proposal, selection: $session.reviewSelection)
-                                applyActions(item)
-                            }
-                            .padding()
-                        }
+                        proposalReview(item: item, root: proposal)
                     } else {
                         PluginSearchSurface(
                             title: "Find Metadata",
@@ -38,7 +32,16 @@ import SwiftUI
                     }
                 }
                 .navigationTitle(item.title)
+                #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                #endif
                 .toolbar { reviewNavigation }
+                .onChange(of: session.selectedItemID) { _, _ in
+                    proposalPath = []
+                }
+                .onChange(of: item.proposal?.proposalID) { _, _ in
+                    proposalPath = []
+                }
                 .accessibilityIdentifier("identify.review")
             } else {
                 ContentUnavailableView(
@@ -47,15 +50,109 @@ import SwiftUI
             }
         }
 
-        private func header(_ item: AdministrativeIdentifyQueueItem) -> some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                Text(item.title).font(.title2.bold())
-                Text("\(item.entityKind.displayLabel) · \(IdentifyQueueState(rawServerValue: item.state).label)")
-                    .foregroundStyle(PrismediaColor.textSecondary)
-                if item.cascadeRunning {
-                    Label("Applying related metadata", systemImage: "arrow.triangle.branch").foregroundStyle(
-                        PrismediaColor.warning)
+        private func proposalReview(
+            item: AdministrativeIdentifyQueueItem,
+            root: AdministrativeEntityMetadataProposal
+        ) -> some View {
+            let context = proposalContext(root: root)
+            let nodes = directNodes(of: context.current)
+            let selectableIDs = Set(nodes.map(\.proposalID))
+            let selectedIDs = selectableIDs.subtracting(session.reviewSelection.excludedProposalIDs)
+
+            return ScrollView {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
+                    if let parent = context.parent {
+                        IdentifyProposalScopeHeader(
+                            parentTitle: parent.patch.title ?? item.title,
+                            siblingIndex: context.siblingIndex,
+                            siblingCount: context.siblings.count,
+                            onOpenParent: openParentProposal,
+                            onOpenPrevious: { openSibling(at: context.siblingIndex - 1, in: context.siblings) },
+                            onOpenNext: { openSibling(at: context.siblingIndex + 1, in: context.siblings) }
+                        )
+                    }
+
+                    if item.cascadeRunning, proposalPath.isEmpty {
+                        Label("Identifying related metadata", systemImage: "arrow.triangle.branch")
+                            .foregroundStyle(PrismediaColor.warning)
+                    }
+
+                    MetadataProposalReviewView(
+                        proposal: context.current,
+                        selection: $session.reviewSelection,
+                        selectedProposalIDs: selectedIDs,
+                        selectableProposalIDs: selectableIDs,
+                        childrenTitle: "Children",
+                        onSetProposalSelected: setProposalSelected,
+                        onActivateProposal: openChildProposal
+                    )
+
+                    applyActions(item)
                 }
+                .id(context.current.proposalID)
+                .padding()
+            }
+        }
+
+        private func proposalContext(
+            root: AdministrativeEntityMetadataProposal
+        ) -> (
+            current: AdministrativeEntityMetadataProposal,
+            parent: AdministrativeEntityMetadataProposal?,
+            siblings: [AdministrativeEntityMetadataProposal],
+            siblingIndex: Int
+        ) {
+            var current = root
+            var parent: AdministrativeEntityMetadataProposal?
+            var siblings: [AdministrativeEntityMetadataProposal] = []
+            var siblingIndex = 0
+
+            for proposalID in proposalPath {
+                let relationshipSiblings = MetadataReviewPolicy.relationships(of: current)
+                let structuralSiblings = MetadataReviewPolicy.structuralChildren(of: current)
+                let availableSiblings =
+                    relationshipSiblings.contains(where: { $0.proposalID == proposalID })
+                    ? relationshipSiblings
+                    : structuralSiblings
+                guard let next = availableSiblings.first(where: { $0.proposalID == proposalID }) else { break }
+                parent = current
+                siblings = availableSiblings
+                siblingIndex = siblings.firstIndex(where: { $0.proposalID == proposalID }) ?? -1
+                current = next
+            }
+
+            return (current, parent, siblings, siblingIndex)
+        }
+
+        private func directNodes(
+            of proposal: AdministrativeEntityMetadataProposal
+        ) -> [AdministrativeEntityMetadataProposal] {
+            MetadataReviewPolicy.relationships(of: proposal)
+                + MetadataReviewPolicy.structuralChildren(of: proposal)
+        }
+
+        private func openChildProposal(_ proposal: AdministrativeEntityMetadataProposal) {
+            proposalPath.append(proposal.proposalID)
+        }
+
+        private func openParentProposal() {
+            guard !proposalPath.isEmpty else { return }
+            proposalPath.removeLast()
+        }
+
+        private func openSibling(
+            at index: Int,
+            in siblings: [AdministrativeEntityMetadataProposal]
+        ) {
+            guard siblings.indices.contains(index), !proposalPath.isEmpty else { return }
+            proposalPath[proposalPath.count - 1] = siblings[index].proposalID
+        }
+
+        private func setProposalSelected(_ proposalID: String, _ isSelected: Bool) {
+            if isSelected {
+                session.reviewSelection.excludedProposalIDs.remove(proposalID)
+            } else {
+                session.reviewSelection.excludedProposalIDs.insert(proposalID)
             }
         }
 
