@@ -108,7 +108,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
         XCTAssertEqual(reports.last?.report.positionTicks, 310_000_000)
     }
 
-    func testCompletionStopsAtDurationMarksPlayedAndDoesNotStopAgain() async {
+    func testCompletionStopsAtDurationWithoutAnExplicitPlayedMutation() async {
         let service = ReportingSpy()
         let reporter = VideoPlaybackReporter(service: service, clock: TestVideoPlaybackClock())
         reporter.install(plan: makePlan(), positionSeconds: 0)
@@ -119,10 +119,8 @@ final class VideoPlaybackReporterTests: XCTestCase {
         await reporter.waitForPendingReports()
 
         let reports = await service.reports
-        let playedVideoIDs = await service.playedVideoIDs
         XCTAssertEqual(reports.map(\.event), [.started, .stopped])
         XCTAssertEqual(reports.last?.report.positionTicks, 1_200_000_000)
-        XCTAssertEqual(playedVideoIDs, [makePlan().videoID])
     }
 
     func testCompletionKeepsFinalStopAtDurationAfterThresholdProgress() async {
@@ -140,7 +138,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
         XCTAssertEqual(reports.last?.report.positionTicks, 1_200_000_000)
     }
 
-    func testCompletionStillMarksPlayedWhenPlayerStateNotificationWasMissed() async {
+    func testCompletionStillStopsAtDurationWhenPlayerStateNotificationWasMissed() async {
         let service = ReportingSpy()
         let reporter = VideoPlaybackReporter(service: service, clock: TestVideoPlaybackClock())
         reporter.install(plan: makePlan(), positionSeconds: 0)
@@ -149,10 +147,8 @@ final class VideoPlaybackReporterTests: XCTestCase {
         await reporter.waitForPendingReports()
 
         let reports = await service.reports
-        let playedVideoIDs = await service.playedVideoIDs
         XCTAssertEqual(reports.map(\.event), [.stopped])
         XCTAssertEqual(reports.first?.report.positionTicks, 1_200_000_000)
-        XCTAssertEqual(playedVideoIDs, [makePlan().videoID])
     }
 
     func testReportingFailureDoesNotPreventLaterStopOrCompletion() async {
@@ -165,9 +161,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
         await reporter.waitForPendingReports()
 
         let reports = await service.reports
-        let playedVideoIDs = await service.playedVideoIDs
         XCTAssertEqual(reports.map(\.event), [.started, .stopped])
-        XCTAssertEqual(playedVideoIDs, [makePlan().videoID])
     }
 
     func testCancelledReportDoesNotCancelTheFollowingStop() async {
@@ -239,7 +233,6 @@ private actor ReportingSpy: VideoPlaybackReporting {
     }
 
     private(set) var reports: [RecordedReport] = []
-    private(set) var playedVideoIDs: [UUID] = []
     private let failingEvents: Set<VideoPlaybackEvent>
     private let cancellingEvents: Set<VideoPlaybackEvent>
 
@@ -255,9 +248,5 @@ private actor ReportingSpy: VideoPlaybackReporting {
         reports.append(.init(event: event, report: report))
         if cancellingEvents.contains(event) { throw CancellationError() }
         if failingEvents.contains(event) { throw URLError(.cannotConnectToHost) }
-    }
-
-    func markVideoPlayed(videoID: UUID) async throws {
-        playedVideoIDs.append(videoID)
     }
 }

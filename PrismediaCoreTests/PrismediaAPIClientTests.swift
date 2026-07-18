@@ -385,19 +385,6 @@ final class PrismediaAPIClientTests: XCTestCase {
         }
     }
 
-    func testMarkVideoPlayedUsesRootJellyfinPlayedItemEndpoint() async throws {
-        let videoID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        let loader = MockHTTPDataLoader(responses: [.json(#"{"Played":true}"#)])
-        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
-
-        try await client.markVideoPlayed(videoID: videoID)
-
-        let request = try XCTUnwrap(loader.requests.first)
-        XCTAssertEqual(request.url?.path, "/UserPlayedItems/\(videoID.uuidString.lowercased())")
-        XCTAssertEqual(request.httpMethod, "POST")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
-    }
-
     func testEntityPageSourceUsesAuthenticatedFileEndpoint() async throws {
         let pageID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
         let bytes = Data([0x89, 0x50, 0x4e, 0x47])

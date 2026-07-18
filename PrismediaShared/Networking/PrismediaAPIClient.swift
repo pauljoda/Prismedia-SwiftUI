@@ -437,13 +437,6 @@ public struct PrismediaAPIClient: Sendable {
         try await sendExpectingNoContent(path: path, method: "POST", body: report)
     }
 
-    public func markVideoPlayed(videoID: UUID) async throws {
-        try await sendExpectingNoContent(
-            path: "/UserPlayedItems/\(videoID.uuidString.lowercased())",
-            method: "POST"
-        )
-    }
-
     public func negotiateVideoPlayback(
         videoID: UUID,
         forceTranscode: Bool = false
