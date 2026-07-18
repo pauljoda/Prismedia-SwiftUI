@@ -89,6 +89,7 @@ import SwiftUI
                     },
                     actionPolicy: .library(user: user),
                     mutationService: client,
+                    prefersInitialTVFocus: true,
                     itemContent: { item, layout in
                         EntityThumbnailNavigationSurface(item: item, layout: layout)
                     }

@@ -16,10 +16,16 @@ public struct EntityGridView<ItemContent: View>: View {
     @State private var actionConfirmation: EntityGridActionConfirmation?
     @State private var mutationFailures: [EntityGridMutationFailure] = []
     @State private var mutationFailureAlertPresented = false
-    @State private var collectionSheetPresented = false
-    @State private var collectionSheetReferences: [CollectionEntityReference] = []
+    #if os(iOS) || os(macOS)
+        @State private var collectionSheetPresented = false
+        @State private var collectionSheetReferences: [CollectionEntityReference] = []
+    #endif
     #if os(tvOS)
         @Environment(TVTabFocusCoordinator.self) private var tabFocusCoordinator
+        @State private var lastFocusedItemID: UUID?
+        @State private var tvCollectionOptions: [EntityThumbnail] = []
+        @State private var tvCollectionOptionsAreLoading = false
+        @State private var tvCollectionOptionsLoadFailed = false
         @FocusState private var tvGridFocus: TVGridFocus?
     #endif
 
@@ -33,6 +39,7 @@ public struct EntityGridView<ItemContent: View>: View {
     private let onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)?
     private let actionPolicy: EntityGridActionPolicy
     private let mutationService: (any EntityGridMutationServicing)?
+    private let prefersInitialTVFocus: Bool
     private let itemContent: (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
 
     public init(
@@ -45,6 +52,7 @@ public struct EntityGridView<ItemContent: View>: View {
         onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)? = nil,
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil,
+        prefersInitialTVFocus: Bool = false,
         @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
     ) {
         self.configuration = configuration
@@ -59,6 +67,7 @@ public struct EntityGridView<ItemContent: View>: View {
         self.onOpenFeedItem = onOpenFeedItem
         self.actionPolicy = actionPolicy
         self.mutationService = mutationService
+        self.prefersInitialTVFocus = prefersInitialTVFocus
         self.itemContent = itemContent
         let restoredPreferences = preferencesStore.load(for: configuration.preferencesID)
         let restoredControls = restoredPreferences?.controls(baselineQuery: configuration.query)
@@ -125,7 +134,7 @@ public struct EntityGridView<ItemContent: View>: View {
             } message: {
                 Text(mutationFailureMessage)
             }
-            #if os(iOS) || os(macOS) || os(tvOS)
+            #if os(iOS) || os(macOS)
                 .sheet(isPresented: $collectionSheetPresented) {
                     AddToCollectionSheet(items: collectionSheetReferences) { result in
                         receiveMutationResult(result)
@@ -150,6 +159,20 @@ public struct EntityGridView<ItemContent: View>: View {
             .task {
                 await loadIfNeeded()
             }
+            #if os(tvOS)
+                .task {
+                    await loadTVCollectionOptionsIfNeeded()
+                }
+                .defaultFocus($tvGridFocus, defaultTVGridFocus)
+                .onChange(of: tvGridFocus) { _, focus in
+                    guard case .item(let itemID) = focus else { return }
+                    lastFocusedItemID = itemID
+                }
+                .onAppear(perform: restoreTVGridFocusIfNeeded)
+                .onChange(of: snapshot.items.map(\.id)) {
+                    restoreTVGridFocusIfNeeded()
+                }
+            #endif
             .onChange(of: environment.entityListRevision) { _, _ in
                 Task { await refresh() }
             }
@@ -435,7 +458,11 @@ public struct EntityGridView<ItemContent: View>: View {
                     isSelectionActive: selection.isActive,
                     isSelected: selection.selectedIDs.contains(item.id),
                     onToggle: { toggleSelection(item.id) },
-                    onAddToCollection: addToCollectionAction(for: item)
+                    collectionOptions: collectionMenuOptions,
+                    collectionOptionsAreLoading: collectionMenuOptionsAreLoading,
+                    collectionOptionsLoadFailed: collectionMenuOptionsLoadFailed,
+                    onAddToCollection: addToCollectionAction(for: item),
+                    onReloadCollectionOptions: reloadCollectionMenuOptions
                 ) {
                     itemContent(item, layout)
                 }
@@ -956,7 +983,10 @@ public struct EntityGridView<ItemContent: View>: View {
         let details = mutationFailures.prefix(4)
             .map { "\($0.title): \($0.message)" }
             .joined(separator: "\n")
-        return "\(count) item\(count == 1 ? "" : "s") remain selected so you can retry.\n\(details)"
+        let summary = selection.isActive
+            ? "remain selected so you can retry"
+            : "could not be updated"
+        return "\(count) item\(count == 1 ? "" : "s") \(summary).\n\(details)"
     }
 
     private func toggleSelection(_ entityID: UUID) {
@@ -981,7 +1011,7 @@ public struct EntityGridView<ItemContent: View>: View {
         guard actionInFlight == nil, !selectedItems.isEmpty else { return }
         switch action {
         case .addToCollection:
-            #if os(iOS) || os(macOS) || os(tvOS)
+            #if os(iOS) || os(macOS)
                 presentCollectionSheet(with: selectedCollectionReferences)
             #endif
         case .markNsfw(let value):
@@ -1054,22 +1084,122 @@ public struct EntityGridView<ItemContent: View>: View {
         }
     }
 
-    private func addToCollectionAction(for item: EntityThumbnail) -> (() -> Void)? {
+    private func addToCollectionAction(
+        for item: EntityThumbnail
+    ) -> ((EntityThumbnail) -> Void)? {
         guard
             mutationService != nil,
-            let reference = actionPolicy.collectionReferences(in: [item]).first
+            !actionPolicy.collectionReferences(in: [item]).isEmpty
         else { return nil }
 
-        return {
-            presentCollectionSheet(with: [reference])
+        return { collection in
+            #if os(tvOS)
+                Task {
+                    await add(item, to: collection)
+                }
+            #else
+                presentCollectionSheet(
+                    with: actionPolicy.collectionReferences(in: [item])
+                )
+            #endif
         }
     }
 
+    #if os(iOS) || os(macOS)
     private func presentCollectionSheet(with references: [CollectionEntityReference]) {
         guard !references.isEmpty else { return }
         collectionSheetReferences = references
         collectionSheetPresented = true
     }
+    #endif
+
+    private var collectionMenuOptions: [EntityThumbnail] {
+        #if os(tvOS)
+            tvCollectionOptions
+        #else
+            []
+        #endif
+    }
+
+    private var collectionMenuOptionsAreLoading: Bool {
+        #if os(tvOS)
+            tvCollectionOptionsAreLoading
+        #else
+            false
+        #endif
+    }
+
+    private var collectionMenuOptionsLoadFailed: Bool {
+        #if os(tvOS)
+            tvCollectionOptionsLoadFailed
+        #else
+            false
+        #endif
+    }
+
+    private var reloadCollectionMenuOptions: (() -> Void)? {
+        #if os(tvOS)
+            reloadTVCollectionOptions
+        #else
+            nil
+        #endif
+    }
+
+    #if os(tvOS)
+        private var defaultTVGridFocus: TVGridFocus? {
+            guard prefersInitialTVFocus else { return nil }
+            if let lastFocusedItemID,
+                snapshot.items.contains(where: { $0.id == lastFocusedItemID })
+            {
+                return .item(lastFocusedItemID)
+            }
+            return snapshot.items.first.map { .item($0.id) }
+        }
+
+        private func restoreTVGridFocusIfNeeded() {
+            guard let target = defaultTVGridFocus else { return }
+            Task { @MainActor in
+                await Task.yield()
+                tvGridFocus = target
+            }
+        }
+
+        private func loadTVCollectionOptionsIfNeeded() async {
+            guard tvCollectionOptions.isEmpty, !tvCollectionOptionsAreLoading else { return }
+            await loadTVCollectionOptions()
+        }
+
+        private func reloadTVCollectionOptions() {
+            Task { await loadTVCollectionOptions() }
+        }
+
+        private func loadTVCollectionOptions() async {
+            guard let mutationService else { return }
+            tvCollectionOptionsAreLoading = true
+            tvCollectionOptionsLoadFailed = false
+            defer { tvCollectionOptionsAreLoading = false }
+            do {
+                tvCollectionOptions = try await mutationService.loadCollectionOptions().sorted {
+                    $0.title.localizedStandardCompare($1.title) == .orderedAscending
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                tvCollectionOptionsLoadFailed = true
+            }
+        }
+
+        private func add(
+            _ item: EntityThumbnail,
+            to collection: EntityThumbnail
+        ) async {
+            let result = await actionService?.addToCollection(
+                collection.id,
+                items: [item]
+            ) ?? unavailableResult([item])
+            receiveMutationResult(result)
+        }
+    #endif
 
     private func unavailableResult(
         _ items: [EntityThumbnail]

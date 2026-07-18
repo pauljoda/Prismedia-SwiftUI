@@ -5,7 +5,11 @@ struct EntityGridSelectionSurface<Content: View>: View {
     let isSelectionActive: Bool
     let isSelected: Bool
     let onToggle: () -> Void
-    let onAddToCollection: (() -> Void)?
+    let collectionOptions: [EntityThumbnail]
+    let collectionOptionsAreLoading: Bool
+    let collectionOptionsLoadFailed: Bool
+    let onAddToCollection: ((EntityThumbnail) -> Void)?
+    let onReloadCollectionOptions: (() -> Void)?
     let content: Content
 
     init(
@@ -13,14 +17,22 @@ struct EntityGridSelectionSurface<Content: View>: View {
         isSelectionActive: Bool,
         isSelected: Bool,
         onToggle: @escaping () -> Void,
-        onAddToCollection: (() -> Void)? = nil,
+        collectionOptions: [EntityThumbnail] = [],
+        collectionOptionsAreLoading: Bool = false,
+        collectionOptionsLoadFailed: Bool = false,
+        onAddToCollection: ((EntityThumbnail) -> Void)? = nil,
+        onReloadCollectionOptions: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.item = item
         self.isSelectionActive = isSelectionActive
         self.isSelected = isSelected
         self.onToggle = onToggle
+        self.collectionOptions = collectionOptions
+        self.collectionOptionsAreLoading = collectionOptionsAreLoading
+        self.collectionOptionsLoadFailed = collectionOptionsLoadFailed
         self.onAddToCollection = onAddToCollection
+        self.onReloadCollectionOptions = onReloadCollectionOptions
         self.content = content()
     }
 
@@ -30,12 +42,9 @@ struct EntityGridSelectionSurface<Content: View>: View {
             if let onAddToCollection {
                 selectionSurface
                     .contextMenu {
-                        Button("Add to Collection", systemImage: "rectangle.stack.badge.plus") {
-                            onAddToCollection()
+                        Menu("Add to Collection", systemImage: "rectangle.stack.badge.plus") {
+                            collectionMenu(onAddToCollection: onAddToCollection)
                         }
-                    }
-                    .accessibilityAction(named: "Add to Collection") {
-                        onAddToCollection()
                     }
             } else {
                 selectionSurface
@@ -44,6 +53,34 @@ struct EntityGridSelectionSurface<Content: View>: View {
             selectionSurface
         #endif
     }
+
+    #if os(tvOS)
+        @ViewBuilder
+        private func collectionMenu(
+            onAddToCollection: @escaping (EntityThumbnail) -> Void
+        ) -> some View {
+            if collectionOptionsAreLoading {
+                Button("Loading Collections…") {}
+                    .disabled(true)
+            } else if collectionOptionsLoadFailed {
+                Button("Try Loading Collections Again", systemImage: "arrow.clockwise") {
+                    onReloadCollectionOptions?()
+                }
+            } else if collectionOptions.isEmpty {
+                Button("No Collections Available") {}
+                    .disabled(true)
+            } else {
+                ForEach(collectionOptions) { collection in
+                    Button(collection.title) {
+                        onAddToCollection(collection)
+                    }
+                    .accessibilityIdentifier(
+                        "add-to-collection.option.\(collection.id.uuidString)"
+                    )
+                }
+            }
+        }
+    #endif
 
     private var selectionSurface: some View {
         content

@@ -2,6 +2,9 @@ import SwiftUI
 
 struct EntityDetailPrimaryActionsView: View {
     @Environment(\.artworkPalette) private var artworkPalette
+    #if os(tvOS)
+        @FocusState private var focusedActionID: EntityDetailActionID?
+    #endif
     let actions: [EntityDetailAction]
     let horizontalPadding: CGFloat
     let isEnabled: (EntityDetailAction) -> Bool
@@ -17,6 +20,12 @@ struct EntityDetailPrimaryActionsView: View {
                 }
                 .padding(.horizontal, horizontalPadding)
                 .prismediaFocusSection()
+                .defaultFocus($focusedActionID, defaultActionID)
+                .task(id: defaultActionID) {
+                    guard let defaultActionID else { return }
+                    await Task.yield()
+                    focusedActionID = defaultActionID
+                }
             #else
                 VStack(spacing: PrismediaSpacing.medium) {
                     actionButtons
@@ -42,6 +51,7 @@ struct EntityDetailPrimaryActionsView: View {
             .disabled(!isEnabled(action))
             #if os(tvOS)
                 .frame(maxWidth: 520)
+                .focused($focusedActionID, equals: action.id)
             #endif
             .accessibilityLabel(action.title)
             .accessibilityHint(accessibilityHint(action))
@@ -52,6 +62,14 @@ struct EntityDetailPrimaryActionsView: View {
     private var primaryTint: Color {
         artworkPalette?.primary.color ?? PrismediaColor.accent
     }
+
+    #if os(tvOS)
+        private var defaultActionID: EntityDetailActionID? {
+            actions.first(where: { $0.id == .play })?.id
+                ?? actions.first(where: { $0.id == .resume })?.id
+                ?? actions.first?.id
+        }
+    #endif
 }
 
 #if DEBUG

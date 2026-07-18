@@ -1,4 +1,4 @@
-#if os(iOS) || os(macOS) || os(tvOS)
+#if os(iOS) || os(macOS)
     import SwiftUI
 
     /// Collection picker for entity grids, detail pages, and compact actions.
