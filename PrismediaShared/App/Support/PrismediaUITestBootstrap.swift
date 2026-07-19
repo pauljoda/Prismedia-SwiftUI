@@ -143,6 +143,30 @@
             return seconds
         }
 
+        static func videoControlsAutoHideDelay(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Duration? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let value = environment["PRISMEDIA_UI_TEST_VIDEO_CONTROLS_TIMEOUT"],
+                let seconds = Double(value),
+                seconds >= 0
+            else { return nil }
+            return .seconds(seconds)
+        }
+
+        static func videoScanSettleDelay(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Duration? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let value = environment["PRISMEDIA_UI_TEST_VIDEO_SCAN_SETTLE_SECONDS"],
+                let seconds = Double(value),
+                seconds >= 0
+            else { return nil }
+            return .seconds(seconds)
+        }
+
         static func videoPlaybackEngine(
             arguments: [String] = CommandLine.arguments,
             environment: [String: String] = ProcessInfo.processInfo.environment

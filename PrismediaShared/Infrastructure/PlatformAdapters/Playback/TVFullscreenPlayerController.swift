@@ -20,6 +20,9 @@
             playerController.appliesPreferredDisplayCriteriaAutomatically = false
             playerController.player = controller.player
             playerController.showsPlaybackControls = true
+            playerController.skippingBehavior = .default
+            playerController.isSkipForwardEnabled = true
+            playerController.isSkipBackwardEnabled = true
             playerController.delegate = context.coordinator
             context.coordinator.configure(
                 playerController,

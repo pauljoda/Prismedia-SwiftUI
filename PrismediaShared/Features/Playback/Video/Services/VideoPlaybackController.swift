@@ -249,6 +249,8 @@ public final class VideoPlaybackController {
     }
 
     func pause() {
+        isPlaying = false
+        isWaiting = false
         if renderer == .compatibility {
             compatibilityPlaybackCommands?.pause()
             return
