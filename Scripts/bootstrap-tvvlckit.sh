@@ -11,15 +11,16 @@ lossless_patch="$script_dir/Patches/TVVLCKit-EnableTrueHD.patch"
 device_binary="$destination/tvos-arm64/TVVLCKit.framework/TVVLCKit"
 simulator_binary="$destination/tvos-arm64_x86_64-simulator/TVVLCKit.framework/TVVLCKit"
 
-has_mlp_decoder() {
+is_compatible_build() {
     binary="$1"
     [ -f "$binary" ] \
         && ! strings "$binary" | grep -q -- '--disable-decoder=mlp' \
         && nm "$binary" | grep -q -- '_ff_mlp_decoder' \
-        && nm "$binary" | grep -q -- '_ff_truehd_decoder'
+        && nm "$binary" | grep -q -- '_ff_truehd_decoder' \
+        && ! nm -u "$binary" | grep -q -- '_pipe2'
 }
 
-if has_mlp_decoder "$device_binary" && has_mlp_decoder "$simulator_binary"; then
+if is_compatible_build "$device_binary" && is_compatible_build "$simulator_binary"; then
     exit 0
 fi
 
@@ -38,8 +39,8 @@ patch -d "$temporary_dir/VLCKit" -p1 < "$lossless_patch"
 framework="$temporary_dir/VLCKit/build/TVVLCKit.xcframework"
 built_device_binary="$framework/tvos-arm64/TVVLCKit.framework/TVVLCKit"
 built_simulator_binary="$framework/tvos-arm64_x86_64-simulator/TVVLCKit.framework/TVVLCKit"
-if ! has_mlp_decoder "$built_device_binary" || ! has_mlp_decoder "$built_simulator_binary"; then
-    echo "TVVLCKit was built without the required MLP/TrueHD decoder." >&2
+if ! is_compatible_build "$built_device_binary" || ! is_compatible_build "$built_simulator_binary"; then
+    echo "TVVLCKit is missing MLP/TrueHD or imports unavailable pipe2()." >&2
     exit 1
 fi
 
