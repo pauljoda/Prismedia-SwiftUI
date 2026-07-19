@@ -1,0 +1,25 @@
+diff --git a/buildMobileVLCKit.sh b/buildMobileVLCKit.sh
+index db20d0c..ef98a34 100755
+--- a/buildMobileVLCKit.sh
++++ b/buildMobileVLCKit.sh
+@@ -105 +105 @@ do
+-             SDK_MIN=10.2
++             SDK_MIN=15.0
+@@ -286,0 +287 @@ buildxcodeproj()
++               TVOS_DEPLOYMENT_TARGET=${SDK_MIN} \
+diff --git a/libvlc/patches/0003-Enable-System-DL.patch b/libvlc/patches/0003-Enable-System-DL.patch
+index cbf7288..6420aad 100644
+--- a/libvlc/patches/0003-Enable-System-DL.patch
++++ b/libvlc/patches/0003-Enable-System-DL.patch
+@@ -8,2 +8,2 @@ Subject: [PATCH 03/45] Enable System DL
+- contrib/src/ffmpeg/rules.mak                |  4 ++++
+- 2 files changed, 24 insertions(+)
++ contrib/src/ffmpeg/rules.mak                |  1 +
++ 2 files changed, 21 insertions(+)
+@@ -42 +42 @@ index 0fe31de9fd..ec2bc70edd 100644
+-@@ -33,6 +33,9 @@ FFMPEGCONF = \
++@@ -33,6 +33,6 @@ FFMPEGCONF = \
+@@ -46,3 +45,0 @@ index 0fe31de9fd..ec2bc70edd 100644
+-+	--disable-decoder=mlp \
+-+	--disable-demuxer=mlp \
+-+	--disable-parser=mlp \

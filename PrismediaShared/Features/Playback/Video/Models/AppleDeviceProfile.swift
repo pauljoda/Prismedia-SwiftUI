@@ -51,7 +51,7 @@ struct AppleDeviceProfile: Encodable {
                     type: "Video",
                     container: "mkv,matroska",
                     videoCodec: [modernVideoCodecs, "mpeg4"].joined(separator: ","),
-                    audioCodec: "aac,ac3,eac3,truehd,dts,dtshd,alac,flac,mp3,opus,vorbis"
+                    audioCodec: "aac,ac3,eac3,truehd,mlp,dts,dtshd,alac,flac,mp3,opus,vorbis"
                 )
             )
         }

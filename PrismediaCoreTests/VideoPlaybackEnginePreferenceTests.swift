@@ -12,6 +12,7 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
 
         XCTAssertTrue(matroska.videoCodec.contains("h264"))
         XCTAssertTrue(matroska.audioCodec.contains("truehd"))
+        XCTAssertTrue(matroska.audioCodec.contains("mlp"))
         XCTAssertTrue(matroska.audioCodec.contains("dts"))
     }
 

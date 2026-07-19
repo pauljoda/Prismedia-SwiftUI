@@ -10,6 +10,7 @@
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @State private var controlsVisible = true
         @State private var controlsDismissGeneration = 0
+        @FocusState private var playerSurfaceFocused: Bool
         @FocusState private var focusedPlaybackMenu: String?
 
         var body: some View {
@@ -41,6 +42,7 @@
             }
             .background(Color.black)
             .focusable()
+            .focused($playerSurfaceFocused)
             .focusEffectDisabled()
             .onTapGesture(perform: toggleControls)
             .onPlayPauseCommand {
@@ -54,6 +56,9 @@
             }
             .onChange(of: focusedPlaybackMenu) { _, _ in
                 revealControls()
+            }
+            .onAppear {
+                playerSurfaceFocused = true
             }
             .task(id: controlsDismissGeneration) {
                 guard controller.isPlaying, focusedPlaybackMenu == nil else { return }
@@ -101,47 +106,18 @@
                     .font(.caption.weight(.bold))
                     .padding(.horizontal, PrismediaSpacing.medium)
                     .padding(.vertical, PrismediaSpacing.extraSmall)
-                    .glassEffect(
-                        .regular.tint(artworkPrimaryAccent.opacity(0.58)),
-                        in: .capsule
-                    )
-                controlButton("xmark", label: "Exit Player", action: onRequestDismiss)
-            }
-        }
-
-        private var transportControls: some View {
-            GlassEffectContainer(spacing: 46) {
-                HStack(spacing: 46) {
-                    controlButton("gobackward.10", label: "Back 10 Seconds") {
-                        controller.skip(by: -10)
-                    }
-                    controlButton(
-                        controller.isPlaying || controller.isWaiting ? "pause.fill" : "play.fill",
-                        label: controller.isPlaying || controller.isWaiting ? "Pause" : "Play",
-                        prominent: true,
-                        action: controller.togglePlayback
-                    )
-                    .accessibilityIdentifier(
-                        controller.isPlaying || controller.isWaiting
-                            ? "video-detail.pause"
-                            : "video-detail.play"
-                    )
-                    controlButton("goforward.10", label: "Forward 10 Seconds") {
-                        controller.skip(by: 10)
-                    }
-                }
+                    .glassEffect(.regular, in: .capsule)
             }
         }
 
         private var bottomChrome: some View {
             VStack(spacing: PrismediaSpacing.medium) {
-                HStack(spacing: 32) {
-                    transportControls
+                HStack(alignment: .center, spacing: PrismediaSpacing.large) {
+                    if !controller.badges.isEmpty {
+                        VideoStatusChips(badges: controller.badges, overlaysVideo: true)
+                    }
+                    Spacer(minLength: PrismediaSpacing.section)
                     playbackMenus
-                }
-
-                if !controller.badges.isEmpty {
-                    VideoStatusChips(badges: controller.badges, overlaysVideo: true)
                 }
 
                 TVVideoPlaybackTimeline(controller: controller)
@@ -161,6 +137,10 @@
         }
 
         private func toggleControls() {
+            if controlsVisible {
+                focusedPlaybackMenu = nil
+                playerSurfaceFocused = true
+            }
             controlsVisible.toggle()
             controlsDismissGeneration += 1
         }
@@ -172,24 +152,47 @@
 
         private func handleMoveCommand(_ direction: MoveCommandDirection) {
             revealControls()
+            if let focusedPlaybackMenu {
+                switch direction {
+                case .left:
+                    self.focusedPlaybackMenu = switch focusedPlaybackMenu {
+                    case "subtitles": "audio"
+                    case "speed": "subtitles"
+                    default: "audio"
+                    }
+                case .right:
+                    self.focusedPlaybackMenu = switch focusedPlaybackMenu {
+                    case "audio": "subtitles"
+                    case "subtitles": "speed"
+                    default: "speed"
+                    }
+                case .down:
+                    self.focusedPlaybackMenu = nil
+                    playerSurfaceFocused = true
+                default:
+                    break
+                }
+                return
+            }
             switch direction {
             case .left:
                 controller.skip(by: -10)
             case .right:
                 controller.skip(by: 10)
+            case .up:
+                focusedPlaybackMenu = "audio"
             default:
                 break
             }
         }
 
         private var playbackMenus: some View {
-            GlassEffectContainer(spacing: PrismediaSpacing.medium) {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    audioMenu
-                    subtitleMenu
-                    playbackSpeedMenu
-                }
+            HStack(spacing: PrismediaSpacing.extraLarge) {
+                audioMenu
+                subtitleMenu
+                playbackSpeedMenu
             }
+            .prismediaFocusSection()
         }
 
         private var audioMenu: some View {
@@ -208,12 +211,11 @@
                     }
                 }
             } label: {
-                playbackMenuLabel("Audio", systemImage: "waveform")
+                playbackMenuLabel(systemImage: "waveform")
             }
             .focused($focusedPlaybackMenu, equals: "audio")
             .buttonStyle(.plain)
-            .buttonBorderShape(.capsule)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .buttonBorderShape(.circle)
             .accessibilityLabel("Audio Tracks")
         }
 
@@ -232,12 +234,11 @@
                     }
                 }
             } label: {
-                playbackMenuLabel("Subtitles", systemImage: "captions.bubble")
+                playbackMenuLabel(systemImage: "captions.bubble")
             }
             .focused($focusedPlaybackMenu, equals: "subtitles")
             .buttonStyle(.plain)
-            .buttonBorderShape(.capsule)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .buttonBorderShape(.circle)
             .accessibilityLabel("Subtitles")
         }
 
@@ -252,21 +253,27 @@
                     }
                 }
             } label: {
-                playbackMenuLabel("Speed", systemImage: "speedometer")
+                playbackMenuLabel(systemImage: "speedometer")
             }
             .focused($focusedPlaybackMenu, equals: "speed")
             .buttonStyle(.plain)
-            .buttonBorderShape(.capsule)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .buttonBorderShape(.circle)
             .accessibilityLabel("Playback Speed")
         }
 
-        private func playbackMenuLabel(_ title: String, systemImage: String) -> some View {
-            Label(title, systemImage: systemImage)
-                .font(.callout.weight(.semibold))
-                .padding(.horizontal, PrismediaSpacing.medium)
-                .frame(height: 52)
-                .contentShape(Capsule())
+        private func playbackMenuLabel(systemImage: String) -> some View {
+            Image(systemName: systemImage)
+                .font(.caption.bold())
+                .frame(
+                    width: VideoPlayerControlMetrics.bottomVisualWidth,
+                    height: VideoPlayerControlMetrics.bottomVisualHeight
+                )
+                .glassEffect(.regular, in: .circle)
+                .frame(
+                    width: VideoPlayerControlMetrics.bottomHitSize,
+                    height: VideoPlayerControlMetrics.bottomHitSize
+                )
+                .contentShape(Circle())
         }
 
         private func menuChoice(
@@ -283,28 +290,6 @@
             }
         }
 
-        private func controlButton(
-            _ systemImage: String,
-            label: String,
-            prominent: Bool = false,
-            action: @escaping () -> Void
-        ) -> some View {
-            Button(action: action) {
-                Image(systemName: systemImage)
-                    .font(.system(size: prominent ? 31 : 25, weight: .semibold))
-                    .frame(width: prominent ? 76 : 64, height: prominent ? 76 : 64)
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .buttonBorderShape(.circle)
-            .glassEffect(
-                prominent
-                    ? .regular.tint(artworkPrimaryAccent).interactive()
-                    : .regular.interactive(),
-                in: .circle
-            )
-            .accessibilityLabel(label)
-        }
     }
 
     #if DEBUG

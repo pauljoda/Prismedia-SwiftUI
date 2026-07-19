@@ -730,6 +730,9 @@ public final class VideoPlaybackController {
         if duration.isFinite, duration > 0 { self.duration = duration }
         self.isPlaying = isPlaying
         self.isWaiting = isWaiting
+        if isPlaying {
+            playbackReporter.playbackStarted(positionSeconds: self.currentTime)
+        }
         playbackReporter.observePlayback(positionSeconds: self.currentTime, isPlaying: isPlaying)
         activeSubtitleContent = WebVTTSubtitleParser.activeContent(
             at: self.currentTime,

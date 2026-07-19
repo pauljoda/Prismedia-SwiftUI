@@ -27,8 +27,10 @@ The shared source tree is organized vertically:
 See [Docs/Architecture.md](Docs/Architecture.md) for the dependency rules, feature template, playback boundaries, and validation contract. `AGENTS.md` is the enforceable engineering and native-design contract.
 
 Before building the tvOS target for the first time, run
-`Scripts/bootstrap-tvvlckit.sh` to install the pinned compatibility-player
-framework under the ignored `Carthage/Build` directory.
+`Scripts/bootstrap-tvvlckit.sh` to build the pinned compatibility-player with
+MLP/TrueHD decoding enabled and install it under the ignored `Carthage/Build`
+directory. This is a one-time source build, so the initial bootstrap takes
+longer than downloading a prebuilt framework.
 
 ## Native design
 
