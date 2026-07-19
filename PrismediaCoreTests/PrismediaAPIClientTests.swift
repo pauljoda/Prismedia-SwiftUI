@@ -109,7 +109,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) })
         XCTAssertEqual(items["kind"], "book")
         XCTAssertEqual(items["sort"], "added")
-        XCTAssertEqual(items["sortDir"], "desc")
+        XCTAssertEqual(items["sortDir"], "asc")
         XCTAssertEqual(items["seed"], "42")
         XCTAssertEqual(items["favorite"], "true")
         XCTAssertEqual(items["organized"], "false")

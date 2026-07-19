@@ -8,10 +8,7 @@ public enum EntityGridSort: String, CaseIterable, Codable, Hashable, Sendable, I
     public var id: String { rawValue }
 
     public var defaultDescending: Bool {
-        switch self {
-        case .added, .rating, .references: true
-        case .title, .random: false
-        }
+        false
     }
 
     public var label: String {

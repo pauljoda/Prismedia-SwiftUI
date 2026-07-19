@@ -72,15 +72,45 @@ final class StaticEntityGridLoaderTests: XCTestCase {
         XCTAssertEqual(second.totalCount, 3)
     }
 
+    func testStaticLoaderDefaultsChildSequenceToAscending() async throws {
+        let tenth = thumbnail(
+            id: 10,
+            kind: .video,
+            title: "Episode Ten",
+            isFavorite: false,
+            sortOrder: 10
+        )
+        let first = thumbnail(
+            id: 1,
+            kind: .video,
+            title: "Episode One",
+            isFavorite: false,
+            sortOrder: 1
+        )
+        let loader = StaticEntityGridLoader(items: [tenth, first])
+
+        let response = try await loader.load(
+            query: EntityListQuery(kind: .video, sort: "added"),
+            limit: 48,
+            search: nil,
+            cursor: nil
+        )
+
+        XCTAssertEqual(response.items.map(\.sortOrder), [1, 10])
+    }
+
     private func thumbnail(
         id: Int,
+        kind: EntityKind = .image,
         title: String,
-        isFavorite: Bool
+        isFavorite: Bool,
+        sortOrder: Int? = nil
     ) -> EntityThumbnail {
         EntityThumbnail(
             id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", id))!,
-            kind: .image,
+            kind: kind,
             title: title,
+            sortOrder: sortOrder,
             isFavorite: isFavorite
         )
     }

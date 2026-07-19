@@ -77,7 +77,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
     ) throws -> EntityGridControls {
         var controls = EntityGridControls(baselineQuery: EntityListQuery())
         controls.sort = try container.decodeIfPresent(String.self, forKey: .sort).flatMap(EntityGridSort.init)
-        controls.sortDescending = try container.decodeIfPresent(Bool.self, forKey: .sortDescending) ?? true
+        controls.sortDescending = try container.decodeIfPresent(Bool.self, forKey: .sortDescending) ?? false
         controls.filters.favoriteOnly = try container.decodeIfPresent(Bool.self, forKey: .favoriteOnly) ?? false
         controls.filters.organization =
             try container.decodeIfPresent(String.self, forKey: .organization)

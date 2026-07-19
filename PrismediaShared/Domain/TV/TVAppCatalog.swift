@@ -45,6 +45,7 @@ public enum TVAppCatalog {
             query: EntityListQuery(
                 kinds: [.movie, .video, .videoSeries, .videoSeason],
                 sort: "last-played",
+                sortDescending: true,
                 status: "in-progress"
             ),
             limit: 20
@@ -56,6 +57,7 @@ public enum TVAppCatalog {
             query: EntityListQuery(
                 kinds: [.movie, .video, .videoSeries, .videoSeason],
                 sort: "last-played",
+                sortDescending: true,
                 status: "watched"
             ),
             limit: 20
@@ -64,7 +66,7 @@ public enum TVAppCatalog {
             id: "movies",
             title: "Recently Added Movies",
             systemImage: "movieclapper",
-            query: EntityListQuery(kind: .movie, sort: "added"),
+            query: EntityListQuery(kind: .movie, sort: "added", sortDescending: true),
             limit: 20,
             destinationTabID: "movies"
         ),
@@ -72,7 +74,7 @@ public enum TVAppCatalog {
             id: "series",
             title: "Recently Added Series",
             systemImage: "rectangle.stack",
-            query: EntityListQuery(kind: .videoSeries, sort: "added"),
+            query: EntityListQuery(kind: .videoSeries, sort: "added", sortDescending: true),
             limit: 20,
             destinationTabID: "series"
         ),

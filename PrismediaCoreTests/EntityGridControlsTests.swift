@@ -3,6 +3,15 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityGridControlsTests: XCTestCase {
+    func testListAndSortControlsDefaultToAscending() {
+        let query = EntityListQuery(kind: .video, sort: "added")
+        let controls = EntityGridControls(baselineQuery: query)
+
+        XCTAssertFalse(query.sortDescending)
+        XCTAssertFalse(controls.sortDescending)
+        XCTAssertTrue(EntityGridSort.allCases.allSatisfy { !$0.defaultDescending })
+    }
+
     func testPersistedPreferencesRestoreControlsWithoutReplacingRouteDefaults() throws {
         let baseline = EntityListQuery(
             kind: .book,
