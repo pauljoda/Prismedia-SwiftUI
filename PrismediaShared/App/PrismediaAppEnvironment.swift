@@ -22,6 +22,7 @@ public final class PrismediaAppEnvironment {
     public let imagePlaybackSession = EntityImagePlaybackSession()
 
     private let sessionStore: SessionStoring
+    private let localSessionStateCleaner: any LocalSessionStateClearing
     private let serverPreferenceStore: ServerPreferenceStoring
     private let nsfwPreferenceStore: NsfwPreferenceStoring
     private let clientFactory: (URL) -> PrismediaAPIClient
@@ -57,6 +58,7 @@ public final class PrismediaAppEnvironment {
 
     public init(
         sessionStore: SessionStoring,
+        localSessionStateCleaner: any LocalSessionStateClearing = UserDefaultsLocalSessionStateCleaner(),
         serverPreferenceStore: ServerPreferenceStoring = UserDefaultsServerPreferenceStore(),
         nsfwPreferenceStore: NsfwPreferenceStoring = UserDefaultsNsfwPreferenceStore(),
         clientFactory: @escaping (URL) -> PrismediaAPIClient = { PrismediaAPIClient(serverURL: $0) },
@@ -67,6 +69,7 @@ public final class PrismediaAppEnvironment {
         resetSessionOnInit: Bool = false
     ) {
         self.sessionStore = sessionStore
+        self.localSessionStateCleaner = localSessionStateCleaner
         self.serverPreferenceStore = serverPreferenceStore
         self.nsfwPreferenceStore = nsfwPreferenceStore
         self.clientFactory = clientFactory
@@ -147,14 +150,15 @@ public final class PrismediaAppEnvironment {
     }
 
     public func signOut() async {
-        if let client {
-            try? await client.logout()
-        }
-
+        let signingOutClient = client
         try? await sessionStore.clear()
         session = nil
         client = nil
         allowsNsfwContent = false
+        await clearLocalSessionState()
+        if let signingOutClient {
+            try? await signingOutClient.logout()
+        }
     }
 
     /// Leaves the authenticated shell before a destructive restore begins. The
@@ -166,6 +170,7 @@ public final class PrismediaAppEnvironment {
         session = nil
         client = nil
         allowsNsfwContent = false
+        await clearLocalSessionState()
     }
 
     public func finishDatabaseRestore() {
@@ -208,6 +213,7 @@ public final class PrismediaAppEnvironment {
             self.session = nil
             self.client = nil
             allowsNsfwContent = false
+            await clearLocalSessionState()
         } catch {
             // A transient server failure must not discard a valid local session.
         }
@@ -225,6 +231,9 @@ public final class PrismediaAppEnvironment {
             allowsNsfwContent = stored.map { storedPreference(for: $0.user) } ?? false
             client = stored.map(configuredClient(for:))
             isRestoringSession = false
+            if stored == nil {
+                await clearLocalSessionState()
+            }
         } catch SessionStoreError.temporarilyUnavailable {
             // A locked-device cold launch can make a foreground-only Keychain
             // item temporarily unreadable. Keep the app in restoration instead
@@ -235,6 +244,7 @@ public final class PrismediaAppEnvironment {
             client = nil
             allowsNsfwContent = false
             isRestoringSession = false
+            await clearLocalSessionState()
         }
     }
 
@@ -269,5 +279,12 @@ public final class PrismediaAppEnvironment {
     private func publishContentChange() {
         entityListRevision &+= 1
         contentRevision &+= 1
+    }
+
+    private func clearLocalSessionState() async {
+        imagePlaybackSession.reset()
+        await localSessionStateCleaner.clear()
+        await artworkLoader.clearCache()
+        await artworkPaletteLoader.clearCache()
     }
 }

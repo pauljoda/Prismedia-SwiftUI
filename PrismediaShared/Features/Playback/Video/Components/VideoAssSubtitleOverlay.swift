@@ -5,12 +5,18 @@ import SwiftUI
 struct VideoAssSubtitleOverlay: View {
     let contents: String
     let player: AVPlayer
+    let additionalBottomInset: CGFloat
 
     @State private var renderer: AssSubtitlesRenderer
 
-    init(contents: String, player: AVPlayer) {
+    init(
+        contents: String,
+        player: AVPlayer,
+        additionalBottomInset: CGFloat = 0
+    ) {
         self.contents = contents
         self.player = player
+        self.additionalBottomInset = additionalBottomInset
         let fontsPath = Bundle.main.resourceURL ?? URL(fileURLWithPath: "/")
         _renderer = State(
             initialValue: AssSubtitlesRenderer(
@@ -28,6 +34,7 @@ struct VideoAssSubtitleOverlay: View {
                 player: player,
                 updateInterval: CMTime(value: 1, timescale: 10)
             )
+            .offset(y: -additionalBottomInset)
             .allowsHitTesting(false)
             .onAppear { renderer.loadTrack(content: contents) }
             .onChange(of: contents) { _, contents in

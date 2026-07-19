@@ -54,4 +54,16 @@ final class EntityImagePlaybackSessionTests: XCTestCase {
         XCTAssertTrue(session.isMuted)
         XCTAssertTrue(session.isMuted(for: secondClaimID))
     }
+
+    func testResetReleasesActivePlaybackAndRestoresMutedDefault() {
+        let session = EntityImagePlaybackSession()
+        let claimID = UUID()
+        session.toggleMute(entityID: UUID(), claimID: claimID)
+
+        session.reset()
+
+        XCTAssertNil(session.activeEntityID)
+        XCTAssertTrue(session.isMuted)
+        XCTAssertTrue(session.isMuted(for: claimID))
+    }
 }

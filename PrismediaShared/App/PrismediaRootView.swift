@@ -52,6 +52,10 @@ public struct PrismediaRootView: View {
             guard scenePhase == .active, environment.isRestoringSession else { return }
             await environment.restoreSession()
         }
+        .onChange(of: sessionScope) { oldScope, newScope in
+            guard let oldScope, oldScope != newScope else { return }
+            router.reset()
+        }
     }
 
     private var signedInView: some View {
@@ -77,6 +81,12 @@ public struct PrismediaRootView: View {
         }
 
         return environment.client == nil ? .signedOut : .signedIn
+    }
+
+    private var sessionScope: String? {
+        environment.session.map {
+            "\($0.serverURL.absoluteString)|\($0.user.id.uuidString.lowercased())"
+        }
     }
 
     @ViewBuilder

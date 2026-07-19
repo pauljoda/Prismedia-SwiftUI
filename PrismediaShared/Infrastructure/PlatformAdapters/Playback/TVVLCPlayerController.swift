@@ -35,6 +35,7 @@
             private weak var controller: VideoPlaybackController?
             private var mediaPlayer: VLCMediaPlayer?
             private var request: VideoCompatibilityPlaybackRequest?
+            private var pausesAfterOpening = false
 
             init(controller: VideoPlaybackController) {
                 self.controller = controller
@@ -57,6 +58,7 @@
 
                 controller?.attachCompatibilityPlayback(commands(for: player))
                 controller?.videoSurfaceDidAttach(isReadyForDisplay: false)
+                pausesAfterOpening = controller?.hasRequestedPlayback == false
                 player.play()
             }
 
@@ -79,6 +81,12 @@
                     player.rate = request?.playbackRate ?? 1
                     applyInitialAudioSelection(to: player)
                     controller?.videoSurfaceReadinessChanged(true)
+                    if pausesAfterOpening {
+                        pausesAfterOpening = false
+                        player.pause()
+                        publishState(isPlaying: false, isWaiting: false)
+                        return
+                    }
                     publishState(isPlaying: true, isWaiting: false)
                 case .opening, .buffering, .esAdded:
                     publishState(isPlaying: false, isWaiting: true)
@@ -151,6 +159,7 @@
                 mediaPlayer?.stop()
                 mediaPlayer?.drawable = nil
                 mediaPlayer = nil
+                pausesAfterOpening = false
             }
         }
     }

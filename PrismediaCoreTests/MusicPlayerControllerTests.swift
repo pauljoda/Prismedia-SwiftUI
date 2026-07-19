@@ -265,6 +265,33 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(publicationCount, 1)
     }
 
+    func testDiscardingSessionPlaybackStopsAndRemovesRestorationWithoutReportingProgress() async {
+        let track = makeTrack(idSuffix: 1)
+        let service = MusicPlaybackServiceStub()
+        let store = MusicPlaybackStateStoreSpy()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            stateStore: store
+        )
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Private Audiobook",
+                playbackOwnerEntityKind: .book
+            )
+        )
+
+        controller.discardPlaybackState()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertNil(controller.currentTrack)
+        XCTAssertTrue(controller.queue.tracks.isEmpty)
+        XCTAssertEqual(store.clearCallCount, 1)
+        XCTAssertTrue(service.playbackUpdates.isEmpty)
+    }
+
     func testRestoresQueueAndElapsedPositionWithoutAutoplaying() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
         let restoration = MusicPlaybackRestoration(
@@ -584,6 +611,7 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private(set) var skippedTrackIDs: [UUID] = []
     private(set) var skippedPositions: [Double?] = []
     private(set) var skippedDurations: [Double?] = []
+    private(set) var playbackUpdates: [(id: UUID, resumeSeconds: Double, completed: Bool)] = []
 
     init(missingStreamIDs: Set<UUID> = []) {
         self.missingStreamIDs = missingStreamIDs
@@ -610,7 +638,9 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
         skippedDurations.append(durationSeconds)
     }
 
-    func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {}
+    func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
+        playbackUpdates.append((id, resumeSeconds, completed))
+    }
 }
 
 private final class TestMusicPlaybackClock: MusicPlaybackClock, @unchecked Sendable {

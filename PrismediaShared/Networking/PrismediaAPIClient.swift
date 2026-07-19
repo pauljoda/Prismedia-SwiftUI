@@ -444,7 +444,8 @@ public struct PrismediaAPIClient: Sendable {
         try await negotiateVideoPlayback(
             videoID: videoID,
             mode: forceTranscode ? .transcode : .automatic,
-            audioStreamIndex: nil
+            audioStreamIndex: nil,
+            preferredEngine: .automatic
         )
     }
 
@@ -456,7 +457,8 @@ public struct PrismediaAPIClient: Sendable {
         try await negotiateVideoPlayback(
             videoID: videoID,
             mode: forceTranscode ? .transcode : .automatic,
-            audioStreamIndex: audioStreamIndex
+            audioStreamIndex: audioStreamIndex,
+            preferredEngine: .automatic
         )
     }
 
@@ -465,13 +467,28 @@ public struct PrismediaAPIClient: Sendable {
         mode: VideoPlaybackNegotiationMode,
         audioStreamIndex: Int? = nil
     ) async throws -> VideoPlaybackPlan {
+        try await negotiateVideoPlayback(
+            videoID: videoID,
+            mode: mode,
+            audioStreamIndex: audioStreamIndex,
+            preferredEngine: .automatic
+        )
+    }
+
+    public func negotiateVideoPlayback(
+        videoID: UUID,
+        mode: VideoPlaybackNegotiationMode,
+        audioStreamIndex: Int? = nil,
+        preferredEngine: VideoPlaybackEngine
+    ) async throws -> VideoPlaybackPlan {
         let response = try await send(
             VideoPlaybackInfoResponse.self,
             path: "/Items/\(videoID.uuidString.lowercased())/PlaybackInfo",
             method: "POST",
             body: ApplePlaybackInfoRequest(
                 mode: mode,
-                audioStreamIndex: audioStreamIndex
+                audioStreamIndex: audioStreamIndex,
+                preferredEngine: preferredEngine
             )
         )
         guard let source = response.mediaSources.first else {
@@ -502,7 +519,10 @@ public struct PrismediaAPIClient: Sendable {
             $0.type.caseInsensitiveCompare("Audio") == .orderedSame
         }
         let sourceAudio = sourceAudioStreams.first(where: { $0.isDefault == true }) ?? sourceAudioStreams.first
-        let renderer = source.playbackRenderer(delivery: delivery)
+        let renderer = source.playbackRenderer(
+            delivery: delivery,
+            preferredEngine: preferredEngine
+        )
         return VideoPlaybackPlan(
             videoID: videoID,
             url: url,

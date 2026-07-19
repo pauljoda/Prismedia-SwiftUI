@@ -10,6 +10,7 @@ struct VideoEntityPlaybackView: View {
     let tvLayout: TVVideoPlaybackLayout
     let presentsFullscreenOnTV: Bool
     let onFullscreenDismiss: () -> Void
+    let onPlaybackProgressCommitted: () -> Void
     let onAdvance: (EntityLink) -> Void
 
     init(
@@ -22,6 +23,7 @@ struct VideoEntityPlaybackView: View {
         tvLayout: TVVideoPlaybackLayout = .standard,
         presentsFullscreenOnTV: Bool = false,
         onFullscreenDismiss: @escaping () -> Void = {},
+        onPlaybackProgressCommitted: @escaping () -> Void = {},
         onAdvance: @escaping (EntityLink) -> Void
     ) {
         self.detail = detail
@@ -33,6 +35,7 @@ struct VideoEntityPlaybackView: View {
         self.tvLayout = tvLayout
         self.presentsFullscreenOnTV = presentsFullscreenOnTV
         self.onFullscreenDismiss = onFullscreenDismiss
+        self.onPlaybackProgressCommitted = onPlaybackProgressCommitted
         self.onAdvance = onAdvance
     }
 
@@ -192,6 +195,7 @@ struct VideoEntityPlaybackView: View {
                 let controller = presentation.controller
                 TVFullscreenPlayerSurface(
                     controller: controller,
+                    title: videoDetail?.title ?? detail.title,
                     onRequestDismiss: { tvFullscreenPresentation = nil }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -225,16 +229,27 @@ struct VideoEntityPlaybackView: View {
             )
         }
 
-        private func stopTVPlayback() {
-            playbackSession?.reset()
-            playbackController?.stop()
+        private func stopTVPlayback() -> VideoPlaybackController? {
+            let controller = playbackController
+            if playbackSession?.activeController === controller {
+                playbackSession?.reset()
+            } else {
+                controller?.stop()
+            }
             playbackController = nil
+            return controller
         }
 
         private func finishTVFullscreenPlayback() {
             isFullscreenPresented = false
-            stopTVPlayback()
+            let controller = stopTVPlayback()
             _ = advanceNavigation.fullscreenDidDismiss()
+            onFullscreenDismiss()
+            Task {
+                await controller?.waitForPendingPlaybackReports()
+                guard !Task.isCancelled else { return }
+                onPlaybackProgressCommitted()
+            }
         }
 
         private func label(for action: TVPlaybackAction, resumeSeconds: Double) -> String {
@@ -294,6 +309,14 @@ struct VideoEntityPlaybackView: View {
         private func startPlayback(at startSeconds: Double? = nil) {
             warmPlayback()
             preparation.requestPlayback(from: startSeconds)
+            #if DEBUG
+                if PrismediaUITestBootstrap.pausesVideoPlayback() {
+                    Task {
+                        await preparation.waitUntilSettled()
+                        preparation.controller?.pause()
+                    }
+                }
+            #endif
         }
 
         private func warmPlayback() {

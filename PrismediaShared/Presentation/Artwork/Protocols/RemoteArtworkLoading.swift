@@ -8,6 +8,7 @@ public protocol RemoteArtworkLoading: Sendable {
     func image(for url: URL, maxPixelSize: Int) async throws -> CGImage
     func cachedImage(for url: URL, maxPixelSize: Int) -> CGImage?
     func prewarm(_ urls: [URL]) async
+    func clearCache() async
 }
 
 extension RemoteArtworkLoading {
@@ -21,6 +22,8 @@ extension RemoteArtworkLoading {
     public func cachedImage(for url: URL, maxPixelSize: Int) -> CGImage? {
         nil
     }
+
+    public func clearCache() async {}
 }
 
 func downsampleRemoteArtworkImage(_ data: Data, maxPixelSize: Int) throws -> CGImage {

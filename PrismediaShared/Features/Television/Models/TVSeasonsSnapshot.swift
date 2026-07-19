@@ -7,6 +7,7 @@ struct TVSeasonsSnapshot: Equatable, Sendable {
     var episodes: [EntityThumbnail] = []
     var selectedEpisode: EntityThumbnail?
     var selectedEpisodeDetail: EntityDetail?
+    var fullscreenRequest: TVEpisodePlaybackRequest?
     var isLoadingSeason = false
     var seasonErrorMessage: String?
 
@@ -45,5 +46,34 @@ struct TVSeasonsSnapshot: Equatable, Sendable {
         selectedEpisode = episodes.first { $0.id == preferredEpisodeID } ?? episodes.first
         selectedEpisodeDetail = nil
         seasonErrorMessage = nil
+    }
+
+    mutating func refreshSeason(_ detail: EntityDetail) {
+        let selectedEpisodeID = selectedEpisode?.id
+        episodes = TVSeasonsPresentation.episodes(in: detail)
+        selectedEpisode = episodes.first { $0.id == selectedEpisodeID } ?? episodes.first
+        if selectedEpisode?.id != selectedEpisodeID {
+            selectedEpisodeDetail = nil
+        }
+        seasonErrorMessage = nil
+    }
+
+    mutating func installEpisodeDetail(_ detail: EntityDetail) {
+        guard selectedEpisode?.id == detail.id else { return }
+        selectedEpisodeDetail = detail
+    }
+
+    mutating func invalidateEpisodeDetail(id: UUID) {
+        guard selectedEpisode?.id == id else { return }
+        selectedEpisodeDetail = nil
+    }
+
+    mutating func presentFullscreen(_ request: TVEpisodePlaybackRequest) {
+        fullscreenRequest = request
+    }
+
+    mutating func finishFullscreen(requestID: UUID) {
+        guard fullscreenRequest?.id == requestID else { return }
+        fullscreenRequest = nil
     }
 }

@@ -3,6 +3,7 @@
 
     struct TVFullscreenPlayerSurface: View {
         let controller: VideoPlaybackController
+        let title: String
         let onRequestDismiss: () -> Void
 
         var body: some View {
@@ -10,6 +11,7 @@
                 TVCompatibilityPlayerView(
                     controller: controller,
                     request: request,
+                    title: title,
                     onRequestDismiss: onRequestDismiss
                 )
             } else {
@@ -47,7 +49,11 @@
                 videoID: UUID(uuidString: "A57450E8-AC6C-4930-9C1E-B3995675D702")!,
                 service: VideoPlaybackPreviewService()
             )
-            TVFullscreenPlayerSurface(controller: controller, onRequestDismiss: {})
+            TVFullscreenPlayerSurface(
+                controller: controller,
+                title: "Signal in the Static",
+                onRequestDismiss: {}
+            )
         }
     #endif
 #endif

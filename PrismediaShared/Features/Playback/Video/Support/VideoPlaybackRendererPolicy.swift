@@ -1,4 +1,36 @@
+import Foundation
+
 enum VideoPlaybackRendererPolicy {
+    static func renderer(
+        delivery: VideoPlaybackDelivery,
+        sourceContainer: String?,
+        dynamicRange: VideoPlaybackDynamicRange,
+        bitDepth: Int?,
+        supportsCompatibilityRenderer: Bool,
+        preferredEngine: VideoPlaybackEngine
+    ) -> VideoPlaybackRenderer {
+        guard supportsCompatibilityRenderer else { return .native }
+        switch preferredEngine {
+        case .native:
+            return .native
+        case .vlc:
+            return .compatibility
+        case .automatic:
+            let container = sourceContainer?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if delivery == .direct, container == "mkv" || container == "matroska" {
+                return .compatibility
+            }
+            return renderer(
+                delivery: delivery,
+                dynamicRange: dynamicRange,
+                bitDepth: bitDepth,
+                supportsCompatibilityRenderer: supportsCompatibilityRenderer
+            )
+        }
+    }
+
     static func renderer(
         delivery: VideoPlaybackDelivery,
         dynamicRange: VideoPlaybackDynamicRange,

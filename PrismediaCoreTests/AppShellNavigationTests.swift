@@ -175,6 +175,29 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
+    func testResetRemovesAllAccountNavigationAndSearchState() {
+        let router = PrismediaAppRouter(
+            initialMode: ModeCatalog.video,
+            initialDestinationID: "movies",
+            initialSearchSelected: true
+        )
+        router.searchText = "private search"
+        router.searchFilters = SearchHubFilterState(selectedKinds: [.movie])
+        router.setPath([EntityLink(entityID: UUID(), kind: .movie)], for: "movies")
+        router.onWillOpenEntity = {}
+
+        router.reset()
+
+        XCTAssertEqual(router.navigation.modeID, "overview")
+        XCTAssertEqual(router.navigation.destinationID, "dashboard")
+        XCTAssertEqual(router.selectedTab, .destination("dashboard"))
+        XCTAssertEqual(router.searchText, "")
+        XCTAssertEqual(router.searchFilters, SearchHubFilterState())
+        XCTAssertTrue(router.path(for: "movies").isEmpty)
+        XCTAssertNil(router.onWillOpenEntity)
+    }
+
+    @MainActor
     func testAppRouterPerformsSynchronousPlaybackHandoffBeforeOpeningEntity() {
         let router = PrismediaAppRouter(initialMode: ModeCatalog.video, initialDestinationID: "movies")
         let entity = EntityThumbnail(id: UUID(), kind: .movie, title: "Arrival")

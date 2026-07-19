@@ -8,8 +8,9 @@ import SwiftUI
         let episodeDetail: EntityDetail?
         let loader: any EntityDetailLoading
         let playbackService: (any VideoPlaybackServicing)?
-        let fullscreenEpisodeID: UUID?
-        let fullscreenRequestID: UUID?
+        let fullscreenRequest: TVEpisodePlaybackRequest?
+        let onFullscreenDismiss: (TVEpisodePlaybackRequest?, UUID) -> Void
+        let onPlaybackProgressCommitted: (UUID) -> Void
         let onAdvance: (EntityLink) -> Void
 
         @ViewBuilder
@@ -22,10 +23,16 @@ import SwiftUI
                     playbackService: playbackService,
                     preparation: preparation,
                     tvLayout: .compact,
-                    presentsFullscreenOnTV: fullscreenEpisodeID == episodeDetail.id,
+                    presentsFullscreenOnTV: fullscreenRequest?.episodeID == episodeDetail.id,
+                    onFullscreenDismiss: {
+                        onFullscreenDismiss(fullscreenRequest, episodeDetail.id)
+                    },
+                    onPlaybackProgressCommitted: {
+                        onPlaybackProgressCommitted(episodeDetail.id)
+                    },
                     onAdvance: onAdvance
                 )
-                .id(episodeDetail.id.uuidString + "-" + (fullscreenRequestID?.uuidString ?? "manual"))
+                .id(episodeDetail.id.uuidString + "-" + (fullscreenRequest?.id.uuidString ?? "manual"))
                 .frame(minHeight: 80)
             } else if episode != nil {
                 HStack(spacing: PrismediaSpacing.extraLarge) {
@@ -54,8 +61,9 @@ import SwiftUI
                 episodeDetail: TVSeasonsPreviewData.episode,
                 loader: TVSeasonsPreviewData.loader,
                 playbackService: VideoPlaybackPreviewService(),
-                fullscreenEpisodeID: nil,
-                fullscreenRequestID: nil,
+                fullscreenRequest: nil,
+                onFullscreenDismiss: { _, _ in },
+                onPlaybackProgressCommitted: { _ in },
                 onAdvance: { _ in }
             )
         }
@@ -68,8 +76,9 @@ import SwiftUI
                 episodeDetail: nil,
                 loader: TVSeasonsPreviewData.loader,
                 playbackService: nil,
-                fullscreenEpisodeID: nil,
-                fullscreenRequestID: nil,
+                fullscreenRequest: nil,
+                onFullscreenDismiss: { _, _ in },
+                onPlaybackProgressCommitted: { _ in },
                 onAdvance: { _ in }
             )
         }

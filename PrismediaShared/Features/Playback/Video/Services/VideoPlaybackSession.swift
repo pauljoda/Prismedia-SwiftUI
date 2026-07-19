@@ -15,6 +15,8 @@ final class VideoPlaybackSession {
     @ObservationIgnored
     private let service: any VideoPlaybackServicing
     @ObservationIgnored
+    private let preferences: VideoPlaybackPreferences
+    @ObservationIgnored
     private let pictureInPictureHandoff: VideoPictureInPictureHandoff
     @ObservationIgnored
     private let systemPlayback: VideoSystemPlaybackIntegration
@@ -33,11 +35,13 @@ final class VideoPlaybackSession {
 
     init(
         service: any VideoPlaybackServicing,
+        preferences: VideoPlaybackPreferences = VideoPlaybackPreferences(),
         pictureInPictureHandoff: VideoPictureInPictureHandoff = .live,
         systemPlayback: VideoSystemPlaybackIntegration = .inactive,
         displayCriteria: VideoDisplayCriteriaIntegration = .inactive
     ) {
         self.service = service
+        self.preferences = preferences
         self.pictureInPictureHandoff = pictureInPictureHandoff
         self.systemPlayback = systemPlayback
         self.displayCriteria = displayCriteria
@@ -76,7 +80,8 @@ final class VideoPlaybackSession {
             service: service,
             audioSession: SystemVideoAudioSession(),
             sidecarSubtitles: Self.subtitles(in: videoDetail),
-            displayCriteria: displayCriteria
+            displayCriteria: displayCriteria,
+            preferredEngine: preferences.engine
         )
         controller.pictureInPicture.onRestore = { [weak self] in
             guard let self, let restoreLink = self.activeRestoreLink else { return }

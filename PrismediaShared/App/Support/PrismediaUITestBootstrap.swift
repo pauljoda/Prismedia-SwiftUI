@@ -143,6 +143,16 @@
             return seconds
         }
 
+        static func videoPlaybackEngine(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> VideoPlaybackEngine? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let value = environment["PRISMEDIA_UI_TEST_VIDEO_ENGINE"]
+            else { return nil }
+            return VideoPlaybackEngine(rawValue: value)
+        }
+
         static func tvTabID(
             arguments: [String] = CommandLine.arguments,
             environment: [String: String] = ProcessInfo.processInfo.environment
@@ -154,6 +164,19 @@
 
             return tabID
         }
+
+        #if os(tvOS)
+            static func tvSettingsDestination(
+                arguments: [String] = CommandLine.arguments,
+                environment: [String: String] = ProcessInfo.processInfo.environment
+            ) -> TVSettingsDestination? {
+                guard arguments.contains("-prismedia-ui-testing"),
+                    let value = environment["PRISMEDIA_UI_TEST_TV_SETTINGS_DESTINATION"]
+                else { return nil }
+
+                return TVSettingsDestination(rawValue: value)
+            }
+        #endif
 
         static func startsEntityDetailAtBottom(
             arguments: [String] = CommandLine.arguments,

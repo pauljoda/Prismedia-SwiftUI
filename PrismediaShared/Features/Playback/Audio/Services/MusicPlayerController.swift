@@ -176,6 +176,16 @@ public final class MusicPlayerController {
 
     public func clearPlayback() {
         reportAudiobookProgress(completed: false)
+        resetPlaybackState()
+    }
+
+    public func discardPlaybackState() {
+        pendingPlaybackReport?.cancel()
+        pendingPlaybackReport = nil
+        resetPlaybackState()
+    }
+
+    private func resetPlaybackState() {
         engine.pause()
         queue = MusicQueue(tracks: [])
         activeQueueID = UUID()

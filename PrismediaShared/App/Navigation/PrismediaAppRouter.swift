@@ -160,4 +160,16 @@ public final class PrismediaAppRouter {
         guard case .destination = selectedTab else { return }
         selectedTab = .destination(navigation.destinationID)
     }
+
+    public func reset() {
+        navigation = AppShellNavigation(
+            mode: ModeCatalog.overview,
+            destinationID: ModeCatalog.overview.destinations.first?.id ?? "dashboard"
+        )
+        selectedTab = .destination(navigation.destinationID)
+        searchText = ""
+        searchFilters = SearchHubFilterState()
+        navigationPaths.removeAll()
+        onWillOpenEntity = nil
+    }
 }

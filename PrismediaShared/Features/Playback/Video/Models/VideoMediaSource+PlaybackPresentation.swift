@@ -23,13 +23,18 @@ extension VideoMediaSource {
         )
     }
 
-    func playbackRenderer(delivery: VideoPlaybackDelivery) -> VideoPlaybackRenderer {
+    func playbackRenderer(
+        delivery: VideoPlaybackDelivery,
+        preferredEngine: VideoPlaybackEngine = .automatic
+    ) -> VideoPlaybackRenderer {
         guard let metadata = playbackDisplayMetadata(delivery: delivery) else { return .native }
         return VideoPlaybackRendererPolicy.renderer(
             delivery: delivery,
+            sourceContainer: container,
             dynamicRange: metadata.dynamicRange,
             bitDepth: metadata.bitDepth,
-            supportsCompatibilityRenderer: VideoPlaybackRendererPolicy.platformSupportsCompatibilityRenderer
+            supportsCompatibilityRenderer: VideoPlaybackRendererPolicy.platformSupportsCompatibilityRenderer,
+            preferredEngine: preferredEngine
         )
     }
 

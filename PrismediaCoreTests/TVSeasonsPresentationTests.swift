@@ -163,9 +163,103 @@ final class TVSeasonsPresentationTests: XCTestCase {
         XCTAssertEqual(snapshot.selectedEpisode?.id, progressEpisode.id)
     }
 
+    func testEpisodeDescriptionPrefersLoadedEpisodeDetail() {
+        let episode = thumbnail(kind: .video, order: 1)
+        let episodeDetail = detail(
+            kind: .video,
+            children: [],
+            description: "The episode-specific description."
+        )
+
+        XCTAssertEqual(
+            TVEpisodeDescriptionPresentation.text(
+                episode: episode,
+                episodeDetail: episodeDetail,
+                seriesDescription: "The series description."
+            ),
+            "The episode-specific description."
+        )
+    }
+
+    func testEpisodeDescriptionFallsBackFromThumbnailToSeries() {
+        let episode = thumbnail(kind: .video, order: 1, summary: "Episode summary")
+
+        XCTAssertEqual(
+            TVEpisodeDescriptionPresentation.text(
+                episode: episode,
+                episodeDetail: nil,
+                seriesDescription: "Series description"
+            ),
+            "Episode summary"
+        )
+        XCTAssertEqual(
+            TVEpisodeDescriptionPresentation.text(
+                episode: thumbnail(kind: .video, order: 1),
+                episodeDetail: nil,
+                seriesDescription: "Series description"
+            ),
+            "Series description"
+        )
+    }
+
+    func testRefreshingASeasonPreservesSelectionAndUpdatesEpisodeProgress() {
+        let selectedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let first = thumbnail(kind: .video, order: 1)
+        let selected = thumbnail(
+            id: selectedID.uuidString,
+            kind: .video,
+            order: 2
+        )
+        let refreshedSelected = thumbnail(
+            id: selectedID.uuidString,
+            kind: .video,
+            order: 2,
+            progress: 0.64,
+            resumeSeconds: 1_800
+        )
+        var snapshot = TVSeasonsSnapshot()
+        snapshot.installSeason(
+            detail(
+                kind: .videoSeason,
+                children: [.init(kind: .video, label: "Episodes", entities: [first, selected], code: nil)]
+            ),
+            preferredEpisodeID: selectedID
+        )
+
+        snapshot.refreshSeason(
+            detail(
+                kind: .videoSeason,
+                children: [
+                    .init(kind: .video, label: "Episodes", entities: [first, refreshedSelected], code: nil)
+                ]
+            )
+        )
+
+        XCTAssertEqual(snapshot.selectedEpisode?.id, selectedID)
+        XCTAssertEqual(snapshot.selectedEpisode?.progress, 0.64)
+        XCTAssertEqual(snapshot.selectedEpisode?.resumeSeconds, 1_800)
+    }
+
+    func testDelayedFullscreenDismissalCannotClearNewPlaybackRequest() {
+        let first = TVEpisodePlaybackRequest(episodeID: UUID())
+        let second = TVEpisodePlaybackRequest(episodeID: UUID())
+        var snapshot = TVSeasonsSnapshot()
+
+        snapshot.presentFullscreen(first)
+        snapshot.presentFullscreen(second)
+        snapshot.finishFullscreen(requestID: first.id)
+
+        XCTAssertEqual(snapshot.fullscreenRequest, second)
+
+        snapshot.finishFullscreen(requestID: second.id)
+
+        XCTAssertNil(snapshot.fullscreenRequest)
+    }
+
     private func detail(
         kind: EntityKind,
-        children: [EntityGroup]
+        children: [EntityGroup],
+        description: String? = nil
     ) -> EntityDetail {
         EntityDetail(
             id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
@@ -174,7 +268,9 @@ final class TVSeasonsPresentationTests: XCTestCase {
             parentEntityID: nil,
             sortOrder: nil,
             hasSourceMedia: true,
-            capabilities: [],
+            capabilities: description.map {
+                [.description(EntityDescriptionCapability(value: $0))]
+            } ?? [],
             childrenByKind: children,
             relationships: []
         )
@@ -184,7 +280,10 @@ final class TVSeasonsPresentationTests: XCTestCase {
         id: String = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
         kind: EntityKind,
         title: String = "Reference",
-        order: Int? = nil
+        order: Int? = nil,
+        summary: String? = nil,
+        progress: Double? = nil,
+        resumeSeconds: Double? = nil
     ) -> EntityThumbnail {
         let parentID =
             kind == .video
@@ -196,10 +295,13 @@ final class TVSeasonsPresentationTests: XCTestCase {
             id: UUID(uuidString: id)!,
             kind: kind,
             title: title,
+            summary: summary,
             parentEntityID: parentID,
             parentKind: parentKind,
             sortOrder: order,
-            hasSourceMedia: true
+            hasSourceMedia: true,
+            progress: progress,
+            resumeSeconds: resumeSeconds
         )
     }
 }

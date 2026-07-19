@@ -45,7 +45,7 @@
         private func connectPlaybackService() {
             guard let client = environment.client else {
                 guard !environment.isRestoringSession else { return }
-                playback.disconnect()
+                playback.clearSession()
                 return
             }
             playback.connect(to: client)

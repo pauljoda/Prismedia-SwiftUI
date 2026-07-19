@@ -3,42 +3,44 @@ import SwiftUI
 struct VideoStatusChips: View {
     let badges: [VideoPlaybackBadge]
     var overlaysVideo = false
+    @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
+
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: PrismediaSpacing.small) {
-                ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
-                    HStack(spacing: PrismediaSpacing.extraSmall) {
-                        if let systemImage = badge.systemImage { Image(systemName: systemImage) }
-                        Text(badge.label)
+        GlassEffectContainer(spacing: PrismediaSpacing.small) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: PrismediaSpacing.small) {
+                    ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
+                        HStack(spacing: PrismediaSpacing.extraSmall) {
+                            if let systemImage = badge.systemImage { Image(systemName: systemImage) }
+                            Text(badge.label)
+                        }
+                        .font(PrismediaTypography.compactCaptionEmphasized)
+                        .padding(.horizontal, PrismediaSpacing.small)
+                        .padding(.vertical, PrismediaSpacing.extraSmall)
+                        .frame(minHeight: PrismediaSpacing.extraExtraLarge)
+                        .glassEffect(
+                            .regular.tint(tint(for: badge.tone)),
+                            in: .capsule
+                        )
+                        .accessibilityLabel(badge.label)
                     }
-                    .font(PrismediaTypography.compactCaptionEmphasized)
-                    .foregroundStyle(chipForeground)
-                    .padding(.horizontal, PrismediaSpacing.small)
-                    .padding(.vertical, PrismediaSpacing.extraSmall)
-                    .frame(minHeight: PrismediaSpacing.extraExtraLarge)
-                    .background(chipBackground, in: .capsule)
-                    .overlay {
-                        Capsule().stroke(chipBorder, lineWidth: PrismediaLayout.hairline)
-                    }
-                    .accessibilityLabel(badge.label)
                 }
+                .padding(.horizontal, PrismediaSpacing.medium)
+                .padding(.vertical, PrismediaSpacing.small)
             }
-            .padding(.horizontal, PrismediaSpacing.medium)
-            .padding(.vertical, PrismediaSpacing.small)
         }
         .accessibilityIdentifier("video-detail.media-badges")
     }
 
-    private var chipBackground: Color {
-        overlaysVideo ? Color.black.opacity(0.58) : PrismediaColor.controlFill
-    }
-
-    private var chipBorder: Color {
-        overlaysVideo ? Color.white.opacity(0.18) : PrismediaColor.borderSubtle
-    }
-
-    private var chipForeground: Color {
-        overlaysVideo ? .white : PrismediaColor.textPrimary
+    private func tint(for tone: VideoPlaybackBadge.Tone) -> Color {
+        let color =
+            switch tone {
+            case .direct: PrismediaColor.success
+            case .transcode: PrismediaColor.warning
+            case .neutral: artworkPrimaryAccent
+            case .premium: PrismediaColor.spectrumYellow
+            }
+        return color.opacity(overlaysVideo ? 0.72 : 0.5)
     }
 }
 

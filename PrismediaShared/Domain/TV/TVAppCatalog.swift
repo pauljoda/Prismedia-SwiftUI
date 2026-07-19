@@ -32,8 +32,8 @@ public enum TVAppCatalog {
         ),
         TVAppTab(
             id: "account",
-            title: "Account",
-            systemImage: "person.crop.circle"
+            title: "Settings",
+            systemImage: "gearshape"
         ),
     ]
 

@@ -13,6 +13,12 @@ struct AppleDeviceProfile: Encodable {
     }
 
     static var current: Self {
+        make(
+            supportsCompatibilityRenderer: VideoPlaybackRendererPolicy.platformSupportsCompatibilityRenderer
+        )
+    }
+
+    static func make(supportsCompatibilityRenderer: Bool) -> Self {
         let modernVideoCodecs = [
             "h264", supports(.hevc) ? "hevc" : nil, supports(.av1) ? "av1" : nil, supports(.vp9) ? "vp9" : nil,
         ]
@@ -25,8 +31,7 @@ struct AppleDeviceProfile: Encodable {
             supports(.av1) ? "av1" : nil, supports(.hevc) ? "hevc" : nil, "h264", "mpeg4",
         ]
         .compactMap { $0 }.joined(separator: ",")
-        return Self(
-            directPlayProfiles: [
+        var directPlayProfiles: [AppleDirectPlayProfile] = [
                 .init(
                     type: "Video", container: "mp4,m4v", videoCodec: modernVideoCodecs,
                     audioCodec: "aac,ac3,eac3,alac,flac"
@@ -39,7 +44,19 @@ struct AppleDeviceProfile: Encodable {
                     type: "Video", container: "mpegts,ts", videoCodec: transportStreamVideoCodecs,
                     audioCodec: "aac,ac3,eac3,mp3"
                 ),
-            ],
+            ]
+        if supportsCompatibilityRenderer {
+            directPlayProfiles.append(
+                .init(
+                    type: "Video",
+                    container: "mkv,matroska",
+                    videoCodec: [modernVideoCodecs, "mpeg4"].joined(separator: ","),
+                    audioCodec: "aac,ac3,eac3,truehd,dts,dtshd,alac,flac,mp3,opus,vorbis"
+                )
+            )
+        }
+        return Self(
+            directPlayProfiles: directPlayProfiles,
             transcodingProfiles: [
                 .init(
                     type: "Video",

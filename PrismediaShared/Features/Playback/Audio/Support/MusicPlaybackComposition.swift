@@ -60,6 +60,13 @@
             serviceRelay.disconnect()
         }
 
+        func clearSession() {
+            controller.discardPlaybackState()
+            serviceRelay.disconnect()
+            artworkPalette = nil
+            artworkTrackID = nil
+        }
+
         func artworkURL(for path: String?) -> URL? {
             serviceRelay.artworkURL(for: path)
         }

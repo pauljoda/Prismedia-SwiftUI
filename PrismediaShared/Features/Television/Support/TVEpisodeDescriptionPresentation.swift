@@ -5,9 +5,11 @@ enum TVEpisodeDescriptionPresentation {
 
     static func text(
         episode: EntityThumbnail?,
+        episodeDetail: EntityDetail?,
         seriesDescription: String?
     ) -> String? {
-        nonempty(episode?.summary)
+        nonempty(episodeDetail.map { EntityDetailPresentation(detail: $0).description } ?? nil)
+            ?? nonempty(episode?.summary)
             ?? nonempty(seriesDescription)
     }
 
