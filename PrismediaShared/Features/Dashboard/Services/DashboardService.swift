@@ -50,6 +50,20 @@ public struct DashboardService {
             }
         }
 
+        let allItemGroups = [loadedContinueItems, snapshot.recentItems]
+            + snapshot.sections.map(\.items)
+        let movieIDs = Self.movieParentIDs(in: allItemGroups)
+        let movies = (try? await loader.loadThumbnails(ids: movieIDs)) ?? []
+        let moviesByID = Dictionary(uniqueKeysWithValues: movies.map { ($0.id, $0) })
+        loadedContinueItems = Self.applyingMoviePosters(to: loadedContinueItems, moviesByID: moviesByID)
+        snapshot.recentItems = Self.applyingMoviePosters(to: snapshot.recentItems, moviesByID: moviesByID)
+        snapshot.sections = snapshot.sections.map { section in
+            DashboardSection(
+                definition: section.definition,
+                items: Self.applyingMoviePosters(to: section.items, moviesByID: moviesByID)
+            )
+        }
+
         snapshot.featuredItems = DashboardFeaturedSelection.items(
             playbackHistory: loadedContinueItems + snapshot.recentItems,
             catalogSources: snapshot.sections.map(\.items)
@@ -65,5 +79,31 @@ public struct DashboardService {
         _ query: EntityListQuery
     ) async -> [EntityThumbnail] {
         (try? await loader.load(query, limit: DashboardCatalog.itemLimit).items) ?? []
+    }
+
+    nonisolated private static func movieParentIDs(in itemGroups: [[EntityThumbnail]]) -> [UUID] {
+        var seen = Set<UUID>()
+        return itemGroups.flatMap { $0 }.compactMap { item in
+            guard item.kind == .video,
+                item.parentKind == .movie,
+                let parentID = item.parentEntityID,
+                seen.insert(parentID).inserted
+            else { return nil }
+            return parentID
+        }
+    }
+
+    nonisolated private static func applyingMoviePosters(
+        to items: [EntityThumbnail],
+        moviesByID: [UUID: EntityThumbnail]
+    ) -> [EntityThumbnail] {
+        items.map { item in
+            guard item.kind == .video,
+                item.parentKind == .movie,
+                let parentID = item.parentEntityID,
+                let movie = moviesByID[parentID]
+            else { return item }
+            return item.replacingCoverArtwork(with: movie)
+        }
     }
 }

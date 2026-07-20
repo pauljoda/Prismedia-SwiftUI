@@ -56,6 +56,41 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         kind == .video && parentKind == .movie ? .movie : kind
     }
 
+    public func replacingCoverArtwork(with source: EntityThumbnail) -> EntityThumbnail {
+        guard source.bestCoverPath != nil else { return self }
+        return EntityThumbnail(
+            id: id,
+            kind: kind,
+            title: title,
+            summary: summary,
+            parentEntityID: parentEntityID,
+            parentKind: parentKind,
+            sortOrder: sortOrder,
+            coverURL: source.coverURL,
+            coverThumbURL: source.coverThumbURL,
+            coverThumb2xURL: source.coverThumb2xURL,
+            hoverKind: hoverKind,
+            hoverURL: hoverURL,
+            hoverImages: hoverImages,
+            meta: meta,
+            rating: rating,
+            isFavorite: isFavorite,
+            isNsfw: isNsfw,
+            isOrganized: isOrganized,
+            isWanted: isWanted,
+            hasSourceMedia: hasSourceMedia,
+            latestAcquisitionStatus: latestAcquisitionStatus,
+            acquisitionStatuses: acquisitionStatuses,
+            wantedStatus: wantedStatus,
+            createdAt: createdAt,
+            progress: progress,
+            resumeSeconds: resumeSeconds,
+            playCount: playCount,
+            genres: genres,
+            referenceCounts: referenceCounts
+        )
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id
         case kind

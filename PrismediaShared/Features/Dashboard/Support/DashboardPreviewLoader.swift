@@ -8,6 +8,11 @@ import SwiftUI
             }
             return EntityListResponse(items: Array(items.prefix(limit)))
         }
+
+        func loadThumbnails(ids: [UUID]) async throws -> [EntityThumbnail] {
+            let requestedIDs = Set(ids)
+            return PrismediaPreviewData.allEntities.filter { requestedIDs.contains($0.id) }
+        }
     }
 
 #endif
