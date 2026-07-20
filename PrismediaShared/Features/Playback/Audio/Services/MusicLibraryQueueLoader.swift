@@ -52,16 +52,12 @@ struct MusicLibraryQueueLoader: Sendable {
     }
 
     func hydrate(_ tracks: [EntityThumbnail]) async throws -> [MusicTrack] {
-        let albumIDs = unique(tracks.compactMap(\.parentEntityID))
-        let albums = try await thumbnails(ids: albumIDs)
-        let albumsByID = Dictionary(uniqueKeysWithValues: albums.map { ($0.id, $0) })
-        let artistIDs = unique(albums.compactMap(\.parentEntityID))
-        let artists = try await thumbnails(ids: artistIDs)
-        let artistsByID = Dictionary(uniqueKeysWithValues: artists.map { ($0.id, $0) })
-        return MusicEntityProjection.libraryTracks(
+        var albumsByID: [UUID: EntityThumbnail] = [:]
+        var artistsByID: [UUID: EntityThumbnail] = [:]
+        return try await hydrate(
             tracks,
-            albumsByID: albumsByID,
-            artistsByID: artistsByID
+            albumsByID: &albumsByID,
+            artistsByID: &artistsByID
         )
     }
 
@@ -105,6 +101,8 @@ struct MusicLibraryQueueLoader: Sendable {
         var cursor: String?
         var visitedCursors = Set<String>()
         var seenTrackIDs = Set<UUID>()
+        var albumsByID: [UUID: EntityThumbnail] = [:]
+        var artistsByID: [UUID: EntityThumbnail] = [:]
 
         while true {
             try Task.checkCancellation()
@@ -113,12 +111,18 @@ struct MusicLibraryQueueLoader: Sendable {
             if query.kind == .audioLibrary {
                 try await yieldAlbumTrackBatches(
                     response.items,
+                    artistsByID: &artistsByID,
                     seenTrackIDs: &seenTrackIDs,
                     continuation: continuation
                 )
             } else {
+                let hydratedTracks = try await hydrate(
+                    response.items,
+                    albumsByID: &albumsByID,
+                    artistsByID: &artistsByID
+                )
                 let tracks = uniqueTracks(
-                    response.items.map { MusicTrack(thumbnail: $0) },
+                    hydratedTracks,
                     seenTrackIDs: &seenTrackIDs
                 )
                 if !tracks.isEmpty { continuation.yield(tracks) }
@@ -133,16 +137,24 @@ struct MusicLibraryQueueLoader: Sendable {
 
     private func yieldAlbumTrackBatches(
         _ albums: [EntityThumbnail],
+        artistsByID: inout [UUID: EntityThumbnail],
         seenTrackIDs: inout Set<UUID>,
         continuation: AsyncThrowingStream<[MusicTrack], Error>.Continuation
     ) async throws {
+        let unresolvedArtistIDs = unique(albums.compactMap(\.parentEntityID))
+            .filter { artistsByID[$0] == nil }
+        let artists = try await thumbnails(ids: unresolvedArtistIDs)
+        for artist in artists { artistsByID[artist.id] = artist }
+
         for batchStart in stride(from: 0, to: albums.count, by: 6) {
             let batchEnd = min(batchStart + 6, albums.count)
             try await withThrowingTaskGroup(of: [MusicTrack].self) { group in
                 for album in albums[batchStart..<batchEnd] {
+                    let artist = album.parentEntityID.flatMap { artistsByID[$0]?.title }
+                        ?? album.musicMetadataValue(matching: ["artist", "person"])
                     group.addTask {
                         let detail = try await client.fetchEntity(id: album.id)
-                        return MusicEntityProjection.tracks(in: detail, artist: nil)
+                        return MusicEntityProjection.tracks(in: detail, artist: artist)
                     }
                 }
                 for try await albumTracks in group {
@@ -151,6 +163,30 @@ struct MusicLibraryQueueLoader: Sendable {
                 }
             }
         }
+    }
+
+    private func hydrate(
+        _ tracks: [EntityThumbnail],
+        albumsByID: inout [UUID: EntityThumbnail],
+        artistsByID: inout [UUID: EntityThumbnail]
+    ) async throws -> [MusicTrack] {
+        let albumIDs = unique(tracks.compactMap(\.parentEntityID))
+        let unresolvedAlbumIDs = albumIDs
+            .filter { albumsByID[$0] == nil }
+        let albums = try await thumbnails(ids: unresolvedAlbumIDs)
+        for album in albums { albumsByID[album.id] = album }
+
+        let artistIDs = unique(albumIDs.compactMap { albumsByID[$0]?.parentEntityID })
+        let unresolvedArtistIDs = artistIDs
+            .filter { artistsByID[$0] == nil }
+        let artists = try await thumbnails(ids: unresolvedArtistIDs)
+        for artist in artists { artistsByID[artist.id] = artist }
+
+        return MusicEntityProjection.libraryTracks(
+            tracks,
+            albumsByID: albumsByID,
+            artistsByID: artistsByID
+        )
     }
 
     private func uniqueTracks(
