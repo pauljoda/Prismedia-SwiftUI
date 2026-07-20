@@ -46,7 +46,6 @@ import SwiftUI
                     guard !Task.isCancelled else { return }
                     hasLoaded = true
                 }
-                await pollQueueWhileVisible()
             }
             .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
                 Task { await session.refreshProviders() }
@@ -67,14 +66,6 @@ import SwiftUI
 
         private var liveRefreshIsActive: Bool {
             pageIsActive && scenePhase == .active
-        }
-
-        private func pollQueueWhileVisible() async {
-            while liveRefreshIsActive {
-                do { try await Task.sleep(for: .seconds(10)) } catch { return }
-                guard !Task.isCancelled, liveRefreshIsActive else { return }
-                await session.refreshQueue()
-            }
         }
 
     }

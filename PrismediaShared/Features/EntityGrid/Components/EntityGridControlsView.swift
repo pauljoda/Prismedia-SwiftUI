@@ -5,15 +5,18 @@ struct EntityGridControlsView: View {
     @State private var draft: EntityGridControls
 
     let catalog: EntityGridControlCatalog
+    let defaultFilters: EntityGridFilters
     let onApply: (EntityGridControls) -> Void
 
     init(
         controls: EntityGridControls,
         catalog: EntityGridControlCatalog,
+        defaultFilters: EntityGridFilters = EntityGridFilters(),
         onApply: @escaping (EntityGridControls) -> Void
     ) {
         _draft = State(initialValue: controls)
         self.catalog = catalog
+        self.defaultFilters = defaultFilters
         self.onApply = onApply
     }
 
@@ -96,12 +99,12 @@ struct EntityGridControlsView: View {
                 }
                 ToolbarItem(placement: resetToolbarPlacement) {
                     Button {
-                        draft.filters = EntityGridFilters()
+                        draft.filters = defaultFilters
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
                     }
                     .accessibilityLabel("Reset Filters")
-                    .disabled(draft.filters.activeCount == 0)
+                    .disabled(draft.filters == defaultFilters)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {

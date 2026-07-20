@@ -6,71 +6,78 @@ import SwiftUI
         let kind: EntityKind
 
         var body: some View {
-            List(selection: $session.selectedBrowseIDs) {
-                Section("Browse Options") {
-                    Picker("Visibility", selection: $session.browseFilter) {
-                        ForEach(IdentifyBrowseFilter.allCases) { Text($0.label).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
+            EntityGridView(
+                configuration: EntityGridConfiguration(
+                    title: kind.displayLabel,
+                    query: EntityListQuery(kind: kind, sort: "added"),
+                    defaultFilters: browseDefaultFilters,
+                    supportsSearch: true,
+                    defaultDisplayMode: .grid,
+                    availableDisplayModes: [.grid, .list],
+                    emptyTitle: "No Unorganized \(kind.displayLabel)",
+                    emptyDescription:
+                        "Everything in this library is organized. Use Filters to include organized items.",
+                    preferencesID: "identify:\(kind.rawValue)"
+                ),
+                loader: session.browseGridLoader,
+                preferencesStore: .standard,
+                automaticRefreshInterval: .seconds(10),
+                startsInSelectionMode: true,
+                actionPolicy: actionPolicy,
+                topContent: { context in
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                        LabeledContent("Identify Provider") {
+                            Picker("Identify Provider", selection: providerSelection) {
+                                ForEach(eligibleProviders) { provider in
+                                    Text(provider.name).tag(provider.id)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                        }
 
-                    Picker("Provider", selection: $session.selectedProviderID) {
-                        Text("Choose Provider").tag("")
-                        ForEach(eligibleProviders) { Text($0.name).tag($0.id) }
+                        if eligibleProviders.isEmpty {
+                            Label(
+                                "No enabled provider supports \(kind.displayLabel.lowercased()).",
+                                systemImage: "exclamationmark.triangle"
+                            )
+                            .font(.footnote)
+                            .foregroundStyle(PrismediaColor.warning)
+                        } else {
+                            Text(gridSummary(context))
+                                .font(.footnote)
+                                .foregroundStyle(PrismediaColor.textSecondary)
+                        }
                     }
-                    .pickerStyle(.menu)
+                    .padding(PrismediaSpacing.large)
+                    .prismediaPanel()
+                },
+                itemContent: { item, layout in
+                    EntityThumbnailCardView(item: item, layout: layout)
                 }
-
-                Section {
-                    ForEach(session.browseItems) { item in
-                        Label(item.title, systemImage: item.isOrganized ? "checkmark.circle" : "questionmark.circle")
-                            .tag(item.id)
-                    }
-                } header: {
-                    HStack {
-                        Text(kind.displayLabel)
-                        Spacer()
-                        Text(session.browseItems.count, format: .number)
-                    }
-                }
-            }
-            .prismediaScreenBackground()
-            .overlay {
-                if session.isBrowsing && session.browseItems.isEmpty {
-                    PrismediaLoadingView("Loading \(kind.displayLabel.lowercased()) items…")
-                } else if session.isBrowsing {
-                    ProgressView("Updating items…")
-                } else if session.browseItems.isEmpty {
-                    ContentUnavailableView.search(text: session.browseSearch)
-                }
-            }
-            .navigationTitle(kind.displayLabel)
-            #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .searchable(text: $session.browseSearch, prompt: "Search library")
-            .toolbar {
-                ToolbarItem(placement: trailingToolbarPlacement) {
-                    Button {
-                        Task { await session.queueSelectedBrowseItems() }
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Add Selected to Queue")
-                    .disabled(session.selectedBrowseIDs.isEmpty || session.selectedProviderID.isEmpty)
-                }
-            }
-            .task(id: kind.rawValue + session.browseFilter.rawValue + session.browseSearch) {
-                await session.browse(kind: kind)
-            }
+            )
+            .task(id: kind) { session.prepareBrowse(kind: kind) }
             .accessibilityIdentifier("identify.browse")
         }
 
-        private var trailingToolbarPlacement: ToolbarItemPlacement {
-            #if os(iOS)
-                .topBarTrailing
-            #else
-                .primaryAction
-            #endif
+        private var actionPolicy: EntityGridActionPolicy {
+            guard let provider = selectedProvider else { return .disabled }
+            return EntityGridActionPolicy(
+                selectionEnabled: true,
+                customActions: [
+                    EntityGridCustomAction(
+                        id: "identify",
+                        label: "Identify with \(provider.name)",
+                        systemImage: "sparkles"
+                    ) { items in
+                        await session.queueBrowseItems(
+                            items,
+                            kind: kind,
+                            providerID: provider.id
+                        )
+                    }
+                ]
+            )
         }
 
         private var eligibleProviders: [AdministrativePlugin] {
@@ -80,14 +87,46 @@ import SwiftUI
                 hidesNsfw: session.hidesNsfw
             )
         }
+
+        private var browseDefaultFilters: EntityGridFilters {
+            var filters = EntityGridFilters()
+            filters.organization = .unorganized
+            return filters
+        }
+
+        private var selectedProvider: AdministrativePlugin? {
+            eligibleProviders.first { $0.id == session.selectedProviderID }
+                ?? eligibleProviders.first
+        }
+
+        private var providerSelection: Binding<String> {
+            Binding(
+                get: { selectedProvider?.id ?? "" },
+                set: { session.selectedProviderID = $0 }
+            )
+        }
+
+        private func gridSummary(_ context: EntityGridTopContentContext) -> String {
+            if context.query.organized == false {
+                return "Showing items that still need metadata. Select items, then choose Identify."
+            }
+            return "Select any library items that should be identified with \(selectedProvider?.name ?? "the chosen provider")."
+        }
     }
 
     #if DEBUG
         #Preview("Browse · Content") {
-            NavigationStack {
-                IdentifyKindBrowseView(
-                    session: .init(service: AdministrativePreviewService(), browser: IdentifyPreviewEntityBrowser()),
-                    kind: .movie)
+            PreviewShell(signedIn: true) {
+                NavigationStack {
+                    IdentifyKindBrowseView(
+                        session: .init(
+                            service: AdministrativePreviewService(),
+                            browser: IdentifyPreviewEntityBrowser(),
+                            initialProviders: [IdentifyPreviewFixtures.provider]
+                        ),
+                        kind: .movie
+                    )
+                }
             }
         }
     #endif

@@ -98,6 +98,32 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(configuration.resolvedDisplayMode(restoring: nil), .list)
     }
 
+    func testConfigurationCanProvideUserVisibleDefaultFiltersWithoutLockingTheRouteQuery() {
+        var defaultFilters = EntityGridFilters()
+        defaultFilters.organization = .unorganized
+        let configuration = EntityGridConfiguration(
+            title: "Identify Movies",
+            query: EntityListQuery(kind: .movie),
+            defaultFilters: defaultFilters
+        )
+        var snapshot = EntityGridSnapshot(configuration: configuration)
+
+        XCTAssertEqual(snapshot.controls.filters.organization, .unorganized)
+        XCTAssertEqual(
+            snapshot.controls.applying(to: configuration.query).organized,
+            false
+        )
+
+        var showAll = snapshot.controls
+        showAll.filters.organization = .any
+        snapshot.setControls(showAll)
+
+        XCTAssertNil(snapshot.controls.applying(to: configuration.query).organized)
+
+        snapshot.resetControls(for: configuration)
+        XCTAssertEqual(snapshot.controls.filters.organization, .unorganized)
+    }
+
     func testPreferencesEncodeUserControlsAsOneNestedValue() throws {
         var controls = EntityGridControls(baselineQuery: EntityListQuery(kind: .book))
         controls.sort = .rating

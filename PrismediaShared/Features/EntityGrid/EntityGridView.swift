@@ -2,6 +2,8 @@ import SwiftUI
 
 public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
+    @Environment(\.prismediaPageIsActive) private var pageIsActive
+    @Environment(\.scenePhase) private var scenePhase
     @State private var snapshot: EntityGridSnapshot
     @State private var searchText = ""
     @State private var filtersPresented = false
@@ -37,6 +39,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     private let horizontalContentPadding: CGFloat
     private let feedMediaDependencies: EntityMediaFeedDependencies?
     private let onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)?
+    private let automaticRefreshInterval: Duration?
     private let actionPolicy: EntityGridActionPolicy
     private let mutationService: (any EntityGridMutationServicing)?
     private let prefersInitialTVFocus: Bool
@@ -51,6 +54,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         horizontalContentPadding: CGFloat? = nil,
         feedMediaDependencies: EntityMediaFeedDependencies? = nil,
         onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)? = nil,
+        automaticRefreshInterval: Duration? = nil,
+        startsInSelectionMode: Bool = false,
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil,
         prefersInitialTVFocus: Bool = false,
@@ -67,6 +72,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             ?? (presentation == .screen ? PrismediaSpacing.extraLarge : 0)
         self.feedMediaDependencies = feedMediaDependencies
         self.onOpenFeedItem = onOpenFeedItem
+        self.automaticRefreshInterval = automaticRefreshInterval
         self.actionPolicy = actionPolicy
         self.mutationService = mutationService
         self.prefersInitialTVFocus = prefersInitialTVFocus
@@ -82,6 +88,11 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         _density = State(initialValue: restoredPreferences?.density ?? .standard)
         _pageSize = State(initialValue: restoredPreferences?.pageSize ?? configuration.pageSize)
         _presets = State(initialValue: preferencesStore.loadPresets(for: configuration.preferencesID))
+        _selection = State(
+            initialValue: EntityGridSelectionState(
+                isActive: startsInSelectionMode && actionPolicy.selectionEnabled
+            )
+        )
         _snapshot = State(
             initialValue: EntityGridSnapshot(
                 configuration: configuration,
@@ -102,7 +113,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             .sheet(isPresented: $filtersPresented) {
                 EntityGridControlsView(
                     controls: snapshot.controls,
-                    catalog: controlCatalog
+                    catalog: controlCatalog,
+                    defaultFilters: configuration.defaultFilters
                 ) { controls in
                     Task { await applyControls(controls) }
                 }
@@ -162,6 +174,14 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             .task {
                 await loadIfNeeded()
             }
+            .task(id: automaticRefreshIsActive) {
+                guard automaticRefreshIsActive, let automaticRefreshInterval else { return }
+                while automaticRefreshIsActive {
+                    do { try await Task.sleep(for: automaticRefreshInterval) } catch { return }
+                    guard !Task.isCancelled, automaticRefreshIsActive else { return }
+                    await refresh()
+                }
+            }
             #if os(tvOS)
                 .task {
                     await loadTVCollectionOptionsIfNeeded()
@@ -192,6 +212,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         case .embedded:
             embeddedContent
         }
+    }
+
+    private var automaticRefreshIsActive: Bool {
+        automaticRefreshInterval != nil && pageIsActive && scenePhase == .active
     }
 
     private var screenContent: some View {
@@ -860,7 +884,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     private var preferencesAreDefault: Bool {
         currentPreferences
             == EntityGridPreferences(
-                controls: EntityGridControls(baselineQuery: configuration.query),
+                controls: configuration.defaultControls(),
                 displayMode: configuration.defaultDisplayMode,
                 pageSize: configuration.pageSize
             )
@@ -1242,6 +1266,8 @@ extension EntityGridView where TopContent == EmptyView {
         horizontalContentPadding: CGFloat? = nil,
         feedMediaDependencies: EntityMediaFeedDependencies? = nil,
         onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)? = nil,
+        automaticRefreshInterval: Duration? = nil,
+        startsInSelectionMode: Bool = false,
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil,
         prefersInitialTVFocus: Bool = false,
@@ -1255,6 +1281,8 @@ extension EntityGridView where TopContent == EmptyView {
             horizontalContentPadding: horizontalContentPadding,
             feedMediaDependencies: feedMediaDependencies,
             onOpenFeedItem: onOpenFeedItem,
+            automaticRefreshInterval: automaticRefreshInterval,
+            startsInSelectionMode: startsInSelectionMode,
             actionPolicy: actionPolicy,
             mutationService: mutationService,
             prefersInitialTVFocus: prefersInitialTVFocus,
@@ -1269,6 +1297,8 @@ extension EntityGridView where TopContent == EmptyView, ItemContent == EntityThu
         configuration: EntityGridConfiguration,
         loader: any EntityGridLoading,
         preferencesStore: EntityGridPreferencesStore = .standard,
+        automaticRefreshInterval: Duration? = nil,
+        startsInSelectionMode: Bool = false,
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil
     ) {
@@ -1276,6 +1306,8 @@ extension EntityGridView where TopContent == EmptyView, ItemContent == EntityThu
             configuration: configuration,
             loader: loader,
             preferencesStore: preferencesStore,
+            automaticRefreshInterval: automaticRefreshInterval,
+            startsInSelectionMode: startsInSelectionMode,
             actionPolicy: actionPolicy,
             mutationService: mutationService
         ) { item, layout in

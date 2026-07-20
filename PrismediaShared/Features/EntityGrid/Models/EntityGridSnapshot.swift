@@ -31,7 +31,7 @@ public struct EntityGridSnapshot: Equatable, Sendable {
         isLoadingNextPage = false
         errorMessage = nil
         paginationErrorMessage = nil
-        controls = restoredControls ?? EntityGridControls(baselineQuery: configuration.query)
+        controls = restoredControls ?? configuration.defaultControls()
         generation = 0
         excludedNsfwIDs = []
         requestedCursors = []
@@ -52,7 +52,7 @@ public struct EntityGridSnapshot: Equatable, Sendable {
     }
 
     public mutating func resetControls(for configuration: EntityGridConfiguration) {
-        controls = EntityGridControls(baselineQuery: configuration.query)
+        controls = configuration.defaultControls()
     }
 
     public mutating func reshuffle(

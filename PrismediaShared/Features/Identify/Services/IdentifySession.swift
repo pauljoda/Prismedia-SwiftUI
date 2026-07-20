@@ -6,9 +6,7 @@ import Observation
     final class IdentifySession {
         private(set) var queue: [AdministrativeIdentifyQueueItem] = []
         private(set) var providers: [AdministrativePlugin] = []
-        private(set) var browseItems: [EntityThumbnail] = []
         private(set) var isLoading = false
-        private(set) var isBrowsing = false
         private(set) var isSearching = false
         private(set) var isSeeking = false
         private(set) var isApplying = false
@@ -17,9 +15,6 @@ import Observation
         var selectedItemID: UUID?
         var selectedQueueIDs = Set<UUID>()
         var selectedKind: EntityKind?
-        var browseFilter = IdentifyBrowseFilter.unorganized
-        var browseSearch = ""
-        var selectedBrowseIDs = Set<UUID>()
         var selectedProviderID = ""
         var searchValues: [String: String] = [:]
         var reviewSelection = MetadataReviewSelection()
@@ -96,6 +91,13 @@ import Observation
             }
         }
 
+        var browseGridLoader: any EntityGridLoading {
+            IdentifyEntityGridLoader(
+                browser: browser,
+                allowsNsfwContent: !hidesNsfw
+            )
+        }
+
         func load() async {
             isLoading = true
             defer { isLoading = false }
@@ -123,6 +125,27 @@ import Observation
                 return
             } catch {
                 // Background refreshes retain the last good queue and stay unobtrusive.
+            }
+        }
+
+        func refreshSelectedItem() async {
+            guard let selectedItemID else { return }
+            do {
+                let refreshedItem = try await service.identifyQueueItem(entityID: selectedItemID)
+                let previousProposalID = selectedItem?.proposal?.proposalID
+                replace(refreshedItem)
+                if previousProposalID != refreshedItem.proposal?.proposalID {
+                    reviewSelection = refreshedItem.proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
+                    showsSearchForProposal = refreshedItem.proposal == nil
+                }
+                reconcileProvider()
+            } catch is CancellationError {
+                return
+            } catch PrismediaAPIError.httpStatus(404, _) {
+                queue.removeAll { $0.entityID == selectedItemID }
+                self.selectedItemID = nil
+            } catch {
+                // A live refresh retains the last usable review state and retries quietly.
             }
         }
 
@@ -269,33 +292,53 @@ import Observation
             selectedQueueIDs.subtract(removedIDs)
         }
 
-        func browse(kind: EntityKind) async {
+        func prepareBrowse(kind: EntityKind) {
             selectedKind = kind
             reconcileBrowseProvider(for: kind)
-            isBrowsing = true
-            defer { isBrowsing = false }
-            do {
-                browseItems = try await browser.entities(
-                    kind: kind, organized: browseFilter == .unorganized ? false : nil,
-                    search: browseSearch.isEmpty ? nil : browseSearch)
-            } catch { errorMessage = error.localizedDescription }
         }
 
-        func queueSelectedBrowseItems() async {
-            guard !selectedProviderID.isEmpty, !selectedBrowseIDs.isEmpty else { return }
-            guard let selectedKind,
+        func queueBrowseItems(
+            _ items: [EntityThumbnail],
+            kind: EntityKind,
+            providerID: String
+        ) async -> EntityGridMutationResult {
+            guard !items.isEmpty,
                 PluginSearchFieldPolicy.eligibleProviders(
                     providers,
-                    entityKind: selectedKind.rawValue,
+                    entityKind: kind.rawValue,
                     hidesNsfw: hidesNsfw
-                ).contains(where: { $0.id == selectedProviderID })
-            else { return }
+                ).contains(where: { $0.id == providerID })
+            else {
+                return EntityGridMutationResult(
+                    failures: items.map {
+                        EntityGridMutationFailure(
+                            entityID: $0.id,
+                            title: $0.title,
+                            message: "Choose an available identify provider and try again."
+                        )
+                    }
+                )
+            }
+
             do {
                 _ = try await service.startBulkIdentify(
-                    provider: selectedProviderID, entityIDs: Array(selectedBrowseIDs), query: nil)
-                selectedBrowseIDs.removeAll()
-                await load()
-            } catch { errorMessage = error.localizedDescription }
+                    provider: providerID,
+                    entityIDs: items.map(\.id),
+                    query: nil
+                )
+                await refreshQueue()
+                return EntityGridMutationResult(succeededIDs: Set(items.map(\.id)))
+            } catch {
+                return EntityGridMutationResult(
+                    failures: items.map {
+                        EntityGridMutationFailure(
+                            entityID: $0.id,
+                            title: $0.title,
+                            message: error.localizedDescription
+                        )
+                    }
+                )
+            }
         }
 
         func reviewAll() { select(reviewableIDs.first) }
@@ -377,7 +420,7 @@ import Observation
 
         private func replace(_ item: AdministrativeIdentifyQueueItem) {
             if let index = queue.firstIndex(where: { $0.entityID == item.entityID }) {
-                queue[index] = item
+                if queue[index] != item { queue[index] = item }
             } else {
                 queue.insert(item, at: 0)
             }

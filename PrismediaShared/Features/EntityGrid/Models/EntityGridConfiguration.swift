@@ -3,6 +3,7 @@ import Foundation
 public struct EntityGridConfiguration: Hashable, Sendable {
     public let title: String
     public let query: EntityListQuery
+    public let defaultFilters: EntityGridFilters
     public let supportsSearch: Bool
     public let pageSize: Int
     public let minimumColumnWidth: CGFloat
@@ -15,6 +16,7 @@ public struct EntityGridConfiguration: Hashable, Sendable {
     public init(
         title: String,
         query: EntityListQuery,
+        defaultFilters: EntityGridFilters = EntityGridFilters(),
         supportsSearch: Bool = false,
         pageSize: Int = 48,
         minimumColumnWidth: CGFloat = 150,
@@ -34,6 +36,7 @@ public struct EntityGridConfiguration: Hashable, Sendable {
 
         self.title = title
         self.query = query
+        self.defaultFilters = defaultFilters
         self.supportsSearch = supportsSearch
         self.pageSize = pageSize
         self.minimumColumnWidth = minimumColumnWidth
@@ -49,6 +52,12 @@ public struct EntityGridConfiguration: Hashable, Sendable {
             return defaultDisplayMode
         }
         return restoredDisplayMode
+    }
+
+    func defaultControls() -> EntityGridControls {
+        var controls = EntityGridControls(baselineQuery: query)
+        controls.filters = defaultFilters
+        return controls
     }
 
     private static func defaultPreferencesID(title: String, query: EntityListQuery) -> String {

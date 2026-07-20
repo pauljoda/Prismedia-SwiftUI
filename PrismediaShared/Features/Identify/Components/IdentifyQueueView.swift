@@ -2,6 +2,8 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifyQueueView: View {
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
         #if os(iOS)
             @Environment(\.editMode) private var editMode
         #endif
@@ -71,7 +73,19 @@ import SwiftUI
                 #endif
             }
             .refreshable { await session.load() }
+            .task(id: compactRefreshIsActive) {
+                guard compactRefreshIsActive else { return }
+                while compactRefreshIsActive {
+                    do { try await Task.sleep(for: .seconds(10)) } catch { return }
+                    guard !Task.isCancelled, compactRefreshIsActive else { return }
+                    await session.refreshQueue()
+                }
+            }
             .accessibilityIdentifier("identify.queue")
+        }
+
+        private var compactRefreshIsActive: Bool {
+            presentsReviewInNavigationStack && pageIsActive && scenePhase == .active
         }
 
         #if os(iOS)

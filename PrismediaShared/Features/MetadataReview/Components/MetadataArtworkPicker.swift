@@ -10,24 +10,35 @@ import SwiftUI
                 VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                     ForEach(imageKinds, id: \.self) { kind in
                         VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                            Text(kind.capitalized)
-                                .font(.subheadline.weight(.medium))
-                            ScrollView(.horizontal) {
-                                LazyHStack(spacing: PrismediaSpacing.medium) {
-                                    PrismediaButton(
-                                        "None",
-                                        systemImage: selectedURL(for: kind) == nil ? "checkmark.circle.fill" : "circle"
-                                    ) {
-                                        setSelectedURL(nil, for: kind)
-                                    }
+                            HStack {
+                                Text(kind.capitalized)
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer(minLength: PrismediaSpacing.small)
+                                Text(selectionSummary(for: kind))
+                                    .font(.caption)
+                                    .foregroundStyle(PrismediaColor.textSecondary)
+                            }
 
-                                    ForEach(images(for: kind), id: \.url) { image in
-                                        MetadataArtworkOptionButton(
-                                            image: image,
-                                            isSelected: selectedURL(for: kind) == image.url,
-                                            onSelect: { setSelectedURL(image.url, for: kind) }
-                                        )
-                                    }
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(
+                                        .adaptive(minimum: minimumTileWidth(for: kind)),
+                                        spacing: PrismediaSpacing.medium,
+                                        alignment: .top
+                                    )
+                                ],
+                                alignment: .leading,
+                                spacing: PrismediaSpacing.medium
+                            ) {
+                                ForEach(images(for: kind), id: \.url) { image in
+                                    let isSelected = selectedURL(for: kind) == image.url
+                                    MetadataArtworkOptionButton(
+                                        image: image,
+                                        isSelected: isSelected,
+                                        onSelect: {
+                                            setSelectedURL(isSelected ? nil : image.url, for: kind)
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -50,6 +61,21 @@ import SwiftUI
 
         private func selectedURL(for kind: String) -> String? {
             selection.selectedImagesByProposal[proposal.proposalID]?[kind]
+        }
+
+        private func selectionSummary(for kind: String) -> String {
+            let count = images(for: kind).count
+            return selectedURL(for: kind) == nil
+                ? "\(count) available"
+                : "1 of \(count) selected"
+        }
+
+        private func minimumTileWidth(for kind: String) -> CGFloat {
+            switch kind.lowercased() {
+            case "backdrop", "thumbnail", "still": 180
+            case "logo": 140
+            default: 112
+            }
         }
 
         private func setSelectedURL(_ url: String?, for kind: String) {

@@ -2,6 +2,8 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifySidebarList: View {
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
         @Bindable var session: IdentifySession
         let usesNavigationLinks: Bool
 
@@ -74,6 +76,18 @@ import SwiftUI
             #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
+            .task(id: liveRefreshIsActive) {
+                guard liveRefreshIsActive else { return }
+                while liveRefreshIsActive {
+                    do { try await Task.sleep(for: .seconds(10)) } catch { return }
+                    guard !Task.isCancelled, liveRefreshIsActive else { return }
+                    await session.refreshQueue()
+                }
+            }
+        }
+
+        private var liveRefreshIsActive: Bool {
+            pageIsActive && scenePhase == .active
         }
 
         private var destinationSelection: Binding<String?> {
@@ -111,21 +125,17 @@ import SwiftUI
 
                     Divider()
 
-                    HStack {
-                        if summary.pendingCount > 0 {
-                            Text("\(summary.pendingCount) queued")
-                                .font(.caption)
-                                .foregroundStyle(PrismediaColor.accent)
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
+                    if summary.pendingCount > 0 {
+                        Text("\(summary.pendingCount) queued")
                             .font(.caption)
+                            .foregroundStyle(PrismediaColor.accent)
                     }
                 }
+                .padding(PrismediaSpacing.medium)
                 .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
                 .contentShape(.rect)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.glass)
             .buttonBorderShape(.roundedRectangle(radius: PrismediaRadius.card))
             .accessibilityHint("Browse \(summary.kind.displayLabel.lowercased()) items")
         }

@@ -184,52 +184,55 @@ import SwiftUI
         @ViewBuilder
         private var providerActions: some View {
             if onRescan != nil || onSeek != nil {
-                ControlGroup {
+                HStack(spacing: PrismediaSpacing.medium) {
                     if let onRescan {
-                        Button(
-                            isRescanning ? "Rescanning" : "Rescan",
+                        PrismediaButton(
+                            isRescanning ? "Rescanning" : "Rescan Provider",
                             systemImage: "arrow.clockwise",
+                            isLoading: isRescanning,
                             action: onRescan
                         )
                         .disabled(isBusy)
-                        .help("Rescan")
                     }
                     if let onSeek {
-                        Button(
-                            isSeeking ? "Seeking" : "Seek All",
-                            systemImage: "scope",
+                        PrismediaButton(
+                            isSeeking ? "Trying Providers" : "Try All Providers",
+                            systemImage: "sparkles",
+                            isLoading: isSeeking,
                             action: onSeek
                         )
                         .disabled(isBusy)
-                        .help("Seek All Providers")
                     }
                 }
-                .labelStyle(.iconOnly)
-                .prismediaCompactActionControlSize()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
 
         private var actionRow: some View {
             HStack(spacing: PrismediaSpacing.medium) {
-                Button("Clear", role: .cancel) {
+                PrismediaButton("Clear", systemImage: "xmark") {
                     values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
                     onClear?()
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
                 .disabled(isBusy || values.values.allSatisfy(\.isEmpty))
 
-                Button {
+                Spacer(minLength: 0)
+
+                PrismediaButton(
+                    "Search",
+                    systemImage: "magnifyingglass",
+                    variant: .prominent,
+                    form: .compactIcon,
+                    primaryTint: PrismediaColor.spectrumCyan,
+                    isLoading: isSearching
+                ) {
                     onSearch(
                         PluginSearchFieldPolicy.submittedValues(
                             fields: searchFields,
                             values: values
-                        ))
-                } label: {
-                    Label(isSearching ? "Searching" : "Search", systemImage: "magnifyingglass")
-                        .frame(maxWidth: .infinity)
+                        )
+                    )
                 }
-                .buttonStyle(.glassProminent)
                 .disabled(!canSearch)
                 .accessibilityIdentifier("plugin-search.submit")
             }
