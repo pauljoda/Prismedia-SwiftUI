@@ -114,6 +114,12 @@ final class AppShellNavigationTests: XCTestCase {
                     kind == .audioLibrary ? "waveform" : canonical.destination.systemImage
                 )
                 XCTAssertEqual(dashboard.destinationID, canonical.destination.id)
+                XCTAssertTrue(dashboard.query.sortDescending)
+
+                guard case .entityList(let entityList) = canonical.destination.content else {
+                    return XCTFail("Canonical destination for \(kind.rawValue) must be an entity list")
+                }
+                XCTAssertFalse(entityList.query.sortDescending)
             }
         }
     }
