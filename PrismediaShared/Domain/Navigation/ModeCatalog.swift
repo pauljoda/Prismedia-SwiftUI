@@ -10,6 +10,7 @@ public enum ModeCatalog {
         destinations: [
             destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
             entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
+            destination("favorites", "Favorites", "heart", content: .favorites),
             destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
         ]
     )

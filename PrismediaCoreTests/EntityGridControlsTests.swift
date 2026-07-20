@@ -12,6 +12,25 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertTrue(EntityGridSort.allCases.allSatisfy { !$0.defaultDescending })
     }
 
+    func testFavoritesCatalogLocksEveryBrowsableEntityKindToFavoriteRecency() {
+        XCTAssertEqual(
+            FavoritesCatalog.sections.map(\.kind),
+            [
+                .video, .movie, .videoSeries, .gallery, .image,
+                .audioLibrary, .musicArtist, .audioTrack,
+                .book, .bookAuthor, .collection, .person, .studio, .tag,
+            ]
+        )
+        XCTAssertTrue(
+            FavoritesCatalog.sections.allSatisfy { section in
+                section.query.favorite == true
+                    && section.query.sort == EntityGridSort.lastAccessed.rawValue
+                    && section.query.sortDescending
+                    && section.query.kind == section.kind
+            }
+        )
+    }
+
     func testPersistedPreferencesRestoreControlsWithoutReplacingRouteDefaults() throws {
         let baseline = EntityListQuery(
             kind: .book,

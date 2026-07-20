@@ -17,6 +17,7 @@ public enum AppSidebarCatalog {
             title: "Overview",
             items: [
                 item(in: ModeCatalog.overview, destinationID: "dashboard"),
+                item(in: ModeCatalog.overview, destinationID: "favorites"),
                 AppSidebarItem(
                     id: "search",
                     title: "Search",

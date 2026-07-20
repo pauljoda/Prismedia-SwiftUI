@@ -229,6 +229,19 @@ public struct PrismediaShellView: View {
                 }
             )
 
+        case .favorites:
+            FavoritesView(
+                loader: PrismediaFavoritesLoader(client: client),
+                gridLoader: PrismediaEntityGridLoader(client: client),
+                detailDependencies: detailDependencies,
+                navigationPath: favoritesPathBinding(
+                    videoPlaybackSession: videoPlaybackSession
+                ),
+                reloadRevision: environment.contentRevision,
+                actionPolicy: libraryActionPolicy,
+                mutationService: client
+            )
+
         case .playbackStatistics:
             PlaybackStatisticsView(
                 loader: PrismediaPlaybackStatisticsLoader(client: client),
@@ -447,6 +460,18 @@ public struct PrismediaShellView: View {
                 guard newPath != router.path(for: destinationID) else { return }
                 videoPlaybackSession.inlinePlaybackWillNavigate()
                 router.setPath(newPath, for: destinationID)
+            }
+        )
+    }
+
+    private func favoritesPathBinding(
+        videoPlaybackSession: VideoPlaybackSession
+    ) -> Binding<NavigationPath> {
+        Binding(
+            get: { router.favoritesPath },
+            set: { newPath in
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+                router.setFavoritesPath(newPath)
             }
         )
     }

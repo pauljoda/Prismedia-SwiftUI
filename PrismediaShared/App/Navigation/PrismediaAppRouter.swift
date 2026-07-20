@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 /// App-wide navigation state retained independently of the shell's adaptive
 /// presentation. iPhone tabs can become an iPad or Mac sidebar without losing
@@ -9,11 +10,13 @@ import Observation
 @MainActor
 public final class PrismediaAppRouter {
     public static let searchPathID = "search"
+    public static let favoritesPathID = "favorites"
 
     public private(set) var navigation: AppShellNavigation
     public private(set) var selectedTab: PrismediaTabSelection
     public var searchText: String
     public var searchFilters: SearchHubFilterState
+    public private(set) var favoritesPath: NavigationPath
 
     /// Synchronous platform handoff invoked before a shared entity link mutates
     /// the active stack. The video host uses it to request PiP while its player
@@ -40,6 +43,7 @@ public final class PrismediaAppRouter {
             : .destination(navigation.destinationID)
         searchText = ""
         searchFilters = SearchHubFilterState()
+        favoritesPath = NavigationPath()
         navigationPaths = [:]
     }
 
@@ -99,8 +103,17 @@ public final class PrismediaAppRouter {
         navigationPaths[destinationID] = path
     }
 
+    public func setFavoritesPath(_ path: NavigationPath) {
+        favoritesPath = path
+    }
+
     @discardableResult
     public func navigateBack(in destinationID: String) -> Bool {
+        if destinationID == Self.favoritesPathID, !favoritesPath.isEmpty {
+            favoritesPath.removeLast()
+            return true
+        }
+
         guard var path = navigationPaths[destinationID], !path.isEmpty else { return false }
         path.removeLast()
         navigationPaths[destinationID] = path
@@ -131,6 +144,10 @@ public final class PrismediaAppRouter {
             case .destination(let destinationID):
                 destinationID
             }
+        if destinationID == Self.favoritesPathID {
+            favoritesPath.append(link)
+            return
+        }
         var path = path(for: destinationID)
         path.append(link)
         setPath(path, for: destinationID)
@@ -169,6 +186,7 @@ public final class PrismediaAppRouter {
         selectedTab = .destination(navigation.destinationID)
         searchText = ""
         searchFilters = SearchHubFilterState()
+        favoritesPath = NavigationPath()
         navigationPaths.removeAll()
         onWillOpenEntity = nil
     }
