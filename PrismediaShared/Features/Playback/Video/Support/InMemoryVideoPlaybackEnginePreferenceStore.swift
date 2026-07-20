@@ -2,7 +2,7 @@
     struct InMemoryVideoPlaybackEnginePreferenceStore: VideoPlaybackEnginePreferenceStoring {
         private let engine: VideoPlaybackEngine
 
-        init(engine: VideoPlaybackEngine = .automatic) {
+        init(engine: VideoPlaybackEngine = .defaultChoice) {
             self.engine = engine
         }
 

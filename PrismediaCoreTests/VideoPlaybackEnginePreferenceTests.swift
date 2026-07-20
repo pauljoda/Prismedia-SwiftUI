@@ -4,6 +4,10 @@ import XCTest
 
 @MainActor
 final class VideoPlaybackEnginePreferenceTests: XCTestCase {
+    func testUserCanChoosePrismediaOrNativePlayback() {
+        XCTAssertEqual(VideoPlaybackEngine.userSelectableCases, [.automatic, .native])
+    }
+
     func testCompatibilityProfileAdvertisesMatroskaAndRichAudio() throws {
         let profile = AppleDeviceProfile.make(supportsCompatibilityRenderer: true)
         let matroska = try XCTUnwrap(
@@ -33,9 +37,22 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
 
         XCTAssertEqual(preferences.engine, .automatic)
 
-        preferences.engine = .vlc
+        preferences.engine = .native
 
-        XCTAssertEqual(VideoPlaybackPreferences(store: store).engine, .vlc)
+        XCTAssertEqual(VideoPlaybackPreferences(store: store).engine, .native)
+    }
+
+    func testLegacyVLCPreferenceMigratesToPrismediaPlayback() {
+        let suiteName = "VideoPlaybackEnginePreferenceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("vlc", forKey: UserDefaultsVideoPlaybackEnginePreferenceStore.key)
+
+        let preferences = VideoPlaybackPreferences(
+            store: UserDefaultsVideoPlaybackEnginePreferenceStore(defaults: defaults)
+        )
+
+        XCTAssertEqual(preferences.engine, .automatic)
     }
 
     func testUnknownPersistedValueFallsBackToAutomatic() {
@@ -48,6 +65,6 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
             store: UserDefaultsVideoPlaybackEnginePreferenceStore(defaults: defaults)
         )
 
-        XCTAssertEqual(preferences.engine, .automatic)
+        XCTAssertEqual(preferences.engine, VideoPlaybackEngine.defaultChoice)
     }
 }

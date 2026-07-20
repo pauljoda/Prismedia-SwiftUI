@@ -1,9 +1,9 @@
 #if os(tvOS)
     import SwiftUI
 
-    struct TVCompatibilityPlayerView: View {
+    struct TVPlayerView: View {
         let controller: VideoPlaybackController
-        let request: VideoCompatibilityPlaybackRequest
+        let compatibilityRequest: VideoCompatibilityPlaybackRequest?
         let title: String
         let trickplayPlaylistPath: String?
         let trickplayFrameLoader: (any TrickplayFrameLoading)?
@@ -29,10 +29,22 @@
         var body: some View {
             ZStack {
                 Color.black
-                TVVLCPlayerController(request: request, controller: controller)
-                    .ignoresSafeArea()
+                TVPlayerRenderSurface(
+                    controller: controller,
+                    compatibilityRequest: compatibilityRequest
+                )
+                .ignoresSafeArea()
 
-                if let subtitleContent = controller.activeSubtitleContent {
+                if compatibilityRequest == nil {
+                    VideoSubtitlePlaybackOverlay(
+                        assContents: controller.activeAssSubtitleContents,
+                        content: controller.activeSubtitleContent,
+                        appearance: controller.subtitleAppearance,
+                        player: controller.player,
+                        additionalBottomInset: controlsVisible ? 240 : 0
+                    )
+                    .ignoresSafeArea()
+                } else if let subtitleContent = controller.activeSubtitleContent {
                     VideoSubtitleOverlay(
                         content: subtitleContent,
                         appearance: controller.subtitleAppearance,
@@ -134,7 +146,7 @@
                         contentHorizontalPadding: 0,
                         scrollAnchor: .trailing
                     )
-                        .frame(maxWidth: 760, alignment: .trailing)
+                    .frame(maxWidth: 760, alignment: .trailing)
                 }
             }
         }
@@ -554,18 +566,13 @@
     }
 
     #if DEBUG
-        #Preview("TV Compatibility Player") {
-            TVCompatibilityPlayerView(
+        #Preview("TV Player") {
+            TVPlayerView(
                 controller: VideoPlaybackController(
                     videoID: UUID(uuidString: "A57450E8-AC6C-4930-9C1E-B3995675D702")!,
                     service: VideoPlaybackPreviewService()
                 ),
-                request: VideoCompatibilityPlaybackRequest(
-                    url: URL(string: "https://example.com/video.mkv")!,
-                    resumeTime: 42,
-                    playbackRate: 1,
-                    audioStreams: []
-                ),
+                compatibilityRequest: nil,
                 title: "Signal in the Static",
                 trickplayPlaylistPath: nil,
                 trickplayFrameLoader: nil,

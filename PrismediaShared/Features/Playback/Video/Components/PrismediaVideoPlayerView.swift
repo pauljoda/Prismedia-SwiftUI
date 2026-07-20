@@ -49,11 +49,8 @@ import SwiftUI
         var body: some View {
             ZStack {
                 Color.black
-                NativeVideoSurface(
-                    controller: controller,
-                    scalingMode: controller.videoScalingMode
-                )
-                .allowsHitTesting(false)
+                VideoPlayerRenderSurface(controller: controller)
+                    .allowsHitTesting(false)
 
                 gestureLayer
 
@@ -212,11 +209,13 @@ import SwiftUI
                         "−\(VideoPlaybackPresentation.clockTime(max(0, controller.duration - controller.currentTime)))")
                     playbackOptionsMenu
                     #if os(iOS)
-                        bottomChromeButton(
-                            systemImage: "pip.enter",
-                            accessibilityLabel: "Start Picture in Picture",
-                            action: controller.startPictureInPicture
-                        )
+                        if controller.renderer == .native {
+                            bottomChromeButton(
+                                systemImage: "pip.enter",
+                                accessibilityLabel: "Start Picture in Picture",
+                                action: controller.startPictureInPicture
+                            )
+                        }
                     #endif
                     bottomChromeButton(
                         systemImage: isExpanded

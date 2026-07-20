@@ -17,6 +17,10 @@
 		AA0000000000000000000906 /* ReadiumNavigator in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000933 /* ReadiumNavigator */; };
 		AA0000000000000000000907 /* Carthage/Build/TVVLCKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000810 /* Carthage/Build/TVVLCKit.xcframework */; };
 		AA0000000000000000000908 /* Carthage/Build/TVVLCKit.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000810 /* Carthage/Build/TVVLCKit.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0000000000000000000990 /* Carthage/Build/MobileVLCKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */; };
+		AA0000000000000000000991 /* Carthage/Build/MobileVLCKit.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0000000000000000000992 /* Carthage/Build/VLCKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */; };
+		AA0000000000000000000993 /* Carthage/Build/VLCKit.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +52,28 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000281 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				AA0000000000000000000991 /* Carthage/Build/MobileVLCKit.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000282 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				AA0000000000000000000993 /* Carthage/Build/VLCKit.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +84,8 @@
 		AA0000000000000000000005 /* PrismediaTVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrismediaTVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000801 /* PrismediaAppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer; path = PrismediaAppIcon.icon; sourceTree = "<group>"; };
 		AA0000000000000000000810 /* Carthage/Build/TVVLCKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/TVVLCKit.xcframework; sourceTree = "<group>"; };
+		AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/MobileVLCKit.xcframework; sourceTree = "<group>"; };
+		AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/VLCKit.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -131,6 +159,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0000000000000000000990 /* Carthage/Build/MobileVLCKit.xcframework in Frameworks */,
 				AA0000000000000000000901 /* SwiftAssRenderer in Frameworks */,
 				AA0000000000000000000904 /* ReadiumShared in Frameworks */,
 				AA0000000000000000000905 /* ReadiumStreamer in Frameworks */,
@@ -142,6 +171,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0000000000000000000992 /* Carthage/Build/VLCKit.xcframework in Frameworks */,
 				AA0000000000000000000902 /* SwiftAssRenderer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -176,6 +206,8 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000801 /* PrismediaAppIcon.icon */,
+				AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */,
+				AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */,
 				AA0000000000000000000810 /* Carthage/Build/TVVLCKit.xcframework */,
 				AA0000000000000000000020 /* PrismediaShared */,
 				AA0000000000000000000021 /* PrismediaiOS */,
@@ -208,6 +240,7 @@
 			buildPhases = (
 				AA0000000000000000000201 /* Sources */,
 				AA0000000000000000000031 /* Frameworks */,
+				AA0000000000000000000281 /* Embed Frameworks */,
 				AA0000000000000000000301 /* Resources */,
 			);
 			buildRules = (
@@ -235,6 +268,7 @@
 			buildPhases = (
 				AA0000000000000000000202 /* Sources */,
 				AA0000000000000000000032 /* Frameworks */,
+				AA0000000000000000000282 /* Embed Frameworks */,
 				AA0000000000000000000302 /* Resources */,
 			);
 			buildRules = (

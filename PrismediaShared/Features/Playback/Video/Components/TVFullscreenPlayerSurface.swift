@@ -23,41 +23,14 @@
         }
 
         var body: some View {
-            if let request = controller.compatibilityPlaybackRequest {
-                TVCompatibilityPlayerView(
-                    controller: controller,
-                    request: request,
-                    title: title,
-                    trickplayPlaylistPath: trickplayPlaylistPath,
-                    trickplayFrameLoader: trickplayFrameLoader,
-                    onRequestDismiss: onRequestDismiss
-                )
-            } else {
-                TVFullscreenPlayerController(
-                    controller: controller,
-                    transportMenuSignature: transportMenuSignature,
-                    assSubtitleContents: controller.activeAssSubtitleContents,
-                    subtitleContent: controller.activeSubtitleContent,
-                    subtitleAppearance: controller.subtitleAppearance,
-                    onRequestDismiss: onRequestDismiss
-                )
-            }
-        }
-
-        private var transportMenuSignature: String {
-            let audio = controller.audioChoices
-                .map { "\($0.id):\($0.title)" }
-                .joined(separator: "|")
-            let subtitles = controller.subtitleChoices
-                .map { "\($0.id):\($0.title)" }
-                .joined(separator: "|")
-            return [
-                audio,
-                subtitles,
-                controller.selectedAudioChoiceID ?? "",
-                controller.selectedSubtitleChoiceID,
-                String(controller.playbackRate),
-            ].joined(separator: "#")
+            TVPlayerView(
+                controller: controller,
+                compatibilityRequest: controller.compatibilityPlaybackRequest,
+                title: title,
+                trickplayPlaylistPath: trickplayPlaylistPath,
+                trickplayFrameLoader: trickplayFrameLoader,
+                onRequestDismiss: onRequestDismiss
+            )
         }
     }
 

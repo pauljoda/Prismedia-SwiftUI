@@ -6,6 +6,7 @@ public struct PrismediaShellView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
     @Environment(PrismediaAppRouter.self) private var router
     @State private var isAccountPresented = false
+    @State private var playbackPreferences = VideoPlaybackPreferences()
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -39,7 +40,11 @@ public struct PrismediaShellView: View {
         }
         .sheet(isPresented: $isAccountPresented) {
             if let user = environment.session?.user, let client = environment.client {
-                AccountView(user: user, service: AccountService(client: client))
+                AccountView(
+                    user: user,
+                    service: AccountService(client: client),
+                    playbackPreferences: playbackPreferences
+                )
             }
         }
     }
@@ -404,7 +409,9 @@ public struct PrismediaShellView: View {
         ) -> some View {
             MusicPlaybackHost {
                 VideoPlaybackHost(
-                    client: client, onRestore: restoreVideoPlayback,
+                    client: client,
+                    preferences: playbackPreferences,
+                    onRestore: restoreVideoPlayback,
                     content: { session in
                         if AppShellLayoutPolicy.usesWideShell(
                             horizontalSizeClass: horizontalSizeClass,
@@ -435,7 +442,9 @@ public struct PrismediaShellView: View {
         ) -> some View {
             MacMusicPlaybackHost(client: client) {
                 VideoPlaybackHost(
-                    client: client, onRestore: restoreVideoPlayback,
+                    client: client,
+                    preferences: playbackPreferences,
+                    onRestore: restoreVideoPlayback,
                     content: { session in
                         wideShell(
                             user: user,

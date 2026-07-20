@@ -11,8 +11,11 @@ struct UserDefaultsVideoPlaybackEnginePreferenceStore: VideoPlaybackEnginePrefer
     }
 
     func load() -> VideoPlaybackEngine {
-        guard let value = defaults.string(forKey: Self.key) else { return .automatic }
-        return VideoPlaybackEngine(rawValue: value) ?? .automatic
+        guard let value = defaults.string(forKey: Self.key),
+            let engine = VideoPlaybackEngine(rawValue: value),
+            VideoPlaybackEngine.userSelectableCases.contains(engine)
+        else { return VideoPlaybackEngine.defaultChoice }
+        return engine
     }
 
     func save(_ engine: VideoPlaybackEngine) {
