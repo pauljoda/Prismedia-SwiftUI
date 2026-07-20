@@ -390,6 +390,7 @@ public struct EntityDetailView: View {
                                         ownerLink: playbackOwnerLink,
                                         detailLoader: dependencies.detailLoader,
                                         playbackService: playbackService,
+                                        trickplayFrameLoader: dependencies.trickplayFrameLoader,
                                         preparation: videoPlaybackPreparation,
                                         presentationMode: VideoPlaybackLaunchPolicy.presentationMode(
                                             for: playbackOwnerLink
@@ -406,6 +407,9 @@ public struct EntityDetailView: View {
                                             else { return }
                                             suppressesRoutePlayback = true
                                             thumbnailPlaybackLink = nil
+                                        },
+                                        onPlaybackProgressCommitted: {
+                                            Task { await refreshPlaybackState() }
                                         },
                                         onAdvance: { destination in
                                             guard playbackOwnerLink.kind != .videoSeason else { return }
@@ -589,6 +593,7 @@ public struct EntityDetailView: View {
                     ownerLink: playbackOwnerLink,
                     detailLoader: dependencies.detailLoader,
                     playbackService: playbackService,
+                    trickplayFrameLoader: dependencies.trickplayFrameLoader,
                     preparation: videoPlaybackPreparation,
                     presentationMode: .fullscreenOnly,
                     presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
@@ -597,6 +602,9 @@ public struct EntityDetailView: View {
                     onFullscreenDismiss: {
                         suppressesRoutePlayback = true
                         thumbnailPlaybackLink = nil
+                    },
+                    onPlaybackProgressCommitted: {
+                        Task { await refreshPlaybackState() }
                     },
                     onAdvance: { _ in }
                 )
@@ -728,6 +736,15 @@ public struct EntityDetailView: View {
         guard let request = state.beginLoad() else { return }
         let outcome = await service.load(id: link.entityID, kind: link.kind)
         state.finishLoad(outcome, request: request)
+    }
+
+    private func refreshPlaybackState() async {
+        let outcome = await service.load(id: link.entityID, kind: link.kind)
+        guard !Task.isCancelled else { return }
+        state.finishPlaybackRefresh(outcome)
+        guard case .content(let detail) = state.phase else { return }
+        await loadVideoProgress(for: detail)
+        dependencies.onEntityMutated()
     }
 
     private func loadVideoProgress(for detail: EntityDetail) async {

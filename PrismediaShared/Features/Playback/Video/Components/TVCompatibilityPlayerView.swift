@@ -5,14 +5,17 @@
         let controller: VideoPlaybackController
         let request: VideoCompatibilityPlaybackRequest
         let title: String
+        let trickplayPlaylistPath: String?
+        let trickplayFrameLoader: (any TrickplayFrameLoading)?
         let onRequestDismiss: () -> Void
 
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @State private var controlsVisible = true
         @State private var controlsDismissGeneration = 0
         @State private var hasStartedAutoDismiss = false
+        @State private var awaitsAutoDismissAfterResume = false
         @State private var optionsFocusEnabled = false
-        @State private var activeOptionsMenu: TVPlaybackOptionsMenu?
+        @State private var trickplayFrames: [TrickplayPlaylist.Frame] = []
         @State private var previewTime: Double?
         @State private var seekOriginTime: Double?
         @State private var scrubPanOrigin = 0.0
@@ -60,19 +63,12 @@
             .prismediaFocusSection()
             .onPlayPauseCommand(perform: handlePlayPauseCommand)
             .onExitCommand(perform: handleExitCommand)
-            .confirmationDialog(
-                activeOptionsMenu?.title ?? "Playback Options",
-                isPresented: optionsMenuPresented,
-                titleVisibility: .visible
-            ) {
-                optionsMenuActions
-            }
             .onChange(of: controller.isPlaying) { _, isPlaying in
-                if isPlaying { startInitialAutoDismissIfNeeded() }
+                handlePlaybackStateChange(isPlaying: isPlaying)
             }
             .onAppear {
                 moveFocus(to: .timeline)
-                if controller.isPlaying { startInitialAutoDismissIfNeeded() }
+                handlePlaybackStateChange(isPlaying: controller.isPlaying)
             }
             .onDisappear {
                 cancelSeekPreview()
@@ -92,6 +88,9 @@
                 try? await Task.sleep(for: scanSettleDelay)
                 guard !Task.isCancelled, scanSide != nil else { return }
                 finishScan(resumePlayback: true)
+            }
+            .task(id: trickplayPlaylistPath) {
+                await loadTrickplayFrames()
             }
             .animation(.easeOut(duration: 0.18), value: controlsVisible)
         }
@@ -128,23 +127,22 @@
                         .foregroundStyle(PrismediaColor.onMedia)
                 }
                 Spacer()
-                Text("VLC")
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, PrismediaSpacing.medium)
-                    .padding(.vertical, PrismediaSpacing.extraSmall)
-                    .glassEffect(.regular, in: .capsule)
+                if !controller.badges.isEmpty {
+                    VideoStatusChips(
+                        badges: controller.badges,
+                        overlaysVideo: true,
+                        contentHorizontalPadding: 0,
+                        scrollAnchor: .trailing
+                    )
+                        .frame(maxWidth: 760, alignment: .trailing)
+                }
             }
         }
 
         private var bottomChrome: some View {
             VStack(spacing: PrismediaSpacing.medium) {
-                HStack(alignment: .center, spacing: PrismediaSpacing.large) {
-                    if !controller.badges.isEmpty {
-                        VideoStatusChips(badges: controller.badges, overlaysVideo: true)
-                    }
-                    Spacer(minLength: PrismediaSpacing.section)
-                    playbackOptionButtons
-                }
+                playbackOptionButtons
+                    .frame(maxWidth: .infinity, alignment: .trailing)
 
                 playbackTimeline
 
@@ -181,7 +179,7 @@
                     originTime: seekOriginTime,
                     isFocused: focusedControl == .timeline,
                     isSeeking: isSeeking,
-                    previewURL: request.url
+                    previewFrame: trickplayFrame
                 )
             }
             .frame(height: 72)
@@ -245,8 +243,8 @@
             focusTarget: TVCompatibilityPlayerFocusTarget,
             systemImage: String
         ) -> some View {
-            Button {
-                openOptionsMenu(menu)
+            Menu {
+                optionsMenuActions(for: menu)
             } label: {
                 Image(systemName: systemImage)
                     .font(.body.weight(.semibold))
@@ -256,7 +254,7 @@
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .disabled(!optionsFocusEnabled)
+            .menuOrder(.fixed)
             .focused($focusedControl, equals: focusTarget)
             .accessibilityLabel(menu.title)
             .accessibilityIdentifier(menu.title)
@@ -266,8 +264,8 @@
         }
 
         @ViewBuilder
-        private var optionsMenuActions: some View {
-            switch activeOptionsMenu {
+        private func optionsMenuActions(for menu: TVPlaybackOptionsMenu) -> some View {
+            switch menu {
             case .audio:
                 if controller.audioChoices.isEmpty {
                     Button("Default") {}
@@ -305,8 +303,6 @@
                         controller.setPlaybackRate(rate)
                     }
                 }
-            case nil:
-                EmptyView()
             }
         }
 
@@ -317,7 +313,7 @@
         ) -> some View {
             Button {
                 action()
-                dismissOptionsMenu()
+                revealControls()
             } label: {
                 if selected {
                     Label(title, systemImage: "checkmark")
@@ -327,17 +323,12 @@
             }
         }
 
-        private var optionsMenuPresented: Binding<Bool> {
-            Binding(
-                get: { activeOptionsMenu != nil },
-                set: { isPresented in
-                    if !isPresented { dismissOptionsMenu() }
-                }
-            )
-        }
-
         private var displayedTime: Double {
             previewTime ?? controller.currentTime
+        }
+
+        private var trickplayFrame: TrickplayPlaylist.Frame? {
+            TrickplayPlaylist(frames: trickplayFrames).frame(at: displayedTime)
         }
 
         private var timelineAccessibilityValue: String {
@@ -360,7 +351,6 @@
         private var canAutoDismissControls: Bool {
             controller.isPlaying
                 && !optionsFocusEnabled
-                && activeOptionsMenu == nil
                 && !isSeeking
         }
 
@@ -389,10 +379,12 @@
             controlsDismissGeneration += 1
         }
 
-        private func startInitialAutoDismissIfNeeded() {
-            guard !hasStartedAutoDismiss else { return }
+        private func handlePlaybackStateChange(isPlaying: Bool) {
+            guard isPlaying else { return }
+            let shouldArmTimer = !hasStartedAutoDismiss || awaitsAutoDismissAfterResume
             hasStartedAutoDismiss = true
-            resetControlsDismissTimer()
+            awaitsAutoDismissAfterResume = false
+            if shouldArmTimer { resetControlsDismissTimer() }
         }
 
         private func moveToPlaybackOptions() {
@@ -469,18 +461,18 @@
                 commitScrub(resumePlayback: true)
                 return
             }
+            if !controller.isPlaying, !controller.isWaiting {
+                awaitsAutoDismissAfterResume = true
+            }
             controller.togglePlayback()
         }
 
         private func handleExitCommand() {
-            if isScrubbing || scanSide != nil {
-                cancelSeekPreview()
-                revealControls()
-            } else if activeOptionsMenu != nil {
-                dismissOptionsMenu()
-            } else {
+            guard controlsVisible else {
                 onRequestDismiss()
+                return
             }
+            hideControls()
         }
 
         private func handleHorizontalPress(_ side: VideoPlayerGestureSide) {
@@ -531,7 +523,9 @@
             guard scanSide != nil, let target = previewTime else { return }
             clearSeekPreview()
             controller.seek(to: target) { finished in
-                if finished, resumePlayback { controller.play() }
+                guard finished, resumePlayback else { return }
+                awaitsAutoDismissAfterResume = true
+                controller.play()
             }
         }
 
@@ -549,7 +543,9 @@
             guard isScrubbing, let target = previewTime else { return }
             clearSeekPreview()
             controller.seek(to: target) { finished in
-                if finished, resumePlayback { controller.play() }
+                guard finished, resumePlayback else { return }
+                awaitsAutoDismissAfterResume = true
+                controller.play()
             }
         }
 
@@ -589,28 +585,27 @@
             scanCommitGeneration += 1
         }
 
+        private func hideControls() {
+            cancelSeekPreview()
+            optionsFocusEnabled = false
+            controlsVisible = false
+            moveFocus(to: .timeline)
+        }
+
         private func boundedTime(_ time: Double) -> Double {
             max(0, min(time, controller.duration > 0 ? controller.duration : time))
         }
 
-        private func openOptionsMenu(_ menu: TVPlaybackOptionsMenu) {
-            activeOptionsMenu = menu
-            revealControls()
-        }
-
-        private func dismissOptionsMenu() {
-            guard let menu = activeOptionsMenu else { return }
-            activeOptionsMenu = nil
-            revealControls()
-            moveFocus(to: focusTarget(for: menu))
-        }
-
-        private func focusTarget(for menu: TVPlaybackOptionsMenu) -> TVCompatibilityPlayerFocusTarget {
-            switch menu {
-            case .audio: .audio
-            case .subtitles: .subtitles
-            case .speed: .speed
+        private func loadTrickplayFrames() async {
+            trickplayFrames = []
+            guard let trickplayPlaylistPath, let trickplayFrameLoader else { return }
+            let frames = await trickplayFrameLoader.loadFrames(
+                playlistPath: trickplayPlaylistPath
+            )
+            guard !Task.isCancelled, self.trickplayPlaylistPath == trickplayPlaylistPath else {
+                return
             }
+            trickplayFrames = frames
         }
 
         private func moveFocus(to target: TVCompatibilityPlayerFocusTarget) {
@@ -636,6 +631,8 @@
                     audioStreams: []
                 ),
                 title: "Signal in the Static",
+                trickplayPlaylistPath: nil,
+                trickplayFrameLoader: nil,
                 onRequestDismiss: {}
             )
         }

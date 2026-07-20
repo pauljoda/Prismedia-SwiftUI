@@ -184,6 +184,48 @@ final class EntityDetailServiceTests: XCTestCase {
             })
     }
 
+    func testPlaybackRefreshPublishesTheLatestResumePositionWithoutLoadingState() throws {
+        let initial = try makeDetail(
+            title: "Arrival",
+            capabilities: playbackCapability(resumeSeconds: 15)
+        )
+        let refreshed = try makeDetail(
+            title: "Arrival",
+            capabilities: playbackCapability(resumeSeconds: 145)
+        )
+        var state = EntityDetailState()
+        let request = try XCTUnwrap(state.beginLoad())
+        state.finishLoad(.content(initial), request: request)
+
+        state.finishPlaybackRefresh(.content(refreshed))
+
+        guard case .content(let detail) = state.phase,
+            let playback: EntityPlaybackCapability = detail.capability()
+        else {
+            return XCTFail("Expected refreshed playback detail to remain visible.")
+        }
+        XCTAssertEqual(playback.resumeSeconds, 145)
+    }
+
+    func testFailedPlaybackRefreshPreservesVisibleResumePosition() throws {
+        let initial = try makeDetail(
+            title: "Arrival",
+            capabilities: playbackCapability(resumeSeconds: 15)
+        )
+        var state = EntityDetailState()
+        let request = try XCTUnwrap(state.beginLoad())
+        state.finishLoad(.content(initial), request: request)
+
+        state.finishPlaybackRefresh(.failure("Offline"))
+
+        guard case .content(let detail) = state.phase,
+            let playback: EntityPlaybackCapability = detail.capability()
+        else {
+            return XCTFail("Expected the existing playback detail to remain visible.")
+        }
+        XCTAssertEqual(playback.resumeSeconds, 15)
+    }
+
     private func makeDetail(
         title: String,
         capabilities: String = "[]",
@@ -220,6 +262,20 @@ final class EntityDetailServiceTests: XCTestCase {
             "genres": [],
             "referenceCounts": []
           }]
+        }]
+        """
+    }
+
+    private func playbackCapability(resumeSeconds: Double) -> String {
+        """
+        [{
+          "kind": "playback",
+          "playCount": 0,
+          "skipCount": 0,
+          "playDurationSeconds": 120,
+          "resumeSeconds": \(resumeSeconds),
+          "lastPlayedAt": null,
+          "completedAt": null
         }]
         """
     }

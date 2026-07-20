@@ -5,6 +5,7 @@ struct VideoEntityPlaybackView: View {
     let ownerLink: EntityLink
     let detailLoader: any EntityDetailLoading
     let playbackService: any VideoPlaybackServicing
+    let trickplayFrameLoader: (any TrickplayFrameLoading)?
     let preparation: VideoPlaybackPreparationCoordinator
     let presentationMode: VideoPlaybackPresentationMode
     let tvLayout: TVVideoPlaybackLayout
@@ -18,6 +19,7 @@ struct VideoEntityPlaybackView: View {
         ownerLink: EntityLink,
         detailLoader: any EntityDetailLoading,
         playbackService: any VideoPlaybackServicing,
+        trickplayFrameLoader: (any TrickplayFrameLoading)? = nil,
         preparation: VideoPlaybackPreparationCoordinator,
         presentationMode: VideoPlaybackPresentationMode = .inline,
         tvLayout: TVVideoPlaybackLayout = .standard,
@@ -30,6 +32,7 @@ struct VideoEntityPlaybackView: View {
         self.ownerLink = ownerLink
         self.detailLoader = detailLoader
         self.playbackService = playbackService
+        self.trickplayFrameLoader = trickplayFrameLoader
         self.preparation = preparation
         self.presentationMode = presentationMode
         self.tvLayout = tvLayout
@@ -196,6 +199,8 @@ struct VideoEntityPlaybackView: View {
                 TVFullscreenPlayerSurface(
                     controller: controller,
                     title: videoDetail?.title ?? detail.title,
+                    trickplayPlaylistPath: trickplayPlaylistPath,
+                    trickplayFrameLoader: trickplayFrameLoader,
                     onRequestDismiss: { tvFullscreenPresentation = nil }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -529,6 +534,16 @@ struct VideoEntityPlaybackView: View {
             detailResumeSeconds: resumeSeconds(in: detail),
             thumbnailResumeSeconds: ownerLink.thumbnailPreview?.resumeSeconds
         )
+    }
+
+    private var trickplayPlaylistPath: String? {
+        if let path = ownerLink.sourceThumbnail?.trickplayPlaylistPath {
+            return path
+        }
+        return presentedVideoDetail?.capabilities.compactMap { capability -> String? in
+            guard case .files(let files) = capability else { return nil }
+            return files.items.first(where: { $0.role == "trickplay" })?.path
+        }.first
     }
 }
 

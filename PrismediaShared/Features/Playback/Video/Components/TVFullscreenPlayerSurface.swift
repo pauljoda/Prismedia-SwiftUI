@@ -4,7 +4,23 @@
     struct TVFullscreenPlayerSurface: View {
         let controller: VideoPlaybackController
         let title: String
+        let trickplayPlaylistPath: String?
+        let trickplayFrameLoader: (any TrickplayFrameLoading)?
         let onRequestDismiss: () -> Void
+
+        init(
+            controller: VideoPlaybackController,
+            title: String,
+            trickplayPlaylistPath: String? = nil,
+            trickplayFrameLoader: (any TrickplayFrameLoading)? = nil,
+            onRequestDismiss: @escaping () -> Void
+        ) {
+            self.controller = controller
+            self.title = title
+            self.trickplayPlaylistPath = trickplayPlaylistPath
+            self.trickplayFrameLoader = trickplayFrameLoader
+            self.onRequestDismiss = onRequestDismiss
+        }
 
         var body: some View {
             if let request = controller.compatibilityPlaybackRequest {
@@ -12,6 +28,8 @@
                     controller: controller,
                     request: request,
                     title: title,
+                    trickplayPlaylistPath: trickplayPlaylistPath,
+                    trickplayFrameLoader: trickplayFrameLoader,
                     onRequestDismiss: onRequestDismiss
                 )
             } else {

@@ -47,6 +47,7 @@ import SwiftUI
                     episodeDetail: snapshot.selectedEpisodeDetail,
                     loader: loader,
                     playbackService: playbackService,
+                    trickplayFrameLoader: dependencies.trickplayFrameLoader,
                     fullscreenRequest: snapshot.fullscreenRequest,
                     onFullscreenDismiss: handleFullscreenDismiss,
                     onPlaybackProgressCommitted: { episodeID in
@@ -251,6 +252,7 @@ import SwiftUI
                 if snapshot.selectedSeasonID == seasonID {
                     snapshot.refreshSeason(seasonDetail)
                 }
+                dependencies.onEntityMutated()
             } catch is CancellationError {
                 return
             } catch {

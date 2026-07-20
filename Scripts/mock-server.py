@@ -912,6 +912,18 @@ def build_entity_detail_response(entity_id):
                 ],
             }
         )
+        capabilities.append(
+            {
+                "kind": "files",
+                "items": [
+                    {
+                        "role": "trickplay",
+                        "path": PUBLIC_TRICKPLAY_PATH,
+                        "mimeType": "text/vtt",
+                    }
+                ],
+            }
+        )
     if entity["kind"] == "image":
         capabilities.append(
             {

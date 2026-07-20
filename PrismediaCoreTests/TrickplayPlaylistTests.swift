@@ -135,4 +135,26 @@ final class TrickplayPlaylistTests: XCTestCase {
             XCTAssertEqual(error as? TrickplayPlaylist.ParseError, .missingTileMetadata)
         }
     }
+
+    func testFrameAtPlaybackTimeUsesTheMostRecentTrickplayFrame() {
+        let frames = [0.0, 10.0, 20.0].map { startTime in
+            TrickplayPlaylist.Frame(
+                startTime: startTime,
+                imageURL: URL(string: "https://media.example/sheet.jpg")!,
+                crop: .init(x: Int(startTime), y: 0, width: 160, height: 90),
+                imageWidth: 480,
+                imageHeight: 90
+            )
+        }
+        let playlist = TrickplayPlaylist(frames: frames)
+
+        XCTAssertEqual(playlist.frame(at: -1)?.startTime, 0)
+        XCTAssertEqual(playlist.frame(at: 9.9)?.startTime, 0)
+        XCTAssertEqual(playlist.frame(at: 10)?.startTime, 10)
+        XCTAssertEqual(playlist.frame(at: 99)?.startTime, 20)
+    }
+
+    func testEmptyPlaylistHasNoFrameAtPlaybackTime() {
+        XCTAssertNil(TrickplayPlaylist(frames: []).frame(at: 10))
+    }
 }

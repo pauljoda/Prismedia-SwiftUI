@@ -3,6 +3,8 @@ import SwiftUI
 struct VideoStatusChips: View {
     let badges: [VideoPlaybackBadge]
     var overlaysVideo = false
+    var contentHorizontalPadding = PrismediaSpacing.medium
+    var scrollAnchor: UnitPoint = .leading
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
     var body: some View {
@@ -25,9 +27,10 @@ struct VideoStatusChips: View {
                         .accessibilityLabel(badge.label)
                     }
                 }
-                .padding(.horizontal, PrismediaSpacing.medium)
+                .padding(.horizontal, contentHorizontalPadding)
                 .padding(.vertical, PrismediaSpacing.small)
             }
+            .defaultScrollAnchor(scrollAnchor)
         }
         .accessibilityIdentifier("video-detail.media-badges")
     }

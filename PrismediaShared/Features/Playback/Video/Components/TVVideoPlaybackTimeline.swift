@@ -9,7 +9,7 @@
         let originTime: Double?
         let isFocused: Bool
         let isSeeking: Bool
-        let previewURL: URL
+        let previewFrame: TrickplayPlaylist.Frame?
 
         private let previewSize = CGSize(width: 360, height: 203)
         private let playheadSize: CGFloat = 22
@@ -82,8 +82,8 @@
                 }
                 .frame(width: width, height: geometry.size.height, alignment: .leading)
                 .overlay(alignment: .topLeading) {
-                    if isSeeking, duration > 0 {
-                        thumbnailPreview
+                    if isSeeking, duration > 0, let previewFrame {
+                        thumbnailPreview(previewFrame)
                             .offset(
                                 x: thumbnailOffset(progress: currentProgress, width: width),
                                 y: -(previewSize.height + 18)
@@ -96,11 +96,12 @@
             .accessibilityHidden(true)
         }
 
-        private var thumbnailPreview: some View {
+        private func thumbnailPreview(_ frame: TrickplayPlaylist.Frame) -> some View {
             ZStack(alignment: .bottom) {
-                TVVLCThumbnailView(
-                    url: previewURL,
-                    position: duration > 0 ? currentTime / duration : 0
+                SpriteFrameView(
+                    frame: frame,
+                    imageURL: frame.imageURL,
+                    showsPlaceholder: false
                 )
                 .frame(width: previewSize.width, height: previewSize.height)
 
@@ -112,6 +113,7 @@
                     .glassEffect(.regular, in: .capsule)
                     .padding(PrismediaSpacing.small)
             }
+            .compositingGroup()
             .clipShape(.rect(cornerRadius: 16))
             .overlay {
                 RoundedRectangle(cornerRadius: 16)
@@ -155,7 +157,13 @@
                 originTime: 30,
                 isFocused: true,
                 isSeeking: true,
-                previewURL: URL(string: "https://example.com/video.mkv")!
+                previewFrame: TrickplayPlaylist.Frame(
+                    startTime: 40,
+                    imageURL: URL(string: "https://example.com/trickplay.jpg")!,
+                    crop: .init(x: 0, y: 0, width: 320, height: 180),
+                    imageWidth: 320,
+                    imageHeight: 180
+                )
             )
             .padding(60)
             .background(Color.black)

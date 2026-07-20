@@ -27,7 +27,6 @@ final class PrismediaTVPlayerUITests: XCTestCase {
         let audio = app.buttons["Audio Tracks"]
         let subtitles = app.buttons["Subtitles"]
         let speed = app.buttons["Playback Speed"]
-        let menuButtons = [audio, subtitles, speed]
         XCTAssertTrue(waitForDisappearance(of: audio, timeout: 10))
 
         XCUIRemote.shared.press(.right)
@@ -39,28 +38,79 @@ final class PrismediaTVPlayerUITests: XCTestCase {
         XCTAssertTrue(waitForFocus(on: surface))
 
         XCUIRemote.shared.press(.up)
-        XCTAssertTrue(waitForAnyFocus(in: menuButtons))
-        XCTAssertTrue(waitForFocus(on: audio))
+        XCUIRemote.shared.press(.select)
+        let commentaryAudio = element(label: "Commentary", in: app)
+        XCTAssertTrue(
+            commentaryAudio.waitForExistence(timeout: 3),
+            "Audio choices should open in an anchored native menu."
+        )
+        XCUIRemote.shared.press(.menu)
+        XCTAssertTrue(waitForDisappearance(of: commentaryAudio, timeout: 3))
+        XCTAssertTrue(audio.waitForExistence(timeout: 3))
+
         XCUIRemote.shared.press(.right)
-        XCTAssertTrue(waitForFocus(on: subtitles))
+        XCUIRemote.shared.press(.select)
+        let subtitlesOff = element(label: "Off", in: app)
+        XCTAssertTrue(
+            subtitlesOff.waitForExistence(timeout: 3),
+            "Subtitle choices should open in an anchored native menu."
+        )
+        XCUIRemote.shared.press(.menu)
+        XCTAssertTrue(waitForDisappearance(of: subtitlesOff, timeout: 3))
+
         XCUIRemote.shared.press(.right)
-        XCTAssertTrue(waitForFocus(on: speed))
+        XCUIRemote.shared.press(.select)
+        let doubleSpeed = element(label: "2×", in: app)
+        XCTAssertTrue(
+            doubleSpeed.waitForExistence(timeout: 3),
+            "Playback speed choices should open in an anchored native menu."
+        )
+        XCUIRemote.shared.press(.menu)
+        XCTAssertTrue(waitForDisappearance(of: doubleSpeed, timeout: 3))
 
         try await Task.sleep(for: .seconds(4.5))
         XCTAssertTrue(
-            menuButtons.contains(where: \.hasFocus),
+            audio.exists && subtitles.exists && speed.exists,
             "Focused playback menus must suspend chrome auto-dismissal."
         )
 
         XCUIRemote.shared.press(.left)
-        XCTAssertTrue(waitForFocus(on: subtitles))
+        XCUIRemote.shared.press(.select)
+        XCTAssertTrue(
+            subtitlesOff.waitForExistence(timeout: 3),
+            "Left/right remote navigation should move between native playback menus."
+        )
+        XCUIRemote.shared.press(.menu)
+        XCTAssertTrue(waitForDisappearance(of: subtitlesOff, timeout: 3))
         try await Task.sleep(for: .seconds(4.5))
         XCTAssertTrue(
-            menuButtons.contains(where: \.hasFocus),
+            audio.exists,
             "Navigating the playback menus must keep the chrome visible."
         )
 
         XCUIRemote.shared.press(.down)
+        XCTAssertTrue(waitForFocus(on: surface))
+
+        XCUIRemote.shared.press(.playPause)
+        try await Task.sleep(for: .milliseconds(300))
+        XCUIRemote.shared.press(.playPause)
+        XCTAssertTrue(
+            waitForDisappearance(of: audio, timeout: 7),
+            "Resuming playback should re-arm chrome auto-dismissal."
+        )
+        XCTAssertTrue(surface.exists)
+
+        XCUIRemote.shared.press(.up)
+        XCTAssertTrue(audio.waitForExistence(timeout: 3))
+        XCUIRemote.shared.press(.menu)
+        XCTAssertTrue(
+            waitForDisappearance(of: audio, timeout: 3),
+            "Back should hide visible playback chrome before dismissing playback."
+        )
+        XCTAssertTrue(surface.exists, "Hiding playback chrome must not exit the player.")
+
+        XCUIRemote.shared.press(.up)
+        XCTAssertTrue(audio.waitForExistence(timeout: 3))
         XCTAssertTrue(waitForFocus(on: surface))
 
         XCUIRemote.shared.press(.select)
@@ -112,18 +162,6 @@ final class PrismediaTVPlayerUITests: XCTestCase {
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "hasFocus == true"),
             object: element
-        )
-        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
-    }
-
-    @MainActor
-    private func waitForAnyFocus(
-        in elements: [XCUIElement],
-        timeout: TimeInterval = 3
-    ) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in elements.contains(where: \.hasFocus) },
-            object: elements[0]
         )
         return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
     }
@@ -182,5 +220,12 @@ final class PrismediaTVPlayerUITests: XCTestCase {
     @MainActor
     private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
+    }
+
+    @MainActor
+    private func element(label: String, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", label))
+            .firstMatch
     }
 }

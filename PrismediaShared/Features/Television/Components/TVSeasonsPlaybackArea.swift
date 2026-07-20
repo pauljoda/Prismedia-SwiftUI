@@ -8,6 +8,7 @@ import SwiftUI
         let episodeDetail: EntityDetail?
         let loader: any EntityDetailLoading
         let playbackService: (any VideoPlaybackServicing)?
+        let trickplayFrameLoader: (any TrickplayFrameLoading)?
         let fullscreenRequest: TVEpisodePlaybackRequest?
         let onFullscreenDismiss: (TVEpisodePlaybackRequest?, UUID) -> Void
         let onPlaybackProgressCommitted: (UUID) -> Void
@@ -21,6 +22,7 @@ import SwiftUI
                     ownerLink: EntityLink(thumbnail: episode, intent: .playback),
                     detailLoader: loader,
                     playbackService: playbackService,
+                    trickplayFrameLoader: trickplayFrameLoader,
                     preparation: preparation,
                     tvLayout: .compact,
                     presentsFullscreenOnTV: fullscreenRequest?.episodeID == episodeDetail.id,
@@ -61,6 +63,7 @@ import SwiftUI
                 episodeDetail: TVSeasonsPreviewData.episode,
                 loader: TVSeasonsPreviewData.loader,
                 playbackService: VideoPlaybackPreviewService(),
+                trickplayFrameLoader: nil,
                 fullscreenRequest: nil,
                 onFullscreenDismiss: { _, _ in },
                 onPlaybackProgressCommitted: { _ in },
@@ -76,6 +79,7 @@ import SwiftUI
                 episodeDetail: nil,
                 loader: TVSeasonsPreviewData.loader,
                 playbackService: nil,
+                trickplayFrameLoader: nil,
                 fullscreenRequest: nil,
                 onFullscreenDismiss: { _, _ in },
                 onPlaybackProgressCommitted: { _ in },
