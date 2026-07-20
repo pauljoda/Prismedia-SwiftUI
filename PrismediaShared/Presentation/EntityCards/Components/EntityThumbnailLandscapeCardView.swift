@@ -182,8 +182,7 @@ struct EntityThumbnailLandscapeCardView: View {
         ThumbnailBadge(
             systemImage: contextBadge.systemImage,
             label: contextBadge.label,
-            tint: PrismediaColor.onMedia,
-            background: PrismediaColor.background.opacity(0.68),
+            glassTint: PrismediaColor.background,
             iconAfterLabel: false
         )
     }

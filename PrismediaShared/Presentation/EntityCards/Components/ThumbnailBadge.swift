@@ -3,8 +3,7 @@ import SwiftUI
 struct ThumbnailBadge: View {
     let systemImage: String?
     let label: String?
-    let tint: Color
-    let background: Color
+    let glassTint: Color
     let iconAfterLabel: Bool
 
     var body: some View {
@@ -18,15 +17,12 @@ struct ThumbnailBadge: View {
             }
         }
         .font(PrismediaTypography.badge)
-        .foregroundStyle(tint)
         .padding(.horizontal, PrismediaSpacing.extraSmall)
         .padding(.vertical, PrismediaSpacing.extraExtraSmall)
-        .background(background)
-        .overlay(
-            RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous)
-                .stroke(tint.opacity(0.35), lineWidth: PrismediaLayout.hairline)
+        .glassEffect(
+            .regular.tint(glassTint),
+            in: .rect(cornerRadius: PrismediaRadius.badge)
         )
-        .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous))
     }
 
     @ViewBuilder
@@ -49,8 +45,7 @@ struct ThumbnailBadge: View {
         ThumbnailBadge(
             systemImage: "play.fill",
             label: "4K",
-            tint: PrismediaColor.accent,
-            background: PrismediaColor.controlFill,
+            glassTint: PrismediaColor.accent,
             iconAfterLabel: false
         )
         .padding(PrismediaSpacing.large)
