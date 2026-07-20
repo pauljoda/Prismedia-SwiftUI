@@ -7,6 +7,7 @@ import SwiftUI
         @Environment(\.scenePhase) private var scenePhase
         @State private var session: IdentifySession
         @State private var hasLoaded = false
+        @State private var compactNavigationPath = NavigationPath()
         private let automaticallyLoads: Bool
 
         init(session: IdentifySession, automaticallyLoads: Bool = true) {
@@ -17,8 +18,15 @@ import SwiftUI
         var body: some View {
             Group {
                 if horizontalSizeClass == .compact {
-                    NavigationStack {
-                        IdentifySidebarList(session: session, usesNavigationLinks: true)
+                    NavigationStack(path: $compactNavigationPath) {
+                        IdentifySidebarList(
+                            session: session,
+                            usesNavigationLinks: true,
+                            onOpenKind: { compactNavigationPath.append($0) }
+                        )
+                            .navigationDestination(for: EntityKind.self) { kind in
+                                IdentifyKindBrowseView(session: session, kind: kind)
+                            }
                     }
                 } else {
                     NavigationSplitView {

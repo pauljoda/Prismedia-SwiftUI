@@ -322,9 +322,6 @@
     "Add Role" : {
 
     },
-    "Add Selected to Queue" : {
-
-    },
     "Add to Collection" : {
 
     },
@@ -508,9 +505,6 @@
     "Browse by Kind" : {
 
     },
-    "Browse Options" : {
-
-    },
     "Browse Server Folders" : {
 
     },
@@ -582,9 +576,6 @@
 
     },
     "Choose Chapter" : {
-
-    },
-    "Choose Provider" : {
 
     },
     "Classification" : {
@@ -813,6 +804,9 @@
 
     },
     "Description" : {
+
+    },
+    "Deselects this artwork" : {
 
     },
     "Destination" : {
@@ -1077,6 +1071,9 @@
     "Identify" : {
 
     },
+    "Identify Provider" : {
+
+    },
     "Identify Queue" : {
 
     },
@@ -1207,9 +1204,6 @@
 
     },
     "Load More" : {
-
-    },
-    "Loading %@ items…" : {
 
     },
     "Loading %@…" : {
@@ -1467,9 +1461,6 @@
     "Next Result" : {
 
     },
-    "Next sibling" : {
-
-    },
     "Next Track" : {
 
     },
@@ -1504,6 +1495,9 @@
 
     },
     "No enabled metadata provider can track this entity yet. Identify it with a supported provider first." : {
+
+    },
+    "No enabled provider supports %@." : {
 
     },
     "No Episodes" : {
@@ -1875,9 +1869,6 @@
 
     },
     "Previous Result" : {
-
-    },
-    "Previous sibling" : {
 
     },
     "Previous Track" : {
@@ -2295,9 +2286,6 @@
     "Search In" : {
 
     },
-    "Search library" : {
-
-    },
     "Search PDF" : {
 
     },
@@ -2335,15 +2323,6 @@
 
     },
     "Searching…" : {
-
-    },
-    "Seek All" : {
-
-    },
-    "Seek All Providers" : {
-
-    },
-    "Seeking" : {
 
     },
     "Seeks playback by one preview frame" : {
@@ -2392,6 +2371,9 @@
 
     },
     "Selection Actions" : {
+
+    },
+    "Selects this artwork" : {
 
     },
     "Sepia" : {
@@ -2764,9 +2746,6 @@
 
     },
     "Updating identify queue…" : {
-
-    },
-    "Updating items…" : {
 
     },
     "Updating progress" : {

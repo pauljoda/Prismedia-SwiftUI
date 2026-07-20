@@ -6,18 +6,21 @@ import SwiftUI
         @Environment(\.scenePhase) private var scenePhase
         @Bindable var session: IdentifySession
         let usesNavigationLinks: Bool
+        var onOpenKind: (EntityKind) -> Void = { _ in }
 
         var body: some View {
             Group {
                 if usesNavigationLinks {
                     List {
                         Section("Browse by Kind") {
-                            LazyVGrid(
-                                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                                spacing: PrismediaSpacing.medium
-                            ) {
-                                ForEach(session.kindSummaries) { summary in
-                                    kindCard(summary)
+                            GlassEffectContainer(spacing: PrismediaSpacing.medium) {
+                                LazyVGrid(
+                                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                                    spacing: PrismediaSpacing.medium
+                                ) {
+                                    ForEach(session.kindSummaries) { summary in
+                                        kindCard(summary)
+                                    }
                                 }
                             }
                             .padding(.vertical, PrismediaSpacing.small)
@@ -105,8 +108,13 @@ import SwiftUI
         }
 
         private func kindCard(_ summary: IdentifyKindSummary) -> some View {
-            NavigationLink {
-                IdentifyKindBrowseView(session: session, kind: summary.kind)
+            let shape = RoundedRectangle(
+                cornerRadius: PrismediaRadius.card,
+                style: .continuous
+            )
+
+            return Button {
+                onOpenKind(summary.kind)
             } label: {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                     Image(systemName: systemImage(for: summary.kind))
@@ -134,9 +142,12 @@ import SwiftUI
                 .padding(PrismediaSpacing.medium)
                 .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
                 .contentShape(.rect)
+                .glassEffect(.regular.interactive(), in: shape)
+                .overlay {
+                    shape.stroke(PrismediaColor.border, lineWidth: 1)
+                }
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.roundedRectangle(radius: PrismediaRadius.card))
+            .buttonStyle(.plain)
             .accessibilityHint("Browse \(summary.kind.displayLabel.lowercased()) items")
         }
 
