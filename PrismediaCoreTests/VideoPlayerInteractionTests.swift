@@ -3,6 +3,38 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoPlayerInteractionTests: XCTestCase {
+    func testTVPlaybackChromeUsesThreeSecondsAndSuspendsOutsideActivePlayback() {
+        XCTAssertEqual(VideoPlayerChromePolicy.tvAutoHideDelay, .seconds(3))
+        XCTAssertTrue(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: true,
+                optionsPresented: false,
+                isSeeking: false
+            )
+        )
+        XCTAssertFalse(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: false,
+                optionsPresented: false,
+                isSeeking: false
+            )
+        )
+        XCTAssertFalse(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: true,
+                optionsPresented: true,
+                isSeeking: false
+            )
+        )
+        XCTAssertFalse(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: true,
+                optionsPresented: false,
+                isSeeking: true
+            )
+        )
+    }
+
     func testDetailMarkerOnlySeeksTheVideoOwnedByTheVisibleDetail() {
         let videoID = UUID()
 

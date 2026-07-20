@@ -14,6 +14,7 @@
         private var mediaPlayer: VLCMediaPlayer?
         private var request: VideoCompatibilityPlaybackRequest?
         private var pausesAfterOpening = false
+        private var stateFilter = VideoCompatibilityPlaybackStateFilter()
 
         init(controller: VideoPlaybackController) {
             self.controller = controller
@@ -22,13 +23,17 @@
         func install(_ request: VideoCompatibilityPlaybackRequest, drawable: AnyObject) {
             tearDownPlayer()
             self.request = request
+            stateFilter = VideoCompatibilityPlaybackStateFilter()
 
             let media = VLCMedia(url: request.url)
-            // VLCKit's VideoToolbox decoder defaults to hardware-only. Keep
-            // that contract explicit so compatible codecs stay on the Apple
-            // device decoder before VLC considers a software fallback.
-            media.addOption(":videotoolbox=1")
-            media.addOption(":videotoolbox-hw-decoder-only=1")
+            #if !targetEnvironment(simulator)
+                // Prefer VLC's native Apple decoder, then keep VideoToolbox active
+                // if the avcodec path is selected for the source codec. Simulators
+                // need VLC's software fallback because they have no device decoder.
+                media.addOption(":codec=videotoolbox,any")
+                media.addOption(":videotoolbox-hw-decoder-only=1")
+                media.addOption(":avcodec-hw=videotoolbox")
+            #endif
             if request.resumeTime > 0 {
                 media.addOption(":start-time=\(request.resumeTime)")
             }
@@ -101,8 +106,10 @@
                     player?.play()
                 },
                 pause: { [weak player] in player?.pause() },
-                seek: { [weak player] seconds in
-                    player?.time = VLCTime(int: Int32(seconds * 1_000))
+                seek: { [weak self, weak player] seconds in
+                    guard let self, let player else { return }
+                    stateFilter.beginSeek(to: seconds, at: ProcessInfo.processInfo.systemUptime)
+                    player.time = VLCTime(int: Int32(seconds * 1_000))
                 },
                 stop: { [weak player] in player?.stop() },
                 setRate: { [weak player] rate in player?.rate = rate },
@@ -115,13 +122,23 @@
 
         private func publishState(isPlaying: Bool, isWaiting: Bool) {
             guard let player = mediaPlayer else { return }
-            let currentTime = Double(player.time.intValue) / 1_000
-            let duration = Double(player.media?.length.intValue ?? 0) / 1_000
-            controller?.compatibilityPlaybackDidUpdate(
-                currentTime: currentTime,
-                duration: duration,
+            let candidate = VideoCompatibilityPlaybackState(
+                currentTime: Double(player.time.intValue) / 1_000,
+                duration: Double(player.media?.length.intValue ?? 0) / 1_000,
                 isPlaying: isPlaying,
                 isWaiting: isWaiting
+            )
+            guard
+                let state = stateFilter.stateToPublish(
+                    candidate,
+                    at: ProcessInfo.processInfo.systemUptime
+                )
+            else { return }
+            controller?.compatibilityPlaybackDidUpdate(
+                currentTime: state.currentTime,
+                duration: state.duration,
+                isPlaying: state.isPlaying,
+                isWaiting: state.isWaiting
             )
         }
 
@@ -145,6 +162,7 @@
             mediaPlayer?.drawable = nil
             mediaPlayer = nil
             pausesAfterOpening = false
+            stateFilter = VideoCompatibilityPlaybackStateFilter()
         }
     }
 #endif

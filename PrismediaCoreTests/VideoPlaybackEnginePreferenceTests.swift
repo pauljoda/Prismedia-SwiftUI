@@ -28,6 +28,18 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
         )
     }
 
+    func testH264DirectPlaybackIsLimitedToHardwareDecodableBitDepth() throws {
+        let profile = AppleDeviceProfile.make(supportsCompatibilityRenderer: true)
+        let h264 = try XCTUnwrap(profile.codecProfiles.first { $0.codec == "h264" })
+        let bitDepth = try XCTUnwrap(
+            h264.conditions.first { $0.property == "VideoBitDepth" }
+        )
+
+        XCTAssertEqual(bitDepth.condition, "LessThanEqual")
+        XCTAssertEqual(bitDepth.value, "8")
+        XCTAssertTrue(bitDepth.isRequired)
+    }
+
     func testPreferencesPersistSelectedEngine() {
         let suiteName = "VideoPlaybackEnginePreferenceTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

@@ -297,16 +297,19 @@
         }
 
         private var canAutoDismissControls: Bool {
-            controller.isPlaying
-                && !optionsFocusEnabled
-                && !isSeeking
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: controller.isPlaying,
+                optionsPresented: optionsFocusEnabled,
+                isSeeking: isSeeking
+            )
         }
 
         private var controlsAutoDismissDelay: Duration {
             #if DEBUG
-                PrismediaUITestBootstrap.videoControlsAutoHideDelay() ?? .seconds(8)
+                PrismediaUITestBootstrap.videoControlsAutoHideDelay()
+                    ?? VideoPlayerChromePolicy.tvAutoHideDelay
             #else
-                .seconds(8)
+                VideoPlayerChromePolicy.tvAutoHideDelay
             #endif
         }
 

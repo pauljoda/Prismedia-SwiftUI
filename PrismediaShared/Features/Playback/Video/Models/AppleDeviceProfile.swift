@@ -32,25 +32,25 @@ struct AppleDeviceProfile: Encodable {
         ]
         .compactMap { $0 }.joined(separator: ",")
         var directPlayProfiles: [AppleDirectPlayProfile] = [
-                .init(
-                    type: "Video", container: "mp4,m4v", videoCodec: modernVideoCodecs,
-                    audioCodec: "aac,ac3,eac3,alac,flac"
-                ),
-                .init(
-                    type: "Video", container: "mov", videoCodec: movVideoCodecs,
-                    audioCodec: "aac,ac3,eac3,alac,mp3,pcm_s16be,pcm_s16le,pcm_s24be,pcm_s24le"
-                ),
-                .init(
-                    type: "Video", container: "mpegts,ts", videoCodec: transportStreamVideoCodecs,
-                    audioCodec: "aac,ac3,eac3,mp3"
-                ),
-            ]
+            .init(
+                type: "Video", container: "mp4,m4v", videoCodec: modernVideoCodecs,
+                audioCodec: "aac,ac3,eac3,alac,flac"
+            ),
+            .init(
+                type: "Video", container: "mov", videoCodec: movVideoCodecs,
+                audioCodec: "aac,ac3,eac3,alac,mp3,pcm_s16be,pcm_s16le,pcm_s24be,pcm_s24le"
+            ),
+            .init(
+                type: "Video", container: "mpegts,ts", videoCodec: transportStreamVideoCodecs,
+                audioCodec: "aac,ac3,eac3,mp3"
+            ),
+        ]
         if supportsCompatibilityRenderer {
             directPlayProfiles.append(
                 .init(
                     type: "Video",
                     container: "mkv,matroska",
-                    videoCodec: [modernVideoCodecs, "mpeg4"].joined(separator: ","),
+                    videoCodec: modernVideoCodecs,
                     audioCodec: "aac,ac3,eac3,truehd,mlp,dts,dtshd,alac,flac,mp3,opus,vorbis"
                 )
             )
@@ -95,7 +95,10 @@ struct AppleDeviceProfile: Encodable {
                 conditions: baseConditions(
                     profiles: "high|main|baseline|constrained baseline",
                     maximumLevel: "80"
-                ) + [videoRangeCondition(values: "SDR|DOVIWithSDR")]
+                ) + [
+                    videoBitDepthCondition(maximum: 8),
+                    videoRangeCondition(values: "SDR|DOVIWithSDR"),
+                ]
             )
         ]
         if supports(.hevc) {
@@ -111,6 +114,7 @@ struct AppleDeviceProfile: Encodable {
                                 value: "hvc1",
                                 isRequired: false
                             ),
+                            videoBitDepthCondition(maximum: 10),
                             videoRangeCondition(values: supportedVideoRangeTypes.joined(separator: "|")),
                         ]
                 )
@@ -122,7 +126,19 @@ struct AppleDeviceProfile: Encodable {
                     type: "Video",
                     codec: "av1",
                     conditions: frameLayoutConditions
-                        + [videoRangeCondition(values: supportedVideoRangeTypes.joined(separator: "|"))]
+                        + [
+                            videoBitDepthCondition(maximum: 10),
+                            videoRangeCondition(values: supportedVideoRangeTypes.joined(separator: "|")),
+                        ]
+                )
+            )
+        }
+        if supports(.vp9) {
+            profiles.append(
+                AppleCodecProfile(
+                    type: "Video",
+                    codec: "vp9",
+                    conditions: frameLayoutConditions + [videoBitDepthCondition(maximum: 10)]
                 )
             )
         }
@@ -145,6 +161,15 @@ struct AppleDeviceProfile: Encodable {
 
     private static func videoRangeCondition(values: String) -> AppleProfileCondition {
         .init(condition: "EqualsAny", property: "VideoRangeType", value: values, isRequired: false)
+    }
+
+    private static func videoBitDepthCondition(maximum: Int) -> AppleProfileCondition {
+        .init(
+            condition: "LessThanEqual",
+            property: "VideoBitDepth",
+            value: String(maximum),
+            isRequired: true
+        )
     }
 
     private enum Codec { case hevc, av1, vp9, dolbyVision }

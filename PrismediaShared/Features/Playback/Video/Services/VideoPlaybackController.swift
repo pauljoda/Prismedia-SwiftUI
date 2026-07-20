@@ -728,10 +728,15 @@ public final class VideoPlaybackController {
         isPlaying: Bool,
         isWaiting: Bool
     ) {
-        self.currentTime = max(0, currentTime)
-        if duration.isFinite, duration > 0 { self.duration = duration }
-        self.isPlaying = isPlaying
-        self.isWaiting = isWaiting
+        let resolvedCurrentTime = max(0, currentTime)
+        if abs(self.currentTime - resolvedCurrentTime) >= 0.01 {
+            self.currentTime = resolvedCurrentTime
+        }
+        if duration.isFinite, duration > 0, abs(self.duration - duration) >= 0.01 {
+            self.duration = duration
+        }
+        if self.isPlaying != isPlaying { self.isPlaying = isPlaying }
+        if self.isWaiting != isWaiting { self.isWaiting = isWaiting }
         if isPlaying {
             playbackReporter.playbackStarted(positionSeconds: self.currentTime)
         }
