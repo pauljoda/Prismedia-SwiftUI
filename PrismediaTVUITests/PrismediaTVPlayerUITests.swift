@@ -44,6 +44,13 @@ final class PrismediaTVPlayerUITests: XCTestCase {
             commentaryAudio.waitForExistence(timeout: 3),
             "Audio choices should open in an anchored native menu."
         )
+        let audioMenuCell = app.cells.firstMatch
+        XCTAssertTrue(waitForFocus(on: audioMenuCell))
+        try await Task.sleep(for: .seconds(1.6))
+        XCTAssertTrue(
+            commentaryAudio.exists && audioMenuCell.hasFocus,
+            "Live playback updates must not recreate or reset an open native menu."
+        )
         XCUIRemote.shared.press(.menu)
         XCTAssertTrue(waitForDisappearance(of: commentaryAudio, timeout: 3))
         XCTAssertTrue(audio.waitForExistence(timeout: 3))

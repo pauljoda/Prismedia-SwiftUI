@@ -218,109 +218,45 @@
         private var playbackOptionButtons: some View {
             GlassEffectContainer(spacing: PrismediaSpacing.large) {
                 HStack(spacing: PrismediaSpacing.large) {
-                    playbackOptionButton(
+                    TVPlaybackOptionMenuButton(
+                        controller: controller,
                         menu: .audio,
                         focusTarget: .audio,
-                        systemImage: "waveform"
+                        systemImage: "waveform",
+                        focusedControl: $focusedControl,
+                        onMove: {
+                            handlePlaybackOptionsMove(from: .audio, direction: $0)
+                        },
+                        onInteraction: revealControls
                     )
-                    playbackOptionButton(
+                    .equatable()
+                    TVPlaybackOptionMenuButton(
+                        controller: controller,
                         menu: .subtitles,
                         focusTarget: .subtitles,
-                        systemImage: "captions.bubble"
+                        systemImage: "captions.bubble",
+                        focusedControl: $focusedControl,
+                        onMove: {
+                            handlePlaybackOptionsMove(from: .subtitles, direction: $0)
+                        },
+                        onInteraction: revealControls
                     )
-                    playbackOptionButton(
+                    .equatable()
+                    TVPlaybackOptionMenuButton(
+                        controller: controller,
                         menu: .speed,
                         focusTarget: .speed,
-                        systemImage: "speedometer"
+                        systemImage: "speedometer",
+                        focusedControl: $focusedControl,
+                        onMove: {
+                            handlePlaybackOptionsMove(from: .speed, direction: $0)
+                        },
+                        onInteraction: revealControls
                     )
+                    .equatable()
                 }
             }
             .prismediaFocusSection()
-        }
-
-        private func playbackOptionButton(
-            menu: TVPlaybackOptionsMenu,
-            focusTarget: TVCompatibilityPlayerFocusTarget,
-            systemImage: String
-        ) -> some View {
-            Menu {
-                optionsMenuActions(for: menu)
-            } label: {
-                Image(systemName: systemImage)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(PrismediaColor.onMedia)
-                    .frame(width: 22, height: 22)
-                    .padding(10)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .menuOrder(.fixed)
-            .focused($focusedControl, equals: focusTarget)
-            .accessibilityLabel(menu.title)
-            .accessibilityIdentifier(menu.title)
-            .onMoveCommand { direction in
-                handlePlaybackOptionsMove(from: focusTarget, direction: direction)
-            }
-        }
-
-        @ViewBuilder
-        private func optionsMenuActions(for menu: TVPlaybackOptionsMenu) -> some View {
-            switch menu {
-            case .audio:
-                if controller.audioChoices.isEmpty {
-                    Button("Default") {}
-                        .disabled(true)
-                } else {
-                    ForEach(controller.audioChoices) { choice in
-                        optionChoice(
-                            choice.title,
-                            selected: controller.selectedAudioChoiceID == choice.id
-                        ) {
-                            Task { await controller.selectAudio(id: choice.id) }
-                        }
-                    }
-                }
-            case .subtitles:
-                if controller.subtitleChoices.isEmpty {
-                    Button("No Subtitles Available") {}
-                        .disabled(true)
-                } else {
-                    ForEach(controller.subtitleChoices) { choice in
-                        optionChoice(
-                            choice.title,
-                            selected: controller.selectedSubtitleChoiceID == choice.id
-                        ) {
-                            Task { await controller.selectSubtitle(id: choice.id) }
-                        }
-                    }
-                }
-            case .speed:
-                ForEach(VideoPlaybackSettings.availableRates, id: \.self) { rate in
-                    optionChoice(
-                        VideoPlaybackSettings.label(for: rate),
-                        selected: controller.playbackRate == rate
-                    ) {
-                        controller.setPlaybackRate(rate)
-                    }
-                }
-            }
-        }
-
-        private func optionChoice(
-            _ title: String,
-            selected: Bool,
-            action: @escaping () -> Void
-        ) -> some View {
-            Button {
-                action()
-                revealControls()
-            } label: {
-                if selected {
-                    Label(title, systemImage: "checkmark")
-                } else {
-                    Text(title)
-                }
-            }
         }
 
         private var displayedTime: Double {
