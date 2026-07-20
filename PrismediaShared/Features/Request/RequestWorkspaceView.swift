@@ -36,15 +36,26 @@ import SwiftUI
                     }
                 }
                 .prismediaScreenBackground()
-                .navigationTitle("Request")
+                .navigationTitle(section.title)
                 #if os(iOS)
                     .navigationBarTitleDisplayMode(.inline)
+                    .toolbarTitleMenu {
+                        sectionPicker
+                    }
                 #endif
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    workspaceControls
-                }
                 .prismediaEntityDestinations(dependencies: detailDependencies)
                 .toolbar {
+                    #if os(macOS)
+                        ToolbarItem(placement: .principal) {
+                            sectionPicker
+                                .pickerStyle(.segmented)
+                        }
+                    #endif
+                    if section == .discover {
+                        ToolbarItem(placement: leadingToolbarPlacement) {
+                            kindPicker
+                        }
+                    }
                     ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
                     ToolbarItem(placement: trailingToolbarPlacement) {
                         Button {
@@ -64,44 +75,30 @@ import SwiftUI
 
         private var sectionPicker: some View {
             Picker("Request View", selection: $section) {
-                sectionOptions
+                ForEach(RequestWorkspaceSection.allCases) { section in
+                    Label(section.title, systemImage: section.systemImage)
+                        .tag(section)
+                }
             }
-            .pickerStyle(.segmented)
-            .fixedSize(horizontal: true, vertical: false)
             .accessibilityIdentifier("request.section")
         }
 
-        private var workspaceControls: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                ScrollView(.horizontal) {
-                    sectionPicker
-                }
-                .scrollIndicators(.hidden)
-
-                if section == .discover {
-                    LabeledContent("Content Kind") {
-                        Picker("Content Kind", selection: $kind) {
-                            ForEach(RequestKindDefinition.allCases) { kind in
-                                Text(kind.label).tag(kind)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .accessibilityIdentifier("request.kind")
-                    }
+        private var kindPicker: some View {
+            Picker("Content Kind", selection: $kind) {
+                ForEach(RequestKindDefinition.allCases) { kind in
+                    Text(kind.label).tag(kind)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, PrismediaSpacing.medium)
-            .background(.bar)
+            .pickerStyle(.menu)
+            .accessibilityIdentifier("request.kind")
         }
 
-        @ViewBuilder
-        private var sectionOptions: some View {
-            ForEach(RequestWorkspaceSection.allCases) { section in
-                Label(section.title, systemImage: section.systemImage)
-                    .tag(section)
-            }
+        private var leadingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarLeading
+            #else
+                .automatic
+            #endif
         }
 
         private func openEntity(_ entityID: UUID, _ kind: EntityKind) {

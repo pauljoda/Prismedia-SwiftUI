@@ -109,10 +109,10 @@ public struct AdministrationService: AdministrationServicing {
     public func updatePlugin(id: String) async throws -> AdministrativePlugin {
         try await client.updateAdministrativePlugin(id: id)
     }
-    public func searchRequests(kind: String, pluginID: String, fields: [String: String]) async throws
+    public func searchRequests(kind: String, pluginID: String, fields: [String: String], limit: Int? = nil) async throws
         -> AdministrativeRequestSearchResponse
     {
-        try await client.searchAdministrativeRequests(kind: kind, pluginID: pluginID, fields: fields)
+        try await client.searchAdministrativeRequests(kind: kind, pluginID: pluginID, fields: fields, limit: limit)
     }
     public func reviewRequest(
         kind: String,

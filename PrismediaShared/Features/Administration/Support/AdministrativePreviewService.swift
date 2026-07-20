@@ -135,7 +135,7 @@ import Foundation
         func removeIdentifyItem(entityID: UUID) async throws {}
         func plugins() async throws -> [AdministrativePlugin] { [] }
         func updatePlugin(id: String) async throws -> AdministrativePlugin { throw CancellationError() }
-        func searchRequests(kind: String, pluginID: String, fields: [String: String]) async throws
+        func searchRequests(kind: String, pluginID: String, fields: [String: String], limit: Int?) async throws
             -> AdministrativeRequestSearchResponse
         {
             AdministrativeRequestSearchResponse(results: [], providerErrors: [])

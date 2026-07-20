@@ -219,14 +219,15 @@ extension PrismediaAPIClient {
     public func searchAdministrativeRequests(
         kind: String,
         pluginID: String,
-        fields: [String: String]
+        fields: [String: String],
+        limit: Int? = nil
     ) async throws -> AdministrativeRequestSearchResponse {
         try await send(
             AdministrativeRequestSearchResponse.self,
             path: "/api/requests/search",
             method: "POST",
             queryItems: [administrativeNsfwVisibilityQueryItem],
-            body: AdministrativeRequestSearchRequest(kind: kind, pluginID: pluginID, fields: fields)
+            body: AdministrativeRequestSearchRequest(kind: kind, pluginID: pluginID, fields: fields, limit: limit)
         )
     }
 

@@ -21,11 +21,13 @@ import SwiftUI
         private let searchStatus: String?
         private let notices: [String]
         private let activeCandidateID: PluginSearchCandidateIdentity?
+        private let candidateDetail: ((AdministrativeEntitySearchCandidate) -> String?)?
         private let onProviderChange: ((String) -> Void)?
         private let onSearch: ([String: String]) -> Void
         private let onClear: (() -> Void)?
         private let onCandidateActivate: (AdministrativeEntitySearchCandidate) -> Void
         private let onCandidatePreview: ((AdministrativeEntitySearchCandidate) -> Void)?
+        private let onLoadMore: (() -> Void)?
         private let onRescan: (() -> Void)?
         private let isRescanning: Bool
         private let onSeek: (() -> Void)?
@@ -51,11 +53,13 @@ import SwiftUI
             searchStatus: String? = nil,
             notices: [String] = [],
             activeCandidateID: PluginSearchCandidateIdentity? = nil,
+            candidateDetail: ((AdministrativeEntitySearchCandidate) -> String?)? = nil,
             onProviderChange: ((String) -> Void)? = nil,
             onSearch: @escaping ([String: String]) -> Void,
             onClear: (() -> Void)? = nil,
             onCandidateActivate: @escaping (AdministrativeEntitySearchCandidate) -> Void,
             onCandidatePreview: ((AdministrativeEntitySearchCandidate) -> Void)? = nil,
+            onLoadMore: (() -> Void)? = nil,
             onRescan: (() -> Void)? = nil,
             isRescanning: Bool = false,
             onSeek: (() -> Void)? = nil,
@@ -80,11 +84,13 @@ import SwiftUI
             self.searchStatus = searchStatus
             self.notices = notices
             self.activeCandidateID = activeCandidateID
+            self.candidateDetail = candidateDetail
             self.onProviderChange = onProviderChange
             self.onSearch = onSearch
             self.onClear = onClear
             self.onCandidateActivate = onCandidateActivate
             self.onCandidatePreview = onCandidatePreview
+            self.onLoadMore = onLoadMore
             self.onRescan = onRescan
             self.isRescanning = isRescanning
             self.onSeek = onSeek
@@ -201,21 +207,23 @@ import SwiftUI
 
         private var actionRow: some View {
             HStack(spacing: PrismediaSpacing.medium) {
-                Button("Clear", systemImage: "xmark") {
+                Button("Clear", role: .cancel) {
                     values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
                     onClear?()
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
                 .disabled(isBusy || values.values.allSatisfy(\.isEmpty))
 
-                Spacer()
-
-                Button(isSearching ? "Searching" : "Search", systemImage: "magnifyingglass") {
+                Button {
                     onSearch(
                         PluginSearchFieldPolicy.submittedValues(
                             fields: searchFields,
                             values: values
                         ))
+                } label: {
+                    Label(isSearching ? "Searching" : "Search", systemImage: "magnifyingglass")
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.glassProminent)
                 .disabled(!canSearch)
@@ -275,11 +283,18 @@ import SwiftUI
                         isBestMatch: candidate.pluginSearchIdentity == candidates.first?.pluginSearchIdentity,
                         isActive: candidate.pluginSearchIdentity == activeCandidateID,
                         isDisabled: isBusy,
+                        detail: candidateDetail?(candidate),
                         onActivate: { onCandidateActivate(candidate) },
                         onPreview: onCandidatePreview.map { preview in
                             { preview(candidate) }
                         }
                     )
+                }
+                if let onLoadMore {
+                    Button("Load More", systemImage: "ellipsis.circle", action: onLoadMore)
+                        .disabled(isBusy)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("plugin-search.load-more")
                 }
             case .error(let message):
                 ContentUnavailableView(

@@ -11,24 +11,7 @@ import SwiftUI
                     if let proposal = item.proposal, !session.showsSearchForProposal {
                         proposalReview(item: item, root: proposal)
                     } else {
-                        PluginSearchSurface(
-                            title: "Find Metadata",
-                            description: "Search installed plugins and choose the correct match.",
-                            entityKind: item.entityKind.rawValue, hidesNsfw: session.hidesNsfw,
-                            seedTitle: item.title,
-                            providers: session.providers, selectedProviderID: $session.selectedProviderID,
-                            values: $session.searchValues, candidates: item.candidates,
-                            hasSearched: item.query != nil || !item.candidates.isEmpty,
-                            isSearching: session.isSearching, isDisabled: item.cascadeRunning,
-                            errorMessage: item.error,
-                            searchStatus: session.isSeeking ? "Seeking across providers…" : nil,
-                            onSearch: { values in Task { await session.search(fields: values) } },
-                            onClear: { session.searchValues.removeAll() },
-                            onCandidateActivate: { candidate in Task { await session.resolve(candidate) } },
-                            onRescan: { Task { await session.rescan() } },
-                            isRescanning: session.isSearching,
-                            onSeek: { Task { await session.seek() } },
-                            isSeeking: session.isSeeking)
+                        searchSurface(item)
                     }
                 }
                 .navigationTitle(item.title)
@@ -50,6 +33,33 @@ import SwiftUI
             }
         }
 
+        private func searchSurface(_ item: AdministrativeIdentifyQueueItem) -> some View {
+            PluginSearchSurface(
+                title: "Find Metadata",
+                description: "Search installed plugins and choose the correct match.",
+                entityKind: item.entityKind.rawValue, hidesNsfw: session.hidesNsfw,
+                seedTitle: item.title,
+                providers: session.providers, selectedProviderID: $session.selectedProviderID,
+                values: $session.searchValues, candidates: item.candidates,
+                hasSearched: item.query != nil || !item.candidates.isEmpty,
+                isSearching: session.isSearching, isDisabled: item.cascadeRunning,
+                errorMessage: item.error,
+                searchStatus: session.isSeeking ? "Seeking across providers…" : nil,
+                onSearch: { values in Task { await session.search(fields: values) } },
+                onClear: { session.searchValues.removeAll() },
+                onCandidateActivate: { candidate in Task { await session.resolve(candidate) } },
+                onRescan: { Task { await session.rescan() } },
+                isRescanning: session.isSearching,
+                onSeek: { Task { await session.seek() } },
+                isSeeking: session.isSeeking
+            )
+            .safeAreaInset(edge: .top, spacing: 0) {
+                IdentifyTargetContextBar(item: item)
+                    .padding(.horizontal)
+                    .padding(.bottom, PrismediaSpacing.small)
+            }
+        }
+
         private func proposalReview(
             item: AdministrativeIdentifyQueueItem,
             root: AdministrativeEntityMetadataProposal
@@ -61,6 +71,10 @@ import SwiftUI
 
             return ScrollView {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
+                    if proposalPath.isEmpty {
+                        IdentifyTargetContextBar(item: item)
+                    }
+
                     if let parent = context.parent {
                         IdentifyProposalScopeHeader(
                             parentTitle: parent.patch.title ?? item.title,

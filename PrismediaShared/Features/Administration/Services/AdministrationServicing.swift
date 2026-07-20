@@ -42,7 +42,7 @@ public protocol AdministrationServicing: Sendable {
     func removeIdentifyItem(entityID: UUID) async throws
     func plugins() async throws -> [AdministrativePlugin]
     func updatePlugin(id: String) async throws -> AdministrativePlugin
-    func searchRequests(kind: String, pluginID: String, fields: [String: String]) async throws
+    func searchRequests(kind: String, pluginID: String, fields: [String: String], limit: Int?) async throws
         -> AdministrativeRequestSearchResponse
     func reviewRequest(kind: String, pluginID: String, externalIdentity: AdministrativeExternalIdentity) async throws
         -> AdministrativeRequestReviewResponse

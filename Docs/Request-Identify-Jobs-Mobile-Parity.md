@@ -6,12 +6,19 @@ This map records the mobile web hierarchy that the SwiftUI surfaces mirror. The 
 
 | Mobile web block | Native SwiftUI equivalent |
 | --- | --- |
-| Discover, Downloads, Missing, Cutoff, History tabs | Visible segmented `Picker` rail |
-| Content-kind dropdown | Menu-style `Picker` beside the rail |
+| Discover, Downloads, Missing, Cutoff, History tabs | iOS: navigation-title menu; macOS: segmented `Picker` in the toolbar |
+| Content-kind toggle chips | Menu-style `Picker` row at the top of the Search section |
 | Provider search fields | Native styled `TextField` controls in the Search section |
+| Candidate cards (poster · title/year · Best badge · overview) | `PluginCandidateCard` with preview-sized provider artwork and a "No provider description available." fallback |
+| Load more paging (25 → 100) | `Load More` row that grows the search `limit` |
 | Status, kind, and sort dropdowns | Inline menu-style `Picker` controls in a Filters section |
-| Metadata and related metadata accordions | `DisclosureGroup` sections in proposal review |
-| Quality profile and import destination dropdowns | Native menu-style `Picker` controls in the request action section |
+| Proposal context bar (poster, kind badge, `namespace:value`) | `MetadataProposalHeaderView` |
+| Metadata and related metadata accordions with counts | `DisclosureGroup` sections with field/item counts and All/None controls |
+| "Request this …" card (monitor preset, quality profile, import destination, submit) | Single request panel combining the preset picker, `RequestTargetOptionsView`, and the commit button |
+
+Provider artwork previews are right-sized through `ProviderImagePreviewPolicy`
+(TMDB size-path rewriting and googleusercontent size hints), matching the web
+preview policy so full-resolution originals are only fetched when applied.
 
 ## Identify
 
@@ -19,8 +26,10 @@ The series path was inspected with live rich data because it exercises fields, c
 
 | Mobile web block or behavior | Native SwiftUI equivalent |
 | --- | --- |
-| Dashboard and entity-kind tabs | Visible segmented `Picker` rail |
-| Browse-by-kind cards | Two-column native button grid with kind and queue count |
+| Dashboard and entity-kind tabs with pending counts | Dashboard with push navigation into each kind (no duplicate scope rail on iPhone) |
+| Browse-by-kind cards | Two-column native `NavigationLink` grid with kind, queue count, and accent highlight when queued |
+| Dashboard review-queue rows | Inline queue section on the dashboard with per-row navigation and a link to the full selectable queue |
+| "To Identify" target preview | `IdentifyTargetContextBar` above the search and proposal surfaces |
 | Unorganized/All and provider filters | Segmented and menu-style `Picker` controls above results |
 | Root proposal sections | Shared proposal review with native disclosures |
 | Credits, relationships, and children | Selectable disclosure rows with a separate full-width navigation target |

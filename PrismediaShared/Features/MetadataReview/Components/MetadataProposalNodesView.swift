@@ -34,6 +34,18 @@ import SwiftUI
                     Text(selectionSummary)
                         .font(.caption)
                         .foregroundStyle(PrismediaColor.textSecondary)
+                    if let onSetSelected, !selectableIDs.isEmpty {
+                        Button("All") {
+                            for id in selectableIDs { onSetSelected(id, true) }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                        Button("None") {
+                            for id in selectableIDs { onSetSelected(id, false) }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                    }
                 }
             }
         }

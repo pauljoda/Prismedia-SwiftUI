@@ -21,7 +21,8 @@ import Foundation
         func search(
             kind: String,
             pluginID: String,
-            fields: [String: String]
+            fields: [String: String],
+            limit: Int?
         ) async throws -> AdministrativeRequestSearchResponse {
             AdministrativeRequestSearchResponse(results: [result], providerErrors: [])
         }

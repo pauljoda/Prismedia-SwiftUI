@@ -18,6 +18,11 @@ import SwiftUI
         @State private var isSearching = false
         @State private var errorMessage: String?
         @State private var searchRevision = RequestLoadRevision()
+        @State private var searchLimit = RequestFeatureView.searchPageSize
+        @State private var submittedFields: [String: String] = [:]
+
+        private static let searchPageSize = 25
+        private static let searchMaxLimit = 100
 
         public init(
             service: any AdministrationServicing,
@@ -44,6 +49,7 @@ import SwiftUI
         }
 
         public var body: some View {
+            let loadMoreAction: (() -> Void)? = canLoadMore ? { loadMore() } : nil
             PluginSearchSurface(
                 title: "Search",
                 description: "Choose a source, enter the provider fields, then review a \(kind.label.lowercased()) match.",
@@ -61,10 +67,15 @@ import SwiftUI
                     ? nil
                     : "\(providerWarnings.count) provider warning\(providerWarnings.count == 1 ? "" : "s")",
                 notices: providerWarnings.map { "\($0.displayName): \($0.message)" },
+                candidateDetail: { candidateDetail($0) },
                 onProviderChange: { _ in invalidateSearch() },
-                onSearch: search,
+                onSearch: { fields in
+                    searchLimit = Self.searchPageSize
+                    search(fields)
+                },
                 onClear: invalidateSearch,
-                onCandidateActivate: activateCandidate
+                onCandidateActivate: activateCandidate,
+                onLoadMore: loadMoreAction
             )
             .task { await loadProviders() }
             .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
@@ -118,10 +129,39 @@ import SwiftUI
             isLoadingProviders = false
         }
 
+        private var canLoadMore: Bool {
+            hasSearched && !results.isEmpty
+                && results.count >= searchLimit
+                && searchLimit < Self.searchMaxLimit
+        }
+
+        private func loadMore() {
+            searchLimit = min(searchLimit + Self.searchPageSize, Self.searchMaxLimit)
+            search(submittedFields)
+        }
+
+        private func candidateDetail(_ candidate: AdministrativeEntitySearchCandidate) -> String? {
+            guard let result = results.first(where: { $0.externalID == candidate.candidateID }) else {
+                return nil
+            }
+            var parts: [String] = []
+            if let runtime = result.runtimeMinutes {
+                parts.append(Duration.seconds(runtime * 60).formatted(.units(allowed: [.hours, .minutes])))
+            }
+            if let certification = result.certification, !certification.isEmpty {
+                parts.append(certification)
+            }
+            if let trackCount = result.trackCount {
+                parts.append("\(trackCount) tracks")
+            }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        }
+
         private func search(_ fields: [String: String]) {
             let revision = searchRevision.advance()
             let providerID = selectedProviderID
             let requestKind = kind
+            submittedFields = fields
             isSearching = true
             errorMessage = nil
             providerWarnings = []
@@ -130,7 +170,8 @@ import SwiftUI
                     let response = try await service.search(
                         kind: requestKind.rawValue,
                         pluginID: providerID,
-                        fields: fields
+                        fields: fields,
+                        limit: searchLimit
                     )
                     guard searchRevision.isCurrent(revision), kind == requestKind,
                         selectedProviderID == providerID
@@ -163,6 +204,8 @@ import SwiftUI
 
         private func invalidateSearch() {
             _ = searchRevision.advance()
+            searchLimit = Self.searchPageSize
+            submittedFields = [:]
             results = []
             providerWarnings = []
             hasSearched = false

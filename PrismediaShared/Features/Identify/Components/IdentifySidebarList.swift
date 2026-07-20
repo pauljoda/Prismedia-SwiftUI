@@ -15,39 +15,7 @@ import SwiftUI
                                 spacing: PrismediaSpacing.medium
                             ) {
                                 ForEach(session.kindSummaries) { summary in
-                                    Button {
-                                        session.selectedKind = summary.kind
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                                            Image(systemName: systemImage(for: summary.kind))
-                                                .font(.title3)
-
-                                            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                                                Text(summary.kind.displayLabel)
-                                                    .font(.headline)
-                                                Text(summary.kind.rawValue)
-                                                    .font(.caption2.monospaced())
-                                                    .foregroundStyle(.secondary)
-                                            }
-
-                                            Divider()
-
-                                            HStack {
-                                                if summary.pendingCount > 0 {
-                                                    Text("\(summary.pendingCount) queued")
-                                                        .font(.caption)
-                                                }
-                                                Spacer(minLength: 0)
-                                                Image(systemName: "chevron.right")
-                                                    .font(.caption)
-                                            }
-                                        }
-                                        .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
-                                        .contentShape(.rect)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .buttonBorderShape(.roundedRectangle(radius: PrismediaRadius.card))
-                                    .accessibilityHint("Browse \(summary.kind.displayLabel.lowercased()) items")
+                                    kindCard(summary)
                                 }
                             }
                             .padding(.vertical, PrismediaSpacing.small)
@@ -55,16 +23,34 @@ import SwiftUI
                         }
 
                         if !session.queue.isEmpty {
-                            Section("Review Queue") {
+                            Section {
+                                ForEach(session.queue) { item in
+                                    NavigationLink {
+                                        IdentifyReviewView(session: session)
+                                            .task { await session.open(entityID: item.entityID) }
+                                    } label: {
+                                        IdentifyQueueRow(item: item)
+                                    }
+                                }
+                            } header: {
+                                HStack {
+                                    Text("Review Queue")
+                                    Spacer(minLength: 0)
+                                    Text("\(session.queue.count) items")
+                                }
+                            } footer: {
                                 NavigationLink {
                                     IdentifyQueueView(
                                         session: session,
                                         presentsReviewInNavigationStack: true
                                     )
                                 } label: {
-                                    queueLabel
+                                    Label("Select and Review All", systemImage: "rectangle.stack")
+                                        .font(.callout)
                                 }
+                                .padding(.top, PrismediaSpacing.small)
                             }
+                            .accessibilityIdentifier("identify.dashboard-queue")
                         }
                     }
                 } else {
@@ -102,6 +88,46 @@ import SwiftUI
                     session.selectedKind = EntityKind(rawValue: selection)
                 }
             )
+        }
+
+        private func kindCard(_ summary: IdentifyKindSummary) -> some View {
+            NavigationLink {
+                IdentifyKindBrowseView(session: session, kind: summary.kind)
+            } label: {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                    Image(systemName: systemImage(for: summary.kind))
+                        .font(.title3)
+                        .foregroundStyle(
+                            summary.pendingCount > 0 ? PrismediaColor.accent : PrismediaColor.textSecondary
+                        )
+
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                        Text(summary.kind.displayLabel)
+                            .font(.headline)
+                        Text(summary.kind.rawValue)
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Divider()
+
+                    HStack {
+                        if summary.pendingCount > 0 {
+                            Text("\(summary.pendingCount) queued")
+                                .font(.caption)
+                                .foregroundStyle(PrismediaColor.accent)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.roundedRectangle(radius: PrismediaRadius.card))
+            .accessibilityHint("Browse \(summary.kind.displayLabel.lowercased()) items")
         }
 
         private var queueLabel: some View {

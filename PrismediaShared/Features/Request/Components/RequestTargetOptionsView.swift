@@ -9,33 +9,46 @@ import SwiftUI
         let errorMessage: String?
         @Binding var selectedProfileID: UUID?
         @Binding var selectedRootID: UUID?
+        var embedsInParentPanel = false
 
         var body: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                Label("Request Options", systemImage: "slider.horizontal.3")
-                    .font(.headline)
-
-                if isLoading {
-                    HStack(spacing: PrismediaSpacing.medium) {
-                        ProgressView()
-                        Text("Loading profiles and libraries…")
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                } else {
-                    profileControl
-                    rootControl
+            if embedsInParentPanel {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                    content
                 }
-
-                if let errorMessage {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.destructive)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("request.target-options")
+            } else {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                    Label("Request Options", systemImage: "slider.horizontal.3")
+                        .font(.headline)
+                    content
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(PrismediaSpacing.large)
+                .prismediaPanel()
+                .accessibilityIdentifier("request.target-options")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
-            .accessibilityIdentifier("request.target-options")
+        }
+
+        @ViewBuilder
+        private var content: some View {
+            if isLoading {
+                HStack(spacing: PrismediaSpacing.medium) {
+                    ProgressView()
+                    Text("Loading profiles and libraries…")
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                }
+            } else {
+                profileControl
+                rootControl
+            }
+
+            if let errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(PrismediaColor.destructive)
+            }
         }
 
         @ViewBuilder
@@ -45,12 +58,17 @@ import SwiftUI
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.textSecondary)
             } else {
-                Picker("Quality profile", selection: profileBinding) {
-                    ForEach(compatibleProfiles) { profile in
-                        Text(profile.displayName).tag(Optional(profile.id))
+                LabeledContent {
+                    Picker("Quality Profile", selection: profileBinding) {
+                        ForEach(compatibleProfiles) { profile in
+                            Text(profile.displayName).tag(Optional(profile.id))
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                } label: {
+                    Label("Quality Profile", systemImage: "slider.horizontal.3")
                 }
-                .pickerStyle(.menu)
                 .onChange(of: selectedProfileID) { _, profileID in
                     let profile = compatibleProfiles.first { $0.id == profileID }
                     selectedRootID = RequestTargetPolicy.defaultRootID(
@@ -68,12 +86,17 @@ import SwiftUI
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.destructive)
             } else {
-                Picker("Import into", selection: rootBinding) {
-                    ForEach(compatibleRoots) { root in
-                        Text(root.label.isEmpty ? root.path : root.label).tag(Optional(root.id))
+                LabeledContent {
+                    Picker("Import Into", selection: rootBinding) {
+                        ForEach(compatibleRoots) { root in
+                            Text(root.label.isEmpty ? root.path : root.label).tag(Optional(root.id))
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                } label: {
+                    Label("Import Into", systemImage: "folder")
                 }
-                .pickerStyle(.menu)
             }
         }
 

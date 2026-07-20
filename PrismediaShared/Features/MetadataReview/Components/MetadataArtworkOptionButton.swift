@@ -10,7 +10,7 @@ import SwiftUI
             Button(action: onSelect) {
                 ZStack(alignment: .topTrailing) {
                     RemotePosterImage(
-                        path: image.url,
+                        path: ProviderImagePreviewPolicy.previewURL(for: image.url, imageKind: image.kind),
                         fallbackSeed: image.url,
                         systemImage: "photo"
                     )
