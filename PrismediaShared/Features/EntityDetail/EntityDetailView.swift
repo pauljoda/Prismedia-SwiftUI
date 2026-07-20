@@ -525,6 +525,7 @@ public struct EntityDetailView: View {
                                 horizontalPadding: detailHorizontalPadding,
                                 ownerLink: link,
                                 acquisitionService: dependencies.acquisitionService,
+                                requestActivityService: dependencies.requestActivityService,
                                 transcriptSourceLoader: dependencies.transcriptSourceLoader,
                                 onAcquisitionMutated: refreshAfterAcquisitionMutation,
                                 onEntityPruned: handlePrunedEntity

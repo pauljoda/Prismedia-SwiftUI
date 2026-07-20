@@ -689,9 +689,10 @@ public struct PrismediaAPIClient: Sendable {
     func sendExpectingNoContent(
         path: String,
         method: String,
+        queryItems: [URLQueryItem] = [],
         body: (some Encodable)? = Optional<LoginRequest>.none
     ) async throws {
-        _ = try await perform(path: path, method: method, queryItems: [], body: body)
+        _ = try await perform(path: path, method: method, queryItems: queryItems, body: body)
     }
 
     func sendMultipart<T: Decodable>(

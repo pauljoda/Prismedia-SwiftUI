@@ -36,6 +36,7 @@ enum PrismediaEntityDetailComposition {
             acquisitionService: isAdministrator
                 ? PrismediaEntityAcquisitionService(client: client)
                 : nil,
+            requestActivityService: isAdministrator ? client : nil,
             imageSourceLoader: adapter,
             imageVideoAspectRatioLoader: PrismediaEntityImageVideoAspectRatioLoader(
                 client: client

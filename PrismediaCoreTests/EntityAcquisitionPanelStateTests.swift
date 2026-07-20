@@ -27,16 +27,19 @@ final class EntityAcquisitionPanelStateTests: XCTestCase {
         )
     }
 
-    private var snapshot: EntityMonitorState {
-        EntityMonitorState(
-            entityID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
-            canMonitor: true,
-            canRequest: true,
-            trackableProviders: ["openlibrary"],
-            discoversChildren: false,
-            canSearchMissingChildren: false,
-            missingChildEntityKind: nil,
-            monitor: nil,
+    private var snapshot: EntityAcquisitionPanelSnapshot {
+        EntityAcquisitionPanelSnapshot(
+            state: EntityMonitorState(
+                entityID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+                canMonitor: true,
+                canRequest: true,
+                trackableProviders: ["openlibrary"],
+                discoversChildren: false,
+                canSearchMissingChildren: false,
+                missingChildEntityKind: nil,
+                monitor: nil,
+                latestAcquisition: nil
+            ),
             latestAcquisition: nil
         )
     }

@@ -20,6 +20,26 @@ Provider artwork previews are right-sized through `ProviderImagePreviewPolicy`
 (TMDB size-path rewriting and googleusercontent size hints), matching the web
 preview policy so full-resolution originals are only fetched when applied.
 
+## Entity Acquisition
+
+The entity detail Acquisition tab mirrors the web `EntityAcquisitionCard` + `AcquisitionPanel` pair for leaf entities. Child monitoring and book rendition rows are not ported yet.
+
+| Web block | Native SwiftUI equivalent |
+| --- | --- |
+| Monitor toggle with state labels (Monitoring / Resume monitoring / Monitor / Finish unmonitoring / Deleting files… / Updating…) | `PrismediaButton` monitor toggle in `EntityAcquisitionPanel` with the same labels; unmonitor keeps a native destructive confirmation dialog |
+| "Search for release" for a wanted item with no acquisition, plus its hint line | Prominent "Search for release" button gated on `canRequest` and no latest acquisition, committing via `POST /api/requests/commit-entity` |
+| Monitor tracked-via line ("Monitoring via …", "Monitoring available — tracked via …") | Caption guidance line under the action row |
+| Acquisition status badge + inline actions (Retry import / Import anyway, Start over with confirmation, Search again, Cancel) | Embedded `RequestActivityAcquisitionManagementSections` (`.embedded` style) status header with the same actions on iOS and macOS |
+| Searching-indexers and cleanup placeholders | `RequestActivityStatePlaceholder` busy placeholders |
+| Download section (stage label, percent, progress bar, Speed / ETA / Seeds ÷ Peers / Size stats) | `RequestActivityDownloadSection` fed by the transfer probe |
+| Collapsible Files list that collapses once imported | `RequestActivityFilesSection` `DisclosureGroup` with collapse-once-imported behavior |
+| Releases section (count header, "No releases found", Download / Download anyway with the manual-queue rejection ban, Blocklist) | `RequestActivityReleasesSection` with `RequestActivityCandidateRow` in its `.download` variant and `RequestActivityReleasePolicy` |
+| "Have a .torrent file?" manual upload fallback | Upload panel driving the shared `.fileImporter` torrent flow |
+| Collapsible History section (event badge, release/quality/indexer, relative time) | `EntityAcquisitionHistorySection` fed by `GET /api/acquisitions/history?entityId=` (limit 50) |
+| Polling (panel 3s while active; entity state 5s) | Shared `.task(id:)` + sleep polling at 4s for both the panel state and the embedded acquisition sections |
+
+tvOS keeps the simpler monitor/latest-acquisition summary with Search Again; the embedded management surface is iOS/macOS only, matching the request-activity feature gating.
+
 ## Identify
 
 The series path was inspected with live rich data because it exercises fields, credits, relationships, artwork, seasons, and episodes. The reference path was MythBusters → Specials → Best Animal Myths, plus the Discovery studio relationship.

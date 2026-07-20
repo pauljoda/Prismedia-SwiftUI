@@ -79,6 +79,52 @@ import Foundation
             """
         )
 
+        static let transfer: RequestActivityTransfer = decode(
+            """
+            {
+              "progress":0.64,
+              "state":"downloading",
+              "totalSizeBytes":2800000000,
+              "downloadSpeedBytesPerSecond":8500000,
+              "etaSeconds":780,
+              "seeds":24,
+              "peers":6,
+              "savePath":"/downloads/dune",
+              "pieceStates":[2,2,2,1,0]
+            }
+            """
+        )
+
+        static let files: RequestActivityFiles = decode(
+            """
+            {
+              "imported":false,
+              "files":[
+                {"name":"Dune.1965.Retail.epub","sizeBytes":4200000,"progress":0.82},
+                {"name":"cover.jpg","sizeBytes":310000,"progress":1.0}
+              ]
+            }
+            """
+        )
+
+        static let rejectedCandidate: RequestActivityReleaseCandidate = decode(
+            """
+            {
+              "id":"77777777-7777-7777-7777-777777777777",
+              "indexerName":"Prowlarr",
+              "title":"Dune.1965.WEB.PDF",
+              "sizeBytes":9800000,
+              "seeders":6,
+              "peers":2,
+              "protocol":"torrent",
+              "accepted":false,
+              "score":41.0,
+              "rejections":["below-cutoff"],
+              "publishedAt":"2026-07-12T16:10:00Z"
+            }
+            """
+        )
+
         private static func decode<Value: Decodable>(_ json: String) -> Value {
             try! PrismediaJSON.decoder().decode(Value.self, from: Data(json.utf8))
         }
