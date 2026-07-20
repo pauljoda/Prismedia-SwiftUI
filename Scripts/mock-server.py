@@ -342,10 +342,10 @@ def person_relationship(index, name):
             "flags": None,
         },
         "images": [],
-        "children": [],
-        "candidates": [],
+        "children": None,
+        "candidates": None,
         "targetEntityId": None,
-        "relationships": [],
+        "relationships": None,
     }
 
 
