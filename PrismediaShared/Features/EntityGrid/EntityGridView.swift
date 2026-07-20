@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct EntityGridView<ItemContent: View>: View {
+public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
     @State private var snapshot: EntityGridSnapshot
     @State private var searchText = ""
@@ -40,6 +40,7 @@ public struct EntityGridView<ItemContent: View>: View {
     private let actionPolicy: EntityGridActionPolicy
     private let mutationService: (any EntityGridMutationServicing)?
     private let prefersInitialTVFocus: Bool
+    private let topContent: (EntityGridTopContentContext) -> TopContent
     private let itemContent: (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
 
     public init(
@@ -53,6 +54,7 @@ public struct EntityGridView<ItemContent: View>: View {
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil,
         prefersInitialTVFocus: Bool = false,
+        @ViewBuilder topContent: @escaping (EntityGridTopContentContext) -> TopContent,
         @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
     ) {
         self.configuration = configuration
@@ -68,6 +70,7 @@ public struct EntityGridView<ItemContent: View>: View {
         self.actionPolicy = actionPolicy
         self.mutationService = mutationService
         self.prefersInitialTVFocus = prefersInitialTVFocus
+        self.topContent = topContent
         self.itemContent = itemContent
         let restoredPreferences = preferencesStore.load(for: configuration.preferencesID)
         let restoredControls = restoredPreferences?.controls(baselineQuery: configuration.query)
@@ -398,6 +401,15 @@ public struct EntityGridView<ItemContent: View>: View {
 
     private var contentGrid: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+            topContent(
+                EntityGridTopContentContext(
+                    query: snapshot.controls.applying(to: configuration.query),
+                    search: snapshot.activeSearch,
+                    visibleItemCount: snapshot.items.count
+                )
+            )
+            .padding(.horizontal, horizontalContentPadding)
+
             if presentation == .screen {
                 Text(itemCountLabel)
                     .font(.footnote.weight(.medium))
@@ -1221,7 +1233,38 @@ public struct EntityGridView<ItemContent: View>: View {
 /// The shared, presentational entity grid used by both library pages and
 /// child collections embedded in an entity detail page.
 
-extension EntityGridView where ItemContent == EntityThumbnailCardView {
+extension EntityGridView where TopContent == EmptyView {
+    public init(
+        configuration: EntityGridConfiguration,
+        loader: any EntityGridLoading,
+        presentation: EntityGridPresentation = .screen,
+        preferencesStore: EntityGridPreferencesStore = .standard,
+        horizontalContentPadding: CGFloat? = nil,
+        feedMediaDependencies: EntityMediaFeedDependencies? = nil,
+        onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)? = nil,
+        actionPolicy: EntityGridActionPolicy = .disabled,
+        mutationService: (any EntityGridMutationServicing)? = nil,
+        prefersInitialTVFocus: Bool = false,
+        @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
+    ) {
+        self.init(
+            configuration: configuration,
+            loader: loader,
+            presentation: presentation,
+            preferencesStore: preferencesStore,
+            horizontalContentPadding: horizontalContentPadding,
+            feedMediaDependencies: feedMediaDependencies,
+            onOpenFeedItem: onOpenFeedItem,
+            actionPolicy: actionPolicy,
+            mutationService: mutationService,
+            prefersInitialTVFocus: prefersInitialTVFocus,
+            topContent: { _ in EmptyView() },
+            itemContent: itemContent
+        )
+    }
+}
+
+extension EntityGridView where TopContent == EmptyView, ItemContent == EntityThumbnailCardView {
     public init(
         configuration: EntityGridConfiguration,
         loader: any EntityGridLoading,

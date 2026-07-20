@@ -323,7 +323,7 @@ public struct PrismediaShellView: View {
                     actionPolicy: libraryActionPolicy,
                     mutationService: client
                 )
-            } else if ["albums", "artists", "tracks"].contains(destination.id) {
+            } else if destination.id == "tracks" {
                 MusicLibraryView(
                     configuration: EntityGridConfiguration.library(
                         destinationID: destination.id,
@@ -331,9 +331,7 @@ public struct PrismediaShellView: View {
                         query: entityList.query,
                         supportsSearch: entityList.supportsSearch
                     ),
-                    layout: destination.id == "albums"
-                        ? .albums
-                        : destination.id == "tracks" ? .tracks : .artists,
+                    layout: .tracks,
                     loader: PrismediaEntityGridLoader(client: client)
                 )
             } else {
@@ -381,6 +379,13 @@ public struct PrismediaShellView: View {
             },
             actionPolicy: libraryActionPolicy,
             mutationService: client,
+            topContent: { context in
+                #if os(iOS) || os(macOS)
+                    if destination.id == "albums" {
+                        MusicLibraryPlaybackActions(context: context)
+                    }
+                #endif
+            },
             itemContent: { item, layout in
                 EntityThumbnailNavigationSurface(item: item, layout: layout)
             }

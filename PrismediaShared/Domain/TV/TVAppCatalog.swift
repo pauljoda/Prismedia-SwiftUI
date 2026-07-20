@@ -7,19 +7,19 @@ public enum TVAppCatalog {
             id: "movies",
             title: "Movies",
             systemImage: "movieclapper",
-            query: EntityListQuery(kind: .movie, sort: "added")
+            query: EntityListQuery(kind: .movie, sort: "added", sortDescending: true)
         ),
         TVAppTab(
             id: "series",
             title: "Series",
             systemImage: "rectangle.stack",
-            query: EntityListQuery(kind: .videoSeries, sort: "added")
+            query: EntityListQuery(kind: .videoSeries, sort: "added", sortDescending: true)
         ),
         TVAppTab(
             id: "collections",
             title: "Collections",
             systemImage: "square.stack.3d.up",
-            query: EntityListQuery(kind: .collection, sort: "added")
+            query: EntityListQuery(kind: .collection, sort: "added", sortDescending: true)
         ),
         TVAppTab(
             id: "search",
@@ -27,7 +27,8 @@ public enum TVAppCatalog {
             systemImage: "magnifyingglass",
             query: EntityListQuery(
                 kinds: [.movie, .videoSeries, .collection],
-                sort: "added"
+                sort: "added",
+                sortDescending: true
             )
         ),
         TVAppTab(

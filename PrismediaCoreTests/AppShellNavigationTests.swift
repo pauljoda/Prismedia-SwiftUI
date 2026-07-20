@@ -119,8 +119,29 @@ final class AppShellNavigationTests: XCTestCase {
                 guard case .entityList(let entityList) = canonical.destination.content else {
                     return XCTFail("Canonical destination for \(kind.rawValue) must be an entity list")
                 }
-                XCTAssertFalse(entityList.query.sortDescending)
+                XCTAssertEqual(entityList.query.sort, "added")
+                XCTAssertTrue(entityList.query.sortDescending)
             }
+        }
+    }
+
+    func testRootEntityLibrariesDefaultToNewestAdded() {
+        let rootLibraries = ModeCatalog.all
+            .flatMap(\.destinations)
+            .compactMap { destination -> (AppDestination, EntityListDestination)? in
+                guard case .entityList(let entityList) = destination.content else { return nil }
+                return (destination, entityList)
+            }
+
+        XCTAssertFalse(rootLibraries.isEmpty)
+        for (destination, entityList) in rootLibraries {
+            XCTAssertEqual(entityList.query.sort, "added", destination.id)
+            XCTAssertTrue(entityList.query.sortDescending, destination.id)
+        }
+
+        for tab in TVAppCatalog.tabs where tab.query != nil {
+            XCTAssertEqual(tab.query?.sort, "added", tab.id)
+            XCTAssertEqual(tab.query?.sortDescending, true, tab.id)
         }
     }
 
