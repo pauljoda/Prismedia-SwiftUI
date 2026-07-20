@@ -1,10 +1,12 @@
 #if os(tvOS)
+    import SwiftUI
     import UIKit
 
     final class TVPlaybackScrubberControl: UIControl {
         var controlsVisible = true
-        var isGrabbed = false {
-            didSet { panGestureRecognizer.isEnabled = isGrabbed }
+        var isGrabbed = false
+        var isScrollingEnabled = false {
+            didSet { panGestureRecognizer.isEnabled = isScrollingEnabled }
         }
 
         var onFocusChange: (Bool) -> Void = { _ in }
@@ -20,22 +22,39 @@
             target: self,
             action: #selector(handlePan(_:))
         )
+        private let contentHostingController: UIHostingController<AnyView>
 
         override var canBecomeFocused: Bool {
             isEnabled && !isHidden && alpha > 0
         }
 
-        override init(frame: CGRect) {
-            super.init(frame: frame)
+        init(content: AnyView) {
+            contentHostingController = UIHostingController(rootView: content)
+            super.init(frame: .zero)
             backgroundColor = .clear
             isUserInteractionEnabled = true
+            contentHostingController.view.backgroundColor = .clear
+            contentHostingController.view.isUserInteractionEnabled = false
+            contentHostingController.view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(contentHostingController.view)
+            NSLayoutConstraint.activate([
+                contentHostingController.view.leadingAnchor.constraint(equalTo: leadingAnchor),
+                contentHostingController.view.trailingAnchor.constraint(equalTo: trailingAnchor),
+                contentHostingController.view.topAnchor.constraint(equalTo: topAnchor),
+                contentHostingController.view.bottomAnchor.constraint(equalTo: bottomAnchor),
+            ])
             panGestureRecognizer.isEnabled = false
+            panGestureRecognizer.cancelsTouchesInView = false
             addGestureRecognizer(panGestureRecognizer)
         }
 
         @available(*, unavailable)
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+
+        func setContent(_ content: AnyView) {
+            contentHostingController.rootView = content
         }
 
         override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
@@ -100,8 +119,20 @@
             onFocusChange(isFocused)
         }
 
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard gestureRecognizer === panGestureRecognizer,
+                  isScrollingEnabled,
+                  let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer
+            else {
+                return false
+            }
+
+            let velocity = panGestureRecognizer.velocity(in: self)
+            return abs(velocity.x) > abs(velocity.y)
+        }
+
         @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
-            guard isGrabbed else { return }
+            guard isScrollingEnabled else { return }
             switch recognizer.state {
             case .began:
                 onPanBegan()

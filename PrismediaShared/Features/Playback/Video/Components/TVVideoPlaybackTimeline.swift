@@ -7,58 +7,93 @@
         let currentTime: Double
         let duration: Double
         let originTime: Double?
+        let isFocused: Bool
         let isSeeking: Bool
         let previewURL: URL
 
         private let previewSize = CGSize(width: 360, height: 203)
+        private let playheadSize: CGFloat = 22
+        private let originMarkerWidth: CGFloat = 4
+
+        private var trackHeight: CGFloat {
+            if isSeeking { return 18 }
+            return isFocused ? 14 : 10
+        }
 
         var body: some View {
             GeometryReader { geometry in
                 let width = geometry.size.width
-                let progress = playbackProgress(for: currentTime)
+                let currentProgress = playbackProgress(for: currentTime)
+                let originProgress = originTime.map(playbackProgress(for:))
 
                 ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(.white.opacity(0.2))
-                        .frame(height: isSeeking ? 10 : 6)
-
-                    Capsule()
-                        .fill(artworkPrimaryAccent)
-                        .frame(width: progress * width, height: isSeeking ? 10 : 6)
-
-                    if let originTime, isSeeking {
+                    ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(.white.opacity(0.55))
-                            .frame(width: 4, height: 24)
-                            .offset(x: markerOffset(for: originTime, width: width))
+                            .fill(.white.opacity(isFocused ? 0.32 : 0.24))
+                            .frame(width: width, height: trackHeight)
+
+                        if let originProgress, isSeeking {
+                            Capsule()
+                                .fill(artworkPrimaryAccent.opacity(0.48))
+                                .frame(
+                                    width: pendingProgress(
+                                        current: currentProgress,
+                                        origin: originProgress
+                                    ) * width,
+                                    height: trackHeight
+                                )
+                        }
+
+                        Capsule()
+                            .fill(artworkPrimaryAccent)
+                            .frame(
+                                width: committedProgress(
+                                    current: currentProgress,
+                                    origin: originProgress
+                                ) * width,
+                                height: trackHeight
+                            )
+                    }
+                    .frame(width: width, height: trackHeight, alignment: .leading)
+                    .clipShape(.capsule)
+
+                    if let originProgress, isSeeking,
+                       abs(originProgress - currentProgress) > 0.001
+                    {
+                        Capsule()
+                            .fill(.white.opacity(0.92))
+                            .frame(width: originMarkerWidth, height: 32)
+                            .offset(x: markerOffset(
+                                progress: originProgress,
+                                markerWidth: originMarkerWidth,
+                                trackWidth: width
+                            ))
                     }
 
                     Circle()
                         .fill(.white)
-                        .frame(width: isSeeking ? 22 : 14, height: isSeeking ? 22 : 14)
+                        .frame(width: playheadSize, height: playheadSize)
                         .shadow(color: .black.opacity(0.45), radius: 5, y: 2)
-                        .offset(x: markerOffset(for: currentTime, width: width))
-
+                        .offset(x: markerOffset(
+                            progress: currentProgress,
+                            markerWidth: playheadSize,
+                            trackWidth: width
+                        ))
+                }
+                .frame(width: width, height: geometry.size.height, alignment: .leading)
+                .overlay(alignment: .topLeading) {
                     if isSeeking, duration > 0 {
                         thumbnailPreview
                             .offset(
-                                x: thumbnailOffset(progress: progress, width: width),
-                                y: -(previewSize.height + 26)
+                                x: thumbnailOffset(progress: currentProgress, width: width),
+                                y: -(previewSize.height + 18)
                             )
                     }
                 }
-                .frame(maxHeight: .infinity)
                 .animation(.easeOut(duration: 0.12), value: isSeeking)
             }
-            .frame(height: 34)
-            .accessibilityElement()
-            .accessibilityLabel("Playback position")
-            .accessibilityValue(
-                VideoPlaybackTimelineAccessibility.value(
-                    currentTime: currentTime,
-                    duration: duration
-                )
-            )
+            .frame(height: 72)
+            .accessibilityHidden(true)
         }
 
         private var thumbnailPreview: some View {
@@ -90,9 +125,21 @@
             return CGFloat(max(0, min(1, time / duration)))
         }
 
-        private func markerOffset(for time: Double, width: CGFloat) -> CGFloat {
-            let markerWidth: CGFloat = isSeeking ? 22 : 14
-            return max(0, min(width - markerWidth, playbackProgress(for: time) * width - markerWidth / 2))
+        private func committedProgress(current: CGFloat, origin: CGFloat?) -> CGFloat {
+            guard let origin, isSeeking else { return current }
+            return min(current, origin)
+        }
+
+        private func pendingProgress(current: CGFloat, origin: CGFloat) -> CGFloat {
+            max(current, origin)
+        }
+
+        private func markerOffset(
+            progress: CGFloat,
+            markerWidth: CGFloat,
+            trackWidth: CGFloat
+        ) -> CGFloat {
+            max(0, min(trackWidth - markerWidth, progress * trackWidth - markerWidth / 2))
         }
 
         private func thumbnailOffset(progress: CGFloat, width: CGFloat) -> CGFloat {
@@ -106,6 +153,7 @@
                 currentTime: 42,
                 duration: 100,
                 originTime: 30,
+                isFocused: true,
                 isSeeking: true,
                 previewURL: URL(string: "https://example.com/video.mkv")!
             )

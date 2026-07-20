@@ -10,6 +10,8 @@
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @State private var controlsVisible = true
         @State private var controlsDismissGeneration = 0
+        @State private var hasStartedAutoDismiss = false
+        @State private var optionsFocusEnabled = false
         @State private var activeOptionsMenu: TVPlaybackOptionsMenu?
         @State private var previewTime: Double?
         @State private var seekOriginTime: Double?
@@ -39,9 +41,9 @@
                 if controlsVisible {
                     chrome
                         .transition(.opacity)
+                } else {
+                    hiddenPlaybackInteractionSurface
                 }
-
-                timelineInteractionSurface
 
                 if controller.isWaiting {
                     ProgressView()
@@ -66,14 +68,11 @@
                 optionsMenuActions
             }
             .onChange(of: controller.isPlaying) { _, isPlaying in
-                if isPlaying { resetControlsDismissTimer() }
-            }
-            .onChange(of: focusedControl) { previousControl, focusedControl in
-                guard focusedControl != previousControl else { return }
-                if focusedControl != nil { revealControls() }
+                if isPlaying { startInitialAutoDismissIfNeeded() }
             }
             .onAppear {
                 moveFocus(to: .timeline)
+                if controller.isPlaying { startInitialAutoDismissIfNeeded() }
             }
             .onDisappear {
                 cancelSeekPreview()
@@ -82,6 +81,7 @@
                 guard canAutoDismissControls else { return }
                 try? await Task.sleep(for: controlsAutoDismissDelay)
                 guard !Task.isCancelled, canAutoDismissControls else { return }
+                optionsFocusEnabled = false
                 controlsVisible = false
             }
             .task(id: scanRunGeneration) {
@@ -146,13 +146,7 @@
                     playbackOptionButtons
                 }
 
-                TVVideoPlaybackTimeline(
-                    currentTime: displayedTime,
-                    duration: controller.duration,
-                    originTime: seekOriginTime,
-                    isSeeking: isSeeking,
-                    previewURL: request.url
-                )
+                playbackTimeline
 
                 HStack(spacing: PrismediaSpacing.medium) {
                     Text(VideoPlaybackPresentation.clockTime(displayedTime))
@@ -166,10 +160,12 @@
             }
         }
 
-        private var timelineInteractionSurface: some View {
+        private var playbackTimeline: some View {
             TVPlaybackScrubber(
                 controlsVisible: controlsVisible,
+                isFocusEnabled: !optionsFocusEnabled,
                 isGrabbed: isScrubbing,
+                isScrollingEnabled: isScrubbing,
                 onFocusChange: handleTimelineFocusChange,
                 onRevealControls: revealControls,
                 onMoveToOptions: moveToPlaybackOptions,
@@ -178,17 +174,46 @@
                 onPanBegan: beginPan,
                 onPanChanged: updatePan,
                 onPanEnded: endPan
-            )
-            .frame(height: 132)
-            .padding(.horizontal, 64)
-            .padding(.bottom, 42)
-            .frame(maxHeight: .infinity, alignment: .bottom)
+            ) {
+                TVVideoPlaybackTimeline(
+                    currentTime: displayedTime,
+                    duration: controller.duration,
+                    originTime: seekOriginTime,
+                    isFocused: focusedControl == .timeline,
+                    isSeeking: isSeeking,
+                    previewURL: request.url
+                )
+            }
+            .frame(height: 72)
             .focused($focusedControl, equals: .timeline)
             .focusEffectDisabled()
             .accessibilityLabel("Playback timeline")
-            .accessibilityValue(
-                timelineAccessibilityValue
-            )
+            .accessibilityValue(timelineAccessibilityValue)
+            .accessibilityIdentifier("video-player.compatibility-surface")
+        }
+
+        private var hiddenPlaybackInteractionSurface: some View {
+            TVPlaybackScrubber(
+                controlsVisible: false,
+                isFocusEnabled: true,
+                isGrabbed: false,
+                isScrollingEnabled: false,
+                onFocusChange: handleTimelineFocusChange,
+                onRevealControls: revealControls,
+                onMoveToOptions: moveToPlaybackOptions,
+                onPrimaryAction: handlePrimaryAction,
+                onHorizontalPress: handleHorizontalPress,
+                onPanBegan: {},
+                onPanChanged: { _ in },
+                onPanEnded: {}
+            ) {
+                Color.clear
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .focused($focusedControl, equals: .timeline)
+            .focusEffectDisabled()
+            .accessibilityLabel("Playback timeline")
+            .accessibilityValue(timelineAccessibilityValue)
             .accessibilityIdentifier("video-player.compatibility-surface")
         }
 
@@ -224,13 +249,14 @@
                 openOptionsMenu(menu)
             } label: {
                 Image(systemName: systemImage)
-                    .font(.title3.weight(.semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(PrismediaColor.onMedia)
-                    .frame(width: 30, height: 30)
-                    .padding(PrismediaSpacing.small)
+                    .frame(width: 22, height: 22)
+                    .padding(10)
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
+            .disabled(!optionsFocusEnabled)
             .focused($focusedControl, equals: focusTarget)
             .accessibilityLabel(menu.title)
             .accessibilityIdentifier(menu.title)
@@ -333,16 +359,16 @@
 
         private var canAutoDismissControls: Bool {
             controller.isPlaying
-                && focusedControl == .timeline
+                && !optionsFocusEnabled
                 && activeOptionsMenu == nil
                 && !isSeeking
         }
 
         private var controlsAutoDismissDelay: Duration {
             #if DEBUG
-                PrismediaUITestBootstrap.videoControlsAutoHideDelay() ?? .seconds(15)
+                PrismediaUITestBootstrap.videoControlsAutoHideDelay() ?? .seconds(8)
             #else
-                .seconds(15)
+                .seconds(8)
             #endif
         }
 
@@ -363,9 +389,19 @@
             controlsDismissGeneration += 1
         }
 
+        private func startInitialAutoDismissIfNeeded() {
+            guard !hasStartedAutoDismiss else { return }
+            hasStartedAutoDismiss = true
+            resetControlsDismissTimer()
+        }
+
         private func moveToPlaybackOptions() {
             revealControls()
-            moveFocus(to: .audio)
+            optionsFocusEnabled = true
+            Task { @MainActor in
+                await Task.yield()
+                moveFocus(to: .audio)
+            }
         }
 
         private func handlePlaybackOptionsMove(
@@ -383,15 +419,24 @@
             case (.speed, .right): target = .speed
             default: target = nil
             }
-            if let target { moveFocus(to: target) }
+            if target == .timeline {
+                optionsFocusEnabled = false
+                Task { @MainActor in
+                    await Task.yield()
+                    moveFocus(to: .timeline)
+                }
+            } else if let target {
+                moveFocus(to: target)
+            }
             revealControls()
         }
 
         private func handleTimelineFocusChange(_ isFocused: Bool) {
             Task { @MainActor in
+                guard !optionsFocusEnabled else { return }
                 if isFocused {
+                    guard focusedControl != .timeline else { return }
                     focusedControl = .timeline
-                    revealControls()
                 } else if focusedControl == .timeline {
                     focusedControl = nil
                 }

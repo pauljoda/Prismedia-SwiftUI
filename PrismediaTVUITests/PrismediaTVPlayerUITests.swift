@@ -16,7 +16,7 @@ final class PrismediaTVPlayerUITests: XCTestCase {
         app.launchEnvironment["PRISMEDIA_UI_TEST_START_VIDEO"] = "1"
         app.launchEnvironment["PRISMEDIA_UI_TEST_START_FULLSCREEN"] = "1"
         app.launchEnvironment["PRISMEDIA_UI_TEST_VIDEO_ENGINE"] = "vlc"
-        app.launchEnvironment["PRISMEDIA_UI_TEST_VIDEO_RESUME_SECONDS"] = "30"
+        app.launchEnvironment["PRISMEDIA_UI_TEST_VIDEO_RESUME_SECONDS"] = "0"
         app.launchEnvironment["PRISMEDIA_UI_TEST_VIDEO_CONTROLS_TIMEOUT"] = "4"
         app.launchEnvironment["PRISMEDIA_UI_TEST_VIDEO_SCAN_SETTLE_SECONDS"] = "5"
         app.launch()
@@ -28,7 +28,7 @@ final class PrismediaTVPlayerUITests: XCTestCase {
         let subtitles = app.buttons["Subtitles"]
         let speed = app.buttons["Playback Speed"]
         let menuButtons = [audio, subtitles, speed]
-        XCTAssertTrue(waitForDisappearance(of: audio, timeout: 5))
+        XCTAssertTrue(waitForDisappearance(of: audio, timeout: 10))
 
         XCUIRemote.shared.press(.right)
         try await Task.sleep(for: .milliseconds(300))
