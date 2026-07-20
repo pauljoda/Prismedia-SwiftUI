@@ -63,6 +63,9 @@
         }
       }
     },
+    "%@ times" : {
+
+    },
     "%@, %@" : {
       "localizations" : {
         "en" : {
@@ -112,6 +115,9 @@
           }
         }
       }
+    },
+    "%@×" : {
+
     },
     "%lld" : {
 
@@ -406,6 +412,9 @@
     "Audio" : {
 
     },
+    "Audio Tracks" : {
+
+    },
     "Audiobook Now Playing" : {
 
     },
@@ -497,6 +506,9 @@
 
     },
     "Browse Server Folders" : {
+
+    },
+    "Buffering" : {
 
     },
     "Building the canonical proposal…" : {
@@ -770,6 +782,9 @@
     "Decrease" : {
 
     },
+    "Default" : {
+
+    },
     "Delete" : {
 
     },
@@ -893,6 +908,9 @@
     "Enter the provider-specific details above to find candidates." : {
 
     },
+    "Entities you mark as favorites will appear here." : {
+
+    },
     "Entity actions" : {
 
     },
@@ -947,7 +965,13 @@
     "Failed items remain selected. Review the details and retry the action." : {
 
     },
+    "Fast Forward" : {
+
+    },
     "Favorite" : {
+
+    },
+    "Favorites" : {
 
     },
     "Favorites only" : {
@@ -1206,6 +1230,9 @@
     "Loading collections…" : {
 
     },
+    "Loading Collections…" : {
+
+    },
     "Loading dashboard…" : {
 
     },
@@ -1222,6 +1249,9 @@
 
     },
     "Loading episodes…" : {
+
+    },
+    "Loading favorites…" : {
 
     },
     "Loading folder…" : {
@@ -1258,6 +1288,9 @@
 
     },
     "Loading roots…" : {
+
+    },
+    "Loading server settings…" : {
 
     },
     "Loading settings…" : {
@@ -1464,6 +1497,9 @@
     "No Collections" : {
 
     },
+    "No Collections Available" : {
+
+    },
     "No enabled library supports %@. Add one in Settings first." : {
 
     },
@@ -1471,6 +1507,9 @@
 
     },
     "No Episodes" : {
+
+    },
+    "No Favorites Yet" : {
 
     },
     "No files reported yet." : {
@@ -1525,6 +1564,9 @@
 
     },
     "No Search Providers" : {
+
+    },
+    "No Subtitles Available" : {
 
     },
     "No Table of Contents" : {
@@ -1739,6 +1781,9 @@
     "Playback" : {
 
     },
+    "Playback Engine" : {
+
+    },
     "Playback Options" : {
 
     },
@@ -1752,6 +1797,9 @@
 
     },
     "Playback Stats" : {
+
+    },
+    "Playback timeline" : {
 
     },
     "Playing" : {
@@ -2139,6 +2187,9 @@
     "Revoke this session?" : {
 
     },
+    "Rewind" : {
+
+    },
     "Rewind gestures" : {
 
     },
@@ -2332,6 +2383,9 @@
 
     },
     "Server path" : {
+
+    },
+    "Server settings are unavailable" : {
 
     },
     "Server URL" : {
@@ -2550,6 +2604,9 @@
     "This device" : {
 
     },
+    "This only changes what is shown for the active account on this Apple TV." : {
+
+    },
     "This PDF does not include an outline." : {
 
     },
@@ -2602,6 +2659,9 @@
 
     },
     "Try another provider or refine the search fields." : {
+
+    },
+    "Try Loading Collections Again" : {
 
     },
     "Two" : {
@@ -2749,6 +2809,9 @@
     "Version %@" : {
 
     },
+    "Video Player" : {
+
+    },
     "Video Size" : {
 
     },
@@ -2765,6 +2828,9 @@
 
     },
     "Visibility" : {
+
+    },
+    "VLC" : {
 
     },
     "Watched" : {

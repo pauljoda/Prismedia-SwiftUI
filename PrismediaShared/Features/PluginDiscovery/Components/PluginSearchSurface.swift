@@ -184,7 +184,7 @@ import SwiftUI
         @ViewBuilder
         private var providerActions: some View {
             if onRescan != nil || onSeek != nil {
-                HStack(spacing: PrismediaSpacing.medium) {
+                ControlGroup {
                     if let onRescan {
                         Button(
                             isRescanning ? "Rescanning" : "Rescan",
@@ -192,6 +192,7 @@ import SwiftUI
                             action: onRescan
                         )
                         .disabled(isBusy)
+                        .help("Rescan")
                     }
                     if let onSeek {
                         Button(
@@ -200,8 +201,11 @@ import SwiftUI
                             action: onSeek
                         )
                         .disabled(isBusy)
+                        .help("Seek All Providers")
                     }
                 }
+                .labelStyle(.iconOnly)
+                .prismediaCompactActionControlSize()
             }
         }
 

@@ -8,8 +8,12 @@ import Foundation
         private var getCalls = 0
         private var addCalls = 0
         private var searchCalls = 0
+        private var queue: [AdministrativeIdentifyQueueItem]
 
-        init(item: AdministrativeIdentifyQueueItem) { self.item = item }
+        init(item: AdministrativeIdentifyQueueItem, queue: [AdministrativeIdentifyQueueItem] = []) {
+            self.item = item
+            self.queue = queue
+        }
 
         func callCounts() -> (get: Int, add: Int, search: Int) { (getCalls, addCalls, searchCalls) }
         func identifyQueueItem(entityID: UUID) async throws -> AdministrativeIdentifyQueueItem {
@@ -34,7 +38,7 @@ import Foundation
         func rescan(rootID: UUID, path: String?) async throws -> AdministrativeFileOperationResponse {
             throw CancellationError()
         }
-        func identifyQueue() async throws -> [AdministrativeIdentifyQueueItem] { [] }
+        func identifyQueue() async throws -> [AdministrativeIdentifyQueueItem] { queue }
         func identifyProviders(kind: String?) async throws -> [AdministrativePlugin] { [] }
         func resolveIdentifyCandidate(entityID: UUID, provider: String, candidate: AdministrativeEntitySearchCandidate)
             async throws -> AdministrativeIdentifyQueueItem

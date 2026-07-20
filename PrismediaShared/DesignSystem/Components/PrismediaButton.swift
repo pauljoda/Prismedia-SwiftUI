@@ -36,6 +36,7 @@ struct PrismediaButton: View {
             .disabled(isLoading)
             .accessibilityLabel(title)
             .accessibilityValue(isLoading ? "In progress" : "")
+            .help(title)
     }
 
     @ViewBuilder

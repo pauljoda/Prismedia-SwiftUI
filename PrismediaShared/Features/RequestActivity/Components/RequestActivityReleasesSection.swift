@@ -84,7 +84,7 @@ import SwiftUI
             PrismediaButton("Upload .torrent", systemImage: "doc.badge.plus") {
                 onUploadTorrent()
             }
-            .controlSize(.small)
+            .prismediaCompactActionControlSize()
             .disabled(isBusy)
         }
     }

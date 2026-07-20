@@ -8,9 +8,11 @@ struct EntityAcquisitionPanelState: Sendable {
     mutating func finishLoad(_ outcome: EntityAcquisitionLoadOutcome) {
         switch outcome {
         case .content(let snapshot):
-            phase = .content(snapshot)
+            let nextPhase = EntityAcquisitionPanelPhase.content(snapshot)
+            if phase != nextPhase { phase = nextPhase }
         case .failure(let message):
-            phase = .failure(message)
+            let nextPhase = EntityAcquisitionPanelPhase.failure(message)
+            if phase != nextPhase { phase = nextPhase }
         case .cancelled:
             break
         }
@@ -21,10 +23,12 @@ struct EntityAcquisitionPanelState: Sendable {
     mutating func finishBackgroundLoad(_ outcome: EntityAcquisitionLoadOutcome) {
         switch outcome {
         case .content(let snapshot):
-            phase = .content(snapshot)
+            let nextPhase = EntityAcquisitionPanelPhase.content(snapshot)
+            if phase != nextPhase { phase = nextPhase }
         case .failure(let message):
             if case .content = phase { return }
-            phase = .failure(message)
+            let nextPhase = EntityAcquisitionPanelPhase.failure(message)
+            if phase != nextPhase { phase = nextPhase }
         case .cancelled:
             break
         }

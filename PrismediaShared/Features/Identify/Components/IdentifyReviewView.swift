@@ -181,6 +181,7 @@ import SwiftUI
 
                     ControlGroup {
                         Button("Back to Search", systemImage: "arrow.left", action: session.returnToSearch)
+                            .help("Back to Search")
 
                         Menu("Reject", systemImage: "xmark") {
                             Button("Reject") {
@@ -190,6 +191,7 @@ import SwiftUI
                                 Task { await session.reject(advance: true) }
                             }
                         }
+                        .help("Reject")
 
                         Menu("Accept", systemImage: "checkmark") {
                             Button("Accept") {
@@ -200,7 +202,9 @@ import SwiftUI
                             }
                         }
                         .disabled(session.isApplying || item.cascadeRunning)
+                        .help("Accept")
                     }
+                    .labelStyle(.iconOnly)
                 }
                 .padding(.vertical, PrismediaSpacing.small)
             }

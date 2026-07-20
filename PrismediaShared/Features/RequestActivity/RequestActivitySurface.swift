@@ -2,6 +2,8 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     public struct RequestActivitySurface: View {
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
         #if os(iOS)
             @Environment(\.editMode) private var editMode
         #endif
@@ -20,7 +22,6 @@ import SwiftUI
         @State private var page = 1
         @State private var selectedIDs = Set<UUID>()
         @State private var pendingRemovalIDs = Set<UUID>()
-        @State private var historyLoaded = false
         @State private var selectedAcquisition: RequestActivityDownload?
 
         private let section: RequestActivitySection
@@ -76,8 +77,9 @@ import SwiftUI
                     )
                 }
                 .task(id: taskIdentity) {
-                    await load(showSpinner: true)
-                    await pollDownloadsWhileActive()
+                    guard liveRefreshIsActive else { return }
+                    await load(showSpinner: currentSourceIsEmpty)
+                    await pollWhileVisible()
                 }
                 .onChange(of: section) {
                     selectedIDs = []
@@ -403,13 +405,11 @@ import SwiftUI
         }
 
         private var taskIdentity: String {
-            let activeDownloadIDs =
-                downloads
-                .filter { RequestActivityStatusPolicy.shouldPoll($0.status) }
-                .map(\.id.uuidString)
-                .sorted()
-                .joined(separator: ",")
-            return "\(loadIdentity)-\(activeDownloadIDs)"
+            "\(loadIdentity)-\(liveRefreshIsActive)"
+        }
+
+        private var liveRefreshIsActive: Bool {
+            pageIsActive && scenePhase == .active && selectedAcquisition == nil
         }
 
         private var removalPresented: Binding<Bool> {
@@ -424,57 +424,67 @@ import SwiftUI
             return "Remove \(count) \(count == 1 ? "Download" : "Downloads")?"
         }
 
-        private func load(showSpinner: Bool) async {
+        private func load(showSpinner: Bool, reportsErrors: Bool = true) async {
             if showSpinner { isLoading = true }
-            defer { isLoading = false }
+            defer { if showSpinner { isLoading = false } }
             do {
                 switch section {
                 case .downloads:
-                    downloads = try await service.listRequestActivityDownloads()
+                    let nextDownloads = try await service.listRequestActivityDownloads()
+                    if downloads != nextDownloads { downloads = nextDownloads }
                 case .missing:
-                    wantedPage = try await service.listRequestActivityWanted(
+                    let nextPage = try await service.listRequestActivityWanted(
                         .missing,
                         page: page,
                         pageSize: 50,
                         kind: selectedWantedKind
                     )
+                    if wantedPage != nextPage { wantedPage = nextPage }
                 case .cutoffUnmet:
-                    wantedPage = try await service.listRequestActivityWanted(
+                    let nextPage = try await service.listRequestActivityWanted(
                         .cutoffUnmet,
                         page: page,
                         pageSize: 50,
                         kind: selectedWantedKind
                     )
+                    if wantedPage != nextPage { wantedPage = nextPage }
                 case .history:
-                    guard !historyLoaded else { return }
-                    history = try await service.listRequestActivityHistory(limit: 200, entityID: nil)
-                    historyLoaded = true
+                    let nextHistory = try await service.listRequestActivityHistory(limit: 200, entityID: nil)
+                    if history != nextHistory { history = nextHistory }
                 }
-                errorMessage = nil
-                selectedIDs.formIntersection(currentIDs)
+                if errorMessage != nil { errorMessage = nil }
+                let validSelection = selectedIDs.intersection(currentIDs)
+                if selectedIDs != validSelection { selectedIDs = validSelection }
             } catch is CancellationError {
                 return
             } catch {
-                errorMessage = error.localizedDescription
+                if reportsErrors { errorMessage = error.localizedDescription }
             }
         }
 
         private func refresh() async {
-            if section == .history { historyLoaded = false }
             await load(showSpinner: currentSourceIsEmpty)
         }
 
-        private func pollDownloadsWhileActive() async {
-            guard section == .downloads else { return }
-            while downloads.contains(where: { RequestActivityStatusPolicy.shouldPoll($0.status) }) {
+        private func pollWhileVisible() async {
+            while liveRefreshIsActive {
                 do {
-                    try await Task.sleep(for: .seconds(4))
+                    try await Task.sleep(for: liveRefreshInterval)
                 } catch {
                     return
                 }
-                guard !Task.isCancelled else { return }
-                await load(showSpinner: false)
+                guard !Task.isCancelled, liveRefreshIsActive else { return }
+                await load(showSpinner: false, reportsErrors: false)
             }
+        }
+
+        private var liveRefreshInterval: Duration {
+            if section == .downloads,
+                downloads.contains(where: { RequestActivityStatusPolicy.shouldPoll($0.status) })
+            {
+                return .seconds(4)
+            }
+            return .seconds(12)
         }
 
         private var currentIDs: Set<UUID> {

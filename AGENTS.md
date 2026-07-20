@@ -64,5 +64,6 @@
 
 ## Git history
 
+- Treat `PrismediaShared/Resources/Localizable.xcstrings` as Xcode-managed housekeeping. Do not pause to investigate its routine generated churn; include it in the focused task commit when it changes.
 - When requested work is complete and its appropriate validation has passed, create a focused commit before handing the work back unless the user explicitly asks not to commit.
 - Keep commits coherent and descriptive. Stage only files that belong to the completed task, preserve unrelated worktree changes, and never commit known-broken or incomplete work merely to make the tree clean.

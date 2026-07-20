@@ -121,11 +121,10 @@ import SwiftUI
         @ViewBuilder
         private var actions: some View {
             if !RequestActivityStatusPolicy.isTransitionLocked(item.status) {
-                ViewThatFits(in: .horizontal) {
+                GlassEffectContainer(spacing: PrismediaSpacing.small) {
                     HStack(spacing: PrismediaSpacing.small) { actionButtons }
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) { actionButtons }
                 }
-                .controlSize(.small)
+                .prismediaCompactActionControlSize()
             }
         }
 
@@ -133,7 +132,8 @@ import SwiftUI
         private var actionButtons: some View {
             PrismediaButton(
                 "Manage",
-                systemImage: "slider.horizontal.3"
+                systemImage: "slider.horizontal.3",
+                form: .compactIcon
             ) {
                 onManage(item)
             }
@@ -144,7 +144,8 @@ import SwiftUI
             ) {
                 PrismediaButton(
                     primary.title,
-                    systemImage: primary.systemImage
+                    systemImage: primary.systemImage,
+                    form: .compactIcon
                 ) {
                     onPrimaryAction(item)
                 }
@@ -156,7 +157,8 @@ import SwiftUI
             {
                 PrismediaButton(
                     "Open in Library",
-                    systemImage: "arrow.up.right.square"
+                    systemImage: "arrow.up.right.square",
+                    form: .compactIcon
                 ) {
                     onOpenEntity(item)
                 }
@@ -165,7 +167,8 @@ import SwiftUI
             PrismediaButton(
                 "Remove",
                 systemImage: "trash",
-                variant: .destructive
+                variant: .destructive,
+                form: .compactIcon
             ) {
                 onRemove(item)
             }

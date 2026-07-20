@@ -3,6 +3,8 @@ import SwiftUI
 struct EntityAcquisitionPanel: View {
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
     @Environment(\.artworkSecondaryText) private var artworkSecondaryText
+    @Environment(\.prismediaPageIsActive) private var pageIsActive
+    @Environment(\.scenePhase) private var scenePhase
     @State private var state = EntityAcquisitionPanelState()
     @State private var confirmsUnmonitor = false
     @State private var historyEntries: [RequestActivityHistoryEntry] = []
@@ -42,10 +44,14 @@ struct EntityAcquisitionPanel: View {
                 adminUnavailableView
             }
         }
-        .task(id: entityID) {
-            guard let service else { return }
-            await load(using: service)
-            await pollWhileActive(using: service)
+        .task(id: liveRefreshTaskIdentity) {
+            guard let service, liveRefreshIsActive else { return }
+            if case .content = state.phase {
+                await backgroundLoad(using: service)
+            } else {
+                await load(using: service)
+            }
+            await pollWhileVisible(using: service)
         }
         .confirmationDialog(
             "Stop monitoring this item?",
@@ -144,14 +150,12 @@ struct EntityAcquisitionPanel: View {
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: PrismediaSpacing.medium) {
-                actionButtons(snapshot, service: service)
-            }
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+        GlassEffectContainer(spacing: PrismediaSpacing.small) {
+            HStack(spacing: PrismediaSpacing.small) {
                 actionButtons(snapshot, service: service)
             }
         }
+        .prismediaCompactActionControlSize()
         .disabled(state.isMutating)
         .overlay {
             if state.isMutating {
@@ -170,7 +174,7 @@ struct EntityAcquisitionPanel: View {
         if let monitor = snapshot.state.monitor {
             monitorToggle(monitor, service: service)
         } else if snapshot.state.canMonitor {
-            PrismediaButton("Monitor", systemImage: "bell") {
+            PrismediaButton("Monitor", systemImage: "bell", form: .compactIcon) {
                 Task { await perform(.start(entityID), using: service) }
             }
         }
@@ -180,6 +184,7 @@ struct EntityAcquisitionPanel: View {
                 "Search for release",
                 systemImage: "magnifyingglass",
                 variant: .prominent,
+                form: .compactIcon,
                 primaryTint: artworkPrimaryAccent
             ) {
                 Task { await perform(.searchForRelease(entityID), using: service) }
@@ -187,7 +192,7 @@ struct EntityAcquisitionPanel: View {
         }
 
         if !embedsManagement(snapshot), let acquisition = snapshot.state.latestAcquisition {
-            PrismediaButton("Search Again", systemImage: "arrow.clockwise") {
+            PrismediaButton("Search Again", systemImage: "arrow.clockwise", form: .compactIcon) {
                 Task { await perform(.searchAgain(acquisition.id), using: service) }
             }
         }
@@ -199,26 +204,31 @@ struct EntityAcquisitionPanel: View {
         service: EntityAcquisitionService
     ) -> some View {
         if monitor.status == .stopping {
-            PrismediaButton("Finish unmonitoring", systemImage: "arrow.clockwise") {
+            PrismediaButton(
+                "Finish unmonitoring",
+                systemImage: "arrow.clockwise",
+                form: .compactIcon
+            ) {
                 Task { await perform(.unmonitor(monitor.id), using: service) }
             }
         } else if monitor.status == .deletingFiles {
-            PrismediaButton("Deleting files…", systemImage: "trash") {}
+            PrismediaButton("Deleting files…", systemImage: "trash", form: .compactIcon) {}
                 .disabled(true)
         } else if isUnknownMonitorStatus(monitor.status) {
-            PrismediaButton("Updating…", systemImage: "arrow.clockwise") {}
+            PrismediaButton("Updating…", systemImage: "arrow.clockwise", form: .compactIcon) {}
                 .disabled(true)
         } else if monitor.status == .active {
             PrismediaButton(
                 "Monitoring",
                 systemImage: "bell.and.waves.left.and.right",
                 variant: .prominent,
+                form: .compactIcon,
                 primaryTint: artworkPrimaryAccent
             ) {
                 confirmsUnmonitor = true
             }
         } else {
-            PrismediaButton("Resume monitoring", systemImage: "bell") {
+            PrismediaButton("Resume monitoring", systemImage: "bell", form: .compactIcon) {
                 Task { await perform(.resume(monitor.id), using: service) }
             }
         }
@@ -367,23 +377,36 @@ struct EntityAcquisitionPanel: View {
     private func loadHistory() async {
         #if os(iOS) || os(macOS)
             guard let requestActivityService else { return }
-            historyEntries =
+            let nextEntries =
                 (try? await requestActivityService.listRequestActivityHistory(
                     limit: 50,
                     entityID: entityID
                 )) ?? historyEntries
+            if historyEntries != nextEntries { historyEntries = nextEntries }
         #endif
     }
 
-    private func pollWhileActive(using service: EntityAcquisitionService) async {
-        while shouldPoll {
-            do { try await Task.sleep(for: .seconds(4)) } catch { return }
-            guard !Task.isCancelled else { return }
+    private func pollWhileVisible(using service: EntityAcquisitionService) async {
+        while liveRefreshIsActive {
+            do { try await Task.sleep(for: liveRefreshInterval) } catch { return }
+            guard !Task.isCancelled, liveRefreshIsActive else { return }
             await backgroundLoad(using: service)
         }
     }
 
-    private var shouldPoll: Bool {
+    private var liveRefreshTaskIdentity: String {
+        "\(entityID.uuidString)-\(liveRefreshIsActive)"
+    }
+
+    private var liveRefreshIsActive: Bool {
+        pageIsActive && scenePhase == .active
+    }
+
+    private var liveRefreshInterval: Duration {
+        requiresFrequentRefresh ? .seconds(4) : .seconds(12)
+    }
+
+    private var requiresFrequentRefresh: Bool {
         guard case .content(let snapshot) = state.phase else { return false }
         if let monitor = snapshot.state.monitor,
             monitor.status == .stopping || monitor.status == .deletingFiles

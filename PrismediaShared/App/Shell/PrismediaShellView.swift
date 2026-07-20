@@ -70,6 +70,10 @@ public struct PrismediaShellView: View {
                         detailDependencies: detailDependencies,
                         videoPlaybackSession: videoPlaybackSession
                     )
+                    .environment(
+                        \.prismediaPageIsActive,
+                        router.selectedTab == .destination(destination.id)
+                    )
                 }
             }
 
@@ -84,6 +88,7 @@ public struct PrismediaShellView: View {
                     detailDependencies: detailDependencies,
                     videoPlaybackSession: videoPlaybackSession
                 )
+                .environment(\.prismediaPageIsActive, router.selectedTab == .search)
             }
         }
         .prismediaAdaptiveAppTabStyle()

@@ -38,25 +38,29 @@ import SwiftUI
                         .font(.caption)
                         .foregroundStyle(rejectionStyle)
                 }
-                HStack {
-                    PrismediaButton(
-                        primaryActionTitle,
-                        systemImage: "arrow.down.circle",
-                        variant: primaryActionVariant
-                    ) {
-                        onQueue(candidate)
+                GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                    HStack(spacing: PrismediaSpacing.small) {
+                        PrismediaButton(
+                            primaryActionTitle,
+                            systemImage: "arrow.down.circle",
+                            variant: primaryActionVariant,
+                            form: .compactIcon
+                        ) {
+                            onQueue(candidate)
+                        }
+                        .disabled(isDisabled || !canQueue)
+                        PrismediaButton(
+                            "Blocklist",
+                            systemImage: "hand.raised",
+                            variant: .destructive,
+                            form: .compactIcon
+                        ) {
+                            onBlocklist(candidate)
+                        }
+                        .disabled(isDisabled)
                     }
-                    .disabled(isDisabled || !canQueue)
-                    PrismediaButton(
-                        "Blocklist",
-                        systemImage: "hand.raised",
-                        variant: .destructive
-                    ) {
-                        onBlocklist(candidate)
-                    }
-                    .disabled(isDisabled)
                 }
-                .controlSize(.small)
+                .prismediaCompactActionControlSize()
             }
             .padding(.vertical, PrismediaSpacing.extraSmall)
             .accessibilityElement(children: .contain)

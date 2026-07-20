@@ -3,7 +3,10 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct IdentifyView: View {
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
         @State private var session: IdentifySession
+        @State private var hasLoaded = false
         private let automaticallyLoads: Bool
 
         init(session: IdentifySession, automaticallyLoads: Bool = true) {
@@ -31,7 +34,20 @@ import SwiftUI
                     }
                 }
             }
-            .task { if automaticallyLoads { await session.load() } }
+            .task(id: liveRefreshIsActive) {
+                guard automaticallyLoads, liveRefreshIsActive else {
+                    session.cancelPolling()
+                    return
+                }
+                if hasLoaded {
+                    await session.refreshQueue()
+                } else {
+                    await session.load()
+                    guard !Task.isCancelled else { return }
+                    hasLoaded = true
+                }
+                await pollQueueWhileVisible()
+            }
             .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
                 Task { await session.refreshProviders() }
             }
@@ -47,6 +63,18 @@ import SwiftUI
                 Text(session.errorMessage ?? "Unknown error")
             }
             .accessibilityIdentifier("identify.root")
+        }
+
+        private var liveRefreshIsActive: Bool {
+            pageIsActive && scenePhase == .active
+        }
+
+        private func pollQueueWhileVisible() async {
+            while liveRefreshIsActive {
+                do { try await Task.sleep(for: .seconds(10)) } catch { return }
+                guard !Task.isCancelled, liveRefreshIsActive else { return }
+                await session.refreshQueue()
+            }
         }
 
     }

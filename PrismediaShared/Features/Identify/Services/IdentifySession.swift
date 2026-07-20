@@ -102,18 +102,37 @@ import Observation
             do {
                 async let loadedProviders = service.identifyProviders(kind: nil)
                 async let loadedQueue = service.identifyQueue()
-                let (providers, queue) = try await (loadedProviders, loadedQueue)
-                self.providers = providers
-                self.queue = queue
-                if selectedItemID == nil { select(queue.first?.entityID) } else { select(selectedItemID) }
+                let (nextProviders, nextQueue) = try await (loadedProviders, loadedQueue)
+                if providers != nextProviders { providers = nextProviders }
+                if queue != nextQueue { queue = nextQueue }
+                if selectedItemID == nil { select(nextQueue.first?.entityID) } else { select(selectedItemID) }
                 reconcileProvider()
-            } catch { errorMessage = error.localizedDescription }
+                if errorMessage != nil { errorMessage = nil }
+            } catch is CancellationError {
+                return
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+
+        func refreshQueue() async {
+            do {
+                let nextQueue = try await service.identifyQueue()
+                receiveQueueRefresh(nextQueue)
+            } catch is CancellationError {
+                return
+            } catch {
+                // Background refreshes retain the last good queue and stay unobtrusive.
+            }
         }
 
         func refreshProviders() async {
             do {
-                providers = try await service.identifyProviders(kind: nil)
+                let nextProviders = try await service.identifyProviders(kind: nil)
+                if providers != nextProviders { providers = nextProviders }
                 reconcileProvider()
+            } catch is CancellationError {
+                return
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -361,6 +380,28 @@ import Observation
                 queue[index] = item
             } else {
                 queue.insert(item, at: 0)
+            }
+        }
+
+        private func receiveQueueRefresh(_ nextQueue: [AdministrativeIdentifyQueueItem]) {
+            guard queue != nextQueue else { return }
+            let previousProposalID = selectedItem?.proposal?.proposalID
+            queue = nextQueue
+
+            let validSelection = selectedQueueIDs.intersection(Set(nextQueue.map(\.entityID)))
+            if selectedQueueIDs != validSelection { selectedQueueIDs = validSelection }
+
+            guard let selectedItemID,
+                let refreshedItem = nextQueue.first(where: { $0.entityID == selectedItemID })
+            else {
+                select(nextQueue.first?.entityID)
+                return
+            }
+
+            if previousProposalID != refreshedItem.proposal?.proposalID {
+                select(selectedItemID)
+            } else {
+                reconcileProvider()
             }
         }
 

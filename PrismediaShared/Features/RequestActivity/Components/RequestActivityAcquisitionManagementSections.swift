@@ -9,6 +9,8 @@ import UniformTypeIdentifiers
     /// Entity monitoring stays in the owning panel so a stable entity monitor is never
     /// duplicated by an acquisition-scoped control.
     struct RequestActivityAcquisitionManagementSections: View {
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
         @State private var detail: RequestActivityAcquisitionDetail?
         @State private var transfer: RequestActivityTransfer?
         @State private var files: RequestActivityFiles?
@@ -59,9 +61,10 @@ import UniformTypeIdentifiers
                 allowsMultipleSelection: false,
                 onCompletion: importTorrent
             )
-            .task(id: acquisitionID) {
-                await load()
-                await pollWhileActive()
+            .task(id: liveRefreshTaskIdentity) {
+                guard liveRefreshIsActive else { return }
+                await load(showSpinner: detail == nil, reportsErrors: detail == nil)
+                await pollWhileVisible()
             }
             .confirmationDialog(
                 "Start this acquisition over?",
@@ -103,7 +106,7 @@ import UniformTypeIdentifiers
             .overlay { overlayContent }
             .navigationTitle(detail?.summary.title ?? "Acquisition")
             .toolbar { listToolbarContent }
-            .refreshable { await load() }
+            .refreshable { await load(showSpinner: detail == nil) }
         }
 
         private func summarySection(_ summary: RequestActivityAcquisitionSummary) -> some View {
@@ -192,7 +195,7 @@ import UniformTypeIdentifiers
                             ) {
                                 Task { await removeBlocklistEntry(entry) }
                             }
-                            .controlSize(.small)
+                            .prismediaCompactActionControlSize()
                             .disabled(isActing)
                         }
                     }
@@ -315,13 +318,10 @@ import UniformTypeIdentifiers
                 }
 
                 if hasEmbeddedActions(detail) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: PrismediaSpacing.medium) { embeddedActions(detail) }
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                            embeddedActions(detail)
-                        }
+                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                        HStack(spacing: PrismediaSpacing.small) { embeddedActions(detail) }
                     }
-                    .controlSize(.small)
+                    .prismediaCompactActionControlSize()
                 }
             }
         }
@@ -339,7 +339,8 @@ import UniformTypeIdentifiers
                 PrismediaButton(
                     status.rawValue == "manual-import-required" ? "Import anyway" : "Retry import",
                     systemImage: "arrow.down.doc",
-                    variant: .prominent
+                    variant: .prominent,
+                    form: .compactIcon
                 ) {
                     Task {
                         await retryImport(allowFormatChange: status.rawValue == "manual-import-required")
@@ -351,20 +352,30 @@ import UniformTypeIdentifiers
                 PrismediaButton(
                     "Start over",
                     systemImage: "arrow.counterclockwise",
-                    variant: .destructive
+                    variant: .destructive,
+                    form: .compactIcon
                 ) {
                     confirmsStartOver = true
                 }
                 .disabled(isActing)
             }
             if canReSearch(detail) {
-                PrismediaButton("Search again", systemImage: "arrow.clockwise") {
+                PrismediaButton(
+                    "Search again",
+                    systemImage: "arrow.clockwise",
+                    form: .compactIcon
+                ) {
                     Task { await research() }
                 }
                 .disabled(isActing)
             }
             if canCancel(status) || status.rawValue == "awaiting-selection" {
-                PrismediaButton("Cancel", systemImage: "xmark", variant: .destructive) {
+                PrismediaButton(
+                    "Cancel",
+                    systemImage: "xmark",
+                    variant: .destructive,
+                    form: .compactIcon
+                ) {
                     Task { await cancel() }
                 }
                 .disabled(isActing)
@@ -460,33 +471,50 @@ import UniformTypeIdentifiers
             )
         }
 
-        private func load() async {
-            isLoading = true
-            defer { isLoading = false }
+        private func load(showSpinner: Bool, reportsErrors: Bool = true) async {
+            if showSpinner { isLoading = true }
+            defer { if showSpinner { isLoading = false } }
             do {
                 let nextDetail = try await service.fetchRequestActivityAcquisition(id: acquisitionID)
-                detail = nextDetail
-                transfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
-                files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
-                blocklist =
+                if detail != nextDetail { detail = nextDetail }
+                let nextTransfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
+                if transfer != nextTransfer { transfer = nextTransfer }
+                let nextFiles = try? await service.fetchRequestActivityFiles(id: acquisitionID)
+                if files != nextFiles { files = nextFiles }
+                let nextBlocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
                         $0.acquisitionID == acquisitionID
                     } ?? []
-                errorMessage = nil
+                if blocklist != nextBlocklist { blocklist = nextBlocklist }
+                if errorMessage != nil { errorMessage = nil }
                 await observeStatusTransition(nextDetail.summary.status)
             } catch is CancellationError {
                 return
             } catch {
-                errorMessage = error.localizedDescription
+                if reportsErrors { errorMessage = error.localizedDescription }
             }
         }
 
-        private func pollWhileActive() async {
-            while detail.map({ RequestActivityStatusPolicy.shouldPoll($0.summary.status) }) == true {
-                do { try await Task.sleep(for: .seconds(4)) } catch { return }
-                guard !Task.isCancelled else { return }
-                await load()
+        private func pollWhileVisible() async {
+            while liveRefreshIsActive {
+                do { try await Task.sleep(for: liveRefreshInterval) } catch { return }
+                guard !Task.isCancelled, liveRefreshIsActive else { return }
+                await load(showSpinner: false, reportsErrors: false)
             }
+        }
+
+        private var liveRefreshTaskIdentity: String {
+            "\(acquisitionID.uuidString)-\(liveRefreshIsActive)"
+        }
+
+        private var liveRefreshIsActive: Bool {
+            pageIsActive && scenePhase == .active
+        }
+
+        private var liveRefreshInterval: Duration {
+            detail.map { RequestActivityStatusPolicy.shouldPoll($0.summary.status) } == true
+                ? .seconds(4)
+                : .seconds(12)
         }
 
         /// Calls the owner once when live status observes this acquisition cross from an
