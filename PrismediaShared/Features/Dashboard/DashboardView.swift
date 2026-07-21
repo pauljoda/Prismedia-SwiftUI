@@ -6,7 +6,7 @@ struct DashboardView: View {
     private let service: DashboardService
     private let detailDependencies: EntityDetailDependencies
     private let user: UserAccount
-    private let allowsNsfwContent: Bool
+    @Binding private var allowsNsfwContent: Bool
     private let launchBrandNamespace: Namespace.ID?
     private let showsHero: Bool
     private let allowsHeroAutomaticAdvance: Bool
@@ -14,7 +14,6 @@ struct DashboardView: View {
     private let onSelectSection: (DashboardSectionDefinition) -> Void
     private let onOpenAccount: () -> Void
     private let onOpenSettings: (() -> Void)?
-    private let onSetAllowsNsfwContent: @MainActor @Sendable (Bool) -> Void
     private let onSignOut: () -> Void
 
     init(
@@ -22,7 +21,7 @@ struct DashboardView: View {
         detailDependencies: EntityDetailDependencies,
         user: UserAccount,
         navigationPath: Binding<[EntityLink]> = .constant([]),
-        allowsNsfwContent: Bool,
+        allowsNsfwContent: Binding<Bool>,
         launchBrandNamespace: Namespace.ID? = nil,
         showsHero: Bool = false,
         allowsHeroAutomaticAdvance: Bool = true,
@@ -30,14 +29,13 @@ struct DashboardView: View {
         onSelectSection: @escaping (DashboardSectionDefinition) -> Void,
         onOpenAccount: @escaping () -> Void = {},
         onOpenSettings: (() -> Void)?,
-        onSetAllowsNsfwContent: @escaping @MainActor @Sendable (Bool) -> Void,
         onSignOut: @escaping () -> Void
     ) {
         _navigationPath = navigationPath
+        _allowsNsfwContent = allowsNsfwContent
         service = DashboardService(loader: loader)
         self.detailDependencies = detailDependencies
         self.user = user
-        self.allowsNsfwContent = allowsNsfwContent
         self.launchBrandNamespace = launchBrandNamespace
         self.showsHero = showsHero
         self.allowsHeroAutomaticAdvance = allowsHeroAutomaticAdvance
@@ -45,7 +43,6 @@ struct DashboardView: View {
         self.onSelectSection = onSelectSection
         self.onOpenAccount = onOpenAccount
         self.onOpenSettings = onOpenSettings
-        self.onSetAllowsNsfwContent = onSetAllowsNsfwContent
         self.onSignOut = onSignOut
     }
 
@@ -126,10 +123,9 @@ struct DashboardView: View {
                 ToolbarItem(placement: .primaryAction) {
                     PrismediaAccountMenu(
                         user: user,
-                        allowsNsfwContent: allowsNsfwContent,
+                        allowsNsfwContent: $allowsNsfwContent,
                         onOpenAccount: onOpenAccount,
                         onOpenSettings: onOpenSettings,
-                        onSetAllowsNsfwContent: onSetAllowsNsfwContent,
                         onSignOut: onSignOut
                     )
                 }
@@ -212,10 +208,9 @@ struct DashboardView: View {
                     onEntityMutated: {}
                 ),
                 user: PrismediaPreviewData.user,
-                allowsNsfwContent: false,
+                allowsNsfwContent: .constant(false),
                 onSelectSection: { _ in },
                 onOpenSettings: {},
-                onSetAllowsNsfwContent: { _ in },
                 onSignOut: {}
             )
         }
