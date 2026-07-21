@@ -98,6 +98,40 @@ final class ModernArchitectureGuardTests: XCTestCase {
         )
     }
 
+    func testSharedSourcesDoNotContainWholeFileSinglePlatformImplementations() throws {
+        let sourceFiles = try swiftFiles(in: ["PrismediaShared"])
+        let singlePlatformCondition = try NSRegularExpression(
+            pattern: #"^#if os\((?:iOS|macOS|tvOS)\)(?: && .*)?$"#,
+            options: [.anchorsMatchLines]
+        )
+
+        let violations = sourceFiles.compactMap { file -> String? in
+            guard let source = try? String(contentsOf: file, encoding: .utf8) else {
+                return nil
+            }
+            let range = NSRange(source.startIndex..., in: source)
+            guard singlePlatformCondition.firstMatch(in: source, range: range) != nil else {
+                return nil
+            }
+
+            let topLevelAlternatives = source.split(separator: "\n").contains { line in
+                line.hasPrefix("#else")
+            }
+            let lastDirective = source.split(whereSeparator: \Character.isWhitespace).last
+            guard !topLevelAlternatives, lastDirective == "#endif" else { return nil }
+
+            return relativePath(file)
+        }
+        .sorted()
+
+        XCTAssertEqual(
+            violations,
+            [],
+            "Move whole-file single-platform implementations into the matching app target.\n"
+                + violations.joined(separator: "\n")
+        )
+    }
+
     private var repositoryRoot: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

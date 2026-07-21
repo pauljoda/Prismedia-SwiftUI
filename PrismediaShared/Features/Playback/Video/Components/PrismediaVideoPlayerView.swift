@@ -1,36 +1,7 @@
 import AVFoundation
 import SwiftUI
 
-#if os(tvOS)
-    import AVKit
-
-    struct PrismediaVideoPlayerView: View {
-        let controller: VideoPlaybackController
-        let title: String
-        let isInteractive: Bool
-        let isExpanded: Bool
-        var badges: [VideoPlaybackBadge] = []
-        let onFullscreen: () -> Void
-        var onDismiss: (() -> Void)?
-
-        var body: some View {
-            ZStack {
-                VideoPlayer(player: controller.player)
-                VideoSubtitlePlaybackOverlay(
-                    assContents: controller.activeAssSubtitleContents,
-                    content: controller.activeSubtitleContent,
-                    appearance: controller.subtitleAppearance,
-                    player: controller.player
-                )
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.black)
-            .ignoresSafeArea()
-            .accessibilityIdentifier("video-player.surface")
-        }
-    }
-
-#else
+#if !os(tvOS)
     struct PrismediaVideoPlayerView: View {
         let controller: VideoPlaybackController
         let title: String
