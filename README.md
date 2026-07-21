@@ -32,6 +32,11 @@ MLP/TrueHD decoding enabled and install them under the ignored `Carthage/Build`
 directory. This is a one-time source build, so the initial bootstrap takes
 longer than downloading a prebuilt framework.
 
+Xcode Cloud uses `ci_scripts/ci_post_clone.sh` to download the matching iOS,
+macOS, or tvOS XCFramework built with Xcode 26. The script verifies the pinned
+release artifact before installing it, while Swift package versions are locked
+by the committed `Package.resolved` files.
+
 ## Native design
 
 - One system `TabView` adapts into sidebar presentation where the platform and width support it while preserving router state.
