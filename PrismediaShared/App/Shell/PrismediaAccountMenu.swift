@@ -26,7 +26,9 @@ struct PrismediaAccountMenu: View {
                     "Allow NSFW Content",
                     isOn: Binding(
                         get: { allowsNsfwContent },
-                        set: onSetAllowsNsfwContent
+                        set: { newValue in
+                            onSetAllowsNsfwContent(newValue)
+                        }
                     )
                 )
                 .accessibilityIdentifier("shell.account.allowNsfw")
