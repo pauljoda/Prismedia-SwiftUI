@@ -271,6 +271,9 @@
     "Account, %@" : {
 
     },
+    "Acquisition" : {
+
+    },
     "Acquisition Action Failed" : {
 
     },
@@ -2433,6 +2436,9 @@
     "Shows file details and actions" : {
 
     },
+    "Shows monitoring options" : {
+
+    },
     "Shows playback and navigation actions" : {
 
     },
@@ -2533,6 +2539,9 @@
 
     },
     "Stop %@" : {
+
+    },
+    "Stop Monitoring" : {
 
     },
     "Stop monitoring this item?" : {
@@ -2743,6 +2752,9 @@
 
     },
     "Updates the selected episode" : {
+
+    },
+    "Updating acquisition" : {
 
     },
     "Updating identify queue…" : {
