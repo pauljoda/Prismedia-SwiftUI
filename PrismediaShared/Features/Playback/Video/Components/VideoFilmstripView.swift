@@ -100,29 +100,19 @@ import SwiftUI
                         frames: frames,
                         duration: controller.duration
                     )
-                    Button {
+                    let offsetX = width / 2
+                        + CGFloat(markerIndex - continuousIndex) * frameWidth
+                        - 22
+
+                    VideoFilmstripMarkerButton(
+                        marker: marker,
+                        accent: artworkPrimaryAccent,
+                        stripHeight: stripHeight,
+                        offsetX: offsetX
+                    ) {
                         cancelScrub()
                         controller.seek(to: marker.seconds)
-                    } label: {
-                        ZStack {
-                            Color.clear
-                            Rectangle()
-                                .fill(artworkPrimaryAccent.opacity(0.65))
-                                .frame(width: 1, height: stripHeight)
-                        }
-                        .frame(width: PrismediaLayout.minimumHitTarget, height: stripHeight)
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .offset(
-                        x: width / 2
-                            + CGFloat(markerIndex - continuousIndex) * frameWidth
-                            - 22
-                    )
-                    .accessibilityLabel(marker.title)
-                    .accessibilityValue("At \(VideoPlaybackPresentation.clockTime(marker.seconds))")
-                    .accessibilityHint("Seeks playback to this marker")
-                    .accessibilityIdentifier("video-filmstrip.marker.\(marker.id)")
                 }
             }
         }
