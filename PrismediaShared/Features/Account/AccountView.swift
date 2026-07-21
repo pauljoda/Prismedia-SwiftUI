@@ -19,7 +19,7 @@ struct AccountView: View {
                             "Allow NSFW Content",
                             isOn: Binding(
                                 get: { environment.allowsNsfwContent },
-                                set: environment.setAllowsNsfwContent
+                                set: { environment.setAllowsNsfwContent($0) }
                             )
                         )
                     }
