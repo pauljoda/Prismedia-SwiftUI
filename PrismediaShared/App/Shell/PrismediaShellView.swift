@@ -220,7 +220,10 @@ public struct PrismediaShellView: View {
                     for: destination.id,
                     videoPlaybackSession: videoPlaybackSession
                 ),
-                allowsNsfwContent: environment.allowsNsfwContent,
+                allowsNsfwContent: Binding(
+                    get: { environment.allowsNsfwContent },
+                    set: { environment.setAllowsNsfwContent($0) }
+                ),
                 launchBrandNamespace: launchBrandNamespace,
                 allowsHeroAutomaticAdvance: allowsDashboardHeroAutomaticAdvance,
                 reloadRevision: environment.contentRevision,
@@ -233,7 +236,6 @@ public struct PrismediaShellView: View {
                     for: user,
                     videoPlaybackSession: videoPlaybackSession
                 ),
-                onSetAllowsNsfwContent: environment.setAllowsNsfwContent,
                 onSignOut: {
                     Task { await environment.signOut() }
                 }
