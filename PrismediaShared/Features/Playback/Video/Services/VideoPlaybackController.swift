@@ -430,14 +430,21 @@ public final class VideoPlaybackController {
         resumeAfterShuttle = isPlaying || isWaiting
         shuttleSide = side
         if side == .right {
-            player.playImmediately(atRate: 2)
+            if renderer == .compatibility {
+                compatibilityPlaybackCommands?.play(2)
+            } else {
+                player.playImmediately(atRate: 2)
+            }
             return
         }
-        if player.currentItem?.canPlayFastReverse == true {
+        if renderer == .compatibility {
+            compatibilityPlaybackCommands?.pause()
+        } else if player.currentItem?.canPlayFastReverse == true {
             player.rate = -2
             return
+        } else {
+            player.pause()
         }
-        player.pause()
         shuttleTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
@@ -451,15 +458,28 @@ public final class VideoPlaybackController {
         guard shuttleSide != nil else { return }
         shuttleTask?.cancel()
         shuttleTask = nil
-        player.pause()
         shuttleSide = nil
-        if resumeAfterShuttle { player.playImmediately(atRate: playbackRate) }
+        if renderer == .compatibility {
+            if resumeAfterShuttle {
+                compatibilityPlaybackCommands?.play(playbackRate)
+            } else {
+                compatibilityPlaybackCommands?.pause()
+            }
+        } else {
+            player.pause()
+            if resumeAfterShuttle { player.playImmediately(atRate: playbackRate) }
+        }
         resumeAfterShuttle = false
         playbackReporter.didSeek(positionSeconds: currentTime)
     }
 
     private func seekForShuttle(to seconds: Double) {
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
+        if renderer == .compatibility {
+            compatibilityPlaybackCommands?.seek(target)
+            currentTime = target
+            return
+        }
         let tolerance = CMTime(seconds: 0.08, preferredTimescale: 600)
         player.seek(
             to: CMTime(seconds: target, preferredTimescale: 600),

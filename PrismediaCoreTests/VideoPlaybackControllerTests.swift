@@ -186,6 +186,40 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertEqual(reports.last?.report.positionTicks, 120_000_000)
     }
 
+    func testCompatibilityShuttleUsesDoubleSpeedUntilTheHoldEnds() async {
+        let videoID = UUID(uuidString: "88888888-8888-8888-8888-888888888888")!
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: CompatibilityVideoPlaybackService(videoID: videoID),
+            audioSession: FailingVideoAudioSession()
+        )
+        var playedRates: [Float] = []
+
+        await controller.load()
+        controller.attachCompatibilityPlayback(
+            VideoCompatibilityPlaybackCommands(
+                play: { playedRates.append($0) },
+                pause: {},
+                seek: { _ in },
+                stop: {},
+                setRate: { _ in },
+                selectAudioStream: { _ in }
+            )
+        )
+        controller.compatibilityPlaybackDidUpdate(
+            currentTime: 10,
+            duration: 120,
+            isPlaying: true,
+            isWaiting: false
+        )
+
+        controller.beginShuttle(on: .right)
+        controller.endShuttle()
+
+        XCTAssertEqual(playedRates, [2, 1])
+        XCTAssertNil(controller.shuttleSide)
+    }
+
     private func waitForNegotiationCount(
         _ count: Int,
         service: StagedFallbackVideoPlaybackService

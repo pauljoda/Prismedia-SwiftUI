@@ -26,6 +26,7 @@
             stateFilter = VideoCompatibilityPlaybackStateFilter()
 
             let media = VLCMedia(url: request.url)
+            media.addOption(":no-spu")
             #if !targetEnvironment(simulator)
                 // Prefer VLC's native Apple decoder, then keep VideoToolbox active
                 // if the avcodec path is selected for the source codec. Simulators
@@ -64,6 +65,7 @@
 
         func mediaPlayerStateChanged(_ notification: Notification) {
             guard let player = mediaPlayer else { return }
+            disableNativeSubtitleRendering(on: player)
             switch player.state {
             case .playing:
                 player.rate = request?.playbackRate ?? 1
@@ -145,6 +147,11 @@
         private func applyInitialAudioSelection(to player: VLCMediaPlayer) {
             guard let streamIndex = request?.audioStreams.first(where: \.isSelected)?.index else { return }
             selectAudioStream(streamIndex, on: player)
+        }
+
+        private func disableNativeSubtitleRendering(on player: VLCMediaPlayer) {
+            guard player.currentVideoSubTitleIndex != -1 else { return }
+            player.currentVideoSubTitleIndex = -1
         }
 
         private func selectAudioStream(_ streamIndex: Int, on player: VLCMediaPlayer) {
