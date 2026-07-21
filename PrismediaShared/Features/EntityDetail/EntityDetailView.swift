@@ -708,8 +708,12 @@ public struct EntityDetailView: View {
     }
 
     private func beginThumbnailPlayback(_ thumbnail: EntityThumbnail) {
+        beginPlayback(EntityLink(thumbnail: thumbnail, intent: .playback))
+    }
+
+    private func beginPlayback(_ playbackLink: EntityLink) {
         suppressesRoutePlayback = false
-        thumbnailPlaybackLink = EntityLink(thumbnail: thumbnail, intent: .playback)
+        thumbnailPlaybackLink = playbackLink
     }
 
     private func reloadCollectionMembers() async {
@@ -783,15 +787,14 @@ public struct EntityDetailView: View {
     }
 
     private func continueVideoProgress() {
-        guard let episode = videoProgressEpisode else { return }
-        advancedEntityLink = EntityLink(
-            entityID: episode.id,
-            kind: .video,
-            parentEntityID: episode.parentEntityID,
-            parentKind: episode.parentEntityID == state.detail?.id
-                ? state.detail?.kind
-                : .videoSeason
-        )
+        guard let episode = videoProgressEpisode,
+            let playbackLink = VideoProgressPlaybackRoute.link(for: episode)
+        else { return }
+        if playbackLink.entityID == state.detail?.id {
+            beginPlayback(playbackLink)
+        } else {
+            advancedEntityLink = playbackLink
+        }
     }
 
     private func toggleVideoProgressCompletion() async {
