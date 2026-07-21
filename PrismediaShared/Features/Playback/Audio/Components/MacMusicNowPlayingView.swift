@@ -71,7 +71,7 @@
             MusicPlaybackTimeline(
                 position: $scrubPosition,
                 duration: max(engine.duration, track.duration ?? 0, 1),
-                onEditingChanged: scrubDidChange
+                onEditingChanged: { scrubDidChange($0) }
             )
         }
 
@@ -106,7 +106,7 @@
                     systemImage: "shuffle",
                     isOn: Binding(
                         get: { controller.queue.isShuffled },
-                        set: controller.setShuffleEnabled
+                        set: { controller.setShuffleEnabled($0) }
                     )
                 )
                 .toggleStyle(.button)
