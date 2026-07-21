@@ -3,6 +3,6 @@ enum MusicQueueArtworkWindow {
 
     static func tracks(in queue: MusicQueue) -> [MusicTrack] {
         guard let currentTrack = queue.currentTrack else { return [] }
-        return [currentTrack] + queue.upNextTracks.prefix(lookAheadCount)
+        return [currentTrack] + queue.upNextTracks(limit: lookAheadCount)
     }
 }

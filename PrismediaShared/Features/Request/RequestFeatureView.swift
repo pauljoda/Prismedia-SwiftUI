@@ -6,8 +6,8 @@ import SwiftUI
         private let hidesNsfw: Bool
         private let onNavigateToEntity: (RequestEntityNavigationIntent) -> Void
 
+        @Binding private var kind: RequestKindDefinition
         @State private var reviewRoute: RequestReviewRoute?
-        @State private var kind = RequestKindDefinition.movie
         @State private var providers: [AdministrativePlugin] = []
         @State private var selectedProviderID = ""
         @State private var fieldValues: [String: String] = [:]
@@ -18,61 +18,69 @@ import SwiftUI
         @State private var isSearching = false
         @State private var errorMessage: String?
         @State private var searchRevision = RequestLoadRevision()
+        @State private var searchLimit = RequestFeatureView.searchPageSize
+        @State private var submittedFields: [String: String] = [:]
+
+        private static let searchPageSize = 25
+        private static let searchMaxLimit = 100
 
         public init(
             service: any AdministrationServicing,
+            kind: Binding<RequestKindDefinition> = .constant(.movie),
             hidesNsfw: Bool = true,
             onNavigateToEntity: @escaping (RequestEntityNavigationIntent) -> Void = { _ in }
         ) {
             self.service = AdministrationRequestFeatureService(administration: service)
+            _kind = kind
             self.hidesNsfw = hidesNsfw
             self.onNavigateToEntity = onNavigateToEntity
         }
 
         init(
             requestService: any RequestFeatureServicing,
+            kind: Binding<RequestKindDefinition> = .constant(.movie),
             hidesNsfw: Bool = true,
             onNavigateToEntity: @escaping (RequestEntityNavigationIntent) -> Void = { _ in }
         ) {
             service = requestService
+            _kind = kind
             self.hidesNsfw = hidesNsfw
             self.onNavigateToEntity = onNavigateToEntity
         }
 
         public var body: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                    kindPicker
-
-                    PluginSearchSurface(
-                        title: "Discover \(kind.pluralLabel)",
-                        description: "Search your installed metadata providers",
-                        noProvidersMessage: noProviderMessage,
-                        entityKind: kind.pluginEntityKind,
-                        hidesNsfw: hidesNsfw,
-                        providers: providers,
-                        selectedProviderID: $selectedProviderID,
-                        values: $fieldValues,
-                        candidates: candidates,
-                        hasSearched: hasSearched,
-                        isSearching: isSearching || isLoadingProviders,
-                        errorMessage: errorMessage,
-                        searchStatus: providerWarnings.isEmpty
-                            ? nil
-                            : "\(providerWarnings.count) provider warning\(providerWarnings.count == 1 ? "" : "s")",
-                        onProviderChange: { _ in invalidateSearch() },
-                        onSearch: search,
-                        onClear: invalidateSearch,
-                        onCandidateActivate: activateCandidate
-                    )
-
-                    RequestProviderWarningsView(warnings: providerWarnings)
-                }
-                .padding()
-            }
-            .navigationTitle("Request")
-            .prismediaScreenBackground()
+            let loadMoreAction: (() -> Void)? = canLoadMore ? { loadMore() } : nil
+            PluginSearchSurface(
+                title: "Search",
+                description: "Choose a source, enter the provider fields, then review a \(kind.label.lowercased()) match.",
+                noProvidersMessage: noProviderMessage,
+                entityKind: kind.pluginEntityKind,
+                hidesNsfw: hidesNsfw,
+                providers: providers,
+                selectedProviderID: $selectedProviderID,
+                values: $fieldValues,
+                candidates: candidates,
+                hasSearched: hasSearched,
+                isSearching: isSearching || isLoadingProviders,
+                errorMessage: errorMessage,
+                searchStatus: providerWarnings.isEmpty
+                    ? nil
+                    : "\(providerWarnings.count) provider warning\(providerWarnings.count == 1 ? "" : "s")",
+                notices: providerWarnings.map { "\($0.displayName): \($0.message)" },
+                candidateDetail: { candidateDetail($0) },
+                onProviderChange: { _ in invalidateSearch() },
+                onSearch: { fields in
+                    searchLimit = Self.searchPageSize
+                    search(fields)
+                },
+                onClear: invalidateSearch,
+                onCandidateActivate: activateCandidate,
+                onLoadMore: loadMoreAction
+            )
             .task { await loadProviders() }
+            .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
+                Task { await loadProviders(force: true) }
+            }
             .onChange(of: kind) { _, _ in resetForKindChange() }
             .sheet(
                 isPresented: Binding(
@@ -97,23 +105,6 @@ import SwiftUI
             .accessibilityIdentifier("request.feature")
         }
 
-        private var kindPicker: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Label("What would you like to request?", systemImage: "sparkle.magnifyingglass")
-                    .font(.headline)
-                Picker("Media type", selection: $kind) {
-                    ForEach(RequestKindDefinition.allCases) { kind in
-                        Text(kind.label).tag(kind)
-                    }
-                }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("request.kind")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
-        }
-
         private var candidates: [AdministrativeEntitySearchCandidate] {
             results.compactMap { result in
                 RequestCandidatePolicy.route(for: result, kind: kind) == nil ? nil : result.pluginCandidate
@@ -126,8 +117,8 @@ import SwiftUI
         }
 
         @MainActor
-        private func loadProviders() async {
-            guard providers.isEmpty, !isLoadingProviders else { return }
+        private func loadProviders(force: Bool = false) async {
+            guard force || providers.isEmpty, !isLoadingProviders else { return }
             isLoadingProviders = true
             errorMessage = nil
             do {
@@ -138,10 +129,39 @@ import SwiftUI
             isLoadingProviders = false
         }
 
+        private var canLoadMore: Bool {
+            hasSearched && !results.isEmpty
+                && results.count >= searchLimit
+                && searchLimit < Self.searchMaxLimit
+        }
+
+        private func loadMore() {
+            searchLimit = min(searchLimit + Self.searchPageSize, Self.searchMaxLimit)
+            search(submittedFields)
+        }
+
+        private func candidateDetail(_ candidate: AdministrativeEntitySearchCandidate) -> String? {
+            guard let result = results.first(where: { $0.externalID == candidate.candidateID }) else {
+                return nil
+            }
+            var parts: [String] = []
+            if let runtime = result.runtimeMinutes {
+                parts.append(Duration.seconds(runtime * 60).formatted(.units(allowed: [.hours, .minutes])))
+            }
+            if let certification = result.certification, !certification.isEmpty {
+                parts.append(certification)
+            }
+            if let trackCount = result.trackCount {
+                parts.append("\(trackCount) tracks")
+            }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        }
+
         private func search(_ fields: [String: String]) {
             let revision = searchRevision.advance()
             let providerID = selectedProviderID
             let requestKind = kind
+            submittedFields = fields
             isSearching = true
             errorMessage = nil
             providerWarnings = []
@@ -150,7 +170,8 @@ import SwiftUI
                     let response = try await service.search(
                         kind: requestKind.rawValue,
                         pluginID: providerID,
-                        fields: fields
+                        fields: fields,
+                        limit: searchLimit
                     )
                     guard searchRevision.isCurrent(revision), kind == requestKind,
                         selectedProviderID == providerID
@@ -183,6 +204,8 @@ import SwiftUI
 
         private func invalidateSearch() {
             _ = searchRevision.advance()
+            searchLimit = Self.searchPageSize
+            submittedFields = [:]
             results = []
             providerWarnings = []
             hasSearched = false

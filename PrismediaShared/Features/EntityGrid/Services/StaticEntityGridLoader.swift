@@ -110,6 +110,8 @@ struct StaticEntityGridLoader: EntityGridLoading {
             lhs.title.localizedStandardCompare(rhs.title)
         case .added:
             compare(lhs.sortOrder ?? Int.max, rhs.sortOrder ?? Int.max)
+        case .lastAccessed:
+            compare(lhs.createdAt ?? .distantPast, rhs.createdAt ?? .distantPast)
         case .rating:
             compare(lhs.rating ?? -1, rhs.rating ?? -1)
         case .references:

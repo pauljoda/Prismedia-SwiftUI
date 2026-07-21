@@ -8,8 +8,12 @@ import Foundation
         private var getCalls = 0
         private var addCalls = 0
         private var searchCalls = 0
+        private var queue: [AdministrativeIdentifyQueueItem]
 
-        init(item: AdministrativeIdentifyQueueItem) { self.item = item }
+        init(item: AdministrativeIdentifyQueueItem, queue: [AdministrativeIdentifyQueueItem] = []) {
+            self.item = item
+            self.queue = queue
+        }
 
         func callCounts() -> (get: Int, add: Int, search: Int) { (getCalls, addCalls, searchCalls) }
         func identifyQueueItem(entityID: UUID) async throws -> AdministrativeIdentifyQueueItem {
@@ -34,7 +38,7 @@ import Foundation
         func rescan(rootID: UUID, path: String?) async throws -> AdministrativeFileOperationResponse {
             throw CancellationError()
         }
-        func identifyQueue() async throws -> [AdministrativeIdentifyQueueItem] { [] }
+        func identifyQueue() async throws -> [AdministrativeIdentifyQueueItem] { queue }
         func identifyProviders(kind: String?) async throws -> [AdministrativePlugin] { [] }
         func resolveIdentifyCandidate(entityID: UUID, provider: String, candidate: AdministrativeEntitySearchCandidate)
             async throws -> AdministrativeIdentifyQueueItem
@@ -61,7 +65,7 @@ import Foundation
         func removeIdentifyItem(entityID: UUID) async throws { throw CancellationError() }
         func plugins() async throws -> [AdministrativePlugin] { throw CancellationError() }
         func updatePlugin(id: String) async throws -> AdministrativePlugin { throw CancellationError() }
-        func searchRequests(kind: String, pluginID: String, fields: [String: String]) async throws
+        func searchRequests(kind: String, pluginID: String, fields: [String: String], limit: Int?) async throws
             -> AdministrativeRequestSearchResponse
         { throw CancellationError() }
         func reviewRequest(kind: String, pluginID: String, externalIdentity: AdministrativeExternalIdentity)
@@ -76,8 +80,10 @@ import Foundation
         func libraryRoots() async throws -> [AdministrativeLibraryRoot] { throw CancellationError() }
         func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] { throw CancellationError() }
         func jobs() async throws -> AdministrativeJobListResponse { throw CancellationError() }
+        func createJob(type: String) async throws -> AdministrativeJobRun { throw CancellationError() }
         func cancelJob(id: UUID) async throws -> Int { throw CancellationError() }
-        func clearFailures(type: String) async throws -> Int { throw CancellationError() }
+        func cancelJobs(type: String?) async throws -> Int { throw CancellationError() }
+        func clearFailures(type: String?) async throws -> Int { throw CancellationError() }
         func rebuildPreviews() async throws -> AdministrativeBulkJobResponse { throw CancellationError() }
         func settings() async throws -> AdministrativeSettingsCatalog { throw CancellationError() }
         func updateSetting(key: String, value: AdministrativeJSONValue) async throws -> AdministrativeSetting {

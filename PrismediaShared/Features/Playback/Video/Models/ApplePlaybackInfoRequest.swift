@@ -17,16 +17,23 @@ struct ApplePlaybackInfoRequest: Encodable {
         case enableClientToneMapping = "EnableClientToneMapping"
     }
 
-    init(mode: VideoPlaybackNegotiationMode, audioStreamIndex: Int? = nil) {
+    init(
+        mode: VideoPlaybackNegotiationMode,
+        audioStreamIndex: Int? = nil,
+        preferredEngine: VideoPlaybackEngine = .automatic
+    ) {
         // The raw direct-play endpoint serves the whole source file and cannot
         // honor AudioStreamIndex. When AVFoundation cannot switch locally,
         // retain native video decode through server remux/direct stream while
         // asking the server to select the requested audio stream.
         enableDirectPlay = mode.allowsDirectPlay && audioStreamIndex == nil
         enableDirectStream = mode.allowsDirectStream
-        deviceProfile = .current
+        let supportsCompatibilityRenderer =
+            preferredEngine != .native
+            && VideoPlaybackRendererPolicy.platformSupportsCompatibilityRenderer
+        deviceProfile = .make(supportsCompatibilityRenderer: supportsCompatibilityRenderer)
         supportedVideoRangeTypes = AppleDeviceProfile.supportedVideoRangeTypes
         self.audioStreamIndex = audioStreamIndex
-        enableClientToneMapping = VideoPlaybackRendererPolicy.platformSupportsCompatibilityRenderer
+        enableClientToneMapping = supportsCompatibilityRenderer
     }
 }

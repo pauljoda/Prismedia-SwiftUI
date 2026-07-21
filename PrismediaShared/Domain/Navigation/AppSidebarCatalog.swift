@@ -17,6 +17,7 @@ public enum AppSidebarCatalog {
             title: "Overview",
             items: [
                 item(in: ModeCatalog.overview, destinationID: "dashboard"),
+                item(in: ModeCatalog.overview, destinationID: "favorites"),
                 AppSidebarItem(
                     id: "search",
                     title: "Search",
@@ -24,7 +25,6 @@ public enum AppSidebarCatalog {
                     selection: .search
                 ),
                 item(in: ModeCatalog.overview, destinationID: "stats"),
-                item(in: ModeCatalog.overview, destinationID: "account"),
             ]
         ),
         AppSidebarSection(

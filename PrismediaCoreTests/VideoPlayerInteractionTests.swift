@@ -3,6 +3,38 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoPlayerInteractionTests: XCTestCase {
+    func testTVPlaybackChromeUsesThreeSecondsAndSuspendsOutsideActivePlayback() {
+        XCTAssertEqual(VideoPlayerChromePolicy.tvAutoHideDelay, .seconds(3))
+        XCTAssertTrue(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: true,
+                optionsPresented: false,
+                isSeeking: false
+            )
+        )
+        XCTAssertFalse(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: false,
+                optionsPresented: false,
+                isSeeking: false
+            )
+        )
+        XCTAssertFalse(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: true,
+                optionsPresented: true,
+                isSeeking: false
+            )
+        )
+        XCTAssertFalse(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: true,
+                optionsPresented: false,
+                isSeeking: true
+            )
+        )
+    }
+
     func testDetailMarkerOnlySeeksTheVideoOwnedByTheVisibleDetail() {
         let videoID = UUID()
 
@@ -103,6 +135,93 @@ final class VideoPlayerInteractionTests: XCTestCase {
             VideoPlaybackPageExitPolicy.shouldReleasePlayback(
                 pictureInPictureIsActiveOrStarting: false
             ))
+    }
+
+    func testPausedScanEscalatesThroughSupportedRatesPerDirection() {
+        XCTAssertEqual(
+            VideoPlaybackScanPolicy.nextRate(
+                currentSide: nil,
+                currentRate: 2,
+                direction: .right
+            ),
+            2
+        )
+        XCTAssertEqual(
+            VideoPlaybackScanPolicy.nextRate(
+                currentSide: .right,
+                currentRate: 2,
+                direction: .right
+            ),
+            4
+        )
+        XCTAssertEqual(
+            VideoPlaybackScanPolicy.nextRate(
+                currentSide: .right,
+                currentRate: 4,
+                direction: .right
+            ),
+            8
+        )
+        XCTAssertEqual(
+            VideoPlaybackScanPolicy.nextRate(
+                currentSide: .right,
+                currentRate: 8,
+                direction: .right
+            ),
+            16
+        )
+        XCTAssertEqual(
+            VideoPlaybackScanPolicy.nextRate(
+                currentSide: .right,
+                currentRate: 16,
+                direction: .right
+            ),
+            32
+        )
+        XCTAssertEqual(
+            VideoPlaybackScanPolicy.nextRate(
+                currentSide: .right,
+                currentRate: 32,
+                direction: .right
+            ),
+            32
+        )
+        XCTAssertEqual(
+            VideoPlaybackScanPolicy.nextRate(
+                currentSide: .right,
+                currentRate: 8,
+                direction: .left
+            ),
+            2
+        )
+    }
+
+    func testScrubTranslationMovesPendingTimeAndClampsToRuntime() {
+        XCTAssertEqual(
+            VideoPlaybackScrubPolicy.targetTime(
+                origin: 45,
+                translation: 1_000,
+                duration: 90
+            ),
+            49.5,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            VideoPlaybackScrubPolicy.targetTime(
+                origin: 5,
+                translation: -10_000,
+                duration: 90
+            ),
+            0
+        )
+        XCTAssertEqual(
+            VideoPlaybackScrubPolicy.targetTime(
+                origin: 85,
+                translation: 10_000,
+                duration: 90
+            ),
+            90
+        )
     }
 
     func testOnlyPlayingOrWaitingVideoNeedsVisiblePictureInPictureHandoff() {

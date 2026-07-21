@@ -90,6 +90,15 @@ extension View {
             self.buttonStyle(.plain)
         #endif
     }
+
+    @ViewBuilder
+    public func prismediaCompactActionControlSize() -> some View {
+        #if os(macOS)
+            self.controlSize(.small)
+        #else
+            self.controlSize(.regular)
+        #endif
+    }
 }
 
 #if DEBUG

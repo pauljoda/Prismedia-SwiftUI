@@ -56,8 +56,8 @@ struct EntityDetailChildGroupsView: View {
         }
         let query =
             itemKinds.count == 1
-            ? EntityListQuery(kind: itemKinds.first)
-            : EntityListQuery(kinds: itemKinds)
+            ? EntityListQuery(kind: itemKinds.first, sort: "added")
+            : EntityListQuery(kinds: itemKinds, sort: "added")
 
         return EntityGridConfiguration(
             title: group.label,

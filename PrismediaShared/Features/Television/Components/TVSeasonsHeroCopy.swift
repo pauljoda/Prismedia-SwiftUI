@@ -5,6 +5,7 @@ import SwiftUI
     struct TVSeasonsHeroCopy: View {
         let series: EntityDetail
         let selectedEpisode: EntityThumbnail?
+        let selectedEpisodeDetail: EntityDetail?
         let seasons: [EntityThumbnail]
         let selectedSeasonID: UUID?
 
@@ -12,6 +13,7 @@ import SwiftUI
             let seriesPresentation = EntityDetailPresentation(detail: series)
             let description = TVEpisodeDescriptionPresentation.text(
                 episode: selectedEpisode,
+                episodeDetail: selectedEpisodeDetail,
                 seriesDescription: seriesPresentation.description
             )
 
@@ -59,6 +61,7 @@ import SwiftUI
             TVSeasonsHeroCopy(
                 series: TVSeasonsPreviewData.series,
                 selectedEpisode: TVSeasonsPreviewData.episodeThumbnail,
+                selectedEpisodeDetail: TVSeasonsPreviewData.episode,
                 seasons: [TVSeasonsPreviewData.seasonThumbnail],
                 selectedSeasonID: TVSeasonsPreviewData.seasonID
             )

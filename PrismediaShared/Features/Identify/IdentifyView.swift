@@ -3,7 +3,11 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct IdentifyView: View {
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
         @State private var session: IdentifySession
+        @State private var hasLoaded = false
+        @State private var compactNavigationPath = NavigationPath()
         private let automaticallyLoads: Bool
 
         init(session: IdentifySession, automaticallyLoads: Bool = true) {
@@ -14,8 +18,15 @@ import SwiftUI
         var body: some View {
             Group {
                 if horizontalSizeClass == .compact {
-                    NavigationStack {
-                        IdentifySidebarList(session: session, usesNavigationLinks: true)
+                    NavigationStack(path: $compactNavigationPath) {
+                        IdentifySidebarList(
+                            session: session,
+                            usesNavigationLinks: true,
+                            onOpenKind: { compactNavigationPath.append($0) }
+                        )
+                            .navigationDestination(for: EntityKind.self) { kind in
+                                IdentifyKindBrowseView(session: session, kind: kind)
+                            }
                     }
                 } else {
                     NavigationSplitView {
@@ -31,7 +42,22 @@ import SwiftUI
                     }
                 }
             }
-            .task { if automaticallyLoads { await session.load() } }
+            .task(id: liveRefreshIsActive) {
+                guard automaticallyLoads, liveRefreshIsActive else {
+                    session.cancelPolling()
+                    return
+                }
+                if hasLoaded {
+                    await session.refreshQueue()
+                } else {
+                    await session.load()
+                    guard !Task.isCancelled else { return }
+                    hasLoaded = true
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
+                Task { await session.refreshProviders() }
+            }
             .onDisappear { session.cancelPolling() }
             .alert(
                 "Identify Unavailable",
@@ -45,6 +71,11 @@ import SwiftUI
             }
             .accessibilityIdentifier("identify.root")
         }
+
+        private var liveRefreshIsActive: Bool {
+            pageIsActive && scenePhase == .active
+        }
+
     }
 
     #if DEBUG

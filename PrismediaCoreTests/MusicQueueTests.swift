@@ -60,6 +60,34 @@ final class MusicQueueTests: XCTestCase {
         XCTAssertEqual(visited.count, tracks.count)
     }
 
+    func testShuffleAllRandomizesTheFirstTrackAndVisitsEveryTrackOnce() {
+        let tracks = makeTracks(count: 5)
+        var queue = MusicQueue(tracks: tracks)
+        var generator = SeededGenerator(seed: 42)
+
+        queue.shuffleAll(using: &generator)
+
+        XCTAssertTrue(queue.isShuffled)
+        XCTAssertNotEqual(queue.currentTrack?.id, tracks[0].id)
+        XCTAssertEqual(Set(queue.orderedTracks.map(\.id)), Set(tracks.map(\.id)))
+    }
+
+    func testAppendingUpcomingTracksPreservesTheCurrentShuffledOrderAndDropsDuplicates() {
+        let tracks = makeTracks(count: 5)
+        var queue = MusicQueue(tracks: Array(tracks.prefix(3)))
+        var generator = SeededGenerator(seed: 42)
+        queue.shuffleAll(using: &generator)
+        let currentTrack = queue.currentTrack
+        let existingOrder = queue.orderedTracks
+
+        queue.appendUpcomingTracks([tracks[1], tracks[3], tracks[4]])
+
+        XCTAssertEqual(queue.currentTrack, currentTrack)
+        XCTAssertEqual(Array(queue.orderedTracks.prefix(3)), existingOrder)
+        XCTAssertEqual(Array(queue.orderedTracks.suffix(2)), [tracks[3], tracks[4]])
+        XCTAssertEqual(queue.tracks.count, 5)
+    }
+
     func testMovingBackThroughPlayedTracksRemovesThemFromHistory() {
         let tracks = makeTracks(count: 4)
         var queue = MusicQueue(tracks: tracks)

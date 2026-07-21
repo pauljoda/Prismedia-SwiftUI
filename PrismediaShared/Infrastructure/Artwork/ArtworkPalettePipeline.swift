@@ -39,6 +39,13 @@ public actor ArtworkPalettePipeline: ArtworkPaletteLoading {
         return palette
     }
 
+    public func clearCache() async {
+        inFlight.values.forEach { $0.cancel() }
+        inFlight.removeAll()
+        cache.removeAll()
+        cacheOrder.removeAll()
+    }
+
     private func store(_ palette: ArtworkPalette, for url: URL) {
         if cache[url] == nil {
             cacheOrder.append(url)

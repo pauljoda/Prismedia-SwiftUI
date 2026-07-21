@@ -19,7 +19,27 @@ import XCTest
             XCTAssertEqual(session.selectedItemID, item.entityID)
         }
 
-        private func queueItem() throws -> AdministrativeIdentifyQueueItem {
+        @MainActor
+        func testBackgroundQueueRefreshReconcilesSelectionWithoutAFullLoad() async throws {
+            let first = try queueItem(title: "Arrival")
+            let second = try queueItem(title: "Dune")
+            let service = OpenIdentifyServiceSpy(item: first, queue: [second])
+            let session = IdentifySession(
+                service: service,
+                browser: IdentifyPreviewEntityBrowser(),
+                initialQueue: [first]
+            )
+            session.selectedQueueIDs = [first.entityID, second.entityID]
+
+            await session.refreshQueue()
+
+            XCTAssertEqual(session.queue, [second])
+            XCTAssertEqual(session.selectedItemID, second.entityID)
+            XCTAssertEqual(session.selectedQueueIDs, [second.entityID])
+            XCTAssertFalse(session.isLoading)
+        }
+
+        private func queueItem(title: String = "Arrival") throws -> AdministrativeIdentifyQueueItem {
             let id = UUID()
             let entityID = UUID()
             let data = Data(
@@ -28,7 +48,7 @@ import XCTest
                   "id": "\(id.uuidString)",
                   "entityId": "\(entityID.uuidString)",
                   "entityKind": "movie",
-                  "title": "Arrival",
+                  "title": "\(title)",
                   "isNsfw": false,
                   "state": "queued",
                   "action": "identify",

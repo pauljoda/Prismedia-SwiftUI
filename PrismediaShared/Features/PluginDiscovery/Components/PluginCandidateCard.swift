@@ -6,30 +6,25 @@ import SwiftUI
         let isBestMatch: Bool
         let isActive: Bool
         let isDisabled: Bool
+        var detail: String?
         let onActivate: () -> Void
         let onPreview: (() -> Void)?
 
         var body: some View {
             HStack(spacing: PrismediaSpacing.small) {
                 Button(action: onActivate) {
-                    HStack(alignment: .center, spacing: PrismediaSpacing.medium) {
+                    HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
                         EntityThumbnailArtworkFrame(aspectRatio: 2.0 / 3.0) {
                             RemotePosterImage(
-                                path: candidate.posterURL,
+                                path: ProviderImagePreviewPolicy.previewURL(for: candidate.posterURL),
                                 fallbackSeed: candidate.title,
                                 systemImage: "photo"
                             )
                         }
-                        .frame(width: 58)
+                        .frame(width: 64)
                         .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous))
 
                         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                            if isBestMatch {
-                                Label("Best Match", systemImage: "sparkles")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(PrismediaColor.accent)
-                            }
-
                             HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.small) {
                                 Text(candidate.title)
                                     .font(.headline)
@@ -40,23 +35,34 @@ import SwiftUI
                                         .font(.subheadline)
                                         .foregroundStyle(PrismediaColor.textSecondary)
                                 }
-                            }
-
-                            if let matchReason = candidate.matchReason, !matchReason.isEmpty {
-                                Text(matchReason)
-                                    .font(.subheadline)
-                                    .foregroundStyle(PrismediaColor.textSecondary)
+                                if isBestMatch {
+                                    Label("Best", systemImage: "star.fill")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(PrismediaColor.accent)
+                                        .labelStyle(.titleAndIcon)
+                                        .fixedSize()
+                                        .layoutPriority(1)
+                                }
                             }
 
                             if let overview = candidate.overview, !overview.isEmpty {
                                 Text(overview)
                                     .font(.caption)
                                     .foregroundStyle(PrismediaColor.textMuted)
-                                    .lineLimit(2)
+                                    .lineLimit(4)
+                            } else {
+                                Text("No provider description available.")
+                                    .font(.caption.italic())
+                                    .foregroundStyle(PrismediaColor.textMuted)
                             }
 
                             HStack(spacing: PrismediaSpacing.medium) {
-                                if let source = candidate.source, !source.isEmpty {
+                                if let detail, !detail.isEmpty {
+                                    Text(detail)
+                                }
+                                if let matchReason = candidate.matchReason, !matchReason.isEmpty {
+                                    Label(matchReason, systemImage: "puzzlepiece.extension")
+                                } else if let source = candidate.source, !source.isEmpty {
                                     Label(source, systemImage: "puzzlepiece.extension")
                                 }
                                 if let confidence = candidate.confidence {
@@ -80,7 +86,6 @@ import SwiftUI
                                 .accessibilityHidden(true)
                         }
                     }
-                    .padding(PrismediaSpacing.medium)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                 }
@@ -91,26 +96,14 @@ import SwiftUI
                 .accessibilityAddTraits(isActive ? .isSelected : [])
 
                 if let onPreview, candidate.posterURL != nil {
-                    PrismediaButton(
+                    Button(
                         "Preview artwork for \(candidate.title)",
                         systemImage: "photo.badge.magnifyingglass",
-                        form: .compactIcon,
                         action: onPreview
                     )
+                    .labelStyle(.iconOnly)
                     .disabled(isDisabled)
                 }
-            }
-            .padding(PrismediaSpacing.extraSmall)
-            .background(
-                isActive ? PrismediaColor.controlFill : PrismediaColor.elevatedContentBackground,
-                in: RoundedRectangle(cornerRadius: PrismediaRadius.card, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: PrismediaRadius.card, style: .continuous)
-                    .stroke(
-                        isActive ? PrismediaColor.accent : PrismediaColor.borderSubtle,
-                        lineWidth: PrismediaLayout.hairline
-                    )
             }
         }
 

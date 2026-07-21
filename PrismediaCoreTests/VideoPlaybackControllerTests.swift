@@ -162,6 +162,30 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertTrue(stopped)
     }
 
+    func testCompatibilityPlaybackReportsItsFinalResumePosition() async {
+        let videoID = UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
+        let service = CompatibilityVideoPlaybackService(videoID: videoID)
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: service,
+            audioSession: FailingVideoAudioSession()
+        )
+
+        await controller.load()
+        controller.compatibilityPlaybackDidUpdate(
+            currentTime: 12,
+            duration: 120,
+            isPlaying: true,
+            isWaiting: false
+        )
+        controller.stop()
+        await controller.waitForPendingPlaybackReports()
+
+        let reports = await service.reports
+        XCTAssertEqual(reports.map(\.event), [.started, .stopped])
+        XCTAssertEqual(reports.last?.report.positionTicks, 120_000_000)
+    }
+
     private func waitForNegotiationCount(
         _ count: Int,
         service: StagedFallbackVideoPlaybackService
@@ -174,8 +198,14 @@ final class VideoPlaybackControllerTests: XCTestCase {
     }
 }
 
-private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing {
+private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing, VideoPlaybackReporting {
+    struct RecordedReport: Sendable {
+        let event: VideoPlaybackEvent
+        let report: VideoPlaybackReport
+    }
+
     private let videoID: UUID
+    private(set) var reports: [RecordedReport] = []
 
     init(videoID: UUID) {
         self.videoID = videoID
@@ -195,6 +225,13 @@ private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing {
 
     func mediaData(for path: String) async throws -> Data { Data() }
     nonisolated func authenticatedMediaURL(for path: String) -> URL? { URL(string: path) }
+
+    func reportVideoPlayback(
+        _ event: VideoPlaybackEvent,
+        report: VideoPlaybackReport
+    ) async throws {
+        reports.append(RecordedReport(event: event, report: report))
+    }
 }
 
 private actor DisplayMetadataVideoPlaybackService: VideoPlaybackServicing {

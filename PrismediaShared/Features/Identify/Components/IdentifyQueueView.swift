@@ -2,6 +2,12 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifyQueueView: View {
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
+        #if os(iOS)
+            @Environment(\.editMode) private var editMode
+        #endif
+
         @Bindable var session: IdentifySession
         var presentsReviewInNavigationStack = false
 
@@ -36,23 +42,76 @@ import SwiftUI
                 }
             }
             .toolbar {
-                ToolbarItemGroup {
-                    Button("Review All", systemImage: "rectangle.stack", action: session.reviewAll)
-                        .disabled(session.reviewableIDs.isEmpty)
-                    Button("Accept", systemImage: "checkmark", action: { Task { await session.acceptSelected() } })
-                        .disabled(!session.canAcceptQueueSelection)
-                    Button(
-                        "Reject", systemImage: "trash", role: .destructive,
-                        action: { Task { await session.rejectSelected() } }
-                    )
-                    .disabled(session.selectedQueueIDs.isEmpty)
-                    #if os(iOS)
-                        EditButton()
-                    #endif
+                ToolbarItemGroup(placement: trailingToolbarPlacement) {
+                    Button(action: session.reviewAll) {
+                        Image(systemName: "rectangle.stack")
+                    }
+                    .accessibilityLabel("Review All")
+                    .disabled(session.reviewableIDs.isEmpty)
+
+                    if !session.selectedQueueIDs.isEmpty {
+                        Menu {
+                            Button("Accept Selected", systemImage: "checkmark") {
+                                Task { await session.acceptSelected() }
+                            }
+                            .disabled(!session.canAcceptQueueSelection)
+                            Button("Reject Selected", systemImage: "trash", role: .destructive) {
+                                Task { await session.rejectSelected() }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                        }
+                        .accessibilityLabel("Selected Item Actions")
+                    }
                 }
+
+                #if os(iOS)
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    ToolbarItem(placement: trailingToolbarPlacement) {
+                        selectionToggleButton
+                    }
+                #endif
             }
             .refreshable { await session.load() }
+            .task(id: compactRefreshIsActive) {
+                guard compactRefreshIsActive else { return }
+                while compactRefreshIsActive {
+                    do { try await Task.sleep(for: .seconds(10)) } catch { return }
+                    guard !Task.isCancelled, compactRefreshIsActive else { return }
+                    await session.refreshQueue()
+                }
+            }
             .accessibilityIdentifier("identify.queue")
+        }
+
+        private var compactRefreshIsActive: Bool {
+            presentsReviewInNavigationStack && pageIsActive && scenePhase == .active
+        }
+
+        #if os(iOS)
+            private var selectionToggleButton: some View {
+                Button {
+                    withAnimation {
+                        if editMode?.wrappedValue.isEditing == true {
+                            editMode?.wrappedValue = .inactive
+                            session.selectedQueueIDs.removeAll()
+                        } else {
+                            editMode?.wrappedValue = .active
+                        }
+                    }
+                } label: {
+                    Image(systemName: editMode?.wrappedValue.isEditing == true ? "checkmark" : "checkmark.circle")
+                }
+                .accessibilityLabel(editMode?.wrappedValue.isEditing == true ? "Done Selecting" : "Select Items")
+            }
+        #endif
+
+        private var trailingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarTrailing
+            #else
+                .primaryAction
+            #endif
         }
 
         @ViewBuilder

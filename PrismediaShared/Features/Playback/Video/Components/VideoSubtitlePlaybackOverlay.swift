@@ -6,18 +6,21 @@ struct VideoSubtitlePlaybackOverlay: View {
     let content: VideoSubtitleText?
     let appearance: VideoSubtitleAppearance
     let player: AVPlayer
+    var additionalBottomInset: CGFloat = 0
 
     var body: some View {
         Group {
             if let assContents {
                 VideoAssSubtitleOverlay(
                     contents: assContents,
-                    player: player
+                    player: player,
+                    additionalBottomInset: additionalBottomInset
                 )
             } else if let content {
                 VideoSubtitleOverlay(
                     content: content,
-                    appearance: appearance
+                    appearance: appearance,
+                    additionalBottomInset: additionalBottomInset
                 )
             }
         }

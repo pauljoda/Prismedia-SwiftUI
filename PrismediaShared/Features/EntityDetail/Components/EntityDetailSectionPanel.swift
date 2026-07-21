@@ -9,6 +9,7 @@ struct EntityDetailSectionPanel: View {
     let horizontalPadding: CGFloat
     let ownerLink: EntityLink?
     let acquisitionService: (any EntityAcquisitionServicing)?
+    let requestActivityService: (any RequestActivityServicing)?
     let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
     let onAcquisitionMutated: @MainActor () async -> Void
     let onEntityPruned: @MainActor () -> Void
@@ -19,6 +20,7 @@ struct EntityDetailSectionPanel: View {
         horizontalPadding: CGFloat,
         ownerLink: EntityLink? = nil,
         acquisitionService: (any EntityAcquisitionServicing)? = nil,
+        requestActivityService: (any RequestActivityServicing)? = nil,
         transcriptSourceLoader: (any EntityTranscriptSourceLoading)? = nil,
         onAcquisitionMutated: @escaping @MainActor () async -> Void = {},
         onEntityPruned: @escaping @MainActor () -> Void = {}
@@ -28,6 +30,7 @@ struct EntityDetailSectionPanel: View {
         self.horizontalPadding = horizontalPadding
         self.ownerLink = ownerLink
         self.acquisitionService = acquisitionService
+        self.requestActivityService = requestActivityService
         self.transcriptSourceLoader = transcriptSourceLoader
         self.onAcquisitionMutated = onAcquisitionMutated
         self.onEntityPruned = onEntityPruned
@@ -48,6 +51,7 @@ struct EntityDetailSectionPanel: View {
                 EntityAcquisitionPanel(
                     entityID: presentation.detail.id,
                     acquisitionService: acquisitionService,
+                    requestActivityService: requestActivityService,
                     onMutated: onAcquisitionMutated,
                     onEntityPruned: onEntityPruned
                 )

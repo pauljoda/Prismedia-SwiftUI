@@ -8,23 +8,12 @@ import SwiftUI
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.extraSmall) {
-                    Text(field.label)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                    if field.required {
-                        Text("Required")
-                            .font(.caption2)
-                            .foregroundStyle(PrismediaColor.accent)
-                    }
-                }
-
                 input
 
                 if let help = field.help, !help.isEmpty {
                     Text(help)
                         .font(.caption)
-                        .foregroundStyle(PrismediaColor.textMuted)
+                        .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -42,8 +31,7 @@ import SwiftUI
         }
 
         private var baseInput: some View {
-            TextField(field.placeholder ?? field.label, text: $value)
-                .prismediaTextInputStyle()
+            TextField(field.label, text: $value, prompt: Text(field.placeholder ?? field.label))
                 .disabled(isDisabled)
                 .accessibilityLabel(accessibilityLabel)
                 .accessibilityHint(accessibilityHint)

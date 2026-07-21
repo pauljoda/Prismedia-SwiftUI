@@ -7,6 +7,10 @@ struct PrismediaEntityAcquisitionService: EntityAcquisitionServicing {
         try await client.fetchEntityMonitorState(entityID: entityID)
     }
 
+    func latestAcquisition(entityID: UUID) async throws -> RequestActivityAcquisitionDetail? {
+        try await client.fetchRequestActivityAcquisition(forEntity: entityID)
+    }
+
     func startMonitor(entityID: UUID) async throws {
         try await client.startEntityMonitor(entityID: entityID)
     }
@@ -21,6 +25,10 @@ struct PrismediaEntityAcquisitionService: EntityAcquisitionServicing {
 
     func searchAgain(acquisitionID: UUID) async throws {
         try await client.searchAcquisitionAgain(id: acquisitionID)
+    }
+
+    func searchForRelease(entityID: UUID) async throws {
+        try await client.commitEntityRequest(entityID: entityID)
     }
 
     func unmonitor(id: UUID) async throws -> Bool {

@@ -8,7 +8,7 @@ public struct EntityGridControlCatalog: Hashable, Sendable {
     }
 
     public var sortOptions: [EntityGridSort] {
-        var options: [EntityGridSort] = [.title, .added, .rating, .random]
+        var options: [EntityGridSort] = [.title, .added, .lastAccessed, .rating, .random]
         if supportsTaxonomyFilters { options.append(.references) }
         return options
     }

@@ -13,6 +13,7 @@ import SwiftUI
                 PrismediaButton(
                     "Previous",
                     systemImage: "chevron.left",
+                    form: .compactIcon,
                     action: onPrevious
                 )
                 .disabled(page <= 1 || isLoading)
@@ -24,11 +25,12 @@ import SwiftUI
                 PrismediaButton(
                     "Next",
                     systemImage: "chevron.right",
+                    form: .compactIcon,
                     action: onNext
                 )
                 .disabled(page >= totalPages || isLoading)
             }
-            .controlSize(.small)
+            .prismediaCompactActionControlSize()
             .accessibilityElement(children: .contain)
         }
     }

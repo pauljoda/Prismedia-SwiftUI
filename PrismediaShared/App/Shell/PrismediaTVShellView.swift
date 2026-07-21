@@ -9,22 +9,26 @@ import SwiftUI
         @State private var selectedTabID = "home"
         @State private var hasAdoptedInitialRouterTab = false
         @State private var tabFocusCoordinator = TVTabFocusCoordinator()
+        @State private var playbackPreferences = VideoPlaybackPreferences()
+        #if DEBUG
+            @State private var settingsPath =
+                PrismediaUITestBootstrap.tvSettingsDestination()
+                .map { NavigationPath([$0]) } ?? NavigationPath()
+        #else
+            @State private var settingsPath = NavigationPath()
+        #endif
         @FocusState private var focusedTabID: String?
 
         var body: some View {
             VideoPlaybackHost(
-                client: client, onRestore: { _ in },
+                client: client,
+                preferences: playbackPreferences,
+                onRestore: { _ in },
                 content: { _ in
                     TabView(selection: $selectedTabID) {
                         ForEach(TVAppCatalog.tabs) { tab in
                             Tab(value: tab.id) {
-                                NavigationStack(path: pathBinding(for: tab)) {
-                                    tabContent(tab)
-                                        .ignoresSafeArea(.container, edges: .horizontal)
-                                        .prismediaEntityDestinations(
-                                            dependencies: detailDependencies
-                                        )
-                                }
+                                tabNavigationContent(tab)
                             } label: {
                                 Label(tab.title, systemImage: tab.systemImage)
                                     .foregroundStyle(
@@ -57,11 +61,33 @@ import SwiftUI
         }
 
         @ViewBuilder
+        private func tabNavigationContent(_ tab: TVAppTab) -> some View {
+            if tab.id == "account" {
+                NavigationStack(path: $settingsPath) {
+                    tabContent(tab)
+                        .ignoresSafeArea(.container, edges: .horizontal)
+                }
+            } else {
+                NavigationStack(path: pathBinding(for: tab)) {
+                    tabContent(tab)
+                        .ignoresSafeArea(.container, edges: .horizontal)
+                        .prismediaEntityDestinations(
+                            dependencies: detailDependencies
+                        )
+                }
+            }
+        }
+
+        @ViewBuilder
         private func tabContent(_ tab: TVAppTab) -> some View {
             if tab.id == "home" {
                 TVHomeView(client: client) { selectedTabID = $0 }
             } else if tab.id == "account" {
-                TVAccountView(user: user) {
+                TVSettingsView(
+                    user: user,
+                    playbackPreferences: playbackPreferences,
+                    administrationService: AdministrationService(client: client)
+                ) {
                     Task { await environment.signOut() }
                 }
             } else if let query = tab.query {
@@ -87,6 +113,9 @@ import SwiftUI
                             within: item.kind == .image ? mediaSequence : nil
                         )
                     },
+                    actionPolicy: .library(user: user),
+                    mutationService: client,
+                    prefersInitialTVFocus: true,
                     itemContent: { item, layout in
                         EntityThumbnailNavigationSurface(item: item, layout: layout)
                     }

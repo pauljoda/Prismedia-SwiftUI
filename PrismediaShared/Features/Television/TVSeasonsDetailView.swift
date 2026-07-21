@@ -10,8 +10,6 @@ import SwiftUI
         @State private var hasLoaded = false
         @State private var hasAppliedRouteEpisode = false
         @State private var initialFocusEpisodeID: UUID?
-        @State private var fullscreenEpisodeID: UUID?
-        @State private var fullscreenRequestID: UUID?
 
         private let useCase: TVSeasonsUseCase
         private let routeLink: EntityLink?
@@ -40,6 +38,7 @@ import SwiftUI
                 TVSeasonsHeroCopy(
                     series: displayedSeries,
                     selectedEpisode: snapshot.selectedEpisode,
+                    selectedEpisodeDetail: snapshot.selectedEpisodeDetail,
                     seasons: snapshot.seasons,
                     selectedSeasonID: snapshot.selectedSeasonID
                 )
@@ -48,8 +47,12 @@ import SwiftUI
                     episodeDetail: snapshot.selectedEpisodeDetail,
                     loader: loader,
                     playbackService: playbackService,
-                    fullscreenEpisodeID: fullscreenEpisodeID,
-                    fullscreenRequestID: fullscreenRequestID,
+                    trickplayFrameLoader: dependencies.trickplayFrameLoader,
+                    fullscreenRequest: snapshot.fullscreenRequest,
+                    onFullscreenDismiss: handleFullscreenDismiss,
+                    onPlaybackProgressCommitted: { episodeID in
+                        Task { await refreshPlaybackProgress(for: episodeID) }
+                    },
                     onAdvance: handleAdvancedEpisode
                 )
                 TVSeasonPicker(
@@ -181,8 +184,9 @@ import SwiftUI
             )
             focusEpisode(episode, shouldPrewarmDetail: decision.shouldPrewarmDetail)
             if decision.shouldPresentFullscreen {
-                fullscreenEpisodeID = decision.episodeID
-                fullscreenRequestID = UUID()
+                snapshot.presentFullscreen(
+                    TVEpisodePlaybackRequest(episodeID: decision.episodeID)
+                )
             }
         }
 
@@ -219,9 +223,41 @@ import SwiftUI
             guard let source = link.sourceThumbnail,
                 let episode = snapshot.episodes.first(where: { $0.id == source.id })
             else { return }
-            fullscreenEpisodeID = nil
-            fullscreenRequestID = nil
+            snapshot.fullscreenRequest = nil
             applyEpisodeSelection(episode, intent: .focus)
+        }
+
+        private func handleFullscreenDismiss(
+            _ request: TVEpisodePlaybackRequest?,
+            episodeID: UUID
+        ) {
+            if let request { snapshot.finishFullscreen(requestID: request.id) }
+            episodeCache[episodeID] = nil
+            snapshot.invalidateEpisodeDetail(id: episodeID)
+        }
+
+        private func refreshPlaybackProgress(for episodeID: UUID) async {
+            do {
+                guard let episodeDetail = try await useCase.loadEpisode(id: episodeID),
+                    !Task.isCancelled
+                else { return }
+                episodeCache[episodeID] = episodeDetail
+                snapshot.installEpisodeDetail(episodeDetail)
+
+                guard let seasonID = episodeDetail.parentEntityID,
+                    let seasonDetail = try await useCase.loadSeason(id: seasonID),
+                    !Task.isCancelled
+                else { return }
+                seasonCache[seasonID] = seasonDetail
+                if snapshot.selectedSeasonID == seasonID {
+                    snapshot.refreshSeason(seasonDetail)
+                }
+                dependencies.onEntityMutated()
+            } catch is CancellationError {
+                return
+            } catch {
+                return
+            }
         }
 
         private func focusEpisode(

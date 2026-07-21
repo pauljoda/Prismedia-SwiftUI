@@ -115,11 +115,10 @@ import SwiftUI
                 monitorStatus: item.monitorStatus,
                 acquisitionStatus: item.acquisitionStatus
             ) {
-                ViewThatFits(in: .horizontal) {
+                GlassEffectContainer(spacing: PrismediaSpacing.small) {
                     HStack(spacing: PrismediaSpacing.small) { actionButtons }
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) { actionButtons }
                 }
-                .controlSize(.small)
+                .prismediaCompactActionControlSize()
             }
         }
 
@@ -127,7 +126,8 @@ import SwiftUI
         private var actionButtons: some View {
             PrismediaButton(
                 "Search Now",
-                systemImage: "arrow.clockwise"
+                systemImage: "arrow.clockwise",
+                form: .compactIcon
             ) {
                 onSearchNow(item)
             }
@@ -135,7 +135,8 @@ import SwiftUI
             if item.entityID != nil {
                 PrismediaButton(
                     "Open in Library",
-                    systemImage: "arrow.up.right.square"
+                    systemImage: "arrow.up.right.square",
+                    form: .compactIcon
                 ) {
                     onOpenEntity(item)
                 }
@@ -144,7 +145,8 @@ import SwiftUI
             PrismediaButton(
                 "Unmonitor",
                 systemImage: "bell.slash",
-                variant: .destructive
+                variant: .destructive,
+                form: .compactIcon
             ) {
                 onUnmonitor(item)
             }

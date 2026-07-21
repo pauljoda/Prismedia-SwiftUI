@@ -34,7 +34,7 @@ public struct EntityListQuery: Hashable, Sendable {
         kind: EntityKind? = nil,
         kinds: [EntityKind] = [],
         sort: String? = nil,
-        sortDescending: Bool = true,
+        sortDescending: Bool = false,
         seed: Int? = nil,
         favorite: Bool? = nil,
         organized: Bool? = nil,

@@ -122,7 +122,7 @@ struct MediaProgressCard: View {
                     .labelStyle(.iconOnly)
                     .padding(PrismediaSpacing.small)
             }
-            .buttonStyle(.glass(.clear))
+            .buttonStyle(.glass)
             .buttonBorderShape(.circle)
             .accessibilityLabel("Progress Options")
         }

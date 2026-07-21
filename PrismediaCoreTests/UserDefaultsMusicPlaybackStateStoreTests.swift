@@ -4,6 +4,32 @@ import XCTest
 
 @MainActor
 final class UserDefaultsMusicPlaybackStateStoreTests: XCTestCase {
+    func testSavingANewQueueReplacesThePreviousRestoration() {
+        let suiteName = "UserDefaultsMusicPlaybackStateStoreTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = UserDefaultsMusicPlaybackStateStore(defaults: defaults)
+        let originalTrack = MusicTrack(id: UUID(), title: "Original Track")
+        let replacementTrack = MusicTrack(id: UUID(), title: "Replacement Track")
+
+        store.save(
+            MusicPlaybackRestoration(
+                queue: MusicQueue(tracks: [originalTrack]),
+                elapsedTime: 12
+            )
+        )
+        store.save(
+            MusicPlaybackRestoration(
+                queue: MusicQueue(tracks: [replacementTrack]),
+                elapsedTime: 0
+            )
+        )
+
+        XCTAssertEqual(store.load()?.tracks, [replacementTrack])
+        XCTAssertEqual(store.load()?.currentTrackID, replacementTrack.id)
+        XCTAssertEqual(store.load()?.elapsedTime, 0)
+    }
+
     func testClearingQueueRestorationKeepsGlobalPlaybackPreferences() {
         let suiteName = "UserDefaultsMusicPlaybackStateStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

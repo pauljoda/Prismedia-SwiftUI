@@ -40,10 +40,12 @@ final class PrismediaAppEnvironmentTests: XCTestCase {
         loader: HTTPDataLoading,
         initialSession: AuthSession? = nil,
         serverStore: RecordingServerPreferenceStore = RecordingServerPreferenceStore(),
-        nsfwStore: RecordingNsfwPreferenceStore = RecordingNsfwPreferenceStore()
+        nsfwStore: RecordingNsfwPreferenceStore = RecordingNsfwPreferenceStore(),
+        localSessionStateCleaner: RecordingLocalSessionStateCleaner = RecordingLocalSessionStateCleaner()
     ) -> PrismediaAppEnvironment {
         PrismediaAppEnvironment(
             sessionStore: store,
+            localSessionStateCleaner: localSessionStateCleaner,
             serverPreferenceStore: serverStore,
             nsfwPreferenceStore: nsfwStore,
             clientFactory: { PrismediaAPIClient(serverURL: $0, loader: loader) },
@@ -336,8 +338,14 @@ final class PrismediaAppEnvironmentTests: XCTestCase {
 
     func testSignOutClearsStoreAndCallsLogout() async {
         let store = RecordingSessionStore(savedSession: storedSession)
+        let localSessionStateCleaner = RecordingLocalSessionStateCleaner()
         let loader = MockHTTPDataLoader(responses: [.json("", statusCode: 204)])
-        let model = makeModel(store: store, loader: loader, initialSession: storedSession)
+        let model = makeModel(
+            store: store,
+            loader: loader,
+            initialSession: storedSession,
+            localSessionStateCleaner: localSessionStateCleaner
+        )
 
         await model.signOut()
 
@@ -345,6 +353,7 @@ final class PrismediaAppEnvironmentTests: XCTestCase {
         XCTAssertNil(model.client)
         XCTAssertNil(store.savedSession)
         XCTAssertEqual(store.clearCount, 1)
+        XCTAssertEqual(localSessionStateCleaner.clearCount, 1)
         XCTAssertEqual(loader.requests.first?.url?.path, "/api/auth/logout")
     }
 
@@ -402,6 +411,15 @@ private final class RecordingSessionStore: SessionStoring {
     func clear() async throws {
         clearCount += 1
         savedSession = nil
+    }
+}
+
+@MainActor
+private final class RecordingLocalSessionStateCleaner: LocalSessionStateClearing {
+    private(set) var clearCount = 0
+
+    func clear() async {
+        clearCount += 1
     }
 }
 

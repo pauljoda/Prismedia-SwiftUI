@@ -18,7 +18,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrack, track)
     }
 
-    func testPreparingShuffledQueueDefersPlaybackUntilArtworkCanBeWarmed() {
+    func testPreparingShuffledQueueDefersPlaybackUntilResume() {
         let tracks = (1...12).map { makeTrack(idSuffix: $0) }
         let engine = AudioPlaybackEngineSpy()
         let service = MusicPlaybackServiceStub()
@@ -27,16 +27,36 @@ final class MusicPlayerControllerTests: XCTestCase {
         controller.preparePlayback(tracks: tracks, queueMode: .shuffled)
 
         XCTAssertTrue(controller.queue.isShuffled)
-        XCTAssertEqual(controller.currentTrack, tracks[0])
+        let preparedTrack = controller.currentTrack
+        XCTAssertNotNil(preparedTrack)
         XCTAssertTrue(engine.loadedURLs.isEmpty)
         XCTAssertEqual(engine.playCallCount, 0)
         XCTAssertFalse(controller.isPlaying)
 
         controller.resume()
 
-        XCTAssertEqual(engine.loadedURLs, [service.audioStreamURL(for: tracks[0].id)!])
+        XCTAssertEqual(engine.loadedURLs, [service.audioStreamURL(for: preparedTrack!.id)!])
         XCTAssertEqual(engine.playCallCount, 1)
         XCTAssertTrue(controller.isPlaying)
+    }
+
+    func testIncrementalQueueExpansionCannotAppendToAReplacementQueue() {
+        let initialTracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
+        let replacementTracks = [makeTrack(idSuffix: 3), makeTrack(idSuffix: 4)]
+        let lateTrack = makeTrack(idSuffix: 5)
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: MusicPlaybackServiceStub()
+        )
+
+        let initialQueueID = controller.preparePlayback(tracks: initialTracks, queueMode: .shuffled)
+        let replacementQueueID = controller.preparePlayback(tracks: replacementTracks)
+
+        XCTAssertFalse(controller.appendUpcomingTracks([lateTrack], to: initialQueueID))
+        XCTAssertEqual(controller.queue.tracks, replacementTracks)
+
+        XCTAssertTrue(controller.appendUpcomingTracks([lateTrack], to: replacementQueueID))
+        XCTAssertEqual(controller.queue.tracks, replacementTracks + [lateTrack])
     }
 
     func testPlaybackRateAppliesImmediatelyAndSurvivesTrackChanges() {
@@ -116,6 +136,64 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.isPlaying)
     }
 
+    func testQuickNextRecordsSkippedPlaybackEventForPreviousTrack() async {
+        let tracks = [
+            makeTrack(idSuffix: 1, duration: 180),
+            makeTrack(idSuffix: 2, duration: 240),
+        ]
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(tracks: tracks)
+        controller.updateElapsedTime(4)
+
+        controller.skipToNext()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(service.skippedTrackIDs, [tracks[0].id])
+        XCTAssertEqual(service.skippedPositions, [4])
+        XCTAssertEqual(service.skippedDurations, [180])
+    }
+
+    func testQueueJumpUsesQuickSkipWindowAndAudiobooksStayExcluded() async {
+        let tracks = [
+            makeTrack(idSuffix: 1, duration: 180),
+            makeTrack(idSuffix: 2, duration: 240),
+            makeTrack(idSuffix: 3, duration: 300),
+        ]
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(tracks: tracks)
+        clock.advance(by: 11)
+
+        controller.skipToUpcomingTrack(id: tracks[2].id)
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertTrue(service.skippedTrackIDs.isEmpty)
+
+        controller.play(
+            tracks: tracks,
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book
+            )
+        )
+        controller.skipToUpcomingTrack(id: tracks[2].id)
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertTrue(service.skippedTrackIDs.isEmpty)
+    }
+
     func testCompletionAtQueueEndStopsWithoutReloading() async {
         let track = makeTrack(idSuffix: 1)
         let engine = AudioPlaybackEngineSpy()
@@ -187,6 +265,33 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(publicationCount, 1)
     }
 
+    func testDiscardingSessionPlaybackStopsAndRemovesRestorationWithoutReportingProgress() async {
+        let track = makeTrack(idSuffix: 1)
+        let service = MusicPlaybackServiceStub()
+        let store = MusicPlaybackStateStoreSpy()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            stateStore: store
+        )
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Private Audiobook",
+                playbackOwnerEntityKind: .book
+            )
+        )
+
+        controller.discardPlaybackState()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertNil(controller.currentTrack)
+        XCTAssertTrue(controller.queue.tracks.isEmpty)
+        XCTAssertEqual(store.clearCallCount, 1)
+        XCTAssertTrue(service.playbackUpdates.isEmpty)
+    }
+
     func testRestoresQueueAndElapsedPositionWithoutAutoplaying() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
         let restoration = MusicPlaybackRestoration(
@@ -251,6 +356,31 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.isPlaying)
     }
 
+    func testPlaybackServiceDisconnectPausesAndPreservesQueueRestoration() {
+        let track = makeTrack(idSuffix: 1)
+        let engine = AudioPlaybackEngineSpy()
+        let store = MusicPlaybackStateStoreSpy()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: MusicPlaybackServiceStub(),
+            stateStore: store
+        )
+        controller.play(tracks: [track])
+
+        controller.playbackServiceDidDisconnect()
+
+        XCTAssertEqual(controller.currentTrack, track)
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertEqual(engine.pauseCallCount, 1)
+        XCTAssertEqual(store.clearCallCount, 0)
+
+        controller.playbackServiceDidConnect()
+
+        XCTAssertEqual(engine.loadedURLs.count, 2)
+        XCTAssertEqual(engine.playCallCount, 1)
+        XCTAssertFalse(controller.isPlaying)
+    }
+
     func testPersistsQueueModesAndProgressInBoundedIntervals() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
         let store = MusicPlaybackStateStoreSpy()
@@ -275,7 +405,7 @@ final class MusicPlayerControllerTests: XCTestCase {
     }
 
     func testElapsedTimeCheckpointsDoNotRewriteTheQueueRestoration() {
-        let tracks = (1...1_000).map(makeTrack(idSuffix:))
+        let tracks = (1...1_000).map { makeTrack(idSuffix: $0) }
         let store = MusicPlaybackStateStoreSpy()
         let controller = MusicPlayerController(
             engine: AudioPlaybackEngineSpy(),
@@ -403,12 +533,13 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.queue.isShuffled)
     }
 
-    private func makeTrack(idSuffix: Int) -> MusicTrack {
+    private func makeTrack(idSuffix: Int, duration: Double? = nil) -> MusicTrack {
         MusicTrack(
             id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", idSuffix))!,
             title: "Track \(idSuffix)",
             artist: "Artist",
             album: "Album",
+            duration: duration,
             sortOrder: idSuffix - 1
         )
     }
@@ -477,6 +608,10 @@ private final class AudioPlaybackEngineSpy: AudioPlaybackEngine {
 private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private let missingStreamIDs: Set<UUID>
     private(set) var recordedTrackIDs: [UUID] = []
+    private(set) var skippedTrackIDs: [UUID] = []
+    private(set) var skippedPositions: [Double?] = []
+    private(set) var skippedDurations: [Double?] = []
+    private(set) var playbackUpdates: [(id: UUID, resumeSeconds: Double, completed: Bool)] = []
 
     init(missingStreamIDs: Set<UUID> = []) {
         self.missingStreamIDs = missingStreamIDs
@@ -491,7 +626,32 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
         recordedTrackIDs.append(id)
     }
 
-    func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {}
+    func recordEntityPlaybackEvent(
+        id: UUID,
+        kind: PlaybackEventKind,
+        positionSeconds: Double?,
+        durationSeconds: Double?
+    ) async throws {
+        guard kind == .skipped else { return }
+        skippedTrackIDs.append(id)
+        skippedPositions.append(positionSeconds)
+        skippedDurations.append(durationSeconds)
+    }
+
+    func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
+        playbackUpdates.append((id, resumeSeconds, completed))
+    }
+}
+
+private final class TestMusicPlaybackClock: MusicPlaybackClock, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedNow: TimeInterval = 0
+
+    var now: TimeInterval { lock.withLock { storedNow } }
+
+    func advance(by interval: TimeInterval) {
+        lock.withLock { storedNow += interval }
+    }
 }
 
 @MainActor

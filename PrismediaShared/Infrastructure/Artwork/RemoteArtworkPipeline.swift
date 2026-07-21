@@ -122,6 +122,14 @@ public actor RemoteArtworkPipeline: RemoteArtworkLoading {
         }
     }
 
+    public func clearCache() async {
+        inFlight.values.forEach { $0.cancel() }
+        imageInFlight.values.forEach { $0.cancel() }
+        inFlight.removeAll()
+        imageInFlight.removeAll()
+        cache.removeAll()
+    }
+
     private func imageRequestKey(for url: URL, maxPixelSize: Int) -> String {
         "\(maxPixelSize)|\(url.absoluteString)"
     }

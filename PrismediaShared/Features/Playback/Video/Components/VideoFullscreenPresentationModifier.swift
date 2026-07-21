@@ -50,6 +50,24 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     }
 
     private var expandedPlayerLayout: some View {
+        Group {
+            #if os(iOS)
+                expandedPlayerGeometry
+                    .ignoresSafeArea()
+            #else
+                expandedPlayerGeometry
+            #endif
+        }
+        .background(
+            VideoFullscreenOrientationRequest(
+                usesRotatedFallback: $usesRotatedLandscapeFallback,
+                controller: orientationController
+            )
+        )
+        .background(Color.black.ignoresSafeArea())
+    }
+
+    private var expandedPlayerGeometry: some View {
         GeometryReader { geometry in
             let rotatesContent = VideoFullscreenLayout.shouldRotateFallback(
                 enabled: usesRotatedLandscapeFallback,
@@ -64,13 +82,6 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                 .rotationEffect(.degrees(rotatesContent ? 90 : 0))
                 .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
         }
-        .background(
-            VideoFullscreenOrientationRequest(
-                usesRotatedFallback: $usesRotatedLandscapeFallback,
-                controller: orientationController
-            )
-        )
-        .background(Color.black.ignoresSafeArea())
     }
 
     private var expandedPlayerContent: some View {
@@ -109,7 +120,6 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                 )
             }
         }
-        .padding(PrismediaSpacing.small)
     }
 
     private func presentationDidDismiss() {

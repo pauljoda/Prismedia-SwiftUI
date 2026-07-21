@@ -3,6 +3,16 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityGridSelectionActionTests: XCTestCase {
+    func testSelectionCanStartActiveForSelectionFirstWorkflows() {
+        let entityID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        var selection = EntityGridSelectionState(isActive: true)
+
+        selection.toggle(entityID)
+
+        XCTAssertTrue(selection.isActive)
+        XCTAssertEqual(selection.selectedIDs, [entityID])
+    }
+
     func testSelectionUsesStableEntityIDsAcrossPaginationAndReconcilesAfterRefresh() {
         let firstPageID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let secondPageID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!

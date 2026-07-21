@@ -2,8 +2,8 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct RequestWorkspaceView: View {
-        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @State private var section = RequestWorkspaceSection.discover
+        @State private var kind = RequestKindDefinition.movie
         @State private var showsAcquisitionSettings = false
 
         let administrationService: any AdministrationServicing
@@ -15,17 +15,12 @@ import SwiftUI
 
         var body: some View {
             NavigationStack(path: navigationPath) {
-                VStack(spacing: 0) {
-                    sectionPicker
-                        .padding(.horizontal)
-                        .padding(.vertical, PrismediaSpacing.medium)
-
-                    Divider()
-
+                Group {
                     switch section {
                     case .discover:
                         RequestFeatureView(
                             service: administrationService,
+                            kind: $kind,
                             hidesNsfw: hidesNsfw,
                             onNavigateToEntity: { intent in
                                 openEntity(intent.entityID, intent.entityKind)
@@ -41,12 +36,34 @@ import SwiftUI
                     }
                 }
                 .prismediaScreenBackground()
+                .navigationTitle(section.title)
+                #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbarTitleMenu {
+                        sectionPicker
+                    }
+                #endif
                 .prismediaEntityDestinations(dependencies: detailDependencies)
                 .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Settings", systemImage: "gearshape") {
-                            showsAcquisitionSettings = true
+                    #if os(macOS)
+                        ToolbarItem(placement: .principal) {
+                            sectionPicker
+                                .pickerStyle(.segmented)
                         }
+                    #endif
+                    if section == .discover {
+                        ToolbarItem(placement: leadingToolbarPlacement) {
+                            kindPicker
+                        }
+                    }
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    ToolbarItem(placement: trailingToolbarPlacement) {
+                        Button {
+                            showsAcquisitionSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        .accessibilityLabel("Acquisition Settings")
                     }
                 }
             }
@@ -56,32 +73,44 @@ import SwiftUI
             .accessibilityIdentifier("request.workspace")
         }
 
-        @ViewBuilder
         private var sectionPicker: some View {
-            if horizontalSizeClass == .compact {
-                Picker("Request Section", selection: $section) {
-                    sectionOptions
+            Picker("Request View", selection: $section) {
+                ForEach(RequestWorkspaceSection.allCases) { section in
+                    Label(section.title, systemImage: section.systemImage)
+                        .tag(section)
                 }
-                .pickerStyle(.menu)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Picker("Request Section", selection: $section) {
-                    sectionOptions
-                }
-                .pickerStyle(.segmented)
             }
+            .accessibilityIdentifier("request.section")
         }
 
-        @ViewBuilder
-        private var sectionOptions: some View {
-            ForEach(RequestWorkspaceSection.allCases) { section in
-                Label(section.title, systemImage: section.systemImage)
-                    .tag(section)
+        private var kindPicker: some View {
+            Picker("Content Kind", selection: $kind) {
+                ForEach(RequestKindDefinition.allCases) { kind in
+                    Text(kind.label).tag(kind)
+                }
             }
+            .pickerStyle(.menu)
+            .accessibilityIdentifier("request.kind")
+        }
+
+        private var leadingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarLeading
+            #else
+                .automatic
+            #endif
         }
 
         private func openEntity(_ entityID: UUID, _ kind: EntityKind) {
             navigationPath.wrappedValue.append(EntityLink(entityID: entityID, kind: kind))
+        }
+
+        private var trailingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarTrailing
+            #else
+                .primaryAction
+            #endif
         }
     }
 

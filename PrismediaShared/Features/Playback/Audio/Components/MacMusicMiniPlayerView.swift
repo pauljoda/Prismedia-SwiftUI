@@ -2,6 +2,7 @@
     import SwiftUI
 
     struct MacMusicMiniPlayerView: View {
+        @Environment(\.musicMiniPlayerVisibility) private var visibility
         @Environment(MusicPlayerController.self) private var controller
 
         let showNowPlaying: () -> Void
@@ -64,8 +65,8 @@
                 .background(.bar)
                 .overlay(alignment: .top) { Divider() }
                 .contextMenu {
-                    Button("Close Player", systemImage: "xmark", role: .destructive) {
-                        controller.clearPlayback()
+                    Button("Hide Player", systemImage: "xmark") {
+                        visibility?.hideByUser()
                     }
                 }
                 .accessibilityElement(children: .contain)

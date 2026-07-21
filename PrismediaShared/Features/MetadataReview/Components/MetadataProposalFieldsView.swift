@@ -5,9 +5,10 @@ import SwiftUI
         let proposal: AdministrativeEntityMetadataProposal
         let selection: Binding<MetadataReviewSelection>?
         let currentValues: [MetadataReviewField: String]
+        @State private var isExpanded = true
 
         var body: some View {
-            DisclosureGroup {
+            DisclosureGroup(isExpanded: $isExpanded) {
                 VStack(spacing: 0) {
                     ForEach(visibleFields, id: \.self) { field in
                         fieldRow(field)
@@ -15,8 +16,14 @@ import SwiftUI
                     }
                 }
             } label: {
-                Label("Metadata", systemImage: "list.bullet.rectangle")
-                    .font(.headline)
+                HStack {
+                    Label("Metadata", systemImage: "list.bullet.rectangle")
+                        .font(.headline)
+                    Spacer()
+                    Text("\(visibleFields.count) fields")
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                }
             }
             .accessibilityIdentifier("metadata-review.fields")
         }
@@ -41,12 +48,17 @@ import SwiftUI
                         LabeledContent("Current", value: current)
                             .font(.caption)
                             .foregroundStyle(PrismediaColor.textSecondary)
+                        LabeledContent(
+                            "Proposed",
+                            value: MetadataReviewPolicy.fieldValue(field, in: proposal)
+                        )
+                        .font(.callout)
+                    } else {
+                        Text(MetadataReviewPolicy.fieldValue(field, in: proposal))
+                            .font(.callout)
+                            .foregroundStyle(PrismediaColor.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    LabeledContent(
-                        currentValues[field] == nil ? "Value" : "Proposed",
-                        value: MetadataReviewPolicy.fieldValue(field, in: proposal)
-                    )
-                    .font(.callout)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

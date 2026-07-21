@@ -3,21 +3,27 @@ import SwiftUI
 struct EntityAcquisitionPanel: View {
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
     @Environment(\.artworkSecondaryText) private var artworkSecondaryText
+    @Environment(\.prismediaPageIsActive) private var pageIsActive
+    @Environment(\.scenePhase) private var scenePhase
     @State private var state = EntityAcquisitionPanelState()
     @State private var confirmsUnmonitor = false
+    @State private var historyEntries: [RequestActivityHistoryEntry] = []
     private let entityID: UUID
     private let service: EntityAcquisitionService?
+    private let requestActivityService: (any RequestActivityServicing)?
     private let onMutated: @MainActor () async -> Void
     private let onEntityPruned: @MainActor () -> Void
 
     init(
         entityID: UUID,
         acquisitionService: (any EntityAcquisitionServicing)?,
+        requestActivityService: (any RequestActivityServicing)? = nil,
         onMutated: @escaping @MainActor () async -> Void,
         onEntityPruned: @escaping @MainActor () -> Void
     ) {
         self.entityID = entityID
         service = acquisitionService.map(EntityAcquisitionService.init(port:))
+        self.requestActivityService = requestActivityService
         self.onMutated = onMutated
         self.onEntityPruned = onEntityPruned
     }
@@ -38,9 +44,14 @@ struct EntityAcquisitionPanel: View {
                 adminUnavailableView
             }
         }
-        .task(id: entityID) {
-            guard let service else { return }
-            await load(using: service)
+        .task(id: liveRefreshTaskIdentity) {
+            guard let service, liveRefreshIsActive else { return }
+            if case .content = state.phase {
+                await backgroundLoad(using: service)
+            } else {
+                await load(using: service)
+            }
+            await pollWhileVisible(using: service)
         }
         .confirmationDialog(
             "Stop monitoring this item?",
@@ -49,7 +60,7 @@ struct EntityAcquisitionPanel: View {
         ) {
             Button("Unmonitor", role: .destructive) {
                 guard case .content(let snapshot) = state.phase,
-                    let monitor = snapshot.monitor,
+                    let monitor = snapshot.state.monitor,
                     let service
                 else { return }
                 Task { await perform(.unmonitor(monitor.id), using: service) }
@@ -93,52 +104,220 @@ struct EntityAcquisitionPanel: View {
         .frame(maxWidth: .infinity)
     }
 
+    @ViewBuilder
     private func contentView(
-        _ snapshot: EntityMonitorState,
+        _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-            capabilityContent(snapshot)
-
-            if let monitor = snapshot.monitor {
-                monitorContent(monitor)
-            }
-
-            if let acquisition = snapshot.latestAcquisition {
-                acquisitionContent(acquisition)
-            }
-
             actionContent(snapshot, service: service)
+            guidanceContent(snapshot)
+
+            #if os(iOS) || os(macOS)
+                if let acquisition = snapshot.latestAcquisition, let requestActivityService {
+                    RequestActivityAcquisitionManagementSections(
+                        acquisitionID: acquisition.summary.id,
+                        service: requestActivityService,
+                        style: .embedded,
+                        onCancelled: { await load(using: service) },
+                        onImported: {
+                            await load(using: service)
+                            await onMutated()
+                        },
+                        onReset: {
+                            await load(using: service)
+                            await onMutated()
+                        }
+                    )
+                    .id(acquisition.summary.id)
+                } else {
+                    summaryFallback(snapshot)
+                }
+
+                if !historyEntries.isEmpty {
+                    EntityAcquisitionHistorySection(entries: historyEntries)
+                }
+            #else
+                summaryFallback(snapshot)
+            #endif
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func capabilityContent(_ snapshot: EntityMonitorState) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            Label(
-                snapshot.canMonitor ? "Eligible for monitoring" : "Monitoring unavailable",
-                systemImage: snapshot.canMonitor ? "checkmark.shield" : "exclamationmark.shield"
-            )
-            .font(.headline)
-            .foregroundStyle(snapshot.canMonitor ? artworkPrimaryAccent : artworkSecondaryText)
+    // MARK: - Action row
 
-            if snapshot.trackableProviders.isEmpty {
+    private func actionContent(
+        _ snapshot: EntityAcquisitionPanelSnapshot,
+        service: EntityAcquisitionService
+    ) -> some View {
+        GlassEffectContainer(spacing: PrismediaSpacing.small) {
+            HStack(spacing: PrismediaSpacing.small) {
+                actionButtons(snapshot, service: service)
+            }
+        }
+        .prismediaCompactActionControlSize()
+        .disabled(state.isMutating)
+        .overlay {
+            if state.isMutating {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actionButtons(
+        _ snapshot: EntityAcquisitionPanelSnapshot,
+        service: EntityAcquisitionService
+    ) -> some View {
+        if let monitor = snapshot.state.monitor {
+            monitorToggle(monitor, service: service)
+        } else if snapshot.state.canMonitor {
+            PrismediaButton("Monitor", systemImage: "bell", form: .compactIcon) {
+                Task { await perform(.start(entityID), using: service) }
+            }
+        }
+
+        if showsSearchForRelease(snapshot) {
+            PrismediaButton(
+                "Search for release",
+                systemImage: "magnifyingglass",
+                variant: .prominent,
+                form: .compactIcon,
+                primaryTint: artworkPrimaryAccent
+            ) {
+                Task { await perform(.searchForRelease(entityID), using: service) }
+            }
+        }
+
+        if !embedsManagement(snapshot), let acquisition = snapshot.state.latestAcquisition {
+            PrismediaButton("Search Again", systemImage: "arrow.clockwise", form: .compactIcon) {
+                Task { await perform(.searchAgain(acquisition.id), using: service) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func monitorToggle(
+        _ monitor: EntityMonitor,
+        service: EntityAcquisitionService
+    ) -> some View {
+        if monitor.status == .stopping {
+            PrismediaButton(
+                "Finish unmonitoring",
+                systemImage: "arrow.clockwise",
+                form: .compactIcon
+            ) {
+                Task { await perform(.unmonitor(monitor.id), using: service) }
+            }
+        } else if monitor.status == .deletingFiles {
+            PrismediaButton("Deleting files…", systemImage: "trash", form: .compactIcon) {}
+                .disabled(true)
+        } else if isUnknownMonitorStatus(monitor.status) {
+            PrismediaButton("Updating…", systemImage: "arrow.clockwise", form: .compactIcon) {}
+                .disabled(true)
+        } else if monitor.status == .active {
+            PrismediaButton(
+                "Monitoring",
+                systemImage: "bell.and.waves.left.and.right",
+                variant: .prominent,
+                form: .compactIcon,
+                primaryTint: artworkPrimaryAccent
+            ) {
+                confirmsUnmonitor = true
+            }
+        } else {
+            PrismediaButton("Resume monitoring", systemImage: "bell", form: .compactIcon) {
+                Task { await perform(.resume(monitor.id), using: service) }
+            }
+        }
+    }
+
+    // MARK: - Guidance lines
+
+    @ViewBuilder
+    private func guidanceContent(_ snapshot: EntityAcquisitionPanelSnapshot) -> some View {
+        let monitorState = snapshot.state
+        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+            if showsMonitorControl(monitorState), !monitorState.trackableProviders.isEmpty {
+                Text(trackedViaLine(monitorState))
+                    .font(.caption)
+                    .foregroundStyle(artworkSecondaryText)
+            } else if monitorState.monitor == nil, !monitorState.canMonitor,
+                monitorState.trackableProviders.isEmpty
+            {
                 Text(
                     "No enabled metadata provider can track this entity yet. Identify it with a supported provider first."
                 )
-                .font(.subheadline)
+                .font(.caption)
                 .foregroundStyle(artworkSecondaryText)
-            } else {
-                LabeledContent("Providers", value: snapshot.trackableProviders.joined(separator: ", "))
             }
 
-            if snapshot.discoversChildren {
-                Label("Discovers new child items from its provider", systemImage: "arrow.triangle.branch")
-                    .font(.subheadline)
+            if showsSearchForRelease(snapshot) {
+                Text("No file yet. Searching starts an auto-grabbing, monitored acquisition for this item.")
+                    .font(.caption)
                     .foregroundStyle(artworkSecondaryText)
             }
         }
-        .accessibilityElement(children: .contain)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func trackedViaLine(_ monitorState: EntityMonitorState) -> String {
+        let via = monitorState.trackableProviders.joined(separator: ", ")
+        if monitorState.monitor?.status == .deletingFiles {
+            return "Monitoring stays enabled via \(via) while files are deleted."
+        }
+        if monitorState.monitor?.status == .active {
+            if monitorState.discoversChildren {
+                return "Watching for new works daily via \(via)."
+            }
+            return "Monitoring via \(via)."
+        }
+        return "Monitoring available — tracked via \(via)."
+    }
+
+    // MARK: - Gates
+
+    private func showsMonitorControl(_ monitorState: EntityMonitorState) -> Bool {
+        monitorState.monitor != nil || monitorState.canMonitor
+    }
+
+    private func showsSearchForRelease(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
+        guard snapshot.state.canRequest,
+            snapshot.latestAcquisition == nil,
+            snapshot.state.latestAcquisition == nil
+        else { return false }
+        guard let monitor = snapshot.state.monitor else { return true }
+        return !isMonitorTransitionLocked(monitor.status)
+    }
+
+    private func embedsManagement(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
+        #if os(iOS) || os(macOS)
+            return snapshot.latestAcquisition != nil && requestActivityService != nil
+        #else
+            return false
+        #endif
+    }
+
+    private func isUnknownMonitorStatus(_ status: EntityMonitorStatus) -> Bool {
+        ![.active, .paused, .fulfilled, .deletingFiles, .stopping].contains(status)
+    }
+
+    private func isMonitorTransitionLocked(_ status: EntityMonitorStatus) -> Bool {
+        status == .stopping || status == .deletingFiles || isUnknownMonitorStatus(status)
+    }
+
+    // MARK: - Fallback summary (tvOS and missing request-activity service)
+
+    @ViewBuilder
+    private func summaryFallback(_ snapshot: EntityAcquisitionPanelSnapshot) -> some View {
+        if let monitor = snapshot.state.monitor {
+            monitorContent(monitor)
+        }
+        if let acquisition = snapshot.state.latestAcquisition {
+            acquisitionContent(acquisition)
+        }
     }
 
     private func monitorContent(_ monitor: EntityMonitor) -> some View {
@@ -179,78 +358,68 @@ struct EntityAcquisitionPanel: View {
         }
     }
 
-    private func actionContent(
-        _ snapshot: EntityMonitorState,
-        service: EntityAcquisitionService
-    ) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: PrismediaSpacing.medium) {
-                actionButtons(snapshot, service: service)
-            }
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                actionButtons(snapshot, service: service)
-            }
-        }
-        .disabled(state.isMutating)
-        .overlay {
-            if state.isMutating {
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func actionButtons(
-        _ snapshot: EntityMonitorState,
-        service: EntityAcquisitionService
-    ) -> some View {
-        if snapshot.monitor == nil, snapshot.canMonitor {
-            PrismediaButton(
-                "Start Monitor",
-                systemImage: "eye",
-                variant: .prominent
-            ) {
-                Task { await perform(.start(entityID), using: service) }
-            }
-        }
-
-        if let monitor = snapshot.monitor {
-            if monitor.status == .active {
-                PrismediaButton("Pause", systemImage: "pause") {
-                    Task { await perform(.pause(monitor.id), using: service) }
-                }
-            } else if monitor.status == .paused {
-                PrismediaButton(
-                    "Resume",
-                    systemImage: "play",
-                    variant: .prominent
-                ) {
-                    Task { await perform(.resume(monitor.id), using: service) }
-                }
-            }
-
-            PrismediaButton(
-                "Unmonitor",
-                systemImage: "trash",
-                variant: .destructive
-            ) {
-                confirmsUnmonitor = true
-            }
-            .disabled(monitor.status == .deletingFiles || monitor.status == .stopping)
-        }
-
-        if let acquisition = snapshot.latestAcquisition {
-            PrismediaButton("Search Again", systemImage: "arrow.clockwise") {
-                Task { await perform(.searchAgain(acquisition.id), using: service) }
-            }
-        }
-    }
+    // MARK: - Loading and mutation
 
     private func load(using service: EntityAcquisitionService) async {
         let outcome = await service.load(entityID: entityID)
         state.finishLoad(outcome)
+        await loadHistory()
+    }
+
+    private func backgroundLoad(using service: EntityAcquisitionService) async {
+        let outcome = await service.load(entityID: entityID)
+        state.finishBackgroundLoad(outcome)
+        await loadHistory()
+    }
+
+    /// Secondary surface: a history-load failure must never break the acquisition
+    /// view, so it silently keeps whatever is already shown.
+    private func loadHistory() async {
+        #if os(iOS) || os(macOS)
+            guard let requestActivityService else { return }
+            let nextEntries =
+                (try? await requestActivityService.listRequestActivityHistory(
+                    limit: 50,
+                    entityID: entityID
+                )) ?? historyEntries
+            if historyEntries != nextEntries { historyEntries = nextEntries }
+        #endif
+    }
+
+    private func pollWhileVisible(using service: EntityAcquisitionService) async {
+        while liveRefreshIsActive {
+            do { try await Task.sleep(for: liveRefreshInterval) } catch { return }
+            guard !Task.isCancelled, liveRefreshIsActive else { return }
+            await backgroundLoad(using: service)
+        }
+    }
+
+    private var liveRefreshTaskIdentity: String {
+        "\(entityID.uuidString)-\(liveRefreshIsActive)"
+    }
+
+    private var liveRefreshIsActive: Bool {
+        pageIsActive && scenePhase == .active
+    }
+
+    private var liveRefreshInterval: Duration {
+        requiresFrequentRefresh ? .seconds(4) : .seconds(12)
+    }
+
+    private var requiresFrequentRefresh: Bool {
+        guard case .content(let snapshot) = state.phase else { return false }
+        if let monitor = snapshot.state.monitor,
+            monitor.status == .stopping || monitor.status == .deletingFiles
+        {
+            return true
+        }
+        if let detail = snapshot.latestAcquisition {
+            return RequestActivityStatusPolicy.shouldPoll(detail.summary.status)
+        }
+        if let summary = snapshot.state.latestAcquisition {
+            return RequestActivityStatusPolicy.shouldPoll(summary.status)
+        }
+        return false
     }
 
     private func perform(
@@ -300,51 +469,63 @@ extension String {
 
 #if DEBUG
     #Preview("Entity Acquisition · Downloading") {
-        let entityID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-        let monitorID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        let acquisitionID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-        let updatedAt = Date(timeIntervalSince1970: 1_783_792_800)
-        let snapshot = EntityMonitorState(
-            entityID: entityID,
-            canMonitor: true,
-            canRequest: true,
-            trackableProviders: ["Open Library"],
-            discoversChildren: false,
-            canSearchMissingChildren: false,
-            missingChildEntityKind: nil,
-            monitor: EntityMonitor(
-                id: monitorID,
-                kind: .book,
-                acquisitionID: acquisitionID,
-                status: .active,
-                title: "The Work",
-                author: "Author",
-                acquisitionStatus: AcquisitionStatus(rawValue: "downloading"),
-                createdAt: updatedAt,
-                updatedAt: updatedAt,
-                entityID: entityID,
-                preset: "all"
-            ),
-            latestAcquisition: EntityAcquisitionSummary(
-                id: acquisitionID,
-                status: AcquisitionStatus(rawValue: "downloading"),
-                statusMessage: "Fetching release",
-                title: "The Work",
-                author: "Author",
-                progress: 0.42,
-                createdAt: updatedAt,
-                updatedAt: updatedAt,
-                entityID: entityID
+        ScrollView {
+            EntityAcquisitionPanel(
+                entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+                acquisitionService: PreviewEntityAcquisitionService(
+                    snapshot: EntityAcquisitionPanelPreviewFixtures.downloadingState,
+                    acquisitionDetail: EntityAcquisitionPanelPreviewFixtures.downloadingDetail
+                ),
+                requestActivityService: EntityAcquisitionPanelPreviewFixtures.requestActivityService(
+                    scenario: .downloading
+                ),
+                onMutated: {},
+                onEntityPruned: {}
             )
-        )
+            .padding()
+        }
+    }
 
+    #Preview("Entity Acquisition · Releases") {
+        ScrollView {
+            EntityAcquisitionPanel(
+                entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+                acquisitionService: PreviewEntityAcquisitionService(
+                    snapshot: EntityAcquisitionPanelPreviewFixtures.awaitingSelectionState,
+                    acquisitionDetail: EntityAcquisitionPanelPreviewFixtures.releasesDetail
+                ),
+                requestActivityService: EntityAcquisitionPanelPreviewFixtures.requestActivityService(
+                    scenario: .releases
+                ),
+                onMutated: {},
+                onEntityPruned: {}
+            )
+            .padding()
+        }
+    }
+
+    #Preview("Entity Acquisition · Wanted, No Acquisition") {
         EntityAcquisitionPanel(
-            entityID: entityID,
-            acquisitionService: PreviewEntityAcquisitionService(snapshot: snapshot),
+            entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+            acquisitionService: PreviewEntityAcquisitionService(
+                snapshot: EntityAcquisitionPanelPreviewFixtures.wantedState
+            ),
             onMutated: {},
             onEntityPruned: {}
         )
         .padding()
-        .frame(width: 560)
+    }
+
+    #Preview("Entity Acquisition · Error") {
+        EntityAcquisitionPanel(
+            entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+            acquisitionService: PreviewEntityAcquisitionService(
+                snapshot: EntityAcquisitionPanelPreviewFixtures.wantedState,
+                loadError: "The server is unreachable."
+            ),
+            onMutated: {},
+            onEntityPruned: {}
+        )
+        .padding()
     }
 #endif

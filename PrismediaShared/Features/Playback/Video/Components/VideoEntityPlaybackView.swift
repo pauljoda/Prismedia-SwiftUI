@@ -5,11 +5,13 @@ struct VideoEntityPlaybackView: View {
     let ownerLink: EntityLink
     let detailLoader: any EntityDetailLoading
     let playbackService: any VideoPlaybackServicing
+    let trickplayFrameLoader: (any TrickplayFrameLoading)?
     let preparation: VideoPlaybackPreparationCoordinator
     let presentationMode: VideoPlaybackPresentationMode
     let tvLayout: TVVideoPlaybackLayout
     let presentsFullscreenOnTV: Bool
     let onFullscreenDismiss: () -> Void
+    let onPlaybackProgressCommitted: () -> Void
     let onAdvance: (EntityLink) -> Void
 
     init(
@@ -17,22 +19,26 @@ struct VideoEntityPlaybackView: View {
         ownerLink: EntityLink,
         detailLoader: any EntityDetailLoading,
         playbackService: any VideoPlaybackServicing,
+        trickplayFrameLoader: (any TrickplayFrameLoading)? = nil,
         preparation: VideoPlaybackPreparationCoordinator,
         presentationMode: VideoPlaybackPresentationMode = .inline,
         tvLayout: TVVideoPlaybackLayout = .standard,
         presentsFullscreenOnTV: Bool = false,
         onFullscreenDismiss: @escaping () -> Void = {},
+        onPlaybackProgressCommitted: @escaping () -> Void = {},
         onAdvance: @escaping (EntityLink) -> Void
     ) {
         self.detail = detail
         self.ownerLink = ownerLink
         self.detailLoader = detailLoader
         self.playbackService = playbackService
+        self.trickplayFrameLoader = trickplayFrameLoader
         self.preparation = preparation
         self.presentationMode = presentationMode
         self.tvLayout = tvLayout
         self.presentsFullscreenOnTV = presentsFullscreenOnTV
         self.onFullscreenDismiss = onFullscreenDismiss
+        self.onPlaybackProgressCommitted = onPlaybackProgressCommitted
         self.onAdvance = onAdvance
     }
 
@@ -162,7 +168,7 @@ struct VideoEntityPlaybackView: View {
                                 )
                             }
                             .buttonBorderShape(.capsule)
-                            .buttonStyle(.glass(.clear))
+                            .buttonStyle(.glass)
                             .controlSize(tvLayout == .compact ? .small : .regular)
                             .accessibilityIdentifier(identifier(for: action))
                         }
@@ -192,6 +198,9 @@ struct VideoEntityPlaybackView: View {
                 let controller = presentation.controller
                 TVFullscreenPlayerSurface(
                     controller: controller,
+                    title: videoDetail?.title ?? detail.title,
+                    trickplayPlaylistPath: trickplayPlaylistPath,
+                    trickplayFrameLoader: trickplayFrameLoader,
                     onRequestDismiss: { tvFullscreenPresentation = nil }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -225,16 +234,27 @@ struct VideoEntityPlaybackView: View {
             )
         }
 
-        private func stopTVPlayback() {
-            playbackSession?.reset()
-            playbackController?.stop()
+        private func stopTVPlayback() -> VideoPlaybackController? {
+            let controller = playbackController
+            if playbackSession?.activeController === controller {
+                playbackSession?.reset()
+            } else {
+                controller?.stop()
+            }
             playbackController = nil
+            return controller
         }
 
         private func finishTVFullscreenPlayback() {
             isFullscreenPresented = false
-            stopTVPlayback()
+            let controller = stopTVPlayback()
             _ = advanceNavigation.fullscreenDidDismiss()
+            onFullscreenDismiss()
+            Task {
+                await controller?.waitForPendingPlaybackReports()
+                guard !Task.isCancelled else { return }
+                onPlaybackProgressCommitted()
+            }
         }
 
         private func label(for action: TVPlaybackAction, resumeSeconds: Double) -> String {
@@ -294,6 +314,14 @@ struct VideoEntityPlaybackView: View {
         private func startPlayback(at startSeconds: Double? = nil) {
             warmPlayback()
             preparation.requestPlayback(from: startSeconds)
+            #if DEBUG
+                if PrismediaUITestBootstrap.pausesVideoPlayback() {
+                    Task {
+                        await preparation.waitUntilSettled()
+                        preparation.controller?.pause()
+                    }
+                }
+            #endif
         }
 
         private func warmPlayback() {
@@ -506,6 +534,16 @@ struct VideoEntityPlaybackView: View {
             detailResumeSeconds: resumeSeconds(in: detail),
             thumbnailResumeSeconds: ownerLink.thumbnailPreview?.resumeSeconds
         )
+    }
+
+    private var trickplayPlaylistPath: String? {
+        if let path = ownerLink.sourceThumbnail?.trickplayPlaylistPath {
+            return path
+        }
+        return presentedVideoDetail?.capabilities.compactMap { capability -> String? in
+            guard case .files(let files) = capability else { return nil }
+            return files.items.first(where: { $0.role == "trickplay" })?.path
+        }.first
     }
 }
 

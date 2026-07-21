@@ -46,7 +46,10 @@ import SwiftUI
             .navigationTitle("Review Request")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done", action: dismiss.callAsFunction)
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
             }
             .task { await loadReview() }
@@ -89,14 +92,24 @@ import SwiftUI
 
                 MetadataProposalReviewView(
                     proposal: review.proposal,
+                    headerSubtitle: "\(route.externalIdentity.namespace):\(route.externalIdentity.value)",
                     selectedProposalIDs: selectedIDs,
                     selectableProposalIDs: selection.selectableIDs,
                     childrenTitle: childrenTitle,
                     onSetProposalSelected: toggleProposal
                 )
 
+                requestPanel(selection)
+            }
+        }
+
+        private func requestPanel(_ selection: RequestReviewSelection) -> some View {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                Label(requestPanelTitle(selection), systemImage: "paperplane")
+                    .font(.headline)
+
                 if selection.mode == .directChildren {
-                    presetPanel(selection)
+                    presetControls(selection)
                 }
 
                 RequestTargetOptionsView(
@@ -106,7 +119,8 @@ import SwiftUI
                     isLoading: isLoadingTargets,
                     errorMessage: targetErrorMessage,
                     selectedProfileID: $selectedProfileID,
-                    selectedRootID: $selectedRootID
+                    selectedRootID: $selectedRootID,
+                    embedsInParentPanel: true
                 )
 
                 if let errorMessage, !requiresReload {
@@ -126,6 +140,16 @@ import SwiftUI
                 .disabled(isSubmitting || requiresReload || !hasRequestIntent(selection))
                 .accessibilityIdentifier("request.commit")
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PrismediaSpacing.large)
+            .prismediaPanel()
+        }
+
+        private func requestPanelTitle(_ selection: RequestReviewSelection) -> String {
+            guard selection.mode == .directChildren, let noun = route.kind.childNoun else {
+                return "Request This \(route.kind.label)"
+            }
+            return "Request \(noun.capitalized)s"
         }
 
         private var conflictBanner: some View {
@@ -150,23 +174,23 @@ import SwiftUI
             .prismediaPanel()
         }
 
-        private func presetPanel(_ selection: RequestReviewSelection) -> some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Label("Monitoring", systemImage: "dot.radiowaves.left.and.right")
-                    .font(.headline)
-                Picker("Preset", selection: presetBinding(selection)) {
-                    ForEach(RequestMonitorPreset.allCases.filter { $0 != .custom || isCustomSelection }) { preset in
-                        Text(preset.label).tag(preset)
+        private func presetControls(_ selection: RequestReviewSelection) -> some View {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                LabeledContent {
+                    Picker("Monitor", selection: presetBinding(selection)) {
+                        ForEach(RequestMonitorPreset.allCases.filter { $0 != .custom || isCustomSelection }) { preset in
+                            Text(preset.label).tag(preset)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                } label: {
+                    Label("Monitor", systemImage: "dot.radiowaves.left.and.right")
                 }
-                .pickerStyle(.menu)
                 Text((isCustomSelection ? RequestMonitorPreset.custom : chosenPreset).detail)
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.textSecondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
         }
 
         private func presetBinding(_ selection: RequestReviewSelection) -> Binding<RequestMonitorPreset> {

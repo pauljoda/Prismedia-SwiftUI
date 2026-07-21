@@ -51,6 +51,16 @@ final class RemoteArtworkCache: @unchecked Sendable {
         }
     }
 
+    func removeAll() {
+        dataStorage.removeAllObjects()
+        decodedLock.withLock {
+            decodedImages.removeAll()
+            decodedCosts.removeAll()
+            decodedRecency.removeAll()
+            decodedByteCost = 0
+        }
+    }
+
     private func decodedKey(for url: URL, maxPixelSize: Int) -> String {
         "\(maxPixelSize)|\(url.absoluteString)"
     }

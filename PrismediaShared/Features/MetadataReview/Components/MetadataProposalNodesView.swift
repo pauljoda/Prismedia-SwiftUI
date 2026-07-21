@@ -31,11 +31,29 @@ import SwiftUI
                     Label(title, systemImage: "square.grid.2x2")
                         .font(.headline)
                     Spacer()
-                    Text("\(nodes.count)")
+                    Text(selectionSummary)
                         .font(.caption)
                         .foregroundStyle(PrismediaColor.textSecondary)
+                    if let onSetSelected, !selectableIDs.isEmpty {
+                        Button("All") {
+                            for id in selectableIDs { onSetSelected(id, true) }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                        Button("None") {
+                            for id in selectableIDs { onSetSelected(id, false) }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                    }
                 }
             }
+        }
+
+        private var selectionSummary: String {
+            guard !selectableIDs.isEmpty else { return nodes.count.formatted() }
+            let selectedCount = selectedIDs.intersection(selectableIDs).count
+            return "\(selectedCount) of \(selectableIDs.count) selected"
         }
     }
 

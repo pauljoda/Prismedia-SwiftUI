@@ -6,6 +6,10 @@ actor SystemVideoAudioSession: VideoAudioSessionPreparing {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .moviePlayback)
             try session.setActive(true)
+        #elseif os(tvOS)
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default)
+            try session.setActive(true)
         #endif
     }
 }

@@ -5,6 +5,8 @@ import SwiftUI
 public struct PrismediaShellView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
     @Environment(PrismediaAppRouter.self) private var router
+    @State private var isAccountPresented = false
+    @State private var playbackPreferences = VideoPlaybackPreferences()
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -36,6 +38,15 @@ public struct PrismediaShellView: View {
         .onChange(of: availableModes) { _, _ in
             router.reconcile(with: availableModes)
         }
+        .sheet(isPresented: $isAccountPresented) {
+            if let user = environment.session?.user, let client = environment.client {
+                AccountView(
+                    user: user,
+                    service: AccountService(client: client),
+                    playbackPreferences: playbackPreferences
+                )
+            }
+        }
     }
 
     private func tabView(
@@ -64,6 +75,10 @@ public struct PrismediaShellView: View {
                         detailDependencies: detailDependencies,
                         videoPlaybackSession: videoPlaybackSession
                     )
+                    .environment(
+                        \.prismediaPageIsActive,
+                        router.selectedTab == .destination(destination.id)
+                    )
                 }
             }
 
@@ -78,6 +93,7 @@ public struct PrismediaShellView: View {
                     detailDependencies: detailDependencies,
                     videoPlaybackSession: videoPlaybackSession
                 )
+                .environment(\.prismediaPageIsActive, router.selectedTab == .search)
             }
         }
         .prismediaAdaptiveAppTabStyle()
@@ -223,6 +239,19 @@ public struct PrismediaShellView: View {
                 }
             )
 
+        case .favorites:
+            FavoritesView(
+                loader: PrismediaFavoritesLoader(client: client),
+                gridLoader: PrismediaEntityGridLoader(client: client),
+                detailDependencies: detailDependencies,
+                navigationPath: favoritesPathBinding(
+                    videoPlaybackSession: videoPlaybackSession
+                ),
+                reloadRevision: environment.contentRevision,
+                actionPolicy: libraryActionPolicy,
+                mutationService: client
+            )
+
         case .playbackStatistics:
             PlaybackStatisticsView(
                 loader: PrismediaPlaybackStatisticsLoader(client: client),
@@ -232,9 +261,6 @@ public struct PrismediaShellView: View {
                     videoPlaybackSession: videoPlaybackSession
                 )
             )
-
-        case .account:
-            AccountView(user: user, service: AccountService(client: client))
 
         case .administration(let administration):
             AdministrativeDestinationView(
@@ -302,7 +328,7 @@ public struct PrismediaShellView: View {
                     actionPolicy: libraryActionPolicy,
                     mutationService: client
                 )
-            } else if ["albums", "artists", "tracks"].contains(destination.id) {
+            } else if destination.id == "tracks" {
                 MusicLibraryView(
                     configuration: EntityGridConfiguration.library(
                         destinationID: destination.id,
@@ -310,9 +336,7 @@ public struct PrismediaShellView: View {
                         query: entityList.query,
                         supportsSearch: entityList.supportsSearch
                     ),
-                    layout: destination.id == "albums"
-                        ? .albums
-                        : destination.id == "tracks" ? .tracks : .artists,
+                    layout: .tracks,
                     loader: PrismediaEntityGridLoader(client: client)
                 )
             } else {
@@ -360,6 +384,13 @@ public struct PrismediaShellView: View {
             },
             actionPolicy: libraryActionPolicy,
             mutationService: client,
+            topContent: { context in
+                #if os(iOS) || os(macOS)
+                    if destination.id == "albums" {
+                        MusicLibraryPlaybackActions(context: context)
+                    }
+                #endif
+            },
             itemContent: { item, layout in
                 EntityThumbnailNavigationSurface(item: item, layout: layout)
             }
@@ -378,7 +409,9 @@ public struct PrismediaShellView: View {
         ) -> some View {
             MusicPlaybackHost {
                 VideoPlaybackHost(
-                    client: client, onRestore: restoreVideoPlayback,
+                    client: client,
+                    preferences: playbackPreferences,
+                    onRestore: restoreVideoPlayback,
                     content: { session in
                         if AppShellLayoutPolicy.usesWideShell(
                             horizontalSizeClass: horizontalSizeClass,
@@ -409,7 +442,9 @@ public struct PrismediaShellView: View {
         ) -> some View {
             MacMusicPlaybackHost(client: client) {
                 VideoPlaybackHost(
-                    client: client, onRestore: restoreVideoPlayback,
+                    client: client,
+                    preferences: playbackPreferences,
+                    onRestore: restoreVideoPlayback,
                     content: { session in
                         wideShell(
                             user: user,
@@ -444,6 +479,18 @@ public struct PrismediaShellView: View {
                 guard newPath != router.path(for: destinationID) else { return }
                 videoPlaybackSession.inlinePlaybackWillNavigate()
                 router.setPath(newPath, for: destinationID)
+            }
+        )
+    }
+
+    private func favoritesPathBinding(
+        videoPlaybackSession: VideoPlaybackSession
+    ) -> Binding<NavigationPath> {
+        Binding(
+            get: { router.favoritesPath },
+            set: { newPath in
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+                router.setFavoritesPath(newPath)
             }
         )
     }
@@ -518,9 +565,8 @@ public struct PrismediaShellView: View {
 
     private func accountAction(videoPlaybackSession: VideoPlaybackSession) -> () -> Void {
         {
-            guard let account = ModeCatalog.overview.destination(id: "account") else { return }
             videoPlaybackSession.inlinePlaybackWillNavigate()
-            router.select(mode: ModeCatalog.overview, destination: account)
+            isAccountPresented = true
         }
     }
 

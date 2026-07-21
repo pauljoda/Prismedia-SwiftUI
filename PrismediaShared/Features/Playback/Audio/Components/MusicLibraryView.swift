@@ -7,10 +7,8 @@
         @State private var snapshot: EntityGridSnapshot
         @State private var searchText = ""
         @State private var filtersPresented = false
-        @State private var loadingQueueMode: MusicQueueStartMode?
         @State private var artistNamesByID: [UUID: String] = [:]
         @State private var visibleTracksByID: [UUID: MusicTrack] = [:]
-        @State private var playbackError: String?
 
         private let configuration: EntityGridConfiguration
         private let layout: MusicLibraryLayout
@@ -93,11 +91,6 @@
             .task(id: parentArtistIDs) { await resolveParentArtists() }
             .task(id: visibleTrackIDs) { await resolveVisibleTracks() }
             .refreshable { await refresh() }
-            .alert("Couldn’t Start Playback", isPresented: playbackErrorPresented) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(playbackError ?? "Please try again.")
-            }
         }
 
         @ViewBuilder
@@ -309,12 +302,13 @@
         }
 
         private var playbackHeader: some View {
-            MusicPlaybackButtons(
-                loadingMode: loadingQueueMode,
-                isDisabled: snapshot.items.isEmpty
-            ) { queueMode in
-                Task { await playLibrary(queueMode: queueMode) }
-            }
+            MusicLibraryPlaybackActions(
+                context: EntityGridTopContentContext(
+                    query: snapshot.controls.applying(to: configuration.query),
+                    search: snapshot.activeSearch,
+                    visibleItemCount: snapshot.items.count
+                )
+            )
             .padding(.top, PrismediaSpacing.extraSmall)
         }
 
@@ -480,34 +474,6 @@
             Task(priority: .utility) { await RemoteArtworkPipeline.shared.prewarm(urls) }
         }
 
-        private func playLibrary(queueMode: MusicQueueStartMode) async {
-            guard let client = environment.client else { return }
-            guard loadingQueueMode == nil else { return }
-            loadingQueueMode = queueMode
-            defer { loadingQueueMode = nil }
-            do {
-                let tracks = try await MusicLibraryQueueLoader(client: client).tracks(
-                    matching: snapshot.controls.applying(to: configuration.query),
-                    search: snapshot.activeSearch
-                )
-                guard !tracks.isEmpty else { return }
-                controller.preparePlayback(
-                    tracks: tracks,
-                    queueMode: queueMode
-                )
-                await MusicQueueArtworkPreloader(
-                    playbackService: client,
-                    artworkLoader: environment.artworkLoader
-                ).prewarm(queue: controller.queue)
-                guard !Task.isCancelled else { return }
-                controller.resume()
-            } catch is CancellationError {
-                return
-            } catch {
-                playbackError = error.localizedDescription
-            }
-        }
-
         private func playVisibleTracks(startingAt trackID: UUID) {
             let tracks = orderedLibraryItems.map {
                 visibleTracksByID[$0.id] ?? MusicTrack(thumbnail: $0)
@@ -515,12 +481,6 @@
             controller.play(tracks: tracks, startingAt: trackID)
         }
 
-        private var playbackErrorPresented: Binding<Bool> {
-            Binding(
-                get: { playbackError != nil },
-                set: { if !$0 { playbackError = nil } }
-            )
-        }
     }
 
     #if DEBUG

@@ -51,6 +51,23 @@ public struct TrickplayPlaylist: Equatable, Sendable {
         self.frames = frames
     }
 
+    public func frame(at time: TimeInterval) -> Frame? {
+        guard !frames.isEmpty else { return nil }
+        let target = time.isFinite ? time : 0
+        var lowerBound = 0
+        var upperBound = frames.count
+
+        while lowerBound < upperBound {
+            let midpoint = (lowerBound + upperBound) / 2
+            if frames[midpoint].startTime <= target {
+                lowerBound = midpoint + 1
+            } else {
+                upperBound = midpoint
+            }
+        }
+        return frames[max(0, lowerBound - 1)]
+    }
+
     public static func parse(contents: String, playlistURL: URL) throws -> Self {
         if contents.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("WEBVTT") {
             return try parseWebVTT(contents: contents, playlistURL: playlistURL)

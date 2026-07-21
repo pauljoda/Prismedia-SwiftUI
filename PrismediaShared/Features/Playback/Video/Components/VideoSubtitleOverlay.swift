@@ -3,6 +3,17 @@ import SwiftUI
 struct VideoSubtitleOverlay: View {
     let content: VideoSubtitleText
     let appearance: VideoSubtitleAppearance
+    let additionalBottomInset: CGFloat
+
+    init(
+        content: VideoSubtitleText,
+        appearance: VideoSubtitleAppearance,
+        additionalBottomInset: CGFloat = 0
+    ) {
+        self.content = content
+        self.appearance = appearance
+        self.additionalBottomInset = additionalBottomInset
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -10,7 +21,10 @@ struct VideoSubtitleOverlay: View {
                 Spacer(minLength: 0)
                 caption
                     .frame(maxWidth: proxy.size.width * 0.86)
-                    .padding(.bottom, proxy.size.height * appearance.bottomInsetFraction)
+                    .padding(
+                        .bottom,
+                        proxy.size.height * appearance.bottomInsetFraction + additionalBottomInset
+                    )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

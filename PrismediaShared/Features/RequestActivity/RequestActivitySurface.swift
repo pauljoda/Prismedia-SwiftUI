@@ -2,6 +2,12 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     public struct RequestActivitySurface: View {
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
+        #if os(iOS)
+            @Environment(\.editMode) private var editMode
+        #endif
+
         @State private var downloads: [RequestActivityDownload] = []
         @State private var wantedPage: RequestActivityWantedPage?
         @State private var history: [RequestActivityHistoryEntry] = []
@@ -16,7 +22,6 @@ import SwiftUI
         @State private var page = 1
         @State private var selectedIDs = Set<UUID>()
         @State private var pendingRemovalIDs = Set<UUID>()
-        @State private var historyLoaded = false
         @State private var selectedAcquisition: RequestActivityDownload?
 
         private let section: RequestActivitySection
@@ -45,7 +50,7 @@ import SwiftUI
         public var body: some View {
             content
                 .searchable(text: $query, prompt: searchPrompt)
-                .navigationTitle(section.title)
+                .navigationTitle(selectedIDs.isEmpty ? section.title : "\(selectedIDs.count) Selected")
                 .toolbar { toolbarContent }
                 .refreshable { await refresh() }
                 .overlay { overlayContent }
@@ -72,8 +77,9 @@ import SwiftUI
                     )
                 }
                 .task(id: taskIdentity) {
-                    await load(showSpinner: true)
-                    await pollDownloadsWhileActive()
+                    guard liveRefreshIsActive else { return }
+                    await load(showSpinner: currentSourceIsEmpty)
+                    await pollWhileVisible()
                 }
                 .onChange(of: section) {
                     selectedIDs = []
@@ -101,6 +107,7 @@ import SwiftUI
             let items = visibleDownloads
             return List(selection: $selectedIDs) {
                 errorSection
+                downloadFilterSection
                 ForEach(items) { item in
                     RequestActivityDownloadRow(
                         item: item,
@@ -128,6 +135,7 @@ import SwiftUI
             let totalPages = max(1, Int(ceil(Double(wantedPage?.total ?? 0) / 50)))
             return List(selection: $selectedIDs) {
                 errorSection
+                wantedFilterSection
                 ForEach(items) { item in
                     RequestActivityWantedRow(
                         item: item,
@@ -213,54 +221,62 @@ import SwiftUI
 
         @ToolbarContentBuilder
         private var toolbarContent: some ToolbarContent {
-            if section == .downloads || section == .missing || section == .cutoffUnmet {
-                ToolbarItem(placement: .primaryAction) {
-                    filterMenu
-                }
-            }
-            if !selectedIDs.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    selectionMenu
-                }
-            }
             #if os(iOS)
                 if section != .history {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        EditButton()
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    ToolbarItemGroup(placement: trailingToolbarPlacement) {
+                        if !selectedIDs.isEmpty {
+                            selectionMenu
+                        }
+                        selectionToggleButton
+                    }
+                }
+            #else
+                if !selectedIDs.isEmpty {
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    ToolbarItem(placement: trailingToolbarPlacement) {
+                        selectionMenu
                     }
                 }
             #endif
         }
 
-        private var filterMenu: some View {
-            Menu {
-                if section == .downloads {
-                    Picker("Status", selection: $selectedStatus) {
-                        ForEach(RequestActivityStatusFilter.allCases) { filter in
-                            Text(filter.title).tag(filter)
-                        }
-                    }
-                    Picker("Kind", selection: $selectedDownloadKind) {
-                        Text("All Kinds").tag(nil as EntityKind?)
-                        ForEach(downloadKinds) { kind in
-                            Text(kind.displayLabel).tag(kind as EntityKind?)
-                        }
-                    }
-                    Picker("Sort", selection: $sort) {
-                        ForEach(RequestActivitySort.allCases) { option in
-                            Text(option.title).tag(option)
-                        }
-                    }
-                } else {
-                    Picker("Kind", selection: $selectedWantedKind) {
-                        Text("All Kinds").tag(nil as EntityKind?)
-                        ForEach(RequestActivityKindCatalog.wanted) { kind in
-                            Text(kind.displayLabel).tag(kind as EntityKind?)
-                        }
+        private var downloadFilterSection: some View {
+            Section("Filters") {
+                Picker("Status", selection: $selectedStatus) {
+                    ForEach(RequestActivityStatusFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
                     }
                 }
-            } label: {
-                Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
+                .pickerStyle(.menu)
+
+                Picker("Kind", selection: $selectedDownloadKind) {
+                    Text("All Kinds").tag(nil as EntityKind?)
+                    ForEach(downloadKinds) { kind in
+                        Text(kind.displayLabel).tag(kind as EntityKind?)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Picker("Sort", selection: $sort) {
+                    ForEach(RequestActivitySort.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+            .accessibilityIdentifier("request-activity.filters")
+        }
+
+        private var wantedFilterSection: some View {
+            Section("Filters") {
+                Picker("Kind", selection: $selectedWantedKind) {
+                    Text("All Kinds").tag(nil as EntityKind?)
+                    ForEach(RequestActivityKindCatalog.wanted) { kind in
+                        Text(kind.displayLabel).tag(kind as EntityKind?)
+                    }
+                }
+                .pickerStyle(.menu)
             }
             .accessibilityIdentifier("request-activity.filters")
         }
@@ -282,8 +298,36 @@ import SwiftUI
                     }
                 }
             } label: {
-                Label("Selected \(selectedIDs.count)", systemImage: "checkmark.circle")
+                Image(systemName: "ellipsis")
             }
+            .accessibilityLabel("Selected Item Actions")
+            .accessibilityValue("\(selectedIDs.count) selected")
+        }
+
+        #if os(iOS)
+            private var selectionToggleButton: some View {
+                Button {
+                    withAnimation {
+                        if editMode?.wrappedValue.isEditing == true {
+                            editMode?.wrappedValue = .inactive
+                            selectedIDs.removeAll()
+                        } else {
+                            editMode?.wrappedValue = .active
+                        }
+                    }
+                } label: {
+                    Image(systemName: editMode?.wrappedValue.isEditing == true ? "checkmark" : "checkmark.circle")
+                }
+                .accessibilityLabel(editMode?.wrappedValue.isEditing == true ? "Done Selecting" : "Select Items")
+            }
+        #endif
+
+        private var trailingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarTrailing
+            #else
+                .primaryAction
+            #endif
         }
 
         private var visibleDownloads: [RequestActivityDownload] {
@@ -361,13 +405,11 @@ import SwiftUI
         }
 
         private var taskIdentity: String {
-            let activeDownloadIDs =
-                downloads
-                .filter { RequestActivityStatusPolicy.shouldPoll($0.status) }
-                .map(\.id.uuidString)
-                .sorted()
-                .joined(separator: ",")
-            return "\(loadIdentity)-\(activeDownloadIDs)"
+            "\(loadIdentity)-\(liveRefreshIsActive)"
+        }
+
+        private var liveRefreshIsActive: Bool {
+            pageIsActive && scenePhase == .active && selectedAcquisition == nil
         }
 
         private var removalPresented: Binding<Bool> {
@@ -382,57 +424,67 @@ import SwiftUI
             return "Remove \(count) \(count == 1 ? "Download" : "Downloads")?"
         }
 
-        private func load(showSpinner: Bool) async {
+        private func load(showSpinner: Bool, reportsErrors: Bool = true) async {
             if showSpinner { isLoading = true }
-            defer { isLoading = false }
+            defer { if showSpinner { isLoading = false } }
             do {
                 switch section {
                 case .downloads:
-                    downloads = try await service.listRequestActivityDownloads()
+                    let nextDownloads = try await service.listRequestActivityDownloads()
+                    if downloads != nextDownloads { downloads = nextDownloads }
                 case .missing:
-                    wantedPage = try await service.listRequestActivityWanted(
+                    let nextPage = try await service.listRequestActivityWanted(
                         .missing,
                         page: page,
                         pageSize: 50,
                         kind: selectedWantedKind
                     )
+                    if wantedPage != nextPage { wantedPage = nextPage }
                 case .cutoffUnmet:
-                    wantedPage = try await service.listRequestActivityWanted(
+                    let nextPage = try await service.listRequestActivityWanted(
                         .cutoffUnmet,
                         page: page,
                         pageSize: 50,
                         kind: selectedWantedKind
                     )
+                    if wantedPage != nextPage { wantedPage = nextPage }
                 case .history:
-                    guard !historyLoaded else { return }
-                    history = try await service.listRequestActivityHistory(limit: 200, entityID: nil)
-                    historyLoaded = true
+                    let nextHistory = try await service.listRequestActivityHistory(limit: 200, entityID: nil)
+                    if history != nextHistory { history = nextHistory }
                 }
-                errorMessage = nil
-                selectedIDs.formIntersection(currentIDs)
+                if errorMessage != nil { errorMessage = nil }
+                let validSelection = selectedIDs.intersection(currentIDs)
+                if selectedIDs != validSelection { selectedIDs = validSelection }
             } catch is CancellationError {
                 return
             } catch {
-                errorMessage = error.localizedDescription
+                if reportsErrors { errorMessage = error.localizedDescription }
             }
         }
 
         private func refresh() async {
-            if section == .history { historyLoaded = false }
             await load(showSpinner: currentSourceIsEmpty)
         }
 
-        private func pollDownloadsWhileActive() async {
-            guard section == .downloads else { return }
-            while downloads.contains(where: { RequestActivityStatusPolicy.shouldPoll($0.status) }) {
+        private func pollWhileVisible() async {
+            while liveRefreshIsActive {
                 do {
-                    try await Task.sleep(for: .seconds(4))
+                    try await Task.sleep(for: liveRefreshInterval)
                 } catch {
                     return
                 }
-                guard !Task.isCancelled else { return }
-                await load(showSpinner: false)
+                guard !Task.isCancelled, liveRefreshIsActive else { return }
+                await load(showSpinner: false, reportsErrors: false)
             }
+        }
+
+        private var liveRefreshInterval: Duration {
+            if section == .downloads,
+                downloads.contains(where: { RequestActivityStatusPolicy.shouldPoll($0.status) })
+            {
+                return .seconds(4)
+            }
+            return .seconds(12)
         }
 
         private var currentIDs: Set<UUID> {

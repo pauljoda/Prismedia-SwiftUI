@@ -73,6 +73,19 @@ final class Step3AdministrationAPIClientTests: XCTestCase {
         XCTAssertEqual(try jsonBody(loader.requests[4])["userIds"] as? [String], [userID.uuidString])
     }
 
+    func testLibraryInventoryDoesNotRevealNsfwRootsUntilTheViewPreferenceIsEnabled() async throws {
+        let response = "[\(rootJSON),\(nsfwRootJSON)]"
+        let loader = MockHTTPDataLoader(responses: [.json(response), .json(response)])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let hiddenInventory = try await client.listAdministrativeLibraryRoots()
+        client.updateNsfwContentPreference(true)
+        let visibleInventory = try await client.listAdministrativeLibraryRoots()
+
+        XCTAssertEqual(hiddenInventory.map(\.label), ["Movies"])
+        XCTAssertEqual(visibleInventory.map(\.label), ["Movies", "Private"])
+    }
+
     func testUserAdministrationUsesCrudPasswordAndAtomicLibraryAccessContracts() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json("{\"items\":[\(userJSON)]}"),
@@ -135,6 +148,12 @@ final class Step3AdministrationAPIClientTests: XCTestCase {
 
     private var rootJSON: String {
         #"{"id":"\#(rootID)","path":"/media/movies","label":"Movies","enabled":true,"recursive":true,"scanVideos":true,"scanImages":false,"scanAudio":false,"scanBooks":false,"isNsfw":false,"lastScannedAt":null,"createdAt":"2026-07-01T12:00:00Z","updatedAt":"2026-07-01T12:00:00Z","autoIdentify":true,"createdByUserId":null,"accessUserIds":[]}"#
+    }
+
+    private var nsfwRootJSON: String {
+        rootJSON
+            .replacingOccurrences(of: #""label":"Movies""#, with: #""label":"Private""#)
+            .replacingOccurrences(of: #""isNsfw":false"#, with: #""isNsfw":true"#)
     }
 
     private var backupListJSON: String {

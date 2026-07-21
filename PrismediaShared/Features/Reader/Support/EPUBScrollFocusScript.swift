@@ -69,35 +69,48 @@ enum EPUBScrollFocusScript {
             (document.body ?? document.documentElement).appendChild(endSpacer);
           };
 
-          const measureBlock = (element, viewportCenter) => {
+          const focusTargetY = (viewportCenter) => {
+            const firstBlock = blocks[0];
+            if (!firstBlock) return viewportCenter;
+
+            const scrollElement = document.scrollingElement ?? document.documentElement;
+            const scrollTop = Math.max(0, scrollElement.scrollTop);
+            const firstRect = firstBlock.getBoundingClientRect();
+            const firstBlockDocumentCenter = (firstRect.top + firstRect.bottom) / 2 + scrollTop;
+            return Math.min(
+              viewportCenter,
+              Math.max(0, firstBlockDocumentCenter + scrollTop)
+            );
+          };
+
+          const measureBlock = (element, focusTarget) => {
             const rect = element.getBoundingClientRect();
             const isVisible = rect.bottom > 0 && rect.top < window.innerHeight;
-            const containsCenter = rect.top <= viewportCenter && rect.bottom >= viewportCenter;
-            let distanceFromCenter = 0;
-            if (rect.bottom < viewportCenter) {
-              distanceFromCenter = viewportCenter - rect.bottom;
-            } else if (rect.top > viewportCenter) {
-              distanceFromCenter = rect.top - viewportCenter;
+            const containsFocusTarget = rect.top <= focusTarget && rect.bottom >= focusTarget;
+            let distanceFromFocusTarget = 0;
+            if (rect.bottom < focusTarget) {
+              distanceFromFocusTarget = focusTarget - rect.bottom;
+            } else if (rect.top > focusTarget) {
+              distanceFromFocusTarget = rect.top - focusTarget;
             }
-            return { element, rect, isVisible, containsCenter, distanceFromCenter };
+            return {
+              element,
+              isVisible,
+              containsFocusTarget,
+              distanceFromFocusTarget
+            };
           };
 
           const activeMeasurement = (visibleMeasurements) => {
             if (visibleMeasurements.length === 0) return null;
 
-            const scrollElement = document.scrollingElement ?? document.documentElement;
-            const startThreshold = Math.max(2, window.innerHeight * 0.01);
-            if (scrollElement.scrollTop <= startThreshold) {
-              return visibleMeasurements[0];
-            }
-
-            const containingParagraph = visibleMeasurements.find(({ containsCenter }) => {
-              return containsCenter;
+            const containingParagraph = visibleMeasurements.find(({ containsFocusTarget }) => {
+              return containsFocusTarget;
             });
             if (containingParagraph) return containingParagraph;
 
             return visibleMeasurements.reduce((closest, measurement) => {
-              return measurement.distanceFromCenter < closest.distanceFromCenter
+              return measurement.distanceFromFocusTarget < closest.distanceFromFocusTarget
                 ? measurement
                 : closest;
             });
@@ -111,20 +124,21 @@ enum EPUBScrollFocusScript {
             }
 
             const viewportCenter = window.innerHeight / 2;
+            const focusTarget = focusTargetY(viewportCenter);
             const fadeRadius = Math.max(140, window.innerHeight * 0.52);
             const minimumOpacity = Math.max(0.2, 1 - state.strength);
             const inactiveCeiling = minimumOpacity + (1 - minimumOpacity) * 0.35;
-            const measurements = blocks.map((element) => measureBlock(element, viewportCenter));
+            const measurements = blocks.map((element) => measureBlock(element, focusTarget));
             const visibleMeasurements = measurements.filter(({ isVisible }) => isVisible);
             const active = activeMeasurement(visibleMeasurements);
 
-            measurements.forEach(({ element, distanceFromCenter }) => {
+            measurements.forEach(({ element, distanceFromFocusTarget }) => {
               rememberOpacity(element);
               let opacity = minimumOpacity;
               if (element === active?.element) {
                 opacity = 1;
-              } else if (distanceFromCenter < fadeRadius) {
-                const progress = distanceFromCenter / fadeRadius;
+              } else if (distanceFromFocusTarget < fadeRadius) {
+                const progress = distanceFromFocusTarget / fadeRadius;
                 opacity = Math.min(
                   inactiveCeiling,
                   1 - progress * (1 - minimumOpacity)

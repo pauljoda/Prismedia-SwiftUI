@@ -4,7 +4,9 @@ public struct EntityGridSelectionState: Equatable, Sendable {
     public private(set) var isActive = false
     public private(set) var selectedIDs = Set<UUID>()
 
-    public init() {}
+    public init(isActive: Bool = false) {
+        self.isActive = isActive
+    }
 
     public mutating func enter() {
         isActive = true

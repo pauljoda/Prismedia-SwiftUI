@@ -3,6 +3,34 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityGridControlsTests: XCTestCase {
+    func testListAndSortControlsDefaultToAscending() {
+        let query = EntityListQuery(kind: .video, sort: "added")
+        let controls = EntityGridControls(baselineQuery: query)
+
+        XCTAssertFalse(query.sortDescending)
+        XCTAssertFalse(controls.sortDescending)
+        XCTAssertTrue(EntityGridSort.allCases.allSatisfy { !$0.defaultDescending })
+    }
+
+    func testFavoritesCatalogLocksEveryBrowsableEntityKindToFavoriteRecency() {
+        XCTAssertEqual(
+            FavoritesCatalog.sections.map(\.kind),
+            [
+                .video, .movie, .videoSeries, .gallery, .image,
+                .audioLibrary, .musicArtist, .audioTrack,
+                .book, .bookAuthor, .collection, .person, .studio, .tag,
+            ]
+        )
+        XCTAssertTrue(
+            FavoritesCatalog.sections.allSatisfy { section in
+                section.query.favorite == true
+                    && section.query.sort == EntityGridSort.lastAccessed.rawValue
+                    && section.query.sortDescending
+                    && section.query.kind == section.kind
+            }
+        )
+    }
+
     func testPersistedPreferencesRestoreControlsWithoutReplacingRouteDefaults() throws {
         let baseline = EntityListQuery(
             kind: .book,
@@ -68,6 +96,32 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(configuration.resolvedDisplayMode(restoring: .grid), .list)
         XCTAssertEqual(configuration.resolvedDisplayMode(restoring: .list), .list)
         XCTAssertEqual(configuration.resolvedDisplayMode(restoring: nil), .list)
+    }
+
+    func testConfigurationCanProvideUserVisibleDefaultFiltersWithoutLockingTheRouteQuery() {
+        var defaultFilters = EntityGridFilters()
+        defaultFilters.organization = .unorganized
+        let configuration = EntityGridConfiguration(
+            title: "Identify Movies",
+            query: EntityListQuery(kind: .movie),
+            defaultFilters: defaultFilters
+        )
+        var snapshot = EntityGridSnapshot(configuration: configuration)
+
+        XCTAssertEqual(snapshot.controls.filters.organization, .unorganized)
+        XCTAssertEqual(
+            snapshot.controls.applying(to: configuration.query).organized,
+            false
+        )
+
+        var showAll = snapshot.controls
+        showAll.filters.organization = .any
+        snapshot.setControls(showAll)
+
+        XCTAssertNil(snapshot.controls.applying(to: configuration.query).organized)
+
+        snapshot.resetControls(for: configuration)
+        XCTAssertEqual(snapshot.controls.filters.organization, .unorganized)
     }
 
     func testPreferencesEncodeUserControlsAsOneNestedValue() throws {

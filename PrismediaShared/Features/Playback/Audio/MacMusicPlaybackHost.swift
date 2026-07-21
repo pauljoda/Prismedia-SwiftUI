@@ -51,6 +51,13 @@
                     guard phase != .active else { return }
                     Task { await controller.flushAudiobookProgress() }
                 }
+                .onChange(of: controller.currentQueueID) {
+                    miniPlayerVisibility.revealForPlaybackActivity()
+                }
+                .onChange(of: controller.isPlaying) { _, isPlaying in
+                    guard isPlaying else { return }
+                    miniPlayerVisibility.revealForPlaybackActivity()
+                }
         }
 
         private func connectPlaybackSystem() {

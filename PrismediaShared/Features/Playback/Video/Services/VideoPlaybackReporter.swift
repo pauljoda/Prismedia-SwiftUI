@@ -66,8 +66,15 @@ final class VideoPlaybackReporter {
         guard !isTerminal, let context else { return }
         hasStarted = true
         isTerminal = true
-        record(.stopped, context: context, positionSeconds: 0, isPaused: true)
-        markPlayed(videoID: context.videoID)
+        let completionPosition = context.durationSeconds.isFinite && context.durationSeconds > 0
+            ? max(context.durationSeconds, lastReportedPosition)
+            : lastReportedPosition
+        record(
+            .stopped,
+            context: context,
+            positionSeconds: completionPosition,
+            isPaused: true
+        )
     }
 
     func waitForPendingReports() async {
@@ -99,12 +106,6 @@ final class VideoPlaybackReporter {
         lastReportedPosition = max(0, positionSeconds)
         enqueue { service in
             try await service.reportVideoPlayback(event, report: report)
-        }
-    }
-
-    private func markPlayed(videoID: UUID) {
-        enqueue { service in
-            try await service.markVideoPlayed(videoID: videoID)
         }
     }
 

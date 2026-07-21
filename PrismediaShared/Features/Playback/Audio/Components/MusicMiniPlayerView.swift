@@ -3,6 +3,7 @@
 
     struct MusicMiniPlayerView: View {
         @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+        @Environment(\.musicMiniPlayerVisibility) private var visibility
         @Environment(MusicPlayerController.self) private var controller
         let showNowPlaying: () -> Void
 
@@ -62,8 +63,8 @@
                 .padding(.horizontal, placement == .inline ? 6 : 10)
                 .padding(.vertical, placement == .inline ? 3 : 6)
                 .contextMenu {
-                    Button("Close Player", systemImage: "xmark", role: .destructive) {
-                        controller.clearPlayback()
+                    Button("Hide Player", systemImage: "xmark") {
+                        visibility?.hideByUser()
                     }
                 }
                 .accessibilityIdentifier("music.mini-player")

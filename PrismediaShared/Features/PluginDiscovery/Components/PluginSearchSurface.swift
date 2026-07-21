@@ -19,12 +19,15 @@ import SwiftUI
         private let submitDisabled: Bool
         private let errorMessage: String?
         private let searchStatus: String?
+        private let notices: [String]
         private let activeCandidateID: PluginSearchCandidateIdentity?
+        private let candidateDetail: ((AdministrativeEntitySearchCandidate) -> String?)?
         private let onProviderChange: ((String) -> Void)?
         private let onSearch: ([String: String]) -> Void
         private let onClear: (() -> Void)?
         private let onCandidateActivate: (AdministrativeEntitySearchCandidate) -> Void
         private let onCandidatePreview: ((AdministrativeEntitySearchCandidate) -> Void)?
+        private let onLoadMore: (() -> Void)?
         private let onRescan: (() -> Void)?
         private let isRescanning: Bool
         private let onSeek: (() -> Void)?
@@ -48,12 +51,15 @@ import SwiftUI
             submitDisabled: Bool = false,
             errorMessage: String? = nil,
             searchStatus: String? = nil,
+            notices: [String] = [],
             activeCandidateID: PluginSearchCandidateIdentity? = nil,
+            candidateDetail: ((AdministrativeEntitySearchCandidate) -> String?)? = nil,
             onProviderChange: ((String) -> Void)? = nil,
             onSearch: @escaping ([String: String]) -> Void,
             onClear: (() -> Void)? = nil,
             onCandidateActivate: @escaping (AdministrativeEntitySearchCandidate) -> Void,
             onCandidatePreview: ((AdministrativeEntitySearchCandidate) -> Void)? = nil,
+            onLoadMore: (() -> Void)? = nil,
             onRescan: (() -> Void)? = nil,
             isRescanning: Bool = false,
             onSeek: (() -> Void)? = nil,
@@ -76,12 +82,15 @@ import SwiftUI
             self.submitDisabled = submitDisabled
             self.errorMessage = errorMessage
             self.searchStatus = searchStatus
+            self.notices = notices
             self.activeCandidateID = activeCandidateID
+            self.candidateDetail = candidateDetail
             self.onProviderChange = onProviderChange
             self.onSearch = onSearch
             self.onClear = onClear
             self.onCandidateActivate = onCandidateActivate
             self.onCandidatePreview = onCandidatePreview
+            self.onLoadMore = onLoadMore
             self.onRescan = onRescan
             self.isRescanning = isRescanning
             self.onSeek = onSeek
@@ -89,10 +98,12 @@ import SwiftUI
         }
 
         var body: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                searchPanel
-                candidatePanel
+            List {
+                searchSection
+                noticesSection
+                candidateSection
             }
+            .prismediaScreenBackground()
             .onChange(of: eligibleProviders.map(\.id), initial: true) { _, _ in
                 reconcileProviderSelection()
             }
@@ -106,28 +117,39 @@ import SwiftUI
             .accessibilityIdentifier("plugin-search.surface")
         }
 
-        private var searchPanel: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                header
-
-                if let activeProvider {
-                    Picker(providerLabel, selection: providerSelection) {
-                        ForEach(eligibleProviders) { provider in
-                            Text(provider.name).tag(provider.id)
-                        }
+        @ViewBuilder
+        private var noticesSection: some View {
+            if !notices.isEmpty {
+                Section("Provider Warnings") {
+                    ForEach(notices, id: \.self) { notice in
+                        Label(notice, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(PrismediaColor.warning)
                     }
-                    .pickerStyle(.menu)
+                }
+                .accessibilityIdentifier("plugin-search.warnings")
+            }
+        }
+
+        private var searchSection: some View {
+            Section {
+                if activeProvider != nil {
+                    LabeledContent(providerLabel) {
+                        Picker(providerLabel, selection: providerSelection) {
+                            ForEach(eligibleProviders) { provider in
+                                Text(provider.name).tag(provider.id)
+                            }
+                        }
+                        .labelsHidden()
+                    }
                     .disabled(isBusy)
                     .accessibilityIdentifier("plugin-search.provider")
 
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                        ForEach(searchFields) { field in
-                            PluginSearchFieldControl(
-                                field: field,
-                                value: fieldBinding(field.key),
-                                isDisabled: isBusy
-                            )
-                        }
+                    ForEach(searchFields) { field in
+                        PluginSearchFieldControl(
+                            field: field,
+                            value: fieldBinding(field.key),
+                            isDisabled: isBusy
+                        )
                     }
 
                     actionRow
@@ -135,14 +157,11 @@ import SwiftUI
                     if let searchStatus, !searchStatus.isEmpty {
                         Label(searchStatus, systemImage: "clock.arrow.circlepath")
                             .font(.caption)
-                            .foregroundStyle(PrismediaColor.textSecondary)
+                            .foregroundStyle(.secondary)
                             .accessibilityIdentifier("plugin-search.status")
                     }
 
-                    Text("Searching with \(activeProvider.name)")
-                        .font(.caption2)
-                        .foregroundStyle(PrismediaColor.textMuted)
-                        .accessibilityHidden(true)
+                    providerActions
                 } else {
                     ContentUnavailableView(
                         "No Search Providers",
@@ -151,108 +170,86 @@ import SwiftUI
                     )
                     .accessibilityIdentifier("plugin-search.no-provider")
                 }
-            }
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
-        }
-
-        private var header: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.small) {
-                    Label(title, systemImage: "magnifyingglass")
-                        .font(.headline)
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                    if let description, !description.isEmpty {
-                        Text(description)
-                            .font(.subheadline)
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                    Spacer(minLength: 0)
-                }
-
-                if onRescan != nil || onSeek != nil {
-                    HStack(spacing: PrismediaSpacing.small) {
-                        if let onRescan {
-                            PrismediaButton(
-                                isRescanning ? "Rescanning" : "Rescan",
-                                systemImage: "arrow.clockwise",
-                                isLoading: isRescanning,
-                                action: onRescan
-                            )
-                            .disabled(isBusy)
-                        }
-                        if let onSeek {
-                            PrismediaButton(
-                                isSeeking ? "Seeking" : "Seek across providers",
-                                systemImage: "scope",
-                                isLoading: isSeeking,
-                                action: onSeek
-                            )
-                            .disabled(isBusy)
-                        }
-                    }
-                }
-            }
-        }
-
-        private var actionRow: some View {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    searchButtons
-                }
-                VStack(spacing: PrismediaSpacing.medium) {
-                    searchButtons
+            } header: {
+                Label(title, systemImage: "magnifyingglass")
+            } footer: {
+                if let description, !description.isEmpty {
+                    Text(description)
+                } else if let activeProvider {
+                    Text("Searching with \(activeProvider.name)")
                 }
             }
         }
 
         @ViewBuilder
-        private var searchButtons: some View {
-            PrismediaButton(
-                "Clear",
-                systemImage: "xmark",
-                form: .fill
-            ) {
-                values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
-                onClear?()
-            }
-            .disabled(isBusy || values.values.allSatisfy(\.isEmpty))
-
-            PrismediaButton(
-                isSearching ? "Searching" : "Search",
-                systemImage: "magnifyingglass",
-                variant: .prominent,
-                form: .fill,
-                isLoading: isSearching
-            ) {
-                onSearch(
-                    PluginSearchFieldPolicy.submittedValues(
-                        fields: searchFields,
-                        values: values
-                    ))
-            }
-            .disabled(!canSearch)
-            .accessibilityIdentifier("plugin-search.submit")
-        }
-
-        private var candidatePanel: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Candidates")
-                        .font(.headline)
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                    Spacer()
-                    if case .results(let count) = presentationState {
-                        Text("\(count) found")
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.textSecondary)
+        private var providerActions: some View {
+            if onRescan != nil || onSeek != nil {
+                HStack(spacing: PrismediaSpacing.medium) {
+                    if let onRescan {
+                        PrismediaButton(
+                            isRescanning ? "Rescanning" : "Rescan Provider",
+                            systemImage: "arrow.clockwise",
+                            isLoading: isRescanning,
+                            action: onRescan
+                        )
+                        .disabled(isBusy)
+                    }
+                    if let onSeek {
+                        PrismediaButton(
+                            isSeeking ? "Trying Providers" : "Try All Providers",
+                            systemImage: "sparkles",
+                            isLoading: isSeeking,
+                            action: onSeek
+                        )
+                        .disabled(isBusy)
                     }
                 }
-
-                candidateContent
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
+        }
+
+        private var actionRow: some View {
+            HStack(spacing: PrismediaSpacing.medium) {
+                PrismediaButton("Clear", systemImage: "xmark") {
+                    values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
+                    onClear?()
+                }
+                .disabled(isBusy || values.values.allSatisfy(\.isEmpty))
+
+                Spacer(minLength: 0)
+
+                PrismediaButton(
+                    "Search",
+                    systemImage: "magnifyingglass",
+                    variant: .prominent,
+                    form: .compactIcon,
+                    primaryTint: PrismediaColor.spectrumCyan,
+                    isLoading: isSearching
+                ) {
+                    onSearch(
+                        PluginSearchFieldPolicy.submittedValues(
+                            fields: searchFields,
+                            values: values
+                        )
+                    )
+                }
+                .disabled(!canSearch)
+                .accessibilityIdentifier("plugin-search.submit")
+            }
+        }
+
+        private var candidateSection: some View {
+            Section {
+                candidateContent
+            } header: {
+                HStack {
+                    Text("Candidates")
+                    Spacer(minLength: 0)
+                    if case .results(let count) = presentationState {
+                        Text("\(count) found")
+                    }
+                }
+            }
             .accessibilityIdentifier("plugin-search.candidates")
         }
 
@@ -275,7 +272,7 @@ import SwiftUI
                 HStack(spacing: PrismediaSpacing.medium) {
                     ProgressView()
                     Text("Searching \(activeProvider?.name ?? "provider")…")
-                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 100)
                 .accessibilityElement(children: .combine)
@@ -287,19 +284,24 @@ import SwiftUI
                     description: Text("Try another provider or refine the search fields.")
                 )
             case .results:
-                LazyVStack(spacing: PrismediaSpacing.medium) {
-                    ForEach(candidates, id: \.pluginSearchIdentity) { candidate in
-                        PluginCandidateCard(
-                            candidate: candidate,
-                            isBestMatch: candidate.pluginSearchIdentity == candidates.first?.pluginSearchIdentity,
-                            isActive: candidate.pluginSearchIdentity == activeCandidateID,
-                            isDisabled: isBusy,
-                            onActivate: { onCandidateActivate(candidate) },
-                            onPreview: onCandidatePreview.map { preview in
-                                { preview(candidate) }
-                            }
-                        )
-                    }
+                ForEach(candidates, id: \.pluginSearchIdentity) { candidate in
+                    PluginCandidateCard(
+                        candidate: candidate,
+                        isBestMatch: candidate.pluginSearchIdentity == candidates.first?.pluginSearchIdentity,
+                        isActive: candidate.pluginSearchIdentity == activeCandidateID,
+                        isDisabled: isBusy,
+                        detail: candidateDetail?(candidate),
+                        onActivate: { onCandidateActivate(candidate) },
+                        onPreview: onCandidatePreview.map { preview in
+                            { preview(candidate) }
+                        }
+                    )
+                }
+                if let onLoadMore {
+                    Button("Load More", systemImage: "ellipsis.circle", action: onLoadMore)
+                        .disabled(isBusy)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("plugin-search.load-more")
                 }
             case .error(let message):
                 ContentUnavailableView(
@@ -388,26 +390,23 @@ import SwiftUI
             @Previewable @State var providerID = "tmdb"
             @Previewable @State var values = ["query": "Arrival", "year": "2016"]
             PreviewShell {
-                ScrollView {
-                    PluginSearchSurface(
-                        title: "Discover",
-                        description: "Choose a source and search",
-                        entityKind: "movie",
-                        hidesNsfw: true,
-                        providers: [PluginSearchPreviewFixtures.provider, PluginSearchPreviewFixtures.secondProvider],
-                        selectedProviderID: $providerID,
-                        values: $values,
-                        candidates: PluginSearchPreviewFixtures.candidates,
-                        hasSearched: true,
-                        activeCandidateID: PluginSearchPreviewFixtures.candidates[0].pluginSearchIdentity,
-                        onSearch: { _ in },
-                        onCandidateActivate: { _ in },
-                        onCandidatePreview: { _ in },
-                        onRescan: {},
-                        onSeek: {}
-                    )
-                    .padding()
-                }
+                PluginSearchSurface(
+                    title: "Discover",
+                    description: "Choose a source and search",
+                    entityKind: "movie",
+                    hidesNsfw: true,
+                    providers: [PluginSearchPreviewFixtures.provider, PluginSearchPreviewFixtures.secondProvider],
+                    selectedProviderID: $providerID,
+                    values: $values,
+                    candidates: PluginSearchPreviewFixtures.candidates,
+                    hasSearched: true,
+                    activeCandidateID: PluginSearchPreviewFixtures.candidates[0].pluginSearchIdentity,
+                    onSearch: { _ in },
+                    onCandidateActivate: { _ in },
+                    onCandidatePreview: { _ in },
+                    onRescan: {},
+                    onSeek: {}
+                )
             }
         }
 
@@ -507,20 +506,17 @@ import SwiftUI
             @Previewable @State var providerID = "tmdb"
             @Previewable @State var values = ["query": "Arrival"]
             PreviewShell {
-                ScrollView {
-                    PluginSearchSurface(
-                        entityKind: "movie",
-                        hidesNsfw: true,
-                        providers: [PluginSearchPreviewFixtures.provider],
-                        selectedProviderID: $providerID,
-                        values: $values,
-                        candidates: PluginSearchPreviewFixtures.candidates,
-                        hasSearched: true,
-                        onSearch: { _ in },
-                        onCandidateActivate: { _ in }
-                    )
-                    .padding()
-                }
+                PluginSearchSurface(
+                    entityKind: "movie",
+                    hidesNsfw: true,
+                    providers: [PluginSearchPreviewFixtures.provider],
+                    selectedProviderID: $providerID,
+                    values: $values,
+                    candidates: PluginSearchPreviewFixtures.candidates,
+                    hasSearched: true,
+                    onSearch: { _ in },
+                    onCandidateActivate: { _ in }
+                )
                 .environment(\.dynamicTypeSize, .accessibility3)
             }
         }

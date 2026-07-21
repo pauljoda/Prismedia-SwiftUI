@@ -2,7 +2,6 @@
     import SwiftUI
 
     struct MusicCollectionDetailView: View {
-        @Environment(PrismediaAppEnvironment.self) private var environment
         @Environment(MusicPlayerController.self) private var controller
         @State private var phase: MusicCollectionPlaybackPhase = .loading
         @State private var artworkPalette: ArtworkPalette?
@@ -141,20 +140,14 @@
         }
 
         private func playAll(queueMode: MusicQueueStartMode) async {
-            guard let snapshot = currentSnapshot, let client = environment.client else { return }
+            guard let snapshot = currentSnapshot else { return }
             guard loadingQueueMode == nil else { return }
             loadingQueueMode = queueMode
             defer { loadingQueueMode = nil }
-            controller.preparePlayback(
+            controller.play(
                 tracks: snapshot.tracks,
                 queueMode: queueMode
             )
-            await MusicQueueArtworkPreloader(
-                playbackService: client,
-                artworkLoader: environment.artworkLoader
-            ).prewarm(queue: controller.queue)
-            guard !Task.isCancelled else { return }
-            controller.resume()
         }
 
         private func play(

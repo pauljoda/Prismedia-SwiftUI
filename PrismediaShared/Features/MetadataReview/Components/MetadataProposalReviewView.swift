@@ -3,6 +3,8 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct MetadataProposalReviewView: View {
         let proposal: AdministrativeEntityMetadataProposal
+        let headerSubtitle: String?
+        let fallbackArtworkPath: String?
         let selection: Binding<MetadataReviewSelection>?
         let currentValues: [MetadataReviewField: String]
         let selectedProposalIDs: Set<String>
@@ -13,6 +15,8 @@ import SwiftUI
 
         init(
             proposal: AdministrativeEntityMetadataProposal,
+            headerSubtitle: String? = nil,
+            fallbackArtworkPath: String? = nil,
             selection: Binding<MetadataReviewSelection>? = nil,
             currentValues: [MetadataReviewField: String] = [:],
             selectedProposalIDs: Set<String> = [],
@@ -22,6 +26,8 @@ import SwiftUI
             onActivateProposal: ((AdministrativeEntityMetadataProposal) -> Void)? = nil
         ) {
             self.proposal = proposal
+            self.headerSubtitle = headerSubtitle
+            self.fallbackArtworkPath = fallbackArtworkPath
             self.selection = selection
             self.currentValues = currentValues
             self.selectedProposalIDs = selectedProposalIDs
@@ -33,7 +39,11 @@ import SwiftUI
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-                MetadataProposalHeaderView(proposal: proposal)
+                MetadataProposalHeaderView(
+                    proposal: proposal,
+                    subtitle: headerSubtitle,
+                    fallbackArtworkPath: fallbackArtworkPath
+                )
                 MetadataProposalFieldsView(
                     proposal: proposal,
                     selection: selection,

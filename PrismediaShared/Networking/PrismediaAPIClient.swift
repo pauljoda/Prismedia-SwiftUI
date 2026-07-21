@@ -393,6 +393,25 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
+    public func recordEntityPlaybackEvent(
+        id: UUID,
+        kind: PlaybackEventKind,
+        positionSeconds: Double?,
+        durationSeconds: Double?
+    ) async throws {
+        _ = try await send(
+            EntityThumbnail.self,
+            path: "/api/entities/\(id.uuidString.lowercased())/playback/events",
+            method: "POST",
+            body: EntityPlaybackEventCreateRequest(
+                kind: kind,
+                occurredAt: nil,
+                positionSeconds: positionSeconds,
+                durationSeconds: durationSeconds
+            )
+        )
+    }
+
     public func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
         _ = try await send(
             EntityThumbnail.self,
@@ -418,13 +437,6 @@ public struct PrismediaAPIClient: Sendable {
         try await sendExpectingNoContent(path: path, method: "POST", body: report)
     }
 
-    public func markVideoPlayed(videoID: UUID) async throws {
-        try await sendExpectingNoContent(
-            path: "/UserPlayedItems/\(videoID.uuidString.lowercased())",
-            method: "POST"
-        )
-    }
-
     public func negotiateVideoPlayback(
         videoID: UUID,
         forceTranscode: Bool = false
@@ -432,7 +444,8 @@ public struct PrismediaAPIClient: Sendable {
         try await negotiateVideoPlayback(
             videoID: videoID,
             mode: forceTranscode ? .transcode : .automatic,
-            audioStreamIndex: nil
+            audioStreamIndex: nil,
+            preferredEngine: .automatic
         )
     }
 
@@ -444,7 +457,8 @@ public struct PrismediaAPIClient: Sendable {
         try await negotiateVideoPlayback(
             videoID: videoID,
             mode: forceTranscode ? .transcode : .automatic,
-            audioStreamIndex: audioStreamIndex
+            audioStreamIndex: audioStreamIndex,
+            preferredEngine: .automatic
         )
     }
 
@@ -453,13 +467,28 @@ public struct PrismediaAPIClient: Sendable {
         mode: VideoPlaybackNegotiationMode,
         audioStreamIndex: Int? = nil
     ) async throws -> VideoPlaybackPlan {
+        try await negotiateVideoPlayback(
+            videoID: videoID,
+            mode: mode,
+            audioStreamIndex: audioStreamIndex,
+            preferredEngine: .automatic
+        )
+    }
+
+    public func negotiateVideoPlayback(
+        videoID: UUID,
+        mode: VideoPlaybackNegotiationMode,
+        audioStreamIndex: Int? = nil,
+        preferredEngine: VideoPlaybackEngine
+    ) async throws -> VideoPlaybackPlan {
         let response = try await send(
             VideoPlaybackInfoResponse.self,
             path: "/Items/\(videoID.uuidString.lowercased())/PlaybackInfo",
             method: "POST",
             body: ApplePlaybackInfoRequest(
                 mode: mode,
-                audioStreamIndex: audioStreamIndex
+                audioStreamIndex: audioStreamIndex,
+                preferredEngine: preferredEngine
             )
         )
         guard let source = response.mediaSources.first else {
@@ -490,7 +519,10 @@ public struct PrismediaAPIClient: Sendable {
             $0.type.caseInsensitiveCompare("Audio") == .orderedSame
         }
         let sourceAudio = sourceAudioStreams.first(where: { $0.isDefault == true }) ?? sourceAudioStreams.first
-        let renderer = source.playbackRenderer(delivery: delivery)
+        let renderer = source.playbackRenderer(
+            delivery: delivery,
+            preferredEngine: preferredEngine
+        )
         return VideoPlaybackPlan(
             videoID: videoID,
             url: url,
@@ -657,9 +689,10 @@ public struct PrismediaAPIClient: Sendable {
     func sendExpectingNoContent(
         path: String,
         method: String,
+        queryItems: [URLQueryItem] = [],
         body: (some Encodable)? = Optional<LoginRequest>.none
     ) async throws {
-        _ = try await perform(path: path, method: method, queryItems: [], body: body)
+        _ = try await perform(path: path, method: method, queryItems: queryItems, body: body)
     }
 
     func sendMultipart<T: Decodable>(
@@ -714,6 +747,22 @@ public struct PrismediaAPIClient: Sendable {
         } catch {
             throw PrismediaAPIError.decoding(error)
         }
+    }
+
+    func sendRawRequest(_ request: URLRequest) async throws -> Data {
+        let (data, response) = try await loader.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw PrismediaAPIError.invalidResponse
+        }
+        if 300..<400 ~= httpResponse.statusCode {
+            let location = httpResponse.value(forHTTPHeaderField: "Location").flatMap(URL.init(string:))
+            throw PrismediaAPIError.redirectedToSignIn(location)
+        }
+        guard 200..<300 ~= httpResponse.statusCode else {
+            let problem = try? PrismediaJSON.decoder().decode(APIProblem.self, from: data)
+            throw PrismediaAPIError.httpStatus(httpResponse.statusCode, problem)
+        }
+        return data
     }
 
     private func perform(

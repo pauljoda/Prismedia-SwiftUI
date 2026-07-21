@@ -5,15 +5,18 @@ struct EntityGridControlsView: View {
     @State private var draft: EntityGridControls
 
     let catalog: EntityGridControlCatalog
+    let defaultFilters: EntityGridFilters
     let onApply: (EntityGridControls) -> Void
 
     init(
         controls: EntityGridControls,
         catalog: EntityGridControlCatalog,
+        defaultFilters: EntityGridFilters = EntityGridFilters(),
         onApply: @escaping (EntityGridControls) -> Void
     ) {
         _draft = State(initialValue: controls)
         self.catalog = catalog
+        self.defaultFilters = defaultFilters
         self.onApply = onApply
     }
 
@@ -89,18 +92,28 @@ struct EntityGridControlsView: View {
             .prismediaInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Cancel")
                 }
                 ToolbarItem(placement: resetToolbarPlacement) {
-                    Button("Reset") { draft.filters = EntityGridFilters() }
-                        .disabled(draft.filters.activeCount == 0)
+                    Button {
+                        draft.filters = defaultFilters
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .accessibilityLabel("Reset Filters")
+                    .disabled(draft.filters == defaultFilters)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
+                    Button {
                         onApply(draft)
                         dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
-                    .fontWeight(.semibold)
+                    .accessibilityLabel("Apply Filters")
                 }
             }
         }

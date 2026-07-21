@@ -1,7 +1,7 @@
 import Foundation
 
 enum EntityAcquisitionLoadOutcome: Equatable, Sendable {
-    case content(EntityMonitorState)
+    case content(EntityAcquisitionPanelSnapshot)
     case failure(String)
     case cancelled
 }

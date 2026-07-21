@@ -39,6 +39,7 @@ public final class VideoPlaybackController {
 
     private let videoID: UUID
     private let service: any VideoPlaybackServicing
+    private let preferredEngine: VideoPlaybackEngine
     private let audioSession: any VideoAudioSessionPreparing
     private let displayCriteria: VideoDisplayCriteriaIntegration
     private let sidecarSubtitles: [EntitySubtitle]
@@ -82,13 +83,15 @@ public final class VideoPlaybackController {
     public convenience init(
         videoID: UUID,
         service: any VideoPlaybackServicing,
-        sidecarSubtitles: [EntitySubtitle] = []
+        sidecarSubtitles: [EntitySubtitle] = [],
+        preferredEngine: VideoPlaybackEngine = .automatic
     ) {
         self.init(
             videoID: videoID,
             service: service,
             audioSession: SystemVideoAudioSession(),
-            sidecarSubtitles: sidecarSubtitles
+            sidecarSubtitles: sidecarSubtitles,
+            preferredEngine: preferredEngine
         )
     }
 
@@ -97,10 +100,12 @@ public final class VideoPlaybackController {
         service: any VideoPlaybackServicing,
         audioSession: any VideoAudioSessionPreparing,
         sidecarSubtitles: [EntitySubtitle] = [],
-        displayCriteria: VideoDisplayCriteriaIntegration = .inactive
+        displayCriteria: VideoDisplayCriteriaIntegration = .inactive,
+        preferredEngine: VideoPlaybackEngine = .automatic
     ) {
         self.videoID = videoID
         self.service = service
+        self.preferredEngine = preferredEngine
         self.audioSession = audioSession
         self.displayCriteria = displayCriteria
         self.sidecarSubtitles = sidecarSubtitles
@@ -137,7 +142,8 @@ public final class VideoPlaybackController {
             let initialPlan = try await service.negotiateVideoPlayback(
                 videoID: videoID,
                 mode: .automatic,
-                audioStreamIndex: nil
+                audioStreamIndex: nil,
+                preferredEngine: preferredEngine
             )
             let resolvedPlayback = try await resolveNativePlayability(of: initialPlan)
             await audioSessionReady
@@ -243,6 +249,8 @@ public final class VideoPlaybackController {
     }
 
     func pause() {
+        isPlaying = false
+        isWaiting = false
         if renderer == .compatibility {
             compatibilityPlaybackCommands?.pause()
             return
@@ -306,7 +314,8 @@ public final class VideoPlaybackController {
             let plan = try await service.negotiateVideoPlayback(
                 videoID: videoID,
                 mode: .directStream,
-                audioStreamIndex: streamIndex
+                audioStreamIndex: streamIndex,
+                preferredEngine: preferredEngine
             )
             await install(plan, resumeAt: resumeAt, mode: .directStream)
             selectedAudioChoiceID = id
@@ -358,7 +367,7 @@ public final class VideoPlaybackController {
             var usesPreservedSource = VideoSidecarSubtitlePolicy.usesPreservedSource(
                 sourceFormat: sidecar.sourceFormat,
                 sourcePath: sidecar.sourcePath,
-                supportsAssRenderer: Self.supportsAssRenderer
+                supportsAssRenderer: supportsAssRenderer
             )
             let subtitlePath =
                 "/api/videos/\(videoID.uuidString.lowercased())/subtitles/\(encodedID)"
@@ -611,7 +620,8 @@ public final class VideoPlaybackController {
             let fallbackPlan = try await service.negotiateVideoPlayback(
                 videoID: videoID,
                 mode: .directStream,
-                audioStreamIndex: nil
+                audioStreamIndex: nil,
+                preferredEngine: preferredEngine
             )
             return (fallbackPlan, .directStream)
         }
@@ -718,10 +728,18 @@ public final class VideoPlaybackController {
         isPlaying: Bool,
         isWaiting: Bool
     ) {
-        self.currentTime = max(0, currentTime)
-        if duration.isFinite, duration > 0 { self.duration = duration }
-        self.isPlaying = isPlaying
-        self.isWaiting = isWaiting
+        let resolvedCurrentTime = max(0, currentTime)
+        if abs(self.currentTime - resolvedCurrentTime) >= 0.01 {
+            self.currentTime = resolvedCurrentTime
+        }
+        if duration.isFinite, duration > 0, abs(self.duration - duration) >= 0.01 {
+            self.duration = duration
+        }
+        if self.isPlaying != isPlaying { self.isPlaying = isPlaying }
+        if self.isWaiting != isWaiting { self.isWaiting = isWaiting }
+        if isPlaying {
+            playbackReporter.playbackStarted(positionSeconds: self.currentTime)
+        }
         playbackReporter.observePlayback(positionSeconds: self.currentTime, isPlaying: isPlaying)
         activeSubtitleContent = WebVTTSubtitleParser.activeContent(
             at: self.currentTime,
@@ -852,7 +870,7 @@ public final class VideoPlaybackController {
         #endif
     }
 
-    private static var supportsAssRenderer: Bool { true }
+    private var supportsAssRenderer: Bool { renderer == .native }
 
     private func applyNativeSubtitleDefaultIfNeeded(
         _ pairs: [(String, AVMediaSelectionOption)],
@@ -899,7 +917,8 @@ public final class VideoPlaybackController {
             let plan = try await service.negotiateVideoPlayback(
                 videoID: videoID,
                 mode: mode,
-                audioStreamIndex: nil
+                audioStreamIndex: nil,
+                preferredEngine: preferredEngine
             )
             await install(plan, resumeAt: resumeAt, mode: mode)
             play()
@@ -921,7 +940,8 @@ public final class VideoPlaybackController {
                 let plan = try await self.service.negotiateVideoPlayback(
                     videoID: self.videoID,
                     mode: mode,
-                    audioStreamIndex: nil
+                    audioStreamIndex: nil,
+                    preferredEngine: self.preferredEngine
                 )
                 await self.install(plan, resumeAt: resumeAt, mode: mode)
                 self.player.playImmediately(atRate: self.playbackRate)

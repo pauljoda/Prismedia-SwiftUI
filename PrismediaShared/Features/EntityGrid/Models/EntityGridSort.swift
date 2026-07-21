@@ -1,6 +1,7 @@
 public enum EntityGridSort: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case title
     case added
+    case lastAccessed = "last-played"
     case rating
     case random
     case references
@@ -8,16 +9,14 @@ public enum EntityGridSort: String, CaseIterable, Codable, Hashable, Sendable, I
     public var id: String { rawValue }
 
     public var defaultDescending: Bool {
-        switch self {
-        case .added, .rating, .references: true
-        case .title, .random: false
-        }
+        false
     }
 
     public var label: String {
         switch self {
         case .title: "Title"
         case .added: "Date Added"
+        case .lastAccessed: "Last Accessed"
         case .rating: "Rating"
         case .random: "Random"
         case .references: "References"

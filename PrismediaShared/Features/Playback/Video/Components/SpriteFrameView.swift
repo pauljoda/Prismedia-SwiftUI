@@ -3,6 +3,7 @@ import SwiftUI
 struct SpriteFrameView: View {
     let frame: TrickplayPlaylist.Frame
     let imageURL: URL
+    var showsPlaceholder = true
     @State private var spriteImage: Image?
 
     var body: some View {
@@ -20,7 +21,7 @@ struct SpriteFrameView: View {
                         alignment: .topLeading
                     )
                     .offset(layout.offset)
-            } else {
+            } else if showsPlaceholder {
                 Color(white: 0.08)
             }
         }

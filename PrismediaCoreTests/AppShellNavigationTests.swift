@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 
 @testable import PrismediaCore
@@ -25,7 +26,15 @@ final class AppShellNavigationTests: XCTestCase {
             sections.map(\.title),
             ["Overview", "Video", "Images", "Audio", "Books", "Browse", "Operate"]
         )
-        XCTAssertEqual(sections[0].items.map(\.title), ["Dashboard", "Search", "Stats", "Account"])
+        XCTAssertEqual(
+            sections[0].items.map(\.title),
+            ["Dashboard", "Favorites", "Search", "Stats"]
+        )
+        XCTAssertEqual(
+            ModeCatalog.overview.destinations.map(\.title),
+            ["Dashboard", "Collections", "Favorites", "Stats"]
+        )
+        XCTAssertNil(ModeCatalog.overview.destination(id: "account"))
         XCTAssertEqual(sections[1].items.map(\.title), ["Movies", "Series", "Videos"])
         XCTAssertEqual(sections[2].items.map(\.title), ["Galleries", "Images"])
         XCTAssertEqual(sections[3].items.map(\.title), ["Artists", "Audio"])
@@ -105,7 +114,34 @@ final class AppShellNavigationTests: XCTestCase {
                     kind == .audioLibrary ? "waveform" : canonical.destination.systemImage
                 )
                 XCTAssertEqual(dashboard.destinationID, canonical.destination.id)
+                XCTAssertTrue(dashboard.query.sortDescending)
+
+                guard case .entityList(let entityList) = canonical.destination.content else {
+                    return XCTFail("Canonical destination for \(kind.rawValue) must be an entity list")
+                }
+                XCTAssertEqual(entityList.query.sort, "added")
+                XCTAssertTrue(entityList.query.sortDescending)
             }
+        }
+    }
+
+    func testRootEntityLibrariesDefaultToNewestAdded() {
+        let rootLibraries = ModeCatalog.all
+            .flatMap(\.destinations)
+            .compactMap { destination -> (AppDestination, EntityListDestination)? in
+                guard case .entityList(let entityList) = destination.content else { return nil }
+                return (destination, entityList)
+            }
+
+        XCTAssertFalse(rootLibraries.isEmpty)
+        for (destination, entityList) in rootLibraries {
+            XCTAssertEqual(entityList.query.sort, "added", destination.id)
+            XCTAssertTrue(entityList.query.sortDescending, destination.id)
+        }
+
+        for tab in TVAppCatalog.tabs where tab.query != nil {
+            XCTAssertEqual(tab.query?.sort, "added", tab.id)
+            XCTAssertEqual(tab.query?.sortDescending, true, tab.id)
         }
     }
 
@@ -156,6 +192,26 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
+    func testFavoritesUseOneMixedPathForKindGridsAndEntityDetails() throws {
+        let router = PrismediaAppRouter(
+            initialMode: ModeCatalog.overview,
+            initialDestinationID: PrismediaAppRouter.favoritesPathID
+        )
+        var path = NavigationPath()
+        path.append(try XCTUnwrap(FavoritesCatalog.sections.first))
+        router.setFavoritesPath(path)
+
+        router.open(
+            entity: EntityThumbnail(id: UUID(), kind: .video, title: "Favorite Video")
+        )
+
+        XCTAssertEqual(router.favoritesPath.count, 2)
+        XCTAssertTrue(router.path(for: PrismediaAppRouter.favoritesPathID).isEmpty)
+        XCTAssertTrue(router.navigateBack(in: PrismediaAppRouter.favoritesPathID))
+        XCTAssertEqual(router.favoritesPath.count, 1)
+    }
+
+    @MainActor
     func testAppRouterKeepsSearchFiltersAcrossSearchDetailNavigation() {
         let router = PrismediaAppRouter(initialSearchSelected: true)
         let filters = SearchHubFilterState(
@@ -171,6 +227,29 @@ final class AppShellNavigationTests: XCTestCase {
 
         XCTAssertEqual(router.searchText, "matrix")
         XCTAssertEqual(router.searchFilters, filters)
+    }
+
+    @MainActor
+    func testResetRemovesAllAccountNavigationAndSearchState() {
+        let router = PrismediaAppRouter(
+            initialMode: ModeCatalog.video,
+            initialDestinationID: "movies",
+            initialSearchSelected: true
+        )
+        router.searchText = "private search"
+        router.searchFilters = SearchHubFilterState(selectedKinds: [.movie])
+        router.setPath([EntityLink(entityID: UUID(), kind: .movie)], for: "movies")
+        router.onWillOpenEntity = {}
+
+        router.reset()
+
+        XCTAssertEqual(router.navigation.modeID, "overview")
+        XCTAssertEqual(router.navigation.destinationID, "dashboard")
+        XCTAssertEqual(router.selectedTab, .destination("dashboard"))
+        XCTAssertEqual(router.searchText, "")
+        XCTAssertEqual(router.searchFilters, SearchHubFilterState())
+        XCTAssertTrue(router.path(for: "movies").isEmpty)
+        XCTAssertNil(router.onWillOpenEntity)
     }
 
     @MainActor

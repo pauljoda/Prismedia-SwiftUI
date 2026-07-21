@@ -14,9 +14,10 @@ public struct AdministrationRequestFeatureService: RequestFeatureServicing {
     public func search(
         kind: String,
         pluginID: String,
-        fields: [String: String]
+        fields: [String: String],
+        limit: Int?
     ) async throws -> AdministrativeRequestSearchResponse {
-        try await administration.searchRequests(kind: kind, pluginID: pluginID, fields: fields)
+        try await administration.searchRequests(kind: kind, pluginID: pluginID, fields: fields, limit: limit)
     }
 
     public func review(

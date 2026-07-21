@@ -66,7 +66,9 @@
                     }
                 }
             }
-            .presentationDetents([.medium, .large])
+            #if os(iOS) || os(macOS)
+                .presentationDetents([.medium, .large])
+            #endif
             .task {
                 guard loadsCollections else { return }
                 await loadCollections()

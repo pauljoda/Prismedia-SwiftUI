@@ -6,6 +6,7 @@ struct EntityDetailSectionContentView: View {
     let horizontalPadding: CGFloat
     let ownerLink: EntityLink?
     let acquisitionService: (any EntityAcquisitionServicing)?
+    let requestActivityService: (any RequestActivityServicing)?
     let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
     let onAcquisitionMutated: @MainActor () async -> Void
     let onEntityPruned: @MainActor () -> Void
@@ -34,6 +35,7 @@ struct EntityDetailSectionContentView: View {
             horizontalPadding: horizontalPadding,
             ownerLink: ownerLink,
             acquisitionService: acquisitionService,
+            requestActivityService: requestActivityService,
             transcriptSourceLoader: transcriptSourceLoader,
             onAcquisitionMutated: onAcquisitionMutated,
             onEntityPruned: onEntityPruned
@@ -53,6 +55,7 @@ struct EntityDetailSectionContentView: View {
                     horizontalPadding: PrismediaSpacing.extraLarge,
                     ownerLink: nil,
                     acquisitionService: nil,
+                    requestActivityService: nil,
                     transcriptSourceLoader: nil,
                     onAcquisitionMutated: {},
                     onEntityPruned: {}

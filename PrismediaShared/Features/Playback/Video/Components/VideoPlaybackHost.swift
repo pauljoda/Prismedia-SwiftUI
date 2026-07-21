@@ -7,7 +7,9 @@ struct VideoPlaybackHost<Content: View>: View {
     private let onRestore: (EntityLink) -> Void
 
     init(
-        client: PrismediaAPIClient, onRestore: @escaping (EntityLink) -> Void,
+        client: PrismediaAPIClient,
+        preferences: VideoPlaybackPreferences = VideoPlaybackPreferences(),
+        onRestore: @escaping (EntityLink) -> Void,
         @ViewBuilder content: @escaping (VideoPlaybackSession) -> Content
     ) {
         #if os(iOS) || os(tvOS)
@@ -23,6 +25,7 @@ struct VideoPlaybackHost<Content: View>: View {
         _session = State(
             initialValue: VideoPlaybackSession(
                 service: client,
+                preferences: preferences,
                 systemPlayback: systemPlayback,
                 displayCriteria: displayCriteria
             )

@@ -3,6 +3,34 @@ import XCTest
 @testable import PrismediaCore
 
 final class MetadataReviewPolicyTests: XCTestCase {
+    func testFindsProposalRecursivelyAcrossChildrenAndRelationships() {
+        let credit = proposal(id: "credit", kind: "person", title: "Amy Adams")
+        let episode = proposal(
+            id: "episode",
+            kind: "video-episode",
+            title: "Episode 1",
+            relationships: [credit]
+        )
+        let season = proposal(
+            id: "season",
+            kind: "video-season",
+            title: "Season 1",
+            children: [episode]
+        )
+        let root = proposal(
+            id: "root",
+            kind: "video-series",
+            title: "Series",
+            children: [season]
+        )
+
+        XCTAssertEqual(
+            MetadataReviewPolicy.proposal(withID: "credit", in: root)?.patch.title,
+            "Amy Adams"
+        )
+        XCTAssertNil(MetadataReviewPolicy.proposal(withID: "missing", in: root))
+    }
+
     func testSeparatesStructuralChildrenFromDeduplicatedRelationships() {
         let person = proposal(id: "person", kind: "person", title: "Amy Adams")
         let child = proposal(id: "season", kind: "video-season", title: "Season 1")

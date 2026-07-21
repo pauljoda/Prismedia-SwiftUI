@@ -24,6 +24,44 @@ import Foundation
             applyHint: "Applies to the next scheduler window."
         )
 
+        static let stringListSetting = AdministrativeSetting(
+            key: "subtitles.preferredLanguages",
+            groupKey: "subtitles",
+            label: "Preferred languages",
+            description: "Languages used when choosing subtitle tracks.",
+            type: "stringList",
+            value: .stringList(["en", "eng"]),
+            defaultValue: .stringList(["en"]),
+            isDefault: false,
+            order: 0,
+            constraints: AdministrativeSettingConstraints(
+                minimum: nil,
+                maximum: nil,
+                step: nil,
+                minItems: 1,
+                maxItems: 6
+            ),
+            options: [],
+            inputKind: nil,
+            applyHint: nil
+        )
+
+        static let autoIdentifyKindSetting = AdministrativeSetting(
+            key: "autoIdentify.entityKinds",
+            groupKey: "autoIdentify",
+            label: "Identify these kinds",
+            description: "Which kinds of scanned media Auto Identify applies to.",
+            type: "stringList",
+            value: .stringList(["movie", "video", "book"]),
+            defaultValue: .stringList(["video", "gallery", "image", "audio", "book"]),
+            isDefault: false,
+            order: 0,
+            constraints: nil,
+            options: [],
+            inputKind: nil,
+            applyHint: nil
+        )
+
         static let fileRootID = UUID(
             uuidString: "11111111-1111-1111-1111-111111111111"
         )!
@@ -97,7 +135,7 @@ import Foundation
         func removeIdentifyItem(entityID: UUID) async throws {}
         func plugins() async throws -> [AdministrativePlugin] { [] }
         func updatePlugin(id: String) async throws -> AdministrativePlugin { throw CancellationError() }
-        func searchRequests(kind: String, pluginID: String, fields: [String: String]) async throws
+        func searchRequests(kind: String, pluginID: String, fields: [String: String], limit: Int?) async throws
             -> AdministrativeRequestSearchResponse
         {
             AdministrativeRequestSearchResponse(results: [], providerErrors: [])
@@ -118,8 +156,10 @@ import Foundation
         func jobs() async throws -> AdministrativeJobListResponse {
             AdministrativeJobListResponse(items: [], counts: [])
         }
+        func createJob(type: String) async throws -> AdministrativeJobRun { throw CancellationError() }
         func cancelJob(id: UUID) async throws -> Int { 0 }
-        func clearFailures(type: String) async throws -> Int { 0 }
+        func cancelJobs(type: String?) async throws -> Int { 0 }
+        func clearFailures(type: String?) async throws -> Int { 0 }
         func rebuildPreviews() async throws -> AdministrativeBulkJobResponse {
             AdministrativeBulkJobResponse(enqueued: 0, skipped: 0)
         }

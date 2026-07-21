@@ -25,17 +25,39 @@ struct MusicLibraryQueueLoader: Sendable {
         return thumbnails.map { MusicTrack(thumbnail: $0) }
     }
 
+    func shuffledTrackBatches(
+        matching query: EntityListQuery,
+        search: String?,
+        pageSize: Int = 100,
+        seed: Int = EntityGridControls.nextRandomSeed()
+    ) -> AsyncThrowingStream<[MusicTrack], Error> {
+        precondition(pageSize > 0, "A music queue page size must be positive.")
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    try await loadShuffledTrackBatches(
+                        matching: query,
+                        search: search,
+                        pageSize: pageSize,
+                        seed: seed,
+                        continuation: continuation
+                    )
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     func hydrate(_ tracks: [EntityThumbnail]) async throws -> [MusicTrack] {
-        let albumIDs = unique(tracks.compactMap(\.parentEntityID))
-        let albums = try await thumbnails(ids: albumIDs)
-        let albumsByID = Dictionary(uniqueKeysWithValues: albums.map { ($0.id, $0) })
-        let artistIDs = unique(albums.compactMap(\.parentEntityID))
-        let artists = try await thumbnails(ids: artistIDs)
-        let artistsByID = Dictionary(uniqueKeysWithValues: artists.map { ($0.id, $0) })
-        return MusicEntityProjection.libraryTracks(
+        var albumsByID: [UUID: EntityThumbnail] = [:]
+        var artistsByID: [UUID: EntityThumbnail] = [:]
+        return try await hydrate(
             tracks,
-            albumsByID: albumsByID,
-            artistsByID: artistsByID
+            albumsByID: &albumsByID,
+            artistsByID: &artistsByID
         )
     }
 
@@ -62,6 +84,116 @@ struct MusicLibraryQueueLoader: Sendable {
             indexedTracks += batch
         }
         return indexedTracks.sorted { $0.0 < $1.0 }.flatMap(\.1)
+    }
+
+    private func loadShuffledTrackBatches(
+        matching query: EntityListQuery,
+        search: String?,
+        pageSize: Int,
+        seed: Int,
+        continuation: AsyncThrowingStream<[MusicTrack], Error>.Continuation
+    ) async throws {
+        var query = query
+        query.sort = EntityGridSort.random.rawValue
+        query.sortDescending = false
+        query.seed = seed
+        query.cursor = nil
+        var cursor: String?
+        var visitedCursors = Set<String>()
+        var seenTrackIDs = Set<UUID>()
+        var albumsByID: [UUID: EntityThumbnail] = [:]
+        var artistsByID: [UUID: EntityThumbnail] = [:]
+
+        while true {
+            try Task.checkCancellation()
+            query.cursor = cursor
+            let response = try await client.listEntities(query, limit: pageSize, search: search)
+            if query.kind == .audioLibrary {
+                try await yieldAlbumTrackBatches(
+                    response.items,
+                    artistsByID: &artistsByID,
+                    seenTrackIDs: &seenTrackIDs,
+                    continuation: continuation
+                )
+            } else {
+                let hydratedTracks = try await hydrate(
+                    response.items,
+                    albumsByID: &albumsByID,
+                    artistsByID: &artistsByID
+                )
+                let tracks = uniqueTracks(
+                    hydratedTracks,
+                    seenTrackIDs: &seenTrackIDs
+                )
+                if !tracks.isEmpty { continuation.yield(tracks) }
+            }
+
+            guard let nextCursor = response.nextCursor,
+                visitedCursors.insert(nextCursor).inserted
+            else { return }
+            cursor = nextCursor
+        }
+    }
+
+    private func yieldAlbumTrackBatches(
+        _ albums: [EntityThumbnail],
+        artistsByID: inout [UUID: EntityThumbnail],
+        seenTrackIDs: inout Set<UUID>,
+        continuation: AsyncThrowingStream<[MusicTrack], Error>.Continuation
+    ) async throws {
+        let unresolvedArtistIDs = unique(albums.compactMap(\.parentEntityID))
+            .filter { artistsByID[$0] == nil }
+        let artists = try await thumbnails(ids: unresolvedArtistIDs)
+        for artist in artists { artistsByID[artist.id] = artist }
+
+        for batchStart in stride(from: 0, to: albums.count, by: 6) {
+            let batchEnd = min(batchStart + 6, albums.count)
+            try await withThrowingTaskGroup(of: [MusicTrack].self) { group in
+                for album in albums[batchStart..<batchEnd] {
+                    let artist = album.parentEntityID.flatMap { artistsByID[$0]?.title }
+                        ?? album.musicMetadataValue(matching: ["artist", "person"])
+                    group.addTask {
+                        let detail = try await client.fetchEntity(id: album.id)
+                        return MusicEntityProjection.tracks(in: detail, artist: artist)
+                    }
+                }
+                for try await albumTracks in group {
+                    let tracks = uniqueTracks(albumTracks, seenTrackIDs: &seenTrackIDs)
+                    if !tracks.isEmpty { continuation.yield(tracks) }
+                }
+            }
+        }
+    }
+
+    private func hydrate(
+        _ tracks: [EntityThumbnail],
+        albumsByID: inout [UUID: EntityThumbnail],
+        artistsByID: inout [UUID: EntityThumbnail]
+    ) async throws -> [MusicTrack] {
+        let albumIDs = unique(tracks.compactMap(\.parentEntityID))
+        let unresolvedAlbumIDs = albumIDs
+            .filter { albumsByID[$0] == nil }
+        let albums = try await thumbnails(ids: unresolvedAlbumIDs)
+        for album in albums { albumsByID[album.id] = album }
+
+        let artistIDs = unique(albumIDs.compactMap { albumsByID[$0]?.parentEntityID })
+        let unresolvedArtistIDs = artistIDs
+            .filter { artistsByID[$0] == nil }
+        let artists = try await thumbnails(ids: unresolvedArtistIDs)
+        for artist in artists { artistsByID[artist.id] = artist }
+
+        return MusicEntityProjection.libraryTracks(
+            tracks,
+            albumsByID: albumsByID,
+            artistsByID: artistsByID
+        )
+    }
+
+    private func uniqueTracks(
+        _ tracks: [MusicTrack],
+        seenTrackIDs: inout Set<UUID>
+    ) -> [MusicTrack] {
+        tracks.filter { seenTrackIDs.insert($0.id).inserted }
     }
 
     private func thumbnails(ids: [UUID]) async throws -> [EntityThumbnail] {

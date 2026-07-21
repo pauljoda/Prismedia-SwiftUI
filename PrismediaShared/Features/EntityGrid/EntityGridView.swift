@@ -1,7 +1,9 @@
 import SwiftUI
 
-public struct EntityGridView<ItemContent: View>: View {
+public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
+    @Environment(\.prismediaPageIsActive) private var pageIsActive
+    @Environment(\.scenePhase) private var scenePhase
     @State private var snapshot: EntityGridSnapshot
     @State private var searchText = ""
     @State private var filtersPresented = false
@@ -16,9 +18,16 @@ public struct EntityGridView<ItemContent: View>: View {
     @State private var actionConfirmation: EntityGridActionConfirmation?
     @State private var mutationFailures: [EntityGridMutationFailure] = []
     @State private var mutationFailureAlertPresented = false
-    @State private var collectionSheetPresented = false
+    #if os(iOS) || os(macOS)
+        @State private var collectionSheetPresented = false
+        @State private var collectionSheetReferences: [CollectionEntityReference] = []
+    #endif
     #if os(tvOS)
         @Environment(TVTabFocusCoordinator.self) private var tabFocusCoordinator
+        @State private var lastFocusedItemID: UUID?
+        @State private var tvCollectionOptions: [EntityThumbnail] = []
+        @State private var tvCollectionOptionsAreLoading = false
+        @State private var tvCollectionOptionsLoadFailed = false
         @FocusState private var tvGridFocus: TVGridFocus?
     #endif
 
@@ -30,8 +39,11 @@ public struct EntityGridView<ItemContent: View>: View {
     private let horizontalContentPadding: CGFloat
     private let feedMediaDependencies: EntityMediaFeedDependencies?
     private let onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)?
+    private let automaticRefreshInterval: Duration?
     private let actionPolicy: EntityGridActionPolicy
     private let mutationService: (any EntityGridMutationServicing)?
+    private let prefersInitialTVFocus: Bool
+    private let topContent: (EntityGridTopContentContext) -> TopContent
     private let itemContent: (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
 
     public init(
@@ -42,8 +54,12 @@ public struct EntityGridView<ItemContent: View>: View {
         horizontalContentPadding: CGFloat? = nil,
         feedMediaDependencies: EntityMediaFeedDependencies? = nil,
         onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)? = nil,
+        automaticRefreshInterval: Duration? = nil,
+        startsInSelectionMode: Bool = false,
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil,
+        prefersInitialTVFocus: Bool = false,
+        @ViewBuilder topContent: @escaping (EntityGridTopContentContext) -> TopContent,
         @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
     ) {
         self.configuration = configuration
@@ -56,8 +72,11 @@ public struct EntityGridView<ItemContent: View>: View {
             ?? (presentation == .screen ? PrismediaSpacing.extraLarge : 0)
         self.feedMediaDependencies = feedMediaDependencies
         self.onOpenFeedItem = onOpenFeedItem
+        self.automaticRefreshInterval = automaticRefreshInterval
         self.actionPolicy = actionPolicy
         self.mutationService = mutationService
+        self.prefersInitialTVFocus = prefersInitialTVFocus
+        self.topContent = topContent
         self.itemContent = itemContent
         let restoredPreferences = preferencesStore.load(for: configuration.preferencesID)
         let restoredControls = restoredPreferences?.controls(baselineQuery: configuration.query)
@@ -69,6 +88,11 @@ public struct EntityGridView<ItemContent: View>: View {
         _density = State(initialValue: restoredPreferences?.density ?? .standard)
         _pageSize = State(initialValue: restoredPreferences?.pageSize ?? configuration.pageSize)
         _presets = State(initialValue: preferencesStore.loadPresets(for: configuration.preferencesID))
+        _selection = State(
+            initialValue: EntityGridSelectionState(
+                isActive: startsInSelectionMode && actionPolicy.selectionEnabled
+            )
+        )
         _snapshot = State(
             initialValue: EntityGridSnapshot(
                 configuration: configuration,
@@ -89,7 +113,8 @@ public struct EntityGridView<ItemContent: View>: View {
             .sheet(isPresented: $filtersPresented) {
                 EntityGridControlsView(
                     controls: snapshot.controls,
-                    catalog: controlCatalog
+                    catalog: controlCatalog,
+                    defaultFilters: configuration.defaultFilters
                 ) { controls in
                     Task { await applyControls(controls) }
                 }
@@ -126,7 +151,7 @@ public struct EntityGridView<ItemContent: View>: View {
             }
             #if os(iOS) || os(macOS)
                 .sheet(isPresented: $collectionSheetPresented) {
-                    AddToCollectionSheet(items: selectedCollectionReferences) { result in
+                    AddToCollectionSheet(items: collectionSheetReferences) { result in
                         receiveMutationResult(result)
                     }
                 }
@@ -149,6 +174,28 @@ public struct EntityGridView<ItemContent: View>: View {
             .task {
                 await loadIfNeeded()
             }
+            .task(id: automaticRefreshIsActive) {
+                guard automaticRefreshIsActive, let automaticRefreshInterval else { return }
+                while automaticRefreshIsActive {
+                    do { try await Task.sleep(for: automaticRefreshInterval) } catch { return }
+                    guard !Task.isCancelled, automaticRefreshIsActive else { return }
+                    await refresh()
+                }
+            }
+            #if os(tvOS)
+                .task {
+                    await loadTVCollectionOptionsIfNeeded()
+                }
+                .defaultFocus($tvGridFocus, defaultTVGridFocus)
+                .onChange(of: tvGridFocus) { _, focus in
+                    guard case .item(let itemID) = focus else { return }
+                    lastFocusedItemID = itemID
+                }
+                .onAppear(perform: restoreTVGridFocusIfNeeded)
+                .onChange(of: snapshot.items.map(\.id)) {
+                    restoreTVGridFocusIfNeeded()
+                }
+            #endif
             .onChange(of: environment.entityListRevision) { _, _ in
                 Task { await refresh() }
             }
@@ -165,6 +212,10 @@ public struct EntityGridView<ItemContent: View>: View {
         case .embedded:
             embeddedContent
         }
+    }
+
+    private var automaticRefreshIsActive: Bool {
+        automaticRefreshInterval != nil && pageIsActive && scenePhase == .active
     }
 
     private var screenContent: some View {
@@ -206,7 +257,7 @@ public struct EntityGridView<ItemContent: View>: View {
         #if os(tvOS)
             .navigationTitle("")
         #else
-            .navigationTitle(configuration.title)
+            .navigationTitle(selection.isActive ? "\(selection.selectedIDs.count) Selected" : configuration.title)
         #endif
         .prismediaInlineNavigationTitle()
         .toolbar {
@@ -223,14 +274,22 @@ public struct EntityGridView<ItemContent: View>: View {
                         onClear: clearSelection,
                         onAction: requestAction
                     )
-                }
 
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if actionPolicy.selectionEnabled {
+                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+
+                    ToolbarItem(placement: trailingToolbarPlacement) {
                         selectionToggleButton
                     }
+                } else {
+                    if actionPolicy.selectionEnabled {
+                        ToolbarItem(placement: trailingToolbarPlacement) {
+                            selectionToggleButton
+                        }
 
-                    if !selection.isActive {
+                        ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                    }
+
+                    ToolbarItemGroup(placement: trailingToolbarPlacement) {
                         displayMenu
                         sortMenu
                         filterButton
@@ -289,12 +348,25 @@ public struct EntityGridView<ItemContent: View>: View {
 
             Spacer(minLength: PrismediaSpacing.medium)
 
-            displayMenu
-            sortMenu
-            filterButton
-            if actionPolicy.selectionEnabled {
-                selectionToggleButton
-            }
+            #if os(tvOS)
+                displayMenu
+                    .buttonStyle(.glass)
+                sortMenu
+                    .buttonStyle(.glass)
+                filterButton
+                    .buttonStyle(.glass)
+                if actionPolicy.selectionEnabled {
+                    selectionToggleButton
+                        .buttonStyle(.glass)
+                }
+            #else
+                displayMenu
+                sortMenu
+                filterButton
+                if actionPolicy.selectionEnabled {
+                    selectionToggleButton
+                }
+            #endif
         }
         .controlSize(.small)
     }
@@ -308,15 +380,12 @@ public struct EntityGridView<ItemContent: View>: View {
 
                 sortMenu
                     .buttonStyle(.glass)
-                    .tint(PrismediaColor.onMedia)
                     .focused($tvGridFocus, equals: .sort)
                 filterButton
                     .buttonStyle(.glass)
-                    .tint(PrismediaColor.onMedia)
                     .focused($tvGridFocus, equals: .filter)
                 displayMenu
                     .buttonStyle(.glass)
-                    .tint(PrismediaColor.onMedia)
                     .focused($tvGridFocus, equals: .display)
 
                 Spacer(minLength: 0)
@@ -356,6 +425,15 @@ public struct EntityGridView<ItemContent: View>: View {
 
     private var contentGrid: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+            topContent(
+                EntityGridTopContentContext(
+                    query: snapshot.controls.applying(to: configuration.query),
+                    search: snapshot.activeSearch,
+                    visibleItemCount: snapshot.items.count
+                )
+            )
+            .padding(.horizontal, horizontalContentPadding)
+
             if presentation == .screen {
                 Text(itemCountLabel)
                     .font(.footnote.weight(.medium))
@@ -415,7 +493,12 @@ public struct EntityGridView<ItemContent: View>: View {
                     item: item,
                     isSelectionActive: selection.isActive,
                     isSelected: selection.selectedIDs.contains(item.id),
-                    onToggle: { toggleSelection(item.id) }
+                    onToggle: { toggleSelection(item.id) },
+                    collectionOptions: collectionMenuOptions,
+                    collectionOptionsAreLoading: collectionMenuOptionsAreLoading,
+                    collectionOptionsLoadFailed: collectionMenuOptionsLoadFailed,
+                    onAddToCollection: addToCollectionAction(for: item),
+                    onReloadCollectionOptions: reloadCollectionMenuOptions
                 ) {
                     itemContent(item, layout)
                 }
@@ -490,20 +573,31 @@ public struct EntityGridView<ItemContent: View>: View {
 
     @ViewBuilder
     private var selectionToggleButton: some View {
-        let button = Button(selection.isActive ? "Done" : "Select") {
+        let button = Button {
             if selection.isActive {
                 exitSelection()
             } else {
                 selection.enter()
             }
+        } label: {
+            Image(systemName: selection.isActive ? "checkmark" : "checkmark.circle")
         }
         .disabled(actionInFlight != nil)
+        .accessibilityLabel(selection.isActive ? "Done Selecting" : "Select Items")
         .accessibilityIdentifier("entity.grid.selection.toggle")
 
         #if os(macOS)
             button.keyboardShortcut("s", modifiers: [.command, .shift])
         #else
             button
+        #endif
+    }
+
+    private var trailingToolbarPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+            .topBarTrailing
+        #else
+            .primaryAction
         #endif
     }
 
@@ -790,7 +884,7 @@ public struct EntityGridView<ItemContent: View>: View {
     private var preferencesAreDefault: Bool {
         currentPreferences
             == EntityGridPreferences(
-                controls: EntityGridControls(baselineQuery: configuration.query),
+                controls: configuration.defaultControls(),
                 displayMode: configuration.defaultDisplayMode,
                 pageSize: configuration.pageSize
             )
@@ -925,7 +1019,10 @@ public struct EntityGridView<ItemContent: View>: View {
         let details = mutationFailures.prefix(4)
             .map { "\($0.title): \($0.message)" }
             .joined(separator: "\n")
-        return "\(count) item\(count == 1 ? "" : "s") remain selected so you can retry.\n\(details)"
+        let summary = selection.isActive
+            ? "remain selected so you can retry"
+            : "could not be updated"
+        return "\(count) item\(count == 1 ? "" : "s") \(summary).\n\(details)"
     }
 
     private func toggleSelection(_ entityID: UUID) {
@@ -951,7 +1048,7 @@ public struct EntityGridView<ItemContent: View>: View {
         switch action {
         case .addToCollection:
             #if os(iOS) || os(macOS)
-                collectionSheetPresented = true
+                presentCollectionSheet(with: selectedCollectionReferences)
             #endif
         case .markNsfw(let value):
             actionConfirmation = EntityGridActionConfirmation(
@@ -1023,6 +1120,123 @@ public struct EntityGridView<ItemContent: View>: View {
         }
     }
 
+    private func addToCollectionAction(
+        for item: EntityThumbnail
+    ) -> ((EntityThumbnail) -> Void)? {
+        guard
+            mutationService != nil,
+            !actionPolicy.collectionReferences(in: [item]).isEmpty
+        else { return nil }
+
+        return { collection in
+            #if os(tvOS)
+                Task {
+                    await add(item, to: collection)
+                }
+            #else
+                presentCollectionSheet(
+                    with: actionPolicy.collectionReferences(in: [item])
+                )
+            #endif
+        }
+    }
+
+    #if os(iOS) || os(macOS)
+    private func presentCollectionSheet(with references: [CollectionEntityReference]) {
+        guard !references.isEmpty else { return }
+        collectionSheetReferences = references
+        collectionSheetPresented = true
+    }
+    #endif
+
+    private var collectionMenuOptions: [EntityThumbnail] {
+        #if os(tvOS)
+            tvCollectionOptions
+        #else
+            []
+        #endif
+    }
+
+    private var collectionMenuOptionsAreLoading: Bool {
+        #if os(tvOS)
+            tvCollectionOptionsAreLoading
+        #else
+            false
+        #endif
+    }
+
+    private var collectionMenuOptionsLoadFailed: Bool {
+        #if os(tvOS)
+            tvCollectionOptionsLoadFailed
+        #else
+            false
+        #endif
+    }
+
+    private var reloadCollectionMenuOptions: (() -> Void)? {
+        #if os(tvOS)
+            reloadTVCollectionOptions
+        #else
+            nil
+        #endif
+    }
+
+    #if os(tvOS)
+        private var defaultTVGridFocus: TVGridFocus? {
+            guard prefersInitialTVFocus else { return nil }
+            if let lastFocusedItemID,
+                snapshot.items.contains(where: { $0.id == lastFocusedItemID })
+            {
+                return .item(lastFocusedItemID)
+            }
+            return snapshot.items.first.map { .item($0.id) }
+        }
+
+        private func restoreTVGridFocusIfNeeded() {
+            guard let target = defaultTVGridFocus else { return }
+            Task { @MainActor in
+                await Task.yield()
+                tvGridFocus = target
+            }
+        }
+
+        private func loadTVCollectionOptionsIfNeeded() async {
+            guard tvCollectionOptions.isEmpty, !tvCollectionOptionsAreLoading else { return }
+            await loadTVCollectionOptions()
+        }
+
+        private func reloadTVCollectionOptions() {
+            Task { await loadTVCollectionOptions() }
+        }
+
+        private func loadTVCollectionOptions() async {
+            guard let mutationService else { return }
+            tvCollectionOptionsAreLoading = true
+            tvCollectionOptionsLoadFailed = false
+            defer { tvCollectionOptionsAreLoading = false }
+            do {
+                tvCollectionOptions = try await mutationService.loadCollectionOptions().sorted {
+                    $0.title.localizedStandardCompare($1.title) == .orderedAscending
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                tvCollectionOptionsLoadFailed = true
+            }
+        }
+
+        private func add(
+            _ item: EntityThumbnail,
+            to collection: EntityThumbnail
+        ) async {
+            let result = await actionService?.addToCollection(
+                collection.id,
+                items: [item]
+            ) ?? unavailableResult([item])
+            receiveMutationResult(result)
+        }
+    #endif
+
     private func unavailableResult(
         _ items: [EntityThumbnail]
     ) -> EntityGridMutationResult {
@@ -1043,11 +1257,48 @@ public struct EntityGridView<ItemContent: View>: View {
 /// The shared, presentational entity grid used by both library pages and
 /// child collections embedded in an entity detail page.
 
-extension EntityGridView where ItemContent == EntityThumbnailCardView {
+extension EntityGridView where TopContent == EmptyView {
+    public init(
+        configuration: EntityGridConfiguration,
+        loader: any EntityGridLoading,
+        presentation: EntityGridPresentation = .screen,
+        preferencesStore: EntityGridPreferencesStore = .standard,
+        horizontalContentPadding: CGFloat? = nil,
+        feedMediaDependencies: EntityMediaFeedDependencies? = nil,
+        onOpenFeedItem: ((EntityThumbnail, EntityMediaSequence) -> Void)? = nil,
+        automaticRefreshInterval: Duration? = nil,
+        startsInSelectionMode: Bool = false,
+        actionPolicy: EntityGridActionPolicy = .disabled,
+        mutationService: (any EntityGridMutationServicing)? = nil,
+        prefersInitialTVFocus: Bool = false,
+        @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
+    ) {
+        self.init(
+            configuration: configuration,
+            loader: loader,
+            presentation: presentation,
+            preferencesStore: preferencesStore,
+            horizontalContentPadding: horizontalContentPadding,
+            feedMediaDependencies: feedMediaDependencies,
+            onOpenFeedItem: onOpenFeedItem,
+            automaticRefreshInterval: automaticRefreshInterval,
+            startsInSelectionMode: startsInSelectionMode,
+            actionPolicy: actionPolicy,
+            mutationService: mutationService,
+            prefersInitialTVFocus: prefersInitialTVFocus,
+            topContent: { _ in EmptyView() },
+            itemContent: itemContent
+        )
+    }
+}
+
+extension EntityGridView where TopContent == EmptyView, ItemContent == EntityThumbnailCardView {
     public init(
         configuration: EntityGridConfiguration,
         loader: any EntityGridLoading,
         preferencesStore: EntityGridPreferencesStore = .standard,
+        automaticRefreshInterval: Duration? = nil,
+        startsInSelectionMode: Bool = false,
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil
     ) {
@@ -1055,6 +1306,8 @@ extension EntityGridView where ItemContent == EntityThumbnailCardView {
             configuration: configuration,
             loader: loader,
             preferencesStore: preferencesStore,
+            automaticRefreshInterval: automaticRefreshInterval,
+            startsInSelectionMode: startsInSelectionMode,
             actionPolicy: actionPolicy,
             mutationService: mutationService
         ) { item, layout in

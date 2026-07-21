@@ -109,7 +109,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) })
         XCTAssertEqual(items["kind"], "book")
         XCTAssertEqual(items["sort"], "added")
-        XCTAssertEqual(items["sortDir"], "desc")
+        XCTAssertEqual(items["sortDir"], "asc")
         XCTAssertEqual(items["seed"], "42")
         XCTAssertEqual(items["favorite"], "true")
         XCTAssertEqual(items["organized"], "false")
@@ -383,19 +383,6 @@ final class PrismediaAPIClientTests: XCTestCase {
             XCTAssertEqual(body["IsPaused"] as? Bool, false)
             XCTAssertEqual(body["IsMuted"] as? Bool, false)
         }
-    }
-
-    func testMarkVideoPlayedUsesRootJellyfinPlayedItemEndpoint() async throws {
-        let videoID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        let loader = MockHTTPDataLoader(responses: [.json(#"{"Played":true}"#)])
-        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
-
-        try await client.markVideoPlayed(videoID: videoID)
-
-        let request = try XCTUnwrap(loader.requests.first)
-        XCTAssertEqual(request.url?.path, "/UserPlayedItems/\(videoID.uuidString.lowercased())")
-        XCTAssertEqual(request.httpMethod, "POST")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
     }
 
     func testEntityPageSourceUsesAuthenticatedFileEndpoint() async throws {
@@ -1027,6 +1014,33 @@ final class PrismediaAPIClientTests: XCTestCase {
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
         XCTAssertEqual(body["resumeSeconds"] as? Double, 3_725)
         XCTAssertEqual(body["completed"] as? Bool, false)
+    }
+
+    func testRecordSkippedPlaybackEventUsesEntityHistoryEndpointAndSyncFields() async throws {
+        let trackID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let loader = MockHTTPDataLoader(responses: [.json(entityDetailJSON(id: trackID, rating: nil))])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        try await client.recordEntityPlaybackEvent(
+            id: trackID,
+            kind: .skipped,
+            positionSeconds: 4,
+            durationSeconds: 181
+        )
+
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(
+            request.url?.path,
+            "/api/entities/\(trackID.uuidString.lowercased())/playback/events"
+        )
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+        )
+        XCTAssertEqual(body["kind"] as? String, "skipped")
+        XCTAssertEqual(body["positionSeconds"] as? Double, 4)
+        XCTAssertEqual(body["durationSeconds"] as? Double, 181)
     }
 
     func testLogoutPostsToAuthLogout() async throws {

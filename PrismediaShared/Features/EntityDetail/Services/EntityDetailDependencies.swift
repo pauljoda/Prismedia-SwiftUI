@@ -18,6 +18,7 @@ public struct EntityDetailDependencies: Sendable {
     public let audioPlaybackService: (any MusicPlaybackServicing)?
     public let onEntityMutated: @MainActor @Sendable () -> Void
     public let acquisitionService: (any EntityAcquisitionServicing)?
+    public let requestActivityService: (any RequestActivityServicing)?
     public let imageSourceLoader: (any EntityImageSourceLoading)?
     public let imageVideoAspectRatioLoader: (any EntityImageVideoAspectRatioLoading)?
     public let mediaSequenceLoader: (any EntityMediaSequenceLoading)?
@@ -33,6 +34,7 @@ public struct EntityDetailDependencies: Sendable {
         onEntityMutated: @escaping @MainActor @Sendable () -> Void,
         audioPlaybackService: (any MusicPlaybackServicing)? = nil,
         acquisitionService: (any EntityAcquisitionServicing)? = nil,
+        requestActivityService: (any RequestActivityServicing)? = nil,
         imageSourceLoader: (any EntityImageSourceLoading)? = nil,
         imageVideoAspectRatioLoader: (any EntityImageVideoAspectRatioLoading)? = nil,
         mediaSequenceLoader: (any EntityMediaSequenceLoading)? = nil,
@@ -57,6 +59,7 @@ public struct EntityDetailDependencies: Sendable {
         self.audioPlaybackService = audioPlaybackService
         self.onEntityMutated = onEntityMutated
         self.acquisitionService = acquisitionService
+        self.requestActivityService = requestActivityService
         self.imageSourceLoader = imageSourceLoader
         self.imageVideoAspectRatioLoader = imageVideoAspectRatioLoader
         self.mediaSequenceLoader = mediaSequenceLoader

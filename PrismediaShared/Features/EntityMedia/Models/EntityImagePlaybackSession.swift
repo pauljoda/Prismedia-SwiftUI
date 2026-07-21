@@ -47,4 +47,10 @@ public final class EntityImagePlaybackSession {
     public func isMuted(for claimID: UUID) -> Bool {
         isMuted || activeClaimID != claimID
     }
+
+    public func reset() {
+        activeEntityID = nil
+        activeClaimID = nil
+        isMuted = true
+    }
 }

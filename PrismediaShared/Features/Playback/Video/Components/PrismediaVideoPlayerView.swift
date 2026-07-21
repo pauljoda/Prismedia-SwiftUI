@@ -49,11 +49,8 @@ import SwiftUI
         var body: some View {
             ZStack {
                 Color.black
-                NativeVideoSurface(
-                    controller: controller,
-                    scalingMode: controller.videoScalingMode
-                )
-                .allowsHitTesting(false)
+                VideoPlayerRenderSurface(controller: controller)
+                    .allowsHitTesting(false)
 
                 gestureLayer
 
@@ -61,7 +58,8 @@ import SwiftUI
                     assContents: controller.activeAssSubtitleContents,
                     content: controller.activeSubtitleContent,
                     appearance: controller.subtitleAppearance,
-                    player: controller.player
+                    player: controller.player,
+                    additionalBottomInset: controlsVisible && showsExpandedChrome ? 16 : 0
                 )
 
                 chrome
@@ -124,26 +122,28 @@ import SwiftUI
         }
 
         private var transportControls: some View {
-            HStack(spacing: showsExpandedChrome ? 34 : 22) {
-                transportButton(systemImage: "gobackward.10", size: showsExpandedChrome ? 44 : 36) {
-                    controller.skip(by: -10)
-                }
-                transportButton(
-                    systemImage: controller.isPlaying || controller.isWaiting ? "pause.fill" : "play.fill",
-                    size: showsExpandedChrome ? 62 : 50,
-                    prominent: true,
-                    action: controller.togglePlayback
-                )
-                .accessibilityLabel(
-                    controller.isPlaying || controller.isWaiting ? "Pause" : "Play"
-                )
-                .accessibilityIdentifier(
-                    controller.isPlaying || controller.isWaiting
-                        ? "video-detail.pause"
-                        : "video-detail.play"
-                )
-                transportButton(systemImage: "goforward.10", size: showsExpandedChrome ? 44 : 36) {
-                    controller.skip(by: 10)
+            GlassEffectContainer(spacing: showsExpandedChrome ? 34 : 22) {
+                HStack(spacing: showsExpandedChrome ? 34 : 22) {
+                    transportButton(systemImage: "gobackward.10", size: showsExpandedChrome ? 44 : 36) {
+                        controller.skip(by: -10)
+                    }
+                    transportButton(
+                        systemImage: controller.isPlaying || controller.isWaiting ? "pause.fill" : "play.fill",
+                        size: showsExpandedChrome ? 62 : 50,
+                        prominent: true,
+                        action: controller.togglePlayback
+                    )
+                    .accessibilityLabel(
+                        controller.isPlaying || controller.isWaiting ? "Pause" : "Play"
+                    )
+                    .accessibilityIdentifier(
+                        controller.isPlaying || controller.isWaiting
+                            ? "video-detail.pause"
+                            : "video-detail.play"
+                    )
+                    transportButton(systemImage: "goforward.10", size: showsExpandedChrome ? 44 : 36) {
+                        controller.skip(by: 10)
+                    }
                 }
             }
         }
@@ -157,12 +157,17 @@ import SwiftUI
             Button(action: action) {
                 Image(systemName: systemImage)
                     .font(.system(size: prominent ? size * 0.38 : size * 0.34, weight: .bold))
-                    .foregroundStyle(PrismediaColor.onMedia)
                     .frame(width: size, height: size)
                     .contentShape(Circle())
             }
+            .buttonStyle(.plain)
             .buttonBorderShape(.circle)
-            .buttonStyle(.glass(.clear))
+            .glassEffect(
+                prominent
+                    ? .regular.tint(artworkPrimaryAccent).interactive()
+                    : .regular.interactive(),
+                in: .circle
+            )
         }
 
         private var expandedHeader: some View {
@@ -204,11 +209,13 @@ import SwiftUI
                         "−\(VideoPlaybackPresentation.clockTime(max(0, controller.duration - controller.currentTime)))")
                     playbackOptionsMenu
                     #if os(iOS)
-                        bottomChromeButton(
-                            systemImage: "pip.enter",
-                            accessibilityLabel: "Start Picture in Picture",
-                            action: controller.startPictureInPicture
-                        )
+                        if controller.renderer == .native {
+                            bottomChromeButton(
+                                systemImage: "pip.enter",
+                                accessibilityLabel: "Start Picture in Picture",
+                                action: controller.startPictureInPicture
+                            )
+                        }
                     #endif
                     bottomChromeButton(
                         systemImage: isExpanded

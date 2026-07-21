@@ -42,13 +42,16 @@ public enum DashboardCatalog {
         else {
             preconditionFailure("Dashboard kind \(kind.rawValue) requires a canonical entity destination.")
         }
+        var query = entityList.query
+        query.sortDescending = true
+
         return DashboardSectionDefinition(
             kind: kind,
             title: target.destination.title,
             systemImage: systemImage ?? target.destination.systemImage,
             colorRole: colorRole,
             destinationID: target.destination.id,
-            query: entityList.query
+            query: query
         )
     }
 }

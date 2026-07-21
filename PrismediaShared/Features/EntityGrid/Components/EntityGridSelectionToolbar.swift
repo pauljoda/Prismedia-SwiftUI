@@ -19,16 +19,11 @@
                     selectAllButton
                 }
 
-                ToolbarItem(placement: .principal) {
-                    selectionStatus
-                }
-
                 ToolbarItem(placement: .topBarTrailing) {
                     actionsMenu
                 }
             #else
                 ToolbarItemGroup(placement: .primaryAction) {
-                    selectionStatus
                     selectAllButton
                     clearButton
                     if selectedCount > 0 {
@@ -38,42 +33,27 @@
             #endif
         }
 
-        private var selectionStatus: some View {
-            HStack(spacing: PrismediaSpacing.small) {
-                Text("\(selectedCount) selected")
-                    .monospacedDigit()
-                    .accessibilityIdentifier("entity.grid.selection.count")
-
-                if isProcessing {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityLabel("Updating selected items")
-                }
-            }
-            .accessibilityElement(children: .combine)
-        }
-
         private var selectAllButton: some View {
-            #if os(iOS)
-                let button = Button("Select All", action: onSelectAll)
-            #else
-                let button = Button("Select All", systemImage: "checkmark.circle", action: onSelectAll)
-            #endif
-            return
-                button
-                .disabled(isProcessing)
-                .keyboardShortcut("a", modifiers: .command)
-                .accessibilityIdentifier("entity.grid.selection.select-all")
+            Button(action: onSelectAll) {
+                Image(systemName: "checkmark.circle.fill")
+            }
+            .accessibilityLabel("Select All")
+            .disabled(isProcessing)
+            .keyboardShortcut("a", modifiers: .command)
+            .accessibilityIdentifier("entity.grid.selection.select-all")
         }
 
         private var clearButton: some View {
-            Button("Clear", systemImage: "xmark.circle", action: onClear)
-                .disabled(selectedCount == 0 || isProcessing)
-                .accessibilityIdentifier("entity.grid.selection.clear")
+            Button(action: onClear) {
+                Image(systemName: "xmark.circle")
+            }
+            .accessibilityLabel("Clear Selection")
+            .disabled(selectedCount == 0 || isProcessing)
+            .accessibilityIdentifier("entity.grid.selection.clear")
         }
 
         private var actionsMenu: some View {
-            Menu("Actions", systemImage: "ellipsis.circle") {
+            Menu {
                 #if os(iOS)
                     clearButton
 
@@ -114,7 +94,10 @@
                         }
                     }
                 }
+            } label: {
+                Image(systemName: "ellipsis")
             }
+            .accessibilityLabel("Selection Actions")
             .disabled(isProcessing)
             .accessibilityIdentifier("entity.grid.selection.actions")
         }

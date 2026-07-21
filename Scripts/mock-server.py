@@ -209,6 +209,290 @@ IDENTIFY_QUEUE = [
     }
 ]
 
+REQUEST_LIBRARY_ROOT_ID = "44444444-4444-4444-4444-444444444444"
+REQUEST_PROFILE_ID = "55555555-5555-5555-5555-555555555555"
+
+REQUEST_LIBRARY_ROOTS = [
+    {
+        "id": REQUEST_LIBRARY_ROOT_ID,
+        "path": "/media/movies",
+        "label": "Movies",
+        "enabled": True,
+        "recursive": True,
+        "scanVideos": True,
+        "scanImages": False,
+        "scanAudio": False,
+        "scanBooks": False,
+        "isNsfw": False,
+        "lastScannedAt": None,
+        "createdAt": "2026-07-01T12:00:00Z",
+        "updatedAt": "2026-07-01T12:00:00Z",
+        "autoIdentify": True,
+        "createdByUserId": None,
+        "accessUserIds": None,
+    }
+]
+
+REQUEST_ACQUISITION_PROFILES = [
+    {
+        "id": REQUEST_PROFILE_ID,
+        "kind": "movie",
+        "displayName": "Default Movies",
+        "isDefault": True,
+        "targetLibraryRootId": REQUEST_LIBRARY_ROOT_ID,
+        "pathTemplate": "",
+        "importMode": "copy",
+        "allowedFormats": [],
+        "preferredLanguages": ["en"],
+        "minSeeders": 1,
+        "minSizeBytes": None,
+        "maxSizeBytes": None,
+        "requiredTerms": [],
+        "ignoredTerms": [],
+        "preferredTerms": [],
+        "weightedTerms": [],
+        "autoPick": True,
+        "autoRedownload": True,
+        "upgradeUntilCutoff": True,
+        "cutoffSourceTier": "web",
+        "cutoffFormatTier": "hd",
+        "downloadCategory": None,
+        "allowedQualities": None,
+        "cutoffQuality": None,
+        "formatScores": None,
+        "minFormatScore": 0,
+        "cutoffFormatScore": None,
+    }
+]
+
+
+def request_search_result(external_value, title, year, overview, poster, runtime=None, certification=None):
+    return {
+        "serviceId": "00000000-0000-0000-0000-000000000000",
+        "source": "plugin",
+        "kind": "movie",
+        "externalId": f"tmdb:{external_value}",
+        "title": title,
+        "subtitle": "TMDB",
+        "year": year,
+        "overview": overview,
+        "posterUrl": poster,
+        "backdropUrl": None,
+        "rating": 8.1 if overview else None,
+        "runtimeMinutes": runtime,
+        "certification": certification,
+        "trackCount": None,
+        "tags": [],
+        "tracked": False,
+        "upstreamId": None,
+        "monitored": None,
+        "requestable": True,
+        "providerName": "The Movie Database",
+        "pluginId": "tmdb",
+        "externalIdentity": {"namespace": "tmdb", "value": external_value},
+    }
+
+
+REQUEST_SEARCH_RESULTS = [
+    request_search_result(
+        "438631",
+        "Dune",
+        2021,
+        "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his "
+        "understanding, must travel to the most dangerous planet in the universe to ensure the "
+        "future of his family and his people.",
+        "/assets/mock-fixtures/poster.jpg",
+        runtime=155,
+        certification="PG-13",
+    ),
+    request_search_result(
+        "841",
+        "Dune",
+        1984,
+        "A Duke's son leads desert warriors against the galactic emperor and his father's evil "
+        "nemesis to free their desert world from the emperor's rule.",
+        "/assets/mock-fixtures/poster.jpg",
+        runtime=137,
+        certification="PG-13",
+    ),
+    request_search_result("693134", "Dune: Part Two", 2024, None, None),
+]
+
+
+def person_relationship(index, name):
+    return {
+        "proposalId": f"tmdb:person:{index}",
+        "provider": "tmdb",
+        "targetKind": "person",
+        "confidence": None,
+        "matchReason": None,
+        "patch": {
+            "title": name,
+            "description": None,
+            "externalIds": {"tmdb": str(index)},
+            "urls": [],
+            "tags": [],
+            "studio": None,
+            "credits": [],
+            "dates": {},
+            "stats": {},
+            "positions": {},
+            "classification": None,
+            "rating": None,
+            "flags": None,
+        },
+        "images": [],
+        "children": None,
+        "candidates": None,
+        "targetEntityId": None,
+        "relationships": None,
+    }
+
+
+REQUEST_REVIEW_RESPONSE_TEMPLATE = {
+    "pluginId": "tmdb",
+    "externalIdentity": {"namespace": "tmdb", "value": "438631"},
+    "entityKind": "movie",
+    "kind": "movie",
+    "revision": "rev-1",
+    "targets": [
+        {
+            "proposalId": "tmdb:movie:438631",
+            "kind": "movie",
+            "entityKind": "movie",
+            "externalIdentity": {"namespace": "tmdb", "value": "438631"},
+            "requestable": True,
+            "position": None,
+            "year": 2021,
+            "monitored": None,
+        }
+    ],
+}
+
+
+def request_review_proposal():
+    return {
+        "proposalId": "tmdb:movie:438631",
+        "provider": "tmdb",
+        "targetKind": "movie",
+        "confidence": 1,
+        "matchReason": "external-id",
+        "patch": {
+            "title": "Dune",
+            "description": "Paul Atreides, a brilliant and gifted young man born into a great "
+            "destiny beyond his understanding, must travel to the most dangerous planet in the "
+            "universe to ensure the future of his family and his people.",
+            "externalIds": {"tmdb": "438631"},
+            "urls": ["https://www.themoviedb.org/movie/438631"],
+            "tags": ["Science Fiction", "Adventure"],
+            "studio": "Legendary Pictures",
+            "credits": [],
+            "dates": {"release": "2021-09-15"},
+            "stats": {"runtimeMinutes": 155},
+            "positions": {},
+            "classification": "PG-13",
+            "rating": 8,
+            "flags": None,
+        },
+        "images": [
+            {
+                "kind": "poster",
+                "url": "/assets/mock-fixtures/poster.jpg",
+                "source": "tmdb",
+                "rank": 1,
+                "language": "en",
+                "width": 2000,
+                "height": 3000,
+            }
+        ],
+        "children": [],
+        "candidates": [],
+        "targetEntityId": None,
+        "relationships": [
+            person_relationship(1190668, "Timothée Chalamet"),
+            person_relationship(933238, "Rebecca Ferguson"),
+            person_relationship(2524, "Oscar Isaac"),
+        ],
+    }
+
+
+IDENTIFY_PROPOSAL["images"] = [
+    {
+        "kind": "poster",
+        "url": "/assets/mock-fixtures/poster.jpg",
+        "source": "tmdb",
+        "rank": 1,
+        "language": "en",
+        "width": 2000,
+        "height": 3000,
+    }
+]
+IDENTIFY_PROPOSAL["relationships"] = [
+    person_relationship(8691, "Amy Adams"),
+    person_relationship(62064, "Jeremy Renner"),
+]
+
+IDENTIFY_QUEUE.append(
+    {
+        "id": "b1000000-0000-0000-0000-000000000002",
+        "entityId": "b2000000-0000-0000-0000-000000000002",
+        "entityKind": "movie",
+        "title": "unsorted-movie-1998.mkv",
+        "isNsfw": False,
+        "state": "search",
+        "provider": "TMDB",
+        "action": "identify",
+        "query": {"title": "unsorted movie", "limit": 25},
+        "candidates": [
+            {
+                "externalIds": {"tmdb": "603"},
+                "title": "The Matrix",
+                "year": 1999,
+                "overview": "Set in the 22nd century, The Matrix tells the story of a computer "
+                "hacker who joins a group of underground insurgents fighting the vast and "
+                "powerful computers who now rule the earth.",
+                "posterUrl": "/assets/mock-fixtures/poster.jpg",
+                "popularity": None,
+                "candidateId": "tmdb:603",
+                "source": "tmdb",
+                "confidence": 0.72,
+                "matchReason": "title-similarity",
+            },
+            {
+                "externalIds": {"tmdb": "604"},
+                "title": "The Matrix Reloaded",
+                "year": 2003,
+                "overview": None,
+                "posterUrl": None,
+                "popularity": None,
+                "candidateId": "tmdb:604",
+                "source": "tmdb",
+                "confidence": 0.41,
+                "matchReason": "title-similarity",
+            },
+        ],
+        "proposal": None,
+        "error": None,
+        "cascadeRunning": False,
+        "createdAt": "2026-07-12T12:00:00Z",
+        "updatedAt": "2026-07-12T12:00:00Z",
+        "completedAt": None,
+    }
+)
+
+REQUEST_COMMIT_RESPONSE = {
+    "containerEntityId": "33333333-3333-3333-3333-333333333333",
+    "items": [
+        {
+            "externalId": "tmdb:438631",
+            "title": "Dune",
+            "outcome": "requested",
+            "entityId": "33333333-3333-3333-3333-333333333333",
+            "acquisitionId": "11111111-1111-1111-1111-111111111111",
+        }
+    ],
+}
+
 REQUEST_DOWNLOADS = [
     {
         "acquisitionId": "11111111-1111-1111-1111-111111111111",
@@ -912,6 +1196,18 @@ def build_entity_detail_response(entity_id):
                 ],
             }
         )
+        capabilities.append(
+            {
+                "kind": "files",
+                "items": [
+                    {
+                        "role": "trickplay",
+                        "path": PUBLIC_TRICKPLAY_PATH,
+                        "mimeType": "text/vtt",
+                    }
+                ],
+            }
+        )
     if entity["kind"] == "image":
         capabilities.append(
             {
@@ -1255,8 +1551,21 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/identify/queue":
             return self._send(200, IDENTIFY_QUEUE)
 
+        if path.startswith("/api/identify/queue/entities/"):
+            entity_id = path.removeprefix("/api/identify/queue/entities/")
+            item = next((entry for entry in IDENTIFY_QUEUE if entry["entityId"] == entity_id), None)
+            if item is None:
+                return self._send(404, {"code": "identify_item_not_found", "message": "Not queued."})
+            return self._send(200, item)
+
         if path == "/api/acquisitions/downloads":
             return self._send(200, REQUEST_DOWNLOADS)
+
+        if path == "/api/libraries":
+            return self._send(200, REQUEST_LIBRARY_ROOTS)
+
+        if path == "/api/acquisitions/profiles":
+            return self._send(200, REQUEST_ACQUISITION_PROFILES)
 
         if path in ("/api/monitors/missing", "/api/monitors/cutoff-unmet"):
             return self._send(200, {"items": [], "total": 0})
@@ -1319,6 +1628,15 @@ class Handler(BaseHTTPRequestHandler):
             if detail is not None:
                 return self._send(200, detail)
             return self._send(404, {"code": "book_not_found", "message": "Book was not found."})
+
+        if path.startswith(("/api/movies/", "/api/videos/")):
+            entity_id = path.rsplit("/", 1)[-1]
+            if DETAIL_DELAY_SECONDS > 0:
+                time.sleep(DETAIL_DELAY_SECONDS)
+            detail = build_entity_detail_response(entity_id)
+            if detail is not None:
+                return self._send(200, detail)
+            return self._send(404, {"code": "entity_not_found", "message": "Entity was not found."})
 
         if path.startswith("/api/entities/"):
             entity_id = path.removeprefix("/api/entities/")
@@ -1431,6 +1749,26 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
 
         request_url = urlsplit(self.path)
+
+        if request_url.path == "/api/requests/search":
+            limit = body.get("limit") or len(REQUEST_SEARCH_RESULTS)
+            fields = body.get("fields") or {}
+            title_field = (fields.get("query") or fields.get("title") or "").lower()
+            results = [
+                result
+                for result in REQUEST_SEARCH_RESULTS
+                if not title_field or title_field in result["title"].lower()
+            ][:limit]
+            return self._send(200, {"results": results, "providerErrors": []})
+
+        if request_url.path == "/api/requests/review":
+            response = dict(REQUEST_REVIEW_RESPONSE_TEMPLATE)
+            response["proposal"] = request_review_proposal()
+            return self._send(200, response)
+
+        if request_url.path == "/api/requests/commit-reviewed":
+            return self._send(200, REQUEST_COMMIT_RESPONSE)
+
         if request_url.path.startswith("/Items/") and request_url.path.endswith("/PlaybackInfo"):
             if PLAYBACK_DELAY_SECONDS > 0:
                 time.sleep(PLAYBACK_DELAY_SECONDS)

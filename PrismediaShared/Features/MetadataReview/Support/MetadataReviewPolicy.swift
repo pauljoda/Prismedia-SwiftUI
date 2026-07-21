@@ -33,6 +33,17 @@ public enum MetadataReviewPolicy {
         )
     }
 
+    public static func proposal(
+        withID proposalID: String,
+        in root: AdministrativeEntityMetadataProposal
+    ) -> AdministrativeEntityMetadataProposal? {
+        if root.proposalID == proposalID { return root }
+        for node in structuralChildren(of: root) + relationships(of: root) {
+            if let match = proposal(withID: proposalID, in: node) { return match }
+        }
+        return nil
+    }
+
     public static func fieldValue(
         _ field: MetadataReviewField,
         in proposal: AdministrativeEntityMetadataProposal

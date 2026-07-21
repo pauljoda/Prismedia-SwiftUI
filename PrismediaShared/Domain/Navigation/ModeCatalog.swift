@@ -10,8 +10,8 @@ public enum ModeCatalog {
         destinations: [
             destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
             entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
+            destination("favorites", "Favorites", "heart", content: .favorites),
             destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
-            destination("account", "Account", "person.crop.circle", content: .account),
         ]
     )
 
@@ -60,7 +60,7 @@ public enum ModeCatalog {
                 "comics",
                 "Comics",
                 "book.pages",
-                query: EntityListQuery(kind: .book, sort: "added", bookType: "comic,manga")
+                query: EntityListQuery(kind: .book, bookType: "comic,manga")
             ),
             entityDestination(
                 "ebooks",
@@ -68,7 +68,6 @@ public enum ModeCatalog {
                 "book.closed",
                 query: EntityListQuery(
                     kind: .book,
-                    sort: "added",
                     bookType: "book,novel",
                     bookFormat: "epub,pdf"
                 )
@@ -85,7 +84,7 @@ public enum ModeCatalog {
                 "collections",
                 "Collections",
                 "square.stack.3d.up",
-                query: EntityListQuery(kind: .collection, sort: "added")
+                query: EntityListQuery(kind: .collection)
             ),
             entityDestination("people", "People", "person.2", kind: .person),
             entityDestination("studios", "Studios", "building.2", kind: .studio),
@@ -198,15 +197,11 @@ public enum ModeCatalog {
         _ systemImage: String,
         kind: EntityKind
     ) -> AppDestination {
-        let sort =
-            kind == .person || kind == .studio || kind == .tag
-            ? "references"
-            : "added"
         return entityDestination(
             id,
             title,
             systemImage,
-            query: EntityListQuery(kind: kind, sort: sort)
+            query: EntityListQuery(kind: kind)
         )
     }
 
@@ -216,7 +211,11 @@ public enum ModeCatalog {
         _ systemImage: String,
         query: EntityListQuery
     ) -> AppDestination {
-        AppDestination(
+        var query = query
+        query.sort = "added"
+        query.sortDescending = true
+
+        return AppDestination(
             id: id,
             title: title,
             systemImage: systemImage,

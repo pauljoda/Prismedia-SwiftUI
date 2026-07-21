@@ -1,0 +1,45 @@
+diff --git a/buildMobileVLCKit.sh b/buildMobileVLCKit.sh
+index db20d0c..4d7b7f6 100755
+--- a/buildMobileVLCKit.sh
++++ b/buildMobileVLCKit.sh
+@@ -5,0 +6,5 @@ set -e
++# The tvOS 27 SDK declares pipe2(), but it is unavailable on earlier tvOS
++# releases supported by this framework. Autoconf does not account for the
++# availability annotation when cross-compiling, so force VLC's pipe() fallback.
++export ac_cv_func_pipe2=no
++
+@@ -12 +12 @@ SDK_VERSION=`xcrun --sdk iphoneos --show-sdk-version`
+-SDK_MIN=9.0
++SDK_MIN=15.0
+@@ -105 +105 @@ do
+-             SDK_MIN=10.2
++             SDK_MIN=15.0
+@@ -114 +114 @@ do
+-             SDK_MIN=10.9
++             SDK_MIN=12.0
+@@ -286,0 +287,2 @@ buildxcodeproj()
++               TVOS_DEPLOYMENT_TARGET=${SDK_MIN} \
++               MACOSX_DEPLOYMENT_TARGET=${SDK_MIN} \
+diff --git a/libvlc/patches/0003-Enable-System-DL.patch b/libvlc/patches/0003-Enable-System-DL.patch
+index cbf7288..6420aad 100644
+--- a/libvlc/patches/0003-Enable-System-DL.patch
++++ b/libvlc/patches/0003-Enable-System-DL.patch
+@@ -8,2 +8,2 @@ Subject: [PATCH 03/45] Enable System DL
+- contrib/src/ffmpeg/rules.mak                |  4 ++++
+- 2 files changed, 24 insertions(+)
++ contrib/src/ffmpeg/rules.mak                |  1 +
++ 2 files changed, 21 insertions(+)
+@@ -42,10 +42,0 @@ index 0fe31de9fd..ec2bc70edd 100644
+-@@ -33,6 +33,9 @@ FFMPEGCONF = \
+- 	--disable-encoder=vorbis \
+- 	--disable-decoder=opus \
+- 	--enable-libgsm \
+-+	--disable-decoder=mlp \
+-+	--disable-demuxer=mlp \
+-+	--disable-parser=mlp \
+- 	--disable-debug \
+- 	--disable-avdevice \
+- 	--disable-devices \
+@@ -52 +42 @@ index 0fe31de9fd..ec2bc70edd 100644
+-@@ -266,6 +269,7 @@ endif
++@@ -266,6 +266,7 @@ endif

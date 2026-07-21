@@ -143,6 +143,40 @@
             return seconds
         }
 
+        static func videoControlsAutoHideDelay(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Duration? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let value = environment["PRISMEDIA_UI_TEST_VIDEO_CONTROLS_TIMEOUT"],
+                let seconds = Double(value),
+                seconds >= 0
+            else { return nil }
+            return .seconds(seconds)
+        }
+
+        static func videoScanSettleDelay(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Duration? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let value = environment["PRISMEDIA_UI_TEST_VIDEO_SCAN_SETTLE_SECONDS"],
+                let seconds = Double(value),
+                seconds >= 0
+            else { return nil }
+            return .seconds(seconds)
+        }
+
+        static func videoPlaybackEngine(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> VideoPlaybackEngine? {
+            guard arguments.contains("-prismedia-ui-testing"),
+                let value = environment["PRISMEDIA_UI_TEST_VIDEO_ENGINE"]
+            else { return nil }
+            return VideoPlaybackEngine(rawValue: value)
+        }
+
         static func tvTabID(
             arguments: [String] = CommandLine.arguments,
             environment: [String: String] = ProcessInfo.processInfo.environment
@@ -154,6 +188,19 @@
 
             return tabID
         }
+
+        #if os(tvOS)
+            static func tvSettingsDestination(
+                arguments: [String] = CommandLine.arguments,
+                environment: [String: String] = ProcessInfo.processInfo.environment
+            ) -> TVSettingsDestination? {
+                guard arguments.contains("-prismedia-ui-testing"),
+                    let value = environment["PRISMEDIA_UI_TEST_TV_SETTINGS_DESTINATION"]
+                else { return nil }
+
+                return TVSettingsDestination(rawValue: value)
+            }
+        #endif
 
         static func startsEntityDetailAtBottom(
             arguments: [String] = CommandLine.arguments,
@@ -169,6 +216,14 @@
         ) -> Bool {
             arguments.contains("-prismedia-ui-testing")
                 && environment["PRISMEDIA_UI_TEST_DISABLE_HERO_AUTO_ADVANCE"] == "1"
+        }
+
+        static func usesStep4AdministrationFixtures(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Bool {
+            arguments.contains("-prismedia-ui-testing")
+                && environment["PRISMEDIA_UI_TEST_STEP4_FIXTURES"] == "1"
         }
     }
 #endif

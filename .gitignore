@@ -14,5 +14,4 @@ DerivedData/
 *.swp
 *.swo
 xcuserdata/
-Package.resolved
 Carthage/Build/

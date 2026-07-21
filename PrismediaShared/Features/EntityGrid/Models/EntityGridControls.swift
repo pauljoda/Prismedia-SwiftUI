@@ -20,7 +20,7 @@ public struct EntityGridControls: Codable, Hashable, Sendable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         sort = try container.decodeIfPresent(EntityGridSort.self, forKey: .sort)
-        sortDescending = try container.decodeIfPresent(Bool.self, forKey: .sortDescending) ?? true
+        sortDescending = try container.decodeIfPresent(Bool.self, forKey: .sortDescending) ?? false
         randomSeed = Self.nextRandomSeed()
         filters = try container.decodeIfPresent(EntityGridFilters.self, forKey: .filters) ?? EntityGridFilters()
     }

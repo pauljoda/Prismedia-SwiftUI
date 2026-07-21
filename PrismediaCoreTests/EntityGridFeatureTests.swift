@@ -178,7 +178,7 @@ final class EntityGridFeatureTests: XCTestCase {
 
         let requests = await loader.recordedRequests()
         XCTAssertEqual(requests.map(\.query.sort), [nil, "rating", "rating"])
-        XCTAssertEqual(requests.map(\.query.sortDescending), [true, false, false])
+        XCTAssertEqual(requests.map(\.query.sortDescending), [false, false, false])
         XCTAssertEqual(requests.map(\.query.favorite), [nil, true, true])
         XCTAssertEqual(requests.map(\.cursor), [nil, nil, "filtered-page-2"])
     }

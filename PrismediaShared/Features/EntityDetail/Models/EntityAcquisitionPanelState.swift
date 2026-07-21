@@ -8,9 +8,27 @@ struct EntityAcquisitionPanelState: Sendable {
     mutating func finishLoad(_ outcome: EntityAcquisitionLoadOutcome) {
         switch outcome {
         case .content(let snapshot):
-            phase = .content(snapshot)
+            let nextPhase = EntityAcquisitionPanelPhase.content(snapshot)
+            if phase != nextPhase { phase = nextPhase }
         case .failure(let message):
-            phase = .failure(message)
+            let nextPhase = EntityAcquisitionPanelPhase.failure(message)
+            if phase != nextPhase { phase = nextPhase }
+        case .cancelled:
+            break
+        }
+    }
+
+    /// Applies a background refresh. A transient poll failure keeps the last good
+    /// content on screen instead of flipping the panel into the failure state.
+    mutating func finishBackgroundLoad(_ outcome: EntityAcquisitionLoadOutcome) {
+        switch outcome {
+        case .content(let snapshot):
+            let nextPhase = EntityAcquisitionPanelPhase.content(snapshot)
+            if phase != nextPhase { phase = nextPhase }
+        case .failure(let message):
+            if case .content = phase { return }
+            let nextPhase = EntityAcquisitionPanelPhase.failure(message)
+            if phase != nextPhase { phase = nextPhase }
         case .cancelled:
             break
         }

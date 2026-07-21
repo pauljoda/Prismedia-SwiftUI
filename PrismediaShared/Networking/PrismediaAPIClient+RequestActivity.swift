@@ -44,6 +44,32 @@ extension PrismediaAPIClient {
         try await send(RequestActivityAcquisitionDetail.self, path: requestActivityAcquisitionPath(id))
     }
 
+    /// The latest acquisition backing a library entity, or `nil` when it has none
+    /// (the common case for scanned-in items).
+    public func fetchRequestActivityAcquisition(
+        forEntity entityID: UUID
+    ) async throws -> RequestActivityAcquisitionDetail? {
+        do {
+            return try await send(
+                RequestActivityAcquisitionDetail.self,
+                path: "/api/acquisitions/for-entity/\(entityID.uuidString.lowercased())"
+            )
+        } catch PrismediaAPIError.httpStatus(404, _) {
+            return nil
+        }
+    }
+
+    /// Requests an existing library entity by id — a wanted placeholder's "Search for release".
+    /// The server resolves the entity's kind and provider identity itself and starts the
+    /// auto-grabbing, monitored acquisition.
+    public func commitEntityRequest(entityID: UUID) async throws {
+        try await sendExpectingNoContent(
+            path: "/api/requests/commit-entity",
+            method: "POST",
+            queryItems: [URLQueryItem(name: "entityId", value: entityID.uuidString.lowercased())]
+        )
+    }
+
     public func queueRequestActivityRelease(
         acquisitionID: UUID,
         candidateID: UUID

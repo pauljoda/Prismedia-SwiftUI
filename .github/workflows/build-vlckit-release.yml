@@ -1,0 +1,102 @@
+name: Build custom VLCKit release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Immutable release tag for the custom VLCKit build
+        required: true
+        default: vlckit-3.7.3-prismedia.1
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -eu
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; release tags are immutable." >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "Prismedia VLCKit 3.7.3 (Xcode 26)" \
+            --notes "Custom VLCKit 3.7.3 XCFrameworks built with Xcode 26. Includes Prismedia's compatibility patch for MLP/TrueHD decoding and pre-tvOS 27 pipe fallback."
+
+  build-frameworks:
+    needs: prepare-release
+    runs-on: macos-26
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ios
+            framework: MobileVLCKit
+            binary: ios-arm64/MobileVLCKit.framework/MobileVLCKit
+          - platform: macos
+            framework: VLCKit
+            binary: macos-arm64_x86_64/VLCKit.framework/Versions/A/VLCKit
+          - platform: tvos
+            framework: TVVLCKit
+            binary: tvos-arm64/TVVLCKit.framework/TVVLCKit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require Xcode 26
+        run: |
+          set -eu
+          xcodebuild -version
+          xcodebuild -version | head -1 | grep -E '^Xcode 26([.]|$)'
+
+      - name: Build ${{ matrix.framework }}
+        env:
+          PRISMEDIA_VLCKIT_PLATFORM: ${{ matrix.platform }}
+        run: Scripts/bootstrap-vlckit.sh
+
+      - name: Verify SDK and package artifact
+        env:
+          FRAMEWORK: ${{ matrix.framework }}
+          BINARY: ${{ matrix.binary }}
+        run: |
+          set -eu
+          build_info=$(xcrun vtool -show-build "Carthage/Build/$FRAMEWORK.xcframework/$BINARY")
+          echo "$build_info"
+          echo "$build_info" | grep -E 'sdk 26([.]|$)'
+
+          archive="$RUNNER_TEMP/$FRAMEWORK.xcframework.zip"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "Carthage/Build/$FRAMEWORK.xcframework" \
+            "$archive"
+          cd "$RUNNER_TEMP"
+          shasum -a 256 "$FRAMEWORK.xcframework.zip" > "$FRAMEWORK.xcframework.zip.sha256"
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          FRAMEWORK: ${{ matrix.framework }}
+        run: |
+          set -eu
+          gh release upload "$RELEASE_TAG" \
+            "$RUNNER_TEMP/$FRAMEWORK.xcframework.zip" \
+            "$RUNNER_TEMP/$FRAMEWORK.xcframework.zip.sha256" \
+            --repo "$GITHUB_REPOSITORY"
+
+  publish-release:
+    needs: build-frameworks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false

@@ -85,22 +85,32 @@ final class AdministrativeAPIClientTests: XCTestCase {
     func testJobActionsUseExactMaintenanceContracts() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json(#"{"items":[],"counts":[]}"#),
+            .json(#"{"job":{"id":"55555555-5555-5555-5555-555555555555","type":"scan-library","status":"waiting","progress":0,"message":null,"targetKind":null,"targetId":null,"targetLabel":null,"createdAt":"2026-07-18T12:00:00Z","startedAt":null,"finishedAt":null}}"#),
             .json(#"{"cancelled":2}"#),
+            .json(#"{"cancelled":4}"#),
             .json(#"{"cleared":3}"#),
+            .json(#"{"cleared":5}"#),
             .json(#"{"enqueued":4,"skipped":1}"#),
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
 
         _ = try await client.listAdministrativeJobs()
+        _ = try await client.createAdministrativeJob(type: "scan-library")
         _ = try await client.cancelAdministrativeJobs(type: "scan")
+        _ = try await client.cancelAdministrativeJobs()
         _ = try await client.clearAdministrativeJobFailures(type: "scan")
+        _ = try await client.clearAdministrativeJobFailures()
         _ = try await client.rebuildAdministrativePreviews()
 
-        XCTAssertEqual(loader.requests[1].httpMethod, "DELETE")
-        XCTAssertEqual(queryItem("type", in: loader.requests[1]), "scan")
-        XCTAssertEqual(loader.requests[2].url?.path, "/api/jobs/failures/clear")
-        XCTAssertEqual(loader.requests[2].httpMethod, "POST")
-        XCTAssertEqual(loader.requests[3].url?.path, "/api/jobs/rebuild-previews")
+        XCTAssertEqual(loader.requests[1].url?.path, "/api/jobs/scan-library")
+        XCTAssertEqual(loader.requests[1].httpMethod, "POST")
+        XCTAssertEqual(loader.requests[2].httpMethod, "DELETE")
+        XCTAssertEqual(queryItem("type", in: loader.requests[2]), "scan")
+        XCTAssertNil(queryItem("type", in: loader.requests[3]))
+        XCTAssertEqual(loader.requests[4].url?.path, "/api/jobs/failures/clear")
+        XCTAssertEqual(loader.requests[4].httpMethod, "POST")
+        XCTAssertNil(queryItem("type", in: loader.requests[5]))
+        XCTAssertEqual(loader.requests[6].url?.path, "/api/jobs/rebuild-previews")
     }
 
     func testSettingsScalarUpdateCacheClearAndBackupUseExactContracts() async throws {

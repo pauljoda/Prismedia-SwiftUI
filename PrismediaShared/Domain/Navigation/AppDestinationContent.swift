@@ -1,6 +1,6 @@
 public enum AppDestinationContent: Hashable, Sendable {
     case dashboard
-    case account
+    case favorites
     case playbackStatistics
     case entityList(EntityListDestination)
     case administration(AdministrativeDestination)

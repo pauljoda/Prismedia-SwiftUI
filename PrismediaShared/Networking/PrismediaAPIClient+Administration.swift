@@ -219,14 +219,15 @@ extension PrismediaAPIClient {
     public func searchAdministrativeRequests(
         kind: String,
         pluginID: String,
-        fields: [String: String]
+        fields: [String: String],
+        limit: Int? = nil
     ) async throws -> AdministrativeRequestSearchResponse {
         try await send(
             AdministrativeRequestSearchResponse.self,
             path: "/api/requests/search",
             method: "POST",
             queryItems: [administrativeNsfwVisibilityQueryItem],
-            body: AdministrativeRequestSearchRequest(kind: kind, pluginID: pluginID, fields: fields)
+            body: AdministrativeRequestSearchRequest(kind: kind, pluginID: pluginID, fields: fields, limit: limit)
         )
     }
 
@@ -274,7 +275,8 @@ extension PrismediaAPIClient {
     }
 
     public func listAdministrativeLibraryRoots() async throws -> [AdministrativeLibraryRoot] {
-        try await send([AdministrativeLibraryRoot].self, path: "/api/libraries")
+        let roots = try await send([AdministrativeLibraryRoot].self, path: "/api/libraries")
+        return allowsNsfwContent ? roots : roots.filter { !$0.isNsfw }
     }
 
     public func listAdministrativeAcquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] {
@@ -285,6 +287,15 @@ extension PrismediaAPIClient {
         try await send(AdministrativeJobListResponse.self, path: "/api/jobs/")
     }
 
+    public func createAdministrativeJob(type: String) async throws -> AdministrativeJobCreateResponse {
+        let encodedType = type.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? type
+        return try await send(
+            AdministrativeJobCreateResponse.self,
+            path: "/api/jobs/\(encodedType)",
+            method: "POST"
+        )
+    }
+
     public func cancelAdministrativeJob(id: UUID) async throws -> AdministrativeCountResponse {
         try await send(
             AdministrativeCountResponse.self,
@@ -293,21 +304,21 @@ extension PrismediaAPIClient {
         )
     }
 
-    public func cancelAdministrativeJobs(type: String) async throws -> AdministrativeCountResponse {
+    public func cancelAdministrativeJobs(type: String? = nil) async throws -> AdministrativeCountResponse {
         try await send(
             AdministrativeCountResponse.self,
             path: "/api/jobs/",
             method: "DELETE",
-            queryItems: [URLQueryItem(name: "type", value: type)]
+            queryItems: type.map { [URLQueryItem(name: "type", value: $0)] } ?? []
         )
     }
 
-    public func clearAdministrativeJobFailures(type: String) async throws -> AdministrativeCountResponse {
+    public func clearAdministrativeJobFailures(type: String? = nil) async throws -> AdministrativeCountResponse {
         try await send(
             AdministrativeCountResponse.self,
             path: "/api/jobs/failures/clear",
             method: "POST",
-            queryItems: [URLQueryItem(name: "type", value: type)]
+            queryItems: type.map { [URLQueryItem(name: "type", value: $0)] } ?? []
         )
     }
 

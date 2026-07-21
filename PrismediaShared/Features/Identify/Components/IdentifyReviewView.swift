@@ -2,40 +2,34 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifyReviewView: View {
+        @Environment(\.prismediaPageIsActive) private var pageIsActive
+        @Environment(\.scenePhase) private var scenePhase
         @Bindable var session: IdentifySession
 
         var body: some View {
             if let item = session.selectedItem {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-                        header(item)
-                        if let proposal = item.proposal, !session.showsSearchForProposal {
-                            MetadataProposalReviewView(proposal: proposal, selection: $session.reviewSelection)
-                            applyActions(item)
-                        } else {
-                            PluginSearchSurface(
-                                title: "Find Metadata",
-                                description: "Search installed plugins and choose the correct match.",
-                                entityKind: item.entityKind.rawValue, hidesNsfw: session.hidesNsfw,
-                                seedTitle: item.title,
-                                providers: session.providers, selectedProviderID: $session.selectedProviderID,
-                                values: $session.searchValues, candidates: item.candidates,
-                                hasSearched: item.query != nil || !item.candidates.isEmpty,
-                                isSearching: session.isSearching, isDisabled: item.cascadeRunning,
-                                errorMessage: item.error,
-                                searchStatus: session.isSeeking ? "Seeking across providers…" : nil,
-                                onSearch: { values in Task { await session.search(fields: values) } },
-                                onClear: { session.searchValues.removeAll() },
-                                onCandidateActivate: { candidate in Task { await session.resolve(candidate) } },
-                                onRescan: { Task { await session.rescan() } },
-                                isRescanning: session.isSearching,
-                                onSeek: { Task { await session.seek() } },
-                                isSeeking: session.isSeeking)
-                        }
-                    }.padding()
+                Group {
+                    if let proposal = item.proposal, !session.showsSearchForProposal {
+                        IdentifyProposalReviewPage(
+                            session: session,
+                            item: item,
+                            proposal: proposal,
+                            isRoot: true
+                        )
+                    } else {
+                        searchSurface(item)
+                    }
                 }
-                .navigationTitle("Review")
+                .navigationTitle(item.title)
+                #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                #endif
                 .toolbar { reviewNavigation }
+                .task(id: searchRefreshTaskID) {
+                    guard searchRefreshIsActive else { return }
+                    await session.refreshSelectedItem()
+                    await pollSearchItemWhileVisible()
+                }
                 .accessibilityIdentifier("identify.review")
             } else {
                 ContentUnavailableView(
@@ -44,76 +38,67 @@ import SwiftUI
             }
         }
 
-        private func header(_ item: AdministrativeIdentifyQueueItem) -> some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                Text(item.title).font(.title2.bold())
-                Text("\(item.entityKind.displayLabel) · \(IdentifyQueueState(rawServerValue: item.state).label)")
-                    .foregroundStyle(PrismediaColor.textSecondary)
-                if item.cascadeRunning {
-                    Label("Applying related metadata", systemImage: "arrow.triangle.branch").foregroundStyle(
-                        PrismediaColor.warning)
-                }
-            }
-        }
-
-        private func applyActions(_ item: AdministrativeIdentifyQueueItem) -> some View {
-            VStack(spacing: PrismediaSpacing.medium) {
-                if let progress = session.applyProgress {
-                    ProgressView(value: Double(progress.currentIndex), total: Double(max(progress.total, 1))) {
-                        Text(progress.currentTitle ?? "Applying metadata")
-                    }
-                }
-                ViewThatFits {
-                    HStack { actionButtons(item) }
-                    VStack { actionButtons(item) }
-                }
-            }.padding(PrismediaSpacing.large).prismediaPanel()
-        }
-
-        @ViewBuilder private func actionButtons(_ item: AdministrativeIdentifyQueueItem) -> some View {
-            PrismediaButton(
-                "Back to Search",
-                systemImage: "arrow.left",
-                action: session.returnToSearch
+        private func searchSurface(_ item: AdministrativeIdentifyQueueItem) -> some View {
+            PluginSearchSurface(
+                title: "Find Metadata",
+                description: "Search installed plugins and choose the correct match.",
+                entityKind: item.entityKind.rawValue, hidesNsfw: session.hidesNsfw,
+                seedTitle: item.title,
+                providers: session.providers, selectedProviderID: $session.selectedProviderID,
+                values: $session.searchValues, candidates: item.candidates,
+                hasSearched: item.query != nil || !item.candidates.isEmpty,
+                isSearching: session.isSearching, isDisabled: item.cascadeRunning,
+                errorMessage: item.error,
+                searchStatus: session.isSeeking ? "Seeking across providers…" : nil,
+                onSearch: { values in Task { await session.search(fields: values) } },
+                onClear: { session.searchValues.removeAll() },
+                onCandidateActivate: { candidate in Task { await session.resolve(candidate) } },
+                onRescan: { Task { await session.rescan() } },
+                isRescanning: session.isSearching,
+                onSeek: { Task { await session.seek() } },
+                isSeeking: session.isSeeking
             )
-            PrismediaButton(
-                "Reject",
-                systemImage: "xmark",
-                variant: .destructive
-            ) {
-                Task { await session.reject(advance: false) }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                IdentifyTargetContextBar(item: item)
+                    .padding(.horizontal)
+                    .padding(.bottom, PrismediaSpacing.small)
             }
-            PrismediaButton(
-                "Reject & Next",
-                systemImage: "xmark",
-                variant: .destructive
-            ) {
-                Task { await session.reject(advance: true) }
+        }
+
+        private var searchRefreshIsActive: Bool {
+            pageIsActive
+                && scenePhase == .active
+                && session.selectedItemID != nil
+                && (session.selectedItem?.proposal == nil || session.showsSearchForProposal)
+                && !session.isSearching
+                && !session.isSeeking
+        }
+
+        private var searchRefreshTaskID: String {
+            "\(session.selectedItemID?.uuidString ?? "none"):\(searchRefreshIsActive)"
+        }
+
+        private func pollSearchItemWhileVisible() async {
+            while searchRefreshIsActive {
+                do { try await Task.sleep(for: .seconds(5)) } catch { return }
+                guard !Task.isCancelled, searchRefreshIsActive else { return }
+                await session.refreshSelectedItem()
             }
-            PrismediaButton(
-                "Accept",
-                systemImage: "checkmark",
-                variant: .prominent
-            ) {
-                Task { await session.apply(advance: false) }
-            }
-            .disabled(session.isApplying || item.cascadeRunning)
-            PrismediaButton(
-                "Accept & Next",
-                systemImage: "checkmark",
-                variant: .prominent
-            ) {
-                Task { await session.apply(advance: true) }
-            }
-            .disabled(session.isApplying || item.cascadeRunning)
         }
 
         @ToolbarContentBuilder private var reviewNavigation: some ToolbarContent {
             ToolbarItemGroup {
-                Button("Previous", systemImage: "chevron.left", action: session.selectPrevious).disabled(
-                    session.reviewableIDs.count < 2)
-                Button("Next", systemImage: "chevron.right", action: session.selectNext).disabled(
-                    session.reviewableIDs.count < 2)
+                Button(action: session.selectPrevious) {
+                    Image(systemName: "chevron.left")
+                }
+                .accessibilityLabel("Previous")
+                .disabled(session.reviewableIDs.count < 2)
+
+                Button(action: session.selectNext) {
+                    Image(systemName: "chevron.right")
+                }
+                .accessibilityLabel("Next")
+                .disabled(session.reviewableIDs.count < 2)
             }
         }
     }

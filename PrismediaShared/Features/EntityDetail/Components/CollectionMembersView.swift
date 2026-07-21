@@ -53,7 +53,8 @@ struct CollectionMembersView: View {
             presentation: .embedded,
             horizontalContentPadding: horizontalPadding,
             actionPolicy: collectionActionPolicy,
-            mutationService: environment.client
+            mutationService: environment.client,
+            prefersInitialTVFocus: true
         ) { item, layout in
             EntityThumbnailNavigationSurface(item: item, layout: layout)
         }

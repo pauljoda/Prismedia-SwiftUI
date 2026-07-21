@@ -23,6 +23,7 @@ import SwiftUI
                 }
             }
             .preferredColorScheme(.dark)
+            .presentationSizing(.page)
         }
     }
 #endif

@@ -75,6 +75,11 @@ public struct MusicQueue: Equatable, Sendable {
         return order.dropFirst(position + 1).map { tracks[$0] }
     }
 
+    public func upNextTracks(limit: Int) -> [MusicTrack] {
+        guard limit > 0, order.indices.contains(position) else { return [] }
+        return order.dropFirst(position + 1).prefix(limit).map { tracks[$0] }
+    }
+
     public var canGoNext: Bool {
         guard currentTrack != nil else { return false }
         return position < order.count - 1 || repeatMode != .off
@@ -148,6 +153,20 @@ public struct MusicQueue: Equatable, Sendable {
         setShuffled(enabled, using: &generator)
     }
 
+    public mutating func shuffleAll() {
+        var generator = SystemRandomNumberGenerator()
+        shuffleAll(using: &generator)
+    }
+
+    public mutating func shuffleAll<R: RandomNumberGenerator>(
+        using generator: inout R
+    ) {
+        order = Array(tracks.indices)
+        order.shuffle(using: &generator)
+        position = order.isEmpty ? -1 : 0
+        isShuffled = true
+    }
+
     public mutating func setShuffled<R: RandomNumberGenerator>(
         _ enabled: Bool,
         using generator: inout R
@@ -169,6 +188,16 @@ public struct MusicQueue: Equatable, Sendable {
         }
 
         isShuffled = enabled
+    }
+
+    public mutating func appendUpcomingTracks(_ newTracks: [MusicTrack]) {
+        var existingIDs = Set(tracks.map(\.id))
+        let uniqueTracks = newTracks.filter { existingIDs.insert($0.id).inserted }
+        guard !uniqueTracks.isEmpty else { return }
+
+        let firstNewIndex = tracks.count
+        tracks += uniqueTracks
+        order += firstNewIndex..<tracks.count
     }
 
     public mutating func recordCurrentTrackInHistory() {
