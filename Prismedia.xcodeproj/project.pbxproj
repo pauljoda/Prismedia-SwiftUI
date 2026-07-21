@@ -370,27 +370,12 @@
 				TargetAttributes = {
 					AA0000000000000000000101 = {
 						CreatedOnToolsVersion = 27.0;
-						SystemCapabilities = {
-							com.apple.iCloud = {
-								enabled = 1;
-							};
-						};
 					};
 					AA0000000000000000000102 = {
 						CreatedOnToolsVersion = 27.0;
-						SystemCapabilities = {
-							com.apple.iCloud = {
-								enabled = 1;
-							};
-						};
 					};
 					AA0000000000000000000103 = {
 						CreatedOnToolsVersion = 27.0;
-						SystemCapabilities = {
-							com.apple.iCloud = {
-								enabled = 1;
-							};
-						};
 					};
 					AA0000000000000000000104 = {
 						CreatedOnToolsVersion = 27.0;
@@ -637,7 +622,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;

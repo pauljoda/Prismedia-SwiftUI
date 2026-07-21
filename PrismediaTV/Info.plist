@@ -25,6 +25,13 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Prismedia connects to your local media server.</string>
+	<key>TVTopShelfImage</key>
+	<dict>
+		<key>TVTopShelfPrimaryImage</key>
+		<string>Top Shelf Image</string>
+		<key>TVTopShelfPrimaryImageWide</key>
+		<string>Top Shelf Image Wide</string>
+	</dict>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

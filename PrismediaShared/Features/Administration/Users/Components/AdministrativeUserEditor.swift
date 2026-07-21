@@ -60,7 +60,10 @@ struct AdministrativeUserEditor: View {
                     .disabled(isSelf)
                 }
                 Section("Permissions") {
-                    Toggle("Allow NSFW content", isOn: Binding(get: { allowNsfw }, set: setAllowNsfw))
+                    Toggle(
+                        "Allow NSFW content",
+                        isOn: Binding(get: { allowNsfw }, set: { setAllowNsfw($0) })
+                    )
                     Toggle("Can create libraries", isOn: $canCreateLibraries)
                     Toggle("Account enabled", isOn: $enabled).disabled(isSelf)
                 }

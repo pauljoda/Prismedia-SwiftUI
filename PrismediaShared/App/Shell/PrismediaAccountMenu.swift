@@ -2,10 +2,9 @@ import SwiftUI
 
 struct PrismediaAccountMenu: View {
     let user: UserAccount
-    let allowsNsfwContent: Bool
+    @Binding var allowsNsfwContent: Bool
     let onOpenAccount: () -> Void
     let onOpenSettings: (() -> Void)?
-    let onSetAllowsNsfwContent: @MainActor @Sendable (Bool) -> Void
     let onSignOut: () -> Void
 
     var body: some View {
@@ -24,10 +23,7 @@ struct PrismediaAccountMenu: View {
             if user.allowNsfw {
                 Toggle(
                     "Allow NSFW Content",
-                    isOn: Binding(
-                        get: { allowsNsfwContent },
-                        set: onSetAllowsNsfwContent
-                    )
+                    isOn: $allowsNsfwContent
                 )
                 .accessibilityIdentifier("shell.account.allowNsfw")
             }
@@ -64,10 +60,9 @@ struct PrismediaAccountMenu: View {
     #Preview("Account Menu") {
         PrismediaAccountMenu(
             user: PrismediaPreviewData.user,
-            allowsNsfwContent: false,
+            allowsNsfwContent: .constant(false),
             onOpenAccount: {},
             onOpenSettings: {},
-            onSetAllowsNsfwContent: { _ in },
             onSignOut: {}
         )
         .padding()

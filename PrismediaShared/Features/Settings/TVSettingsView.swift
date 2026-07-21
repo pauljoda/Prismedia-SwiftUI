@@ -65,7 +65,7 @@ import SwiftUI
                 TVVisibilitySettingsView(
                     allowsNsfwContent: Binding(
                         get: { environment.allowsNsfwContent },
-                        set: environment.setAllowsNsfwContent
+                        set: { environment.setAllowsNsfwContent($0) }
                     )
                 )
             case .account:
