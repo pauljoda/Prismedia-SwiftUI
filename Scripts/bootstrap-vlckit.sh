@@ -7,6 +7,15 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_dir=$(dirname -- "$script_dir")
 destination_dir="$repository_dir/Carthage/Build"
 lossless_patch="$script_dir/Patches/TVVLCKit-EnableTrueHD.patch"
+requested_platform="${PRISMEDIA_VLCKIT_PLATFORM:-all}"
+
+case "$requested_platform" in
+    all | ios | macos | tvos) ;;
+    *)
+        echo "Unsupported PRISMEDIA_VLCKIT_PLATFORM: $requested_platform" >&2
+        exit 2
+        ;;
+esac
 
 framework_is_compatible() {
     binary="$1"
@@ -25,17 +34,23 @@ tv_ready=false
 ios_ready=false
 mac_ready=false
 
-if framework_is_compatible "$tv_destination/tvos-arm64/TVVLCKit.framework/TVVLCKit" \
+if [ "$requested_platform" != all ] && [ "$requested_platform" != tvos ]; then
+    tv_ready=true
+elif framework_is_compatible "$tv_destination/tvos-arm64/TVVLCKit.framework/TVVLCKit" \
     && framework_is_compatible \
         "$tv_destination/tvos-arm64_x86_64-simulator/TVVLCKit.framework/TVVLCKit"; then
     tv_ready=true
 fi
-if framework_is_compatible "$ios_destination/ios-arm64/MobileVLCKit.framework/MobileVLCKit" \
+if [ "$requested_platform" != all ] && [ "$requested_platform" != ios ]; then
+    ios_ready=true
+elif framework_is_compatible "$ios_destination/ios-arm64/MobileVLCKit.framework/MobileVLCKit" \
     && framework_is_compatible \
         "$ios_destination/ios-arm64_x86_64-simulator/MobileVLCKit.framework/MobileVLCKit"; then
     ios_ready=true
 fi
-if framework_is_compatible "$mac_destination/macos-arm64_x86_64/VLCKit.framework/VLCKit"; then
+if [ "$requested_platform" != all ] && [ "$requested_platform" != macos ]; then
+    mac_ready=true
+elif framework_is_compatible "$mac_destination/macos-arm64_x86_64/VLCKit.framework/VLCKit"; then
     mac_ready=true
 fi
 
