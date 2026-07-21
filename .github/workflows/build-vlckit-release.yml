@@ -6,7 +6,7 @@ on:
       release_tag:
         description: Immutable release tag for the custom VLCKit build
         required: true
-        default: vlckit-3.7.3-prismedia.1
+        default: vlckit-3.7.3-prismedia.3
 
 permissions:
   contents: write
@@ -29,7 +29,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --draft \
             --title "Prismedia VLCKit 3.7.3 (Xcode 26)" \
-            --notes "Custom VLCKit 3.7.3 XCFrameworks built with Xcode 26. Includes Prismedia's compatibility patch for MLP/TrueHD decoding and pre-tvOS 27 pipe fallback."
+            --notes-file Docs/CustomVLCKit.md
 
   build-frameworks:
     needs: prepare-release
