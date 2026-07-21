@@ -370,27 +370,12 @@
 				TargetAttributes = {
 					AA0000000000000000000101 = {
 						CreatedOnToolsVersion = 27.0;
-						SystemCapabilities = {
-							com.apple.iCloud = {
-								enabled = 1;
-							};
-						};
 					};
 					AA0000000000000000000102 = {
 						CreatedOnToolsVersion = 27.0;
-						SystemCapabilities = {
-							com.apple.iCloud = {
-								enabled = 1;
-							};
-						};
 					};
 					AA0000000000000000000103 = {
 						CreatedOnToolsVersion = 27.0;
-						SystemCapabilities = {
-							com.apple.iCloud = {
-								enabled = 1;
-							};
-						};
 					};
 					AA0000000000000000000104 = {
 						CreatedOnToolsVersion = 27.0;
