@@ -26,16 +26,54 @@ The shared source tree is organized vertically:
 
 See [Docs/Architecture.md](Docs/Architecture.md) for the dependency rules, feature template, playback boundaries, and validation contract. `AGENTS.md` is the enforceable engineering and native-design contract.
 
-Before building an app target for the first time, run
-`Scripts/bootstrap-vlckit.sh` to build the pinned compatibility-player frameworks with
-MLP/TrueHD decoding enabled and install them under the ignored `Carthage/Build`
-directory. This is a one-time source build, so the initial bootstrap takes
-longer than downloading a prebuilt framework.
+## Custom VLCKit builds
 
-Xcode Cloud uses `ci_scripts/ci_post_clone.sh` to download the matching iOS,
-macOS, or tvOS XCFramework built with Xcode 26. The script verifies the pinned
-release artifact before installing it, while Swift package versions are locked
-by the committed `Package.resolved` files.
+Prismedia publishes reproducible, checksum-pinned VLCKit 3.7.3 XCFrameworks for
+iOS, macOS, and tvOS. These are intentionally public because the two downstream
+fixes are useful to any Apple-platform client with the same requirements:
+
+- restore FFmpeg's MLP demuxer, parser, and decoder so Dolby TrueHD/MLP audio is
+  available;
+- force VLC's `pipe()` fallback instead of importing `pipe2()`, which newer SDKs
+  declare even though the symbol is unavailable on older supported tvOS
+  releases.
+
+The patch also gives the frameworks explicit minimums of iOS/tvOS 15 and macOS
+12. It does not otherwise change VLCKit's public API.
+
+| Release asset | Contents |
+| --- | --- |
+| `MobileVLCKit.xcframework.zip` | iOS device and Simulator slices |
+| `VLCKit.xcframework.zip` | Universal Apple-silicon and Intel macOS framework |
+| `TVVLCKit.xcframework.zip` | tvOS device and Simulator slices |
+
+The [latest custom VLCKit release](https://github.com/pauljoda/Prismedia-SwiftUI/releases/latest)
+contains each archive and its SHA-256 file. The release workflow requires Xcode
+26, checks the compiled SDK with `vtool`, and refuses to publish unless the
+expected TrueHD/MLP symbols are present and `pipe2()` is not an undefined
+import. Release tags are immutable.
+
+To reproduce the frameworks locally, run `Scripts/bootstrap-vlckit.sh`. Set
+`PRISMEDIA_VLCKIT_PLATFORM` to `ios`, `macos`, or `tvos` to build one platform;
+omit it to build all three. The script clones the upstream 3.7.3 tag, applies
+the narrow patch in `Scripts/Patches`, validates the binaries, and installs them
+under the ignored `Carthage/Build` directory.
+
+See [Docs/CustomVLCKit.md](Docs/CustomVLCKit.md) for download examples, exact
+verification behavior, supported slices, and licensing details. These are
+downstream community builds, not official VideoLAN releases.
+
+### Xcode Cloud integration
+
+Xcode Cloud runs `ci_scripts/ci_post_clone.sh` to download only the XCFramework
+for the current action. The script verifies its hard-coded SHA-256 before
+installing it. Swift package versions are separately locked by the committed
+`Package.resolved` files.
+
+`PrismediaCloud.xcworkspace` exposes the app and bootstrap schemes to Xcode
+Cloud without granting repository access to the owners of public Swift package
+dependencies. Packages such as Point-Free's `combine-schedulers` remain normal
+public dependencies; they do not require owner sign-in or repository access.
 
 ## Native design
 
