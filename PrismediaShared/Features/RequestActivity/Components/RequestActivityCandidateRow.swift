@@ -38,32 +38,42 @@ import SwiftUI
                         .font(.caption)
                         .foregroundStyle(rejectionStyle)
                 }
-                GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                    HStack(spacing: PrismediaSpacing.small) {
-                        PrismediaButton(
-                            primaryActionTitle,
-                            systemImage: "arrow.down.circle",
-                            variant: primaryActionVariant,
-                            form: .compactIcon
-                        ) {
-                            onQueue(candidate)
+                ViewThatFits(in: .horizontal) {
+                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                        HStack(spacing: PrismediaSpacing.small) {
+                            actionButtons
                         }
-                        .disabled(isDisabled || !canQueue)
-                        PrismediaButton(
-                            "Blocklist",
-                            systemImage: "hand.raised",
-                            variant: .destructive,
-                            form: .compactIcon
-                        ) {
-                            onBlocklist(candidate)
+                    }
+                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                            actionButtons
                         }
-                        .disabled(isDisabled)
                     }
                 }
                 .prismediaCompactActionControlSize()
             }
             .padding(.vertical, PrismediaSpacing.extraSmall)
             .accessibilityElement(children: .contain)
+        }
+
+        @ViewBuilder
+        private var actionButtons: some View {
+            PrismediaButton(
+                primaryActionTitle,
+                systemImage: "arrow.down.circle",
+                variant: primaryActionVariant
+            ) {
+                onQueue(candidate)
+            }
+            .disabled(isDisabled || !canQueue)
+            PrismediaButton(
+                "Blocklist",
+                systemImage: "hand.raised",
+                variant: .destructive
+            ) {
+                onBlocklist(candidate)
+            }
+            .disabled(isDisabled)
         }
 
         private var primaryActionTitle: String {

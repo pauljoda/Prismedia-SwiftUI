@@ -109,12 +109,12 @@ struct EntityAcquisitionPanel: View {
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-            actionContent(snapshot, service: service)
-            guidanceContent(snapshot)
+        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+            panelHeader(snapshot, service: service)
 
             #if os(iOS) || os(macOS)
                 if let acquisition = snapshot.latestAcquisition, let requestActivityService {
+                    Divider()
                     RequestActivityAcquisitionManagementSections(
                         acquisitionID: acquisition.summary.id,
                         service: requestActivityService,
@@ -131,38 +131,70 @@ struct EntityAcquisitionPanel: View {
                     )
                     .id(acquisition.summary.id)
                 } else {
-                    summaryFallback(snapshot)
+                    fallbackContent(snapshot)
                 }
 
                 if !historyEntries.isEmpty {
+                    Divider()
                     EntityAcquisitionHistorySection(entries: historyEntries)
                 }
             #else
-                summaryFallback(snapshot)
+                fallbackContent(snapshot)
             #endif
         }
+        .padding(PrismediaSpacing.extraLarge)
+        .prismediaCard()
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Action row
+    private func panelHeader(
+        _ snapshot: EntityAcquisitionPanelSnapshot,
+        service: EntityAcquisitionService
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+            Text("Acquisition")
+                .font(.title3.bold())
+                .foregroundStyle(PrismediaColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+
+            guidanceContent(snapshot)
+
+            if hasPanelActions(snapshot) {
+                actionContent(snapshot, service: service)
+            }
+        }
+    }
+
+    // MARK: - Actions
 
     private func actionContent(
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        GlassEffectContainer(spacing: PrismediaSpacing.small) {
-            HStack(spacing: PrismediaSpacing.small) {
-                actionButtons(snapshot, service: service)
+        ViewThatFits(in: .horizontal) {
+            GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                HStack(spacing: PrismediaSpacing.small) {
+                    actionButtons(snapshot, service: service)
+                    mutationProgress
+                }
+            }
+            GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                    actionButtons(snapshot, service: service)
+                    mutationProgress
+                }
             }
         }
         .prismediaCompactActionControlSize()
         .disabled(state.isMutating)
-        .overlay {
-            if state.isMutating {
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
+    }
+
+    @ViewBuilder
+    private var mutationProgress: some View {
+        if state.isMutating {
+            ProgressView()
+                .controlSize(.small)
+                .accessibilityLabel("Updating acquisition")
         }
     }
 
@@ -174,7 +206,7 @@ struct EntityAcquisitionPanel: View {
         if let monitor = snapshot.state.monitor {
             monitorToggle(monitor, service: service)
         } else if snapshot.state.canMonitor {
-            PrismediaButton("Monitor", systemImage: "bell", form: .compactIcon) {
+            PrismediaButton("Monitor", systemImage: "bell") {
                 Task { await perform(.start(entityID), using: service) }
             }
         }
@@ -184,7 +216,6 @@ struct EntityAcquisitionPanel: View {
                 "Search for release",
                 systemImage: "magnifyingglass",
                 variant: .prominent,
-                form: .compactIcon,
                 primaryTint: artworkPrimaryAccent
             ) {
                 Task { await perform(.searchForRelease(entityID), using: service) }
@@ -192,7 +223,7 @@ struct EntityAcquisitionPanel: View {
         }
 
         if !embedsManagement(snapshot), let acquisition = snapshot.state.latestAcquisition {
-            PrismediaButton("Search Again", systemImage: "arrow.clockwise", form: .compactIcon) {
+            PrismediaButton("Search Again", systemImage: "arrow.clockwise") {
                 Task { await perform(.searchAgain(acquisition.id), using: service) }
             }
         }
@@ -206,29 +237,28 @@ struct EntityAcquisitionPanel: View {
         if monitor.status == .stopping {
             PrismediaButton(
                 "Finish unmonitoring",
-                systemImage: "arrow.clockwise",
-                form: .compactIcon
+                systemImage: "arrow.clockwise"
             ) {
                 Task { await perform(.unmonitor(monitor.id), using: service) }
             }
         } else if monitor.status == .deletingFiles {
-            PrismediaButton("Deleting files…", systemImage: "trash", form: .compactIcon) {}
+            PrismediaButton("Deleting files…", systemImage: "trash") {}
                 .disabled(true)
         } else if isUnknownMonitorStatus(monitor.status) {
-            PrismediaButton("Updating…", systemImage: "arrow.clockwise", form: .compactIcon) {}
+            PrismediaButton("Updating…", systemImage: "arrow.clockwise") {}
                 .disabled(true)
         } else if monitor.status == .active {
-            PrismediaButton(
-                "Monitoring",
-                systemImage: "bell.and.waves.left.and.right",
-                variant: .prominent,
-                form: .compactIcon,
-                primaryTint: artworkPrimaryAccent
-            ) {
-                confirmsUnmonitor = true
+            Menu {
+                Button("Stop Monitoring", systemImage: "bell.slash", role: .destructive) {
+                    confirmsUnmonitor = true
+                }
+            } label: {
+                Label("Monitoring", systemImage: "bell.and.waves.left.and.right")
             }
+            .buttonStyle(.glass)
+            .accessibilityHint("Shows monitoring options")
         } else {
-            PrismediaButton("Resume monitoring", systemImage: "bell", form: .compactIcon) {
+            PrismediaButton("Resume monitoring", systemImage: "bell") {
                 Task { await perform(.resume(monitor.id), using: service) }
             }
         }
@@ -266,21 +296,27 @@ struct EntityAcquisitionPanel: View {
     private func trackedViaLine(_ monitorState: EntityMonitorState) -> String {
         let via = monitorState.trackableProviders.joined(separator: ", ")
         if monitorState.monitor?.status == .deletingFiles {
-            return "Monitoring stays enabled via \(via) while files are deleted."
+            return "Tracking stays enabled via \(via) while files are deleted."
         }
         if monitorState.monitor?.status == .active {
             if monitorState.discoversChildren {
-                return "Watching for new works daily via \(via)."
+                return "Checked daily for new works via \(via)."
             }
-            return "Monitoring via \(via)."
+            return "Tracked via \(via)."
         }
-        return "Monitoring available — tracked via \(via)."
+        return "Tracking is available via \(via)."
     }
 
     // MARK: - Gates
 
     private func showsMonitorControl(_ monitorState: EntityMonitorState) -> Bool {
         monitorState.monitor != nil || monitorState.canMonitor
+    }
+
+    private func hasPanelActions(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
+        showsMonitorControl(snapshot.state)
+            || showsSearchForRelease(snapshot)
+            || (!embedsManagement(snapshot) && snapshot.state.latestAcquisition != nil)
     }
 
     private func showsSearchForRelease(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
@@ -309,6 +345,14 @@ struct EntityAcquisitionPanel: View {
     }
 
     // MARK: - Fallback summary (tvOS and missing request-activity service)
+
+    @ViewBuilder
+    private func fallbackContent(_ snapshot: EntityAcquisitionPanelSnapshot) -> some View {
+        if snapshot.state.monitor != nil || snapshot.state.latestAcquisition != nil {
+            Divider()
+            summaryFallback(snapshot)
+        }
+    }
 
     @ViewBuilder
     private func summaryFallback(_ snapshot: EntityAcquisitionPanelSnapshot) -> some View {

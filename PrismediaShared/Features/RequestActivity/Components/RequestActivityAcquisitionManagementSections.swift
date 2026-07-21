@@ -300,30 +300,61 @@ import UniformTypeIdentifiers
         }
 
         private func embeddedStatusHeader(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.medium) {
-                    Label(
-                        RequestActivityStatusPolicy.label(for: detail.summary.status),
-                        systemImage: RequestActivityStatusPolicy.systemImage(for: detail.summary.status)
-                    )
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(
-                        RequestActivityStatusPolicy.tone(for: detail.summary.status).foregroundStyle
-                    )
-                    if let message = detail.summary.statusMessage, !message.isEmpty {
-                        Text(message)
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.textMuted)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: PrismediaSpacing.large) {
+                    embeddedStatusSummary(detail)
+                    Spacer(minLength: PrismediaSpacing.medium)
+                    if hasEmbeddedActions(detail) {
+                        GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                            HStack(spacing: PrismediaSpacing.small) {
+                                embeddedActions(detail)
+                            }
+                        }
+                        .prismediaCompactActionControlSize()
                     }
                 }
-
-                if hasEmbeddedActions(detail) {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                    embeddedStatusSummary(detail)
                     GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                        HStack(spacing: PrismediaSpacing.small) { embeddedActions(detail) }
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: PrismediaSpacing.small) {
+                                embeddedActions(detail)
+                            }
+                            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                                embeddedActions(detail)
+                            }
+                        }
                     }
                     .prismediaCompactActionControlSize()
                 }
             }
+        }
+
+        private func embeddedStatusSummary(_ detail: RequestActivityAcquisitionDetail) -> some View {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                Label(
+                    RequestActivityStatusPolicy.label(for: detail.summary.status),
+                    systemImage: RequestActivityStatusPolicy.systemImage(for: detail.summary.status)
+                )
+                .font(.headline)
+                .foregroundStyle(
+                    RequestActivityStatusPolicy.tone(for: detail.summary.status).foregroundStyle
+                )
+
+                if let description = RequestActivityStatusPolicy.description(
+                    for: detail.summary.status,
+                    message: detail.summary.statusMessage
+                ) {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                } else if let message = detail.summary.statusMessage, !message.isEmpty {
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
         }
 
         private func hasEmbeddedActions(_ detail: RequestActivityAcquisitionDetail) -> Bool {
@@ -339,8 +370,7 @@ import UniformTypeIdentifiers
                 PrismediaButton(
                     status.rawValue == "manual-import-required" ? "Import anyway" : "Retry import",
                     systemImage: "arrow.down.doc",
-                    variant: .prominent,
-                    form: .compactIcon
+                    variant: .prominent
                 ) {
                     Task {
                         await retryImport(allowFormatChange: status.rawValue == "manual-import-required")
@@ -352,8 +382,7 @@ import UniformTypeIdentifiers
                 PrismediaButton(
                     "Start over",
                     systemImage: "arrow.counterclockwise",
-                    variant: .destructive,
-                    form: .compactIcon
+                    variant: .destructive
                 ) {
                     confirmsStartOver = true
                 }
@@ -362,8 +391,7 @@ import UniformTypeIdentifiers
             if canReSearch(detail) {
                 PrismediaButton(
                     "Search again",
-                    systemImage: "arrow.clockwise",
-                    form: .compactIcon
+                    systemImage: "arrow.clockwise"
                 ) {
                     Task { await research() }
                 }
@@ -371,10 +399,9 @@ import UniformTypeIdentifiers
             }
             if canCancel(status) || status.rawValue == "awaiting-selection" {
                 PrismediaButton(
-                    "Cancel",
+                    "Cancel acquisition",
                     systemImage: "xmark",
-                    variant: .destructive,
-                    form: .compactIcon
+                    variant: .destructive
                 ) {
                     Task { await cancel() }
                 }

@@ -7,22 +7,16 @@ import SwiftUI
         let transfer: RequestActivityTransfer?
 
         var body: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Text("Download")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-
-                if let transfer {
-                    transferContent(transfer)
-                } else {
-                    RequestActivityStatePlaceholder(
-                        title: "Preparing download",
-                        message:
-                            "Connecting to the download client and waiting for the first progress report…",
-                        systemImage: "arrow.down.circle",
-                        isBusy: true
-                    )
-                }
+            if let transfer {
+                transferContent(transfer)
+            } else {
+                RequestActivityStatePlaceholder(
+                    title: "Preparing download",
+                    message:
+                        "Connecting to the download client and waiting for the first progress report…",
+                    systemImage: "arrow.down.circle",
+                    isBusy: true
+                )
             }
         }
 
@@ -51,8 +45,6 @@ import SwiftUI
                     VStack(alignment: .leading, spacing: PrismediaSpacing.small) { stats(transfer) }
                 }
             }
-            .padding(PrismediaSpacing.medium)
-            .prismediaPanel()
         }
 
         @ViewBuilder
@@ -83,6 +75,8 @@ import SwiftUI
         #Preview("Download Section") {
             VStack(spacing: PrismediaSpacing.large) {
                 RequestActivityDownloadSection(transfer: RequestActivityPreviewFixtures.transfer)
+                    .padding(PrismediaSpacing.extraLarge)
+                    .prismediaCard()
                 RequestActivityDownloadSection(transfer: nil)
             }
             .padding()

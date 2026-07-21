@@ -5,6 +5,7 @@ import SwiftUI
     /// Download / Blocklist actions, and the manual .torrent upload fallback — mirroring
     /// the web releases section.
     struct RequestActivityReleasesSection: View {
+        @State private var visibleCount = 10
         let candidates: [RequestActivityReleaseCandidate]
         let canPickRelease: Bool
         let isBusy: Bool
@@ -33,7 +34,7 @@ import SwiftUI
                     )
                 } else {
                     VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                        ForEach(candidates) { candidate in
+                        ForEach(visibleCandidates) { candidate in
                             RequestActivityCandidateRow(
                                 candidate: candidate,
                                 isDisabled: isBusy || !canPickRelease,
@@ -42,6 +43,10 @@ import SwiftUI
                                 onBlocklist: onBlocklist
                             )
                         }
+
+                        if remainingCount > 0 {
+                            loadMoreButton
+                        }
                     }
                 }
 
@@ -49,7 +54,35 @@ import SwiftUI
                     torrentUploadFallback
                 }
             }
+            .onChange(of: candidates.count) {
+                visibleCount = pageSize
+            }
         }
+
+        private var visibleCandidates: ArraySlice<RequestActivityReleaseCandidate> {
+            candidates.prefix(visibleCount)
+        }
+
+        private var remainingCount: Int {
+            max(0, candidates.count - visibleCount)
+        }
+
+        private var nextPageCount: Int {
+            min(pageSize, remainingCount)
+        }
+
+        private var loadMoreButton: some View {
+            PrismediaButton(
+                "Load \(nextPageCount) more releases",
+                systemImage: "chevron.down"
+            ) {
+                visibleCount += pageSize
+            }
+            .prismediaCompactActionControlSize()
+            .padding(.top, PrismediaSpacing.small)
+        }
+
+        private var pageSize: Int { 10 }
 
         private var torrentUploadFallback: some View {
             ViewThatFits(in: .horizontal) {
