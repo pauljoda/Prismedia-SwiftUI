@@ -3,6 +3,7 @@ import Foundation
 public struct RequestActivityDownloadProtocol: RawRepresentable, Codable, Hashable, Sendable {
     public static let torrent = RequestActivityDownloadProtocol(rawValue: "torrent")
     public static let usenet = RequestActivityDownloadProtocol(rawValue: "usenet")
+    public static let soulseek = RequestActivityDownloadProtocol(rawValue: "soulseek")
 
     public let rawValue: String
 

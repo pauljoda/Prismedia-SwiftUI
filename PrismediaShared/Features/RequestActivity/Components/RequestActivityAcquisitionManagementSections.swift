@@ -1,6 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+#if canImport(Accessibility)
+    import Accessibility
+#endif
+
 #if os(iOS) || os(macOS)
     /// The acquisition-specific management surface: status, live transfer, files,
     /// release review, torrent upload, retry-import, and cancel. One state machine with
@@ -23,6 +27,7 @@ import UniformTypeIdentifiers
         @State private var refreshState = RequestActivityAcquisitionRefreshState()
         @State private var activeLifecycleAction: RequestActivityAcquisitionAction?
         @State private var failedLifecycleAction: RequestActivityAcquisitionAction?
+        @State private var activeCandidateAction: RequestActivityCandidateAction?
         @State private var isImportingTorrent = false
         @State private var confirmsStartOver = false
         @State private var lastObservedStatus: AcquisitionStatus?
@@ -69,6 +74,7 @@ import UniformTypeIdentifiers
                 refreshMessage: String? = nil,
                 activeLifecycleAction: RequestActivityAcquisitionAction? = nil,
                 failedLifecycleAction: RequestActivityAcquisitionAction? = nil,
+                activeCandidateAction: RequestActivityCandidateAction? = nil,
                 confirmsStartOver: Bool = false
             ) {
                 self.init(
@@ -90,6 +96,7 @@ import UniformTypeIdentifiers
                 )
                 _activeLifecycleAction = State(initialValue: activeLifecycleAction)
                 _failedLifecycleAction = State(initialValue: failedLifecycleAction)
+                _activeCandidateAction = State(initialValue: activeCandidateAction)
                 _confirmsStartOver = State(initialValue: confirmsStartOver)
                 disablesLiveLoadingForPreview = true
             }
@@ -187,17 +194,19 @@ import UniformTypeIdentifiers
 
         @ViewBuilder
         private func listDownstreamSections(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            switch RequestActivityAcquisitionLifecyclePolicy.content(for: detail.summary.status) {
-            case .download:
-                transferSection
-                filesSection
-            case .files:
-                filesSection
-            case .releases:
+            if canPickRelease(detail) {
                 blocklistSection
-                candidatesSection
-            case .preparingSearch, .searching, .lifecycleOnly, .locked:
-                EmptyView()
+                candidatesSection(detail)
+            } else {
+                switch RequestActivityAcquisitionLifecyclePolicy.content(for: detail.summary.status) {
+                case .download:
+                    transferSection
+                    filesSection
+                case .files:
+                    filesSection
+                case .releases, .preparingSearch, .searching, .lifecycleOnly, .locked:
+                    EmptyView()
+                }
             }
         }
 
@@ -274,28 +283,18 @@ import UniformTypeIdentifiers
             }
         }
 
-        @ViewBuilder
-        private var candidatesSection: some View {
-            if let detail {
-                Section("Release Candidates") {
-                    if detail.candidates.isEmpty {
-                        ContentUnavailableView(
-                            "No Candidates",
-                            systemImage: "magnifyingglass",
-                            description: Text("Search again or import a torrent file manually.")
-                        )
-                    } else {
-                        ForEach(detail.candidates) { candidate in
-                            RequestActivityCandidateRow(
-                                candidate: candidate,
-                                isDisabled: isActing
-                                    || RequestActivityStatusPolicy.isTransitionLocked(detail.summary.status),
-                                onQueue: { target in Task { await queue(target) } },
-                                onBlocklist: { target in Task { await blocklist(target) } }
-                            )
-                        }
-                    }
-                }
+        private func candidatesSection(_ detail: RequestActivityAcquisitionDetail) -> some View {
+            Section {
+                RequestActivityReleasesSection(
+                    candidates: detail.candidates,
+                    canPickRelease: canPickRelease(detail),
+                    isBusy: isActing,
+                    activeAction: activeCandidateAction,
+                    showsTorrentFallback: false,
+                    onDownload: { target in Task { await queue(target) } },
+                    onBlocklist: { target in Task { await blocklist(target) } },
+                    onUploadTorrent: {}
+                )
             }
         }
 
@@ -523,47 +522,56 @@ import UniformTypeIdentifiers
         @ViewBuilder
         private func embeddedBody(_ detail: RequestActivityAcquisitionDetail) -> some View {
             let status = detail.summary.status
-            switch RequestActivityAcquisitionLifecyclePolicy.content(for: status) {
-            case .locked:
-                RequestActivityStatePlaceholder(
-                    title: status.rawValue == "stopping"
-                        ? "Cleaning up acquisition"
-                        : "Updating acquisition",
-                    message: status.rawValue == "stopping"
-                        ? "Removing the download and managed files. Actions will return when cleanup finishes."
-                        : "Prismedia is finishing a newer lifecycle transition. Actions are temporarily unavailable.",
-                    systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
-                    isBusy: true
-                )
-            case .preparingSearch:
-                PrismediaLoadingView("Preparing search…")
-            case .searching:
-                PrismediaLoadingView("Searching indexers…")
-            case .download:
-                RequestActivityDownloadSection(transfer: transfer)
-            case .files:
-                RequestActivityFilesSection(
-                    files: files,
-                    isActive: RequestActivityStatusPolicy.shouldPoll(status)
-                )
-            case .releases:
-                RequestActivityReleasesSection(
-                    candidates: detail.candidates,
-                    canPickRelease: canPickRelease(detail),
-                    isBusy: isActing,
-                    onQueue: { target in Task { await queue(target) } },
-                    onBlocklist: { target in Task { await blocklist(target) } },
-                    onUploadTorrent: { isImportingTorrent = true }
-                )
-            case .lifecycleOnly:
-                EmptyView()
+            if canPickRelease(detail) {
+                releasePicker(detail)
+            } else {
+                switch RequestActivityAcquisitionLifecyclePolicy.content(for: status) {
+                case .locked:
+                    RequestActivityStatePlaceholder(
+                        title: status.rawValue == "stopping"
+                            ? "Cleaning up acquisition"
+                            : "Updating acquisition",
+                        message: status.rawValue == "stopping"
+                            ? "Removing the download and managed files. Actions will return when cleanup finishes."
+                            : "Prismedia is finishing a newer lifecycle transition. Actions are temporarily unavailable.",
+                        systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
+                        isBusy: true
+                    )
+                case .preparingSearch:
+                    PrismediaLoadingView("Preparing search…")
+                case .searching:
+                    PrismediaLoadingView("Searching indexers…")
+                case .download:
+                    RequestActivityDownloadSection(transfer: transfer)
+                case .files:
+                    RequestActivityFilesSection(
+                        files: files,
+                        isActive: RequestActivityStatusPolicy.shouldPoll(status)
+                    )
+                case .releases, .lifecycleOnly:
+                    EmptyView()
+                }
             }
         }
 
+        private func releasePicker(_ detail: RequestActivityAcquisitionDetail) -> some View {
+            RequestActivityReleasesSection(
+                candidates: detail.candidates,
+                canPickRelease: canPickRelease(detail),
+                isBusy: isActing,
+                activeAction: activeCandidateAction,
+                onDownload: { target in Task { await queue(target) } },
+                onBlocklist: { target in Task { await blocklist(target) } },
+                onUploadTorrent: { isImportingTorrent = true }
+            )
+        }
+
         private func canPickRelease(_ detail: RequestActivityAcquisitionDetail) -> Bool {
-            let status = detail.summary.status.rawValue
-            return status == "awaiting-selection"
-                || status == "manual-import-required"
+            RequestActivityAcquisitionLifecyclePolicy.showsReleasePicker(
+                for: detail.summary.status,
+                hasResumableImport: detail.summary.hasResumableImport,
+                hasCandidates: !detail.candidates.isEmpty
+            )
         }
 
         // MARK: - Loading and actions
@@ -680,7 +688,7 @@ import UniformTypeIdentifiers
         }
 
         private func queue(_ candidate: RequestActivityReleaseCandidate) async {
-            await mutate {
+            await mutateCandidate(.download(candidate.id)) {
                 try await service.queueRequestActivityRelease(
                     acquisitionID: acquisitionID,
                     candidateID: candidate.id
@@ -689,11 +697,16 @@ import UniformTypeIdentifiers
         }
 
         private func blocklist(_ candidate: RequestActivityReleaseCandidate) async {
-            await mutate {
+            let succeeded = await mutateCandidate(.blocklist(candidate.id)) {
                 try await service.blocklistRequestActivityCandidate(
                     acquisitionID: acquisitionID,
                     candidateID: candidate.id
                 )
+            }
+            if succeeded {
+                AccessibilityNotification.Announcement(
+                    "Blocked \(RequestActivityReleasePolicy.displayTitle(for: candidate))."
+                ).post()
             }
         }
 
@@ -757,6 +770,41 @@ import UniformTypeIdentifiers
             } catch {
                 actionErrorMessage = error.localizedDescription
                 failedLifecycleAction = nil
+            }
+        }
+
+        @discardableResult
+        private func mutateCandidate(
+            _ action: RequestActivityCandidateAction,
+            operation: () async throws -> RequestActivityAcquisitionDetail
+        ) async -> Bool {
+            guard !isActing else { return false }
+            isActing = true
+            activeCandidateAction = action
+            defer {
+                activeCandidateAction = nil
+                isActing = false
+            }
+            do {
+                let nextDetail = try await operation()
+                detail = nextDetail
+                transfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
+                files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
+                blocklist =
+                    (try? await service.listRequestActivityBlocklist())?.filter {
+                        $0.acquisitionID == acquisitionID
+                    } ?? []
+                actionErrorMessage = nil
+                failedLifecycleAction = nil
+                refreshState.recordSuccess()
+                await observeStatusTransition(nextDetail.summary.status)
+                return true
+            } catch is CancellationError {
+                return false
+            } catch {
+                actionErrorMessage = error.localizedDescription
+                failedLifecycleAction = nil
+                return false
             }
         }
 

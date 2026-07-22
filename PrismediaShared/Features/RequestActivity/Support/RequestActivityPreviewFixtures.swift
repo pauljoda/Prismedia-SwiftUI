@@ -125,6 +125,109 @@ import Foundation
             """
         )
 
+        static let categoryCandidate: RequestActivityReleaseCandidate = decode(
+            """
+            {
+              "id":"88888888-8888-8888-8888-888888888888",
+              "indexerName":"BookSearch",
+              "title":"Dune Messiah    Retail EPUB  »  Books / Ebook",
+              "sizeBytes":5100000,
+              "seeders":62,
+              "peers":8,
+              "protocol":"torrent",
+              "accepted":true,
+              "score":97.4,
+              "rejections":[],
+              "infoUrl":"https://example.com/releases/dune-messiah",
+              "publishedAt":"2026-07-12T18:10:00Z"
+            }
+            """
+        )
+
+        static let unavailableCandidate: RequestActivityReleaseCandidate = decode(
+            """
+            {
+              "id":"99999999-9999-9999-9999-999999999999",
+              "indexerName":"Archive Index",
+              "title":"Dune.1965.Unknown.Archive » Other",
+              "sizeBytes":15600000,
+              "protocol":"usenet",
+              "accepted":false,
+              "score":5.0,
+              "rejections":["unsupported-format","no-download-link"],
+              "publishedAt":"2026-07-11T09:00:00Z"
+            }
+            """
+        )
+
+        static let blockedCandidate: RequestActivityReleaseCandidate = decode(
+            """
+            {
+              "id":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+              "indexerName":"BookSearch",
+              "title":"Dune.1965.Retail.MOBI » Books / Ebook",
+              "sizeBytes":6300000,
+              "seeders":14,
+              "peers":1,
+              "protocol":"torrent",
+              "accepted":false,
+              "score":78.0,
+              "rejections":["blocklisted"],
+              "infoUrl":"https://example.com/releases/dune-mobi",
+              "publishedAt":"2026-07-12T12:20:00Z"
+            }
+            """
+        )
+
+        static let soulseekCandidate: RequestActivityReleaseCandidate = decode(
+            """
+            {
+              "id":"bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+              "indexerName":"Soulseek",
+              "title":"Dune (Unabridged) M4B » Audio / Audiobook",
+              "sizeBytes":684000000,
+              "seeders":3,
+              "peers":0,
+              "protocol":"soulseek",
+              "accepted":true,
+              "score":88.8,
+              "rejections":[],
+              "infoUrl":"https://example.com/releases/dune-audio",
+              "publishedAt":"2026-07-12T13:30:00Z"
+            }
+            """
+        )
+
+        static let unknownProtocolCandidate: RequestActivityReleaseCandidate = decode(
+            """
+            {
+              "id":"cccccccc-dddd-eeee-ffff-000000000000",
+              "indexerName":"Future Indexer",
+              "title":"Dune.1965.Retail.PDF » Books / Ebook",
+              "sizeBytes":7400000,
+              "seeders":null,
+              "peers":null,
+              "protocol":"future-transfer",
+              "accepted":false,
+              "score":33.2,
+              "rejections":["wrong-protocol"],
+              "publishedAt":"2026-07-12T10:00:00Z"
+            }
+            """
+        )
+
+        static var releasePickerCandidates: [RequestActivityReleaseCandidate] {
+            [
+                categoryCandidate,
+                candidate,
+                soulseekCandidate,
+                rejectedCandidate,
+                unavailableCandidate,
+                blockedCandidate,
+                unknownProtocolCandidate,
+            ]
+        }
+
         private static func decode<Value: Decodable>(_ json: String) -> Value {
             try! PrismediaJSON.decoder().decode(Value.self, from: Data(json.utf8))
         }
