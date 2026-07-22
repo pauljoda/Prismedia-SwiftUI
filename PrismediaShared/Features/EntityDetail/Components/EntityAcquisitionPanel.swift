@@ -52,6 +52,7 @@ struct EntityAcquisitionPanel: View {
             refreshError: String? = nil,
             pendingMonitorValue: Bool? = nil,
             confirmedMonitorValue: Bool? = nil,
+            activeCommand: EntityAcquisitionCommand? = nil,
             failedCommand: EntityAcquisitionCommand? = nil,
             failedPendingMonitorValue: Bool? = nil,
             actionNotice: String? = nil,
@@ -76,6 +77,7 @@ struct EntityAcquisitionPanel: View {
             )
             _pendingMonitorValue = State(initialValue: pendingMonitorValue)
             _confirmedMonitorValue = State(initialValue: confirmedMonitorValue)
+            _activeCommand = State(initialValue: activeCommand)
             _failedCommand = State(initialValue: failedCommand)
             _failedPendingMonitorValue = State(initialValue: failedPendingMonitorValue)
             _actionNotice = State(initialValue: actionNotice)
@@ -180,6 +182,8 @@ struct EntityAcquisitionPanel: View {
             EntityMonitorControl(
                 monitorState: monitorState,
                 presentation: presentation,
+                showsMutationProgress: pendingMonitorValue != nil
+                    || confirmedMonitorValue != nil,
                 primaryAccent: artworkPrimaryAccent,
                 onChange: { nextValue in
                     guard let monitorState else { return }
@@ -197,6 +201,10 @@ struct EntityAcquisitionPanel: View {
                 service: service,
                 loadError: loadError
             )
+
+            if loadError == nil, monitorState == nil {
+                PrismediaLoadingView("Loading monitoring…")
+            }
 
             if presentation.showsExpandedContent, let snapshot {
                 expandedContent(snapshot, service: service)

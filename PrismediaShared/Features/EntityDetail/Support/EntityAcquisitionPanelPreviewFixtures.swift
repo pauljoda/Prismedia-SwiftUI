@@ -196,6 +196,36 @@ import Foundation
             detail(status: "awaiting-selection", statusMessage: nil)
         }
 
+        static func lifecycleDetail(
+            status: String,
+            statusMessage: String? = nil,
+            hasResumableImport: Bool = false,
+            progress: Double? = nil
+        ) -> RequestActivityAcquisitionDetail {
+            let encodedMessage = statusMessage.map { "\"statusMessage\":\"\($0)\"," } ?? ""
+            let encodedProgress = progress.map { "\"progress\":\($0)," } ?? ""
+            let json = """
+                {
+                  "summary":{
+                    "id":"\(acquisitionID.uuidString.lowercased())",
+                    "status":"\(status)",
+                    \(encodedMessage)
+                    \(encodedProgress)
+                    "title":"Dune",
+                    "author":"Frank Herbert",
+                    "kind":"book",
+                    "createdAt":"2026-07-11T10:00:00Z",
+                    "updatedAt":"2026-07-11T12:00:00Z",
+                    "entityId":"\(entityID.uuidString.lowercased())",
+                    "hasResumableImport":\(hasResumableImport)
+                  },
+                  "candidates":[]
+                }
+                """
+            return try! PrismediaJSON.decoder()
+                .decode(RequestActivityAcquisitionDetail.self, from: Data(json.utf8))
+        }
+
         static func requestActivityService(
             scenario: RequestActivityPreviewScenario
         ) -> any RequestActivityServicing {

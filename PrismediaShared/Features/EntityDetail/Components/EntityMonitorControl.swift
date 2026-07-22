@@ -3,6 +3,7 @@ import SwiftUI
 struct EntityMonitorControl: View {
     let monitorState: EntityMonitorState?
     let presentation: EntityMonitorPresentation
+    let showsMutationProgress: Bool
     let primaryAccent: Color
     let onChange: @MainActor @Sendable (Bool) -> Void
 
@@ -22,14 +23,9 @@ struct EntityMonitorControl: View {
                 .padding(.trailing, PrismediaSpacing.small)
                 .accessibilityHint(toggleHint(isOn: isOn))
             } else {
-                HStack(alignment: .center, spacing: PrismediaSpacing.medium) {
-                    label
-                    Spacer(minLength: PrismediaSpacing.large)
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityHidden(true)
-                }
-                .accessibilityElement(children: .combine)
+                label
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
             }
         }
         .accessibilityIdentifier("entity-detail.acquisition.monitor")
@@ -41,7 +37,7 @@ struct EntityMonitorControl: View {
                 Text("Monitor")
                     .font(.title3)
                     .foregroundStyle(PrismediaColor.textPrimary)
-                if presentation.isBusy, presentation.isOn != nil {
+                if showsMutationProgress, presentation.isOn != nil {
                     ProgressView()
                         .controlSize(.small)
                         .accessibilityHidden(true)
@@ -58,9 +54,9 @@ struct EntityMonitorControl: View {
     private var statusText: some View {
         if presentation.isAwaitingRefresh {
             Text("Monitoring changed. Refreshing the latest status…")
-        } else if presentation.isBusy, presentation.isOn == true {
+        } else if showsMutationProgress, presentation.isOn == true {
             Text("Turning on monitoring…")
-        } else if presentation.isBusy, presentation.isOn == false {
+        } else if showsMutationProgress, presentation.isOn == false {
             Text("Stopping monitoring…")
         } else if let monitorState {
             if let monitor = monitorState.monitor {
@@ -129,6 +125,7 @@ struct EntityMonitorControl: View {
                 isMutating: false,
                 pendingValue: nil
             ),
+            showsMutationProgress: false,
             primaryAccent: PrismediaColor.spectrumCyan,
             onChange: { _ in }
         )

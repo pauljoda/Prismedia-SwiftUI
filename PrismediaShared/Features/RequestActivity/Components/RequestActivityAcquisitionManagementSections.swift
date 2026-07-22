@@ -34,6 +34,9 @@ import UniformTypeIdentifiers
         let onCancelled: (@MainActor () async -> Void)?
         let onImported: (@MainActor () async -> Void)?
         let onReset: (@MainActor () async -> Void)?
+        #if DEBUG
+            private var disablesLiveLoadingForPreview = false
+        #endif
 
         init(
             acquisitionID: UUID,
@@ -51,6 +54,47 @@ import UniformTypeIdentifiers
             self.onReset = onReset
         }
 
+        #if DEBUG
+            init(
+                acquisitionID: UUID,
+                service: any RequestActivityServicing,
+                style: RequestActivityAcquisitionManagementStyle = .embedded,
+                previewDetail: RequestActivityAcquisitionDetail? = nil,
+                previewTransfer: RequestActivityTransfer? = nil,
+                previewFiles: RequestActivityFiles? = nil,
+                isLoading: Bool = false,
+                loadErrorMessage: String? = nil,
+                isActing: Bool = false,
+                actionErrorMessage: String? = nil,
+                refreshMessage: String? = nil,
+                activeLifecycleAction: RequestActivityAcquisitionAction? = nil,
+                failedLifecycleAction: RequestActivityAcquisitionAction? = nil,
+                confirmsStartOver: Bool = false
+            ) {
+                self.init(
+                    acquisitionID: acquisitionID,
+                    service: service,
+                    style: style
+                )
+                _detail = State(initialValue: previewDetail)
+                _transfer = State(initialValue: previewTransfer)
+                _files = State(initialValue: previewFiles)
+                _isLoading = State(initialValue: isLoading)
+                _loadErrorMessage = State(initialValue: loadErrorMessage)
+                _isActing = State(initialValue: isActing)
+                _actionErrorMessage = State(initialValue: actionErrorMessage)
+                _refreshState = State(
+                    initialValue: RequestActivityAcquisitionRefreshState(
+                        previewMessage: refreshMessage
+                    )
+                )
+                _activeLifecycleAction = State(initialValue: activeLifecycleAction)
+                _failedLifecycleAction = State(initialValue: failedLifecycleAction)
+                _confirmsStartOver = State(initialValue: confirmsStartOver)
+                disablesLiveLoadingForPreview = true
+            }
+        #endif
+
         var body: some View {
             Group {
                 switch style {
@@ -67,6 +111,9 @@ import UniformTypeIdentifiers
                 onCompletion: importTorrent
             )
             .task(id: liveRefreshTaskIdentity) {
+                #if DEBUG
+                    guard !disablesLiveLoadingForPreview else { return }
+                #endif
                 guard liveRefreshIsActive else { return }
                 await load(showSpinner: detail == nil)
                 await pollWhileVisible()
@@ -319,14 +366,7 @@ import UniformTypeIdentifiers
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else if isLoading {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Loading acquisition…")
-                        .font(.subheadline)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                PrismediaLoadingView("Loading acquisition…")
             } else if let loadErrorMessage {
                 RequestActivityLifecycleMessage(
                     title: "Unable to Load Acquisition",
@@ -538,13 +578,9 @@ import UniformTypeIdentifiers
                     isBusy: true
                 )
             case .preparingSearch:
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel("Preparing search")
+                PrismediaLoadingView("Preparing search…")
             case .searching:
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel("Searching indexers")
+                PrismediaLoadingView("Searching indexers…")
             case .download:
                 RequestActivityDownloadSection(transfer: transfer)
             case .files:
