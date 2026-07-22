@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct EntityChildAcquisitionActivityRow: View {
-    @ScaledMetric(relativeTo: .body) private var artworkWidth: CGFloat = 52
     let item: EntityChildAcquisitionActivityItem
 
     var body: some View {
@@ -42,20 +41,7 @@ struct EntityChildAcquisitionActivityRow: View {
     }
 
     private var artwork: some View {
-        RemotePosterImage(
-            path: item.entity.bestCoverPath,
-            fallbackSeed: item.entity.title,
-            systemImage: item.entity.kind.prefersWideThumbnail ? "rectangle.stack" : "photo",
-            imageCornerRadius: PrismediaRadius.compact,
-            maxPixelSize: 256
-        )
-        .frame(
-            width: artworkWidth,
-            height: item.entity.kind.prefersWideThumbnail ? artworkWidth * 0.72 : artworkWidth * 1.32
-        )
-        .background(PrismediaColor.controlFill)
-        .clipShape(.rect(cornerRadius: PrismediaRadius.compact, style: .continuous))
-        .accessibilityHidden(true)
+        EntityThumbnailCompactArtworkView(item: item.entity, width: 52)
     }
 
     private var statusMetadata: some View {

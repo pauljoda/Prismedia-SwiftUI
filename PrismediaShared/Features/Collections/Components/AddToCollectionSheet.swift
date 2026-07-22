@@ -86,16 +86,10 @@
                     Task { await add(to: collection) }
                 } label: {
                     HStack(spacing: PrismediaSpacing.medium) {
-                        RemotePosterImage(
-                            path: collection.bestCoverPath,
-                            fallbackSeed: collection.title,
-                            systemImage: "rectangle.stack"
+                        EntityThumbnailCompactArtworkView(
+                            item: collection,
+                            width: PrismediaLayout.minimumHitTarget
                         )
-                        .frame(
-                            width: PrismediaLayout.minimumHitTarget,
-                            height: PrismediaLayout.minimumHitTarget
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.compact, style: .continuous))
 
                         Text(collection.title)
                             .foregroundStyle(.primary)

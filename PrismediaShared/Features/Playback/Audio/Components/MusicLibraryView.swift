@@ -153,16 +153,11 @@
                         playVisibleTracks(startingAt: track.id)
                     } label: {
                         HStack(spacing: PrismediaSpacing.medium) {
-                            RemotePosterImage(
-                                path: track.artworkPath,
-                                fallbackSeed: track.album ?? track.title,
-                                systemImage: "music.note"
+                            EntityThumbnailCompactArtworkView(
+                                item: thumbnail,
+                                artworkPathOverride: track.artworkPath,
+                                width: PrismediaLayout.minimumHitTarget
                             )
-                            .frame(
-                                width: PrismediaLayout.minimumHitTarget,
-                                height: PrismediaLayout.minimumHitTarget
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous))
 
                             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                                 Text(track.title)
@@ -212,16 +207,7 @@
                         )
                     ) {
                         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                            Color.clear
-                                .aspectRatio(1, contentMode: .fit)
-                                .overlay {
-                                    RemotePosterImage(
-                                        path: album.bestCoverPath,
-                                        fallbackSeed: album.title,
-                                        systemImage: "square.stack"
-                                    )
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.compact, style: .continuous))
+                            EntityThumbnailCompactArtworkView(item: album)
                             Text(album.title)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(PrismediaColor.textPrimary)
@@ -245,13 +231,7 @@
                 ForEach(artists) { artist in
                     NavigationLink(value: EntityLink(thumbnail: artist)) {
                         HStack(spacing: PrismediaSpacing.medium) {
-                            RemotePosterImage(
-                                path: artist.bestCoverPath,
-                                fallbackSeed: artist.title,
-                                systemImage: "music.mic"
-                            )
-                            .frame(width: 38, height: 38)
-                            .clipShape(Circle())
+                            EntityThumbnailCompactArtworkView(item: artist, width: 38)
                             Text(artist.title)
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(PrismediaColor.textPrimary)

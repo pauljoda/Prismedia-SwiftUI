@@ -3,6 +3,48 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityDomainModelsTests: XCTestCase {
+    func testThumbnailArtworkUsesCanonicalAspectRatios() {
+        let cases: [(EntityKind, Double)] = [
+            (.audioLibrary, 1),
+            (.movie, 2.0 / 3.0),
+            (.person, 4.0 / 5.0),
+            (.video, 16.0 / 9.0),
+            (.studio, 21.0 / 9.0),
+        ]
+
+        for (kind, expectedAspectRatio) in cases {
+            let thumbnail = EntityThumbnail(
+                id: UUID(),
+                kind: kind,
+                title: kind.rawValue
+            )
+
+            XCTAssertEqual(
+                thumbnail.thumbnailArtworkPresentation.aspectRatio,
+                expectedAspectRatio,
+                accuracy: 0.000_001,
+                "Unexpected compact artwork aspect ratio for \(kind.rawValue)"
+            )
+        }
+    }
+
+    func testMovieOwnedVideoUsesMoviePosterArtworkGeometry() {
+        let thumbnail = EntityThumbnail(
+            id: UUID(),
+            kind: .video,
+            title: "Movie File",
+            parentEntityID: UUID(),
+            parentKind: .movie
+        )
+
+        XCTAssertEqual(
+            thumbnail.thumbnailArtworkPresentation.aspectRatio,
+            EntityKind.movie.thumbnailAspectRatio,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(thumbnail.thumbnailPresentationKind, .movie)
+    }
+
     func testBookDetailKeepsReaderDispatchFields() throws {
         let json = """
             {

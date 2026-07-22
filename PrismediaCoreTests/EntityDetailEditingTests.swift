@@ -37,14 +37,17 @@ final class EntityDetailEditingTests: XCTestCase {
                 UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
             ])
         XCTAssertEqual(draft.tags.map(\.title), ["Atmospheric"])
+        XCTAssertEqual(draft.tags.first?.sourceThumbnail?.kind, .tag)
         XCTAssertEqual(
             draft.studio?.entityID,
             UUID(uuidString: "dddddddd-dddd-dddd-dddd-dddddddddddd")!
         )
+        XCTAssertEqual(draft.studio?.sourceThumbnail?.kind, .studio)
         XCTAssertEqual(
             draft.credits.first?.person.entityID,
             UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
         )
+        XCTAssertEqual(draft.credits.first?.person.sourceThumbnail?.kind, .person)
         XCTAssertEqual(draft.credits.first?.roles, ["actor", "producer"])
     }
 
@@ -159,9 +162,54 @@ final class EntityDetailEditingTests: XCTestCase {
 
         XCTAssertEqual(results.map(\.entityID), [personID])
         XCTAssertEqual(results.map(\.title), ["Mara Voss"])
+        XCTAssertEqual(results.first?.sourceThumbnail, person)
         XCTAssertEqual(recordedKind, .person)
         XCTAssertEqual(recordedLimit, 20)
         XCTAssertEqual(recordedSearch, "mara")
+    }
+
+    func testReferenceSelectionIgnoresArtworkMetadataChanges() {
+        let entityID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let original = EntityDetailReferenceDraft(
+            thumbnail: EntityThumbnail(
+                id: entityID,
+                kind: .person,
+                title: "Mara Voss",
+                coverThumbURL: "/mara-old.jpg",
+                meta: [EntityThumbnailMeta(icon: "person", label: "Actor")]
+            )
+        )
+        let refreshed = EntityDetailReferenceDraft(
+            thumbnail: EntityThumbnail(
+                id: entityID,
+                kind: .person,
+                title: "Mara Voss",
+                coverThumbURL: "/mara-new.jpg",
+                meta: [EntityThumbnailMeta(icon: "film", label: "Director")]
+            )
+        )
+
+        XCTAssertEqual(original, refreshed)
+        XCTAssertEqual(original.hashValue, refreshed.hashValue)
+    }
+
+    func testReferenceArtworkRefreshDoesNotMarkEditDraftDirty() throws {
+        let detail = try makeDetail()
+        let original = EntityDetailEditDraft(detail: detail)
+        var refreshed = original
+        refreshed.tags = [
+            EntityDetailReferenceDraft(
+                thumbnail: EntityThumbnail(
+                    id: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
+                    kind: .tag,
+                    title: "Atmospheric",
+                    coverThumb2xURL: "/atmospheric@2x.jpg",
+                    meta: [EntityThumbnailMeta(icon: "sparkles", label: "Updated artwork")]
+                )
+            )
+        ]
+
+        XCTAssertEqual(original, refreshed)
     }
 
     func testPendingReferenceIsOfferedOnlyWhenNoExactMatchExists() {

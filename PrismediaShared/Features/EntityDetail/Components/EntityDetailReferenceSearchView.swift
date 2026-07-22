@@ -110,19 +110,15 @@ struct EntityDetailReferenceSearchView: View {
 
     private func resultLabel(_ reference: EntityDetailReferenceDraft, isNew: Bool) -> some View {
         HStack(spacing: PrismediaSpacing.small) {
-            if isNew {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(PrismediaColor.accent)
-                    .frame(width: 44, height: 44)
+            if let thumbnail = reference.sourceThumbnail {
+                EntityThumbnailCompactArtworkView(item: thumbnail, width: 44)
             } else {
-                RemotePosterImage(
-                    path: reference.artworkPath,
-                    fallbackSeed: reference.title,
-                    systemImage: kind == .person ? "person.crop.square" : "tag"
+                EntityThumbnailCompactArtworkView(
+                    title: reference.title,
+                    kind: reference.kind,
+                    artworkPath: reference.artworkPath,
+                    width: 44
                 )
-                .frame(width: 44, height: 44)
-                .clipShape(.rect(cornerRadius: PrismediaRadius.compact))
             }
 
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
@@ -141,7 +137,7 @@ struct EntityDetailReferenceSearchView: View {
 }
 
 #if DEBUG
-    #Preview("Entity Reference Search") {
+    #Preview("Entity Reference Search · Person") {
         @Previewable @State var selection: [EntityDetailReferenceDraft] = []
         let person = EntityThumbnail(
             id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
@@ -158,6 +154,52 @@ struct EntityDetailReferenceSearchView: View {
                     mode: .multiple,
                     searchService: EntityDetailReferenceSearchService(
                         loader: StaticEntityGridLoader(items: [person])
+                    )
+                )
+            }
+        }
+    }
+
+    #Preview("Entity Reference Search · Studio") {
+        @Previewable @State var selection: [EntityDetailReferenceDraft] = []
+        let studio = EntityThumbnail(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            kind: .studio,
+            title: "Northlight Studio"
+        )
+
+        PreviewShell {
+            NavigationStack {
+                EntityDetailReferenceSearchView(
+                    selection: $selection,
+                    title: "Studio",
+                    kind: .studio,
+                    mode: .single,
+                    searchService: EntityDetailReferenceSearchService(
+                        loader: StaticEntityGridLoader(items: [studio])
+                    )
+                )
+            }
+        }
+    }
+
+    #Preview("Entity Reference Search · Tag") {
+        @Previewable @State var selection: [EntityDetailReferenceDraft] = []
+        let tag = EntityThumbnail(
+            id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
+            kind: .tag,
+            title: "Atmospheric"
+        )
+
+        PreviewShell {
+            NavigationStack {
+                EntityDetailReferenceSearchView(
+                    selection: $selection,
+                    title: "Tags",
+                    kind: .tag,
+                    mode: .multiple,
+                    searchService: EntityDetailReferenceSearchService(
+                        loader: StaticEntityGridLoader(items: [tag])
                     )
                 )
             }

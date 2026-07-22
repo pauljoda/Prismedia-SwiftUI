@@ -31,6 +31,13 @@
         )
     }
 
+    #Preview("Acquisition Review · Child Activity · Mixed Thumbnail Shapes") {
+        acquisitionChildActivityReviewSection(
+            items: EntityChildAcquisitionActivityPreviewFixtures.mixedShapeItems,
+            width: 620
+        )
+    }
+
     #Preview(
         "Acquisition Review · Child Activity · Simultaneous · iPad and Mac",
         traits: .fixedLayout(width: 1_000, height: 1_000)

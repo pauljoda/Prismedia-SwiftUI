@@ -12,13 +12,7 @@ struct EntityDetailReferenceSelector: View {
         Section(title) {
             ForEach(selection) { reference in
                 HStack(spacing: PrismediaSpacing.small) {
-                    RemotePosterImage(
-                        path: reference.artworkPath,
-                        fallbackSeed: reference.title,
-                        systemImage: kind == .person ? "person.crop.square" : "tag"
-                    )
-                    .frame(width: 42, height: 42)
-                    .clipShape(.rect(cornerRadius: PrismediaRadius.compact))
+                    referenceArtwork(reference)
 
                     Text(reference.title)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -46,19 +40,63 @@ struct EntityDetailReferenceSelector: View {
             .accessibilityIdentifier("entity-detail.edit.\(kind.rawValue).select")
         }
     }
+
+    @ViewBuilder
+    private func referenceArtwork(_ reference: EntityDetailReferenceDraft) -> some View {
+        if let thumbnail = reference.sourceThumbnail {
+            EntityThumbnailCompactArtworkView(item: thumbnail, width: 42)
+        } else {
+            EntityThumbnailCompactArtworkView(
+                title: reference.title,
+                kind: reference.kind,
+                artworkPath: reference.artworkPath,
+                width: 42
+            )
+        }
+    }
 }
 
 #if DEBUG
     #Preview("Entity Reference Selector") {
-        @Previewable @State var selection = [
-            EntityDetailReferenceDraft.new(title: "Atmospheric", kind: .tag)
+        @Previewable @State var people = [
+            EntityDetailReferenceDraft(
+                thumbnail: EntityThumbnail(id: UUID(), kind: .person, title: "Mara Voss")
+            )
+        ]
+        @Previewable @State var studios = [
+            EntityDetailReferenceDraft(
+                thumbnail: EntityThumbnail(id: UUID(), kind: .studio, title: "Northlight Studio")
+            )
+        ]
+        @Previewable @State var tags = [
+            EntityDetailReferenceDraft(
+                thumbnail: EntityThumbnail(id: UUID(), kind: .tag, title: "Atmospheric")
+            )
         ]
 
         PreviewShell {
             NavigationStack {
                 Form {
                     EntityDetailReferenceSelector(
-                        selection: $selection,
+                        selection: $people,
+                        title: "People",
+                        kind: .person,
+                        mode: .multiple,
+                        searchService: EntityDetailReferenceSearchService(
+                            loader: StaticEntityGridLoader(items: [])
+                        )
+                    )
+                    EntityDetailReferenceSelector(
+                        selection: $studios,
+                        title: "Studio",
+                        kind: .studio,
+                        mode: .single,
+                        searchService: EntityDetailReferenceSearchService(
+                            loader: StaticEntityGridLoader(items: [])
+                        )
+                    )
+                    EntityDetailReferenceSelector(
+                        selection: $tags,
                         title: "Tags",
                         kind: .tag,
                         mode: .multiple,

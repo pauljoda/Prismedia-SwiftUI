@@ -210,13 +210,7 @@ struct PlaybackStatisticsView: View {
                 .font(.caption.bold().monospacedDigit())
                 .foregroundStyle(PrismediaColor.accent)
                 .frame(minWidth: 34)
-            RemotePosterImage(
-                path: item.bestCoverPath,
-                fallbackSeed: item.title,
-                systemImage: "photo"
-            )
-            .frame(width: 52, height: 52)
-            .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.compact))
+            EntityThumbnailCompactArtworkView(item: item, width: 52)
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                 Text(item.title).lineLimit(1)
                 Text(trailing).font(.caption).foregroundStyle(.secondary).lineLimit(1)

@@ -88,6 +88,41 @@ import Foundation
             ]
         }
 
+        static var mixedShapeItems: [EntityChildAcquisitionActivityItem] {
+            [
+                item(
+                    index: 15,
+                    title: "Standalone Featurette",
+                    kind: .video,
+                    parentKind: .gallery,
+                    status: "downloading",
+                    progress: 0.34
+                ),
+                item(
+                    index: 16,
+                    title: "Collected Volume",
+                    kind: .bookVolume,
+                    parentKind: .book,
+                    status: "importing",
+                    progress: 0.71
+                ),
+                item(
+                    index: 17,
+                    title: "Album Track",
+                    kind: .audioTrack,
+                    parentKind: .audioLibrary,
+                    status: "queued"
+                ),
+                item(
+                    index: 18,
+                    title: "Movie-owned Video",
+                    kind: .video,
+                    parentKind: .movie,
+                    status: "searching"
+                ),
+            ]
+        }
+
         static var childGroup: EntityGroup {
             EntityGroup(
                 kind: .video,
@@ -124,6 +159,8 @@ import Foundation
         private static func item(
             index: Int,
             title: String,
+            kind: EntityKind = .video,
+            parentKind: EntityKind = .videoSeason,
             status: String?,
             progress: Double? = nil,
             message: String? = nil,
@@ -134,17 +171,17 @@ import Foundation
             )!
             let entity = EntityThumbnail(
                 id: entityID,
-                kind: .video,
+                kind: kind,
                 title: title,
                 parentEntityID: parentID,
-                parentKind: .videoSeason,
+                parentKind: parentKind,
                 isWanted: true,
                 latestAcquisitionStatus: status.map(AcquisitionStatus.init(rawValue:))
             )
             let monitor = preparesMetadata
                 ? EntityMonitor(
                     id: UUID(uuidString: "82000000-0000-0000-0000-000000000001")!,
-                    kind: .video,
+                    kind: kind,
                     acquisitionID: nil,
                     status: .active,
                     title: title,
@@ -167,7 +204,7 @@ import Foundation
                     progress: progress,
                     createdAt: referenceDate.addingTimeInterval(-3_600),
                     updatedAt: referenceDate.addingTimeInterval(TimeInterval(index * 60)),
-                    kind: .video,
+                    kind: kind,
                     entityID: entityID
                 )
             }

@@ -133,16 +133,7 @@
                 ForEach(albums) { album in
                     NavigationLink(value: EntityLink(thumbnail: album, previewSubtitle: detail.title)) {
                         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                            Color.clear
-                                .aspectRatio(1, contentMode: .fit)
-                                .overlay {
-                                    RemotePosterImage(
-                                        path: album.bestCoverPath,
-                                        fallbackSeed: album.title,
-                                        systemImage: "square.stack"
-                                    )
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.compact, style: .continuous))
+                            EntityThumbnailCompactArtworkView(item: album)
                             Text(album.title)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)

@@ -75,16 +75,10 @@ struct SearchHubResultGroup: View {
     private func entityRow(_ item: EntityThumbnail) -> some View {
         NavigationLink(value: EntityLink(thumbnail: item)) {
             HStack(spacing: PrismediaSpacing.medium) {
-                RemotePosterImage(
-                    path: item.bestCoverPath,
-                    fallbackSeed: item.title,
-                    systemImage: SearchHubKindCatalog.systemImage(for: item.kind)
+                EntityThumbnailCompactArtworkView(
+                    item: item,
+                    width: usesRegularLayout ? 48 : 56
                 )
-                .frame(width: usesRegularLayout ? 48 : 56, height: usesRegularLayout ? 48 : 56)
-                .clipShape(
-                    PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.control)
-                )
-                .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                     HStack(spacing: PrismediaSpacing.small) {
