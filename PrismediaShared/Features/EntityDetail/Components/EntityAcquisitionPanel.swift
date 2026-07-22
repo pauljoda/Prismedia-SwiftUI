@@ -20,6 +20,9 @@ struct EntityAcquisitionPanel: View {
     private let requestActivityService: (any RequestActivityServicing)?
     private let onMutated: @MainActor () async -> Void
     private let onEntityPruned: @MainActor () -> Void
+    #if DEBUG
+        private var disablesLiveLoadingForPreview = false
+    #endif
 
     init(
         entityID: UUID,
@@ -36,6 +39,49 @@ struct EntityAcquisitionPanel: View {
         self.onMutated = onMutated
         self.onEntityPruned = onEntityPruned
     }
+
+    #if DEBUG
+        init(
+            entityID: UUID,
+            childGroups: [EntityGroup] = [],
+            previewPhase: EntityAcquisitionPanelPhase,
+            acquisitionService: any EntityAcquisitionServicing,
+            requestActivityService: (any RequestActivityServicing)? = nil,
+            isMutating: Bool = false,
+            mutationError: String? = nil,
+            refreshError: String? = nil,
+            pendingMonitorValue: Bool? = nil,
+            confirmedMonitorValue: Bool? = nil,
+            failedCommand: EntityAcquisitionCommand? = nil,
+            failedPendingMonitorValue: Bool? = nil,
+            actionNotice: String? = nil,
+            onMutated: @escaping @MainActor () async -> Void = {},
+            onEntityPruned: @escaping @MainActor () -> Void = {}
+        ) {
+            self.init(
+                entityID: entityID,
+                childGroups: childGroups,
+                acquisitionService: acquisitionService,
+                requestActivityService: requestActivityService,
+                onMutated: onMutated,
+                onEntityPruned: onEntityPruned
+            )
+            _state = State(
+                initialValue: EntityAcquisitionPanelState(
+                    previewPhase: previewPhase,
+                    isMutating: isMutating,
+                    mutationError: mutationError,
+                    refreshError: refreshError
+                )
+            )
+            _pendingMonitorValue = State(initialValue: pendingMonitorValue)
+            _confirmedMonitorValue = State(initialValue: confirmedMonitorValue)
+            _failedCommand = State(initialValue: failedCommand)
+            _failedPendingMonitorValue = State(initialValue: failedPendingMonitorValue)
+            _actionNotice = State(initialValue: actionNotice)
+            disablesLiveLoadingForPreview = true
+        }
+    #endif
 
     var body: some View {
         Group {
@@ -58,6 +104,9 @@ struct EntityAcquisitionPanel: View {
             }
         }
         .task(id: liveRefreshTaskIdentity) {
+            #if DEBUG
+                guard !disablesLiveLoadingForPreview else { return }
+            #endif
             guard let service, liveRefreshIsActive else { return }
             if case .content = state.phase {
                 await backgroundLoad(using: service)

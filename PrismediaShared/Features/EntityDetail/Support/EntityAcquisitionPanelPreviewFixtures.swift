@@ -51,6 +51,10 @@ import Foundation
             )
         }
 
+        static var activeLeafState: EntityMonitorState {
+            monitorState(entityID: entityID, status: .active)
+        }
+
         static var groupingState: EntityMonitorState {
             monitorState(
                 entityID: entityID,
@@ -65,6 +69,14 @@ import Foundation
 
         static var pausedState: EntityMonitorState {
             monitorState(entityID: entityID, status: .paused)
+        }
+
+        static var fulfilledState: EntityMonitorState {
+            monitorState(entityID: entityID, status: .fulfilled)
+        }
+
+        static var deletingFilesState: EntityMonitorState {
+            monitorState(entityID: entityID, status: .deletingFiles)
         }
 
         static var unavailableState: EntityMonitorState {
@@ -121,6 +133,61 @@ import Foundation
             ]
         }
 
+        static var childReviewItems: [EntityChildMonitoringItem] {
+            [
+                childItem(
+                    id: childOffID,
+                    title: "Unaired Special",
+                    state: monitorAvailableState(entityID: childOffID)
+                ),
+                childItem(
+                    id: childActiveID,
+                    title: "Failure to Hard Launch",
+                    state: monitorState(entityID: childActiveID, status: .active)
+                ),
+                childItem(
+                    id: childPausedID,
+                    title: "The Maharelle Sisters",
+                    state: monitorState(entityID: childPausedID, status: .paused)
+                ),
+                childItem(
+                    id: childFulfilledID,
+                    title: "Serves Me Right for Giving General George S. Patton the Bathroom Key",
+                    state: monitorState(entityID: childFulfilledID, status: .fulfilled)
+                ),
+                childItem(
+                    id: childDeletingID,
+                    title: "The Petriot Act",
+                    state: monitorState(entityID: childDeletingID, status: .deletingFiles)
+                ),
+                childItem(
+                    id: childStoppingID,
+                    title: "The Honeymooners",
+                    state: monitorState(entityID: childStoppingID, status: .stopping)
+                ),
+                childItem(
+                    id: childUnavailableID,
+                    title: "Returning Japanese",
+                    state: monitorUnavailableState(entityID: childUnavailableID)
+                ),
+                childItem(
+                    id: childUnknownID,
+                    title: "Death Picks Cotton",
+                    state: monitorState(
+                        entityID: childUnknownID,
+                        status: EntityMonitorStatus(rawValue: "future-state")
+                    )
+                ),
+                childItem(
+                    id: childBusyID,
+                    title: "Raise the Steaks",
+                    state: monitorAvailableState(entityID: childBusyID)
+                ),
+            ]
+        }
+
+        static let childBusyID = UUID(uuidString: "00000000-0000-0000-0000-000000000009")!
+
         static var downloadingDetail: RequestActivityAcquisitionDetail {
             detail(status: "downloading", statusMessage: "Fetching release")
         }
@@ -153,6 +220,58 @@ import Foundation
 
         private static let childOneID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
         private static let childTwoID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
+        private static let childOffID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        private static let childActiveID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        private static let childPausedID = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
+        private static let childFulfilledID = UUID(uuidString: "00000000-0000-0000-0000-000000000004")!
+        private static let childDeletingID = UUID(uuidString: "00000000-0000-0000-0000-000000000005")!
+        private static let childStoppingID = UUID(uuidString: "00000000-0000-0000-0000-000000000006")!
+        private static let childUnavailableID = UUID(uuidString: "00000000-0000-0000-0000-000000000007")!
+        private static let childUnknownID = UUID(uuidString: "00000000-0000-0000-0000-000000000008")!
+
+        private static func childItem(
+            id: UUID,
+            title: String,
+            state: EntityMonitorState
+        ) -> EntityChildMonitoringItem {
+            EntityChildMonitoringItem(
+                entity: EntityThumbnail(
+                    id: id,
+                    kind: .video,
+                    title: title,
+                    isWanted: true
+                ),
+                state: state
+            )
+        }
+
+        private static func monitorAvailableState(entityID: UUID) -> EntityMonitorState {
+            EntityMonitorState(
+                entityID: entityID,
+                canMonitor: true,
+                canRequest: true,
+                trackableProviders: ["TMDB"],
+                discoversChildren: false,
+                canSearchMissingChildren: false,
+                missingChildEntityKind: nil,
+                monitor: nil,
+                latestAcquisition: nil
+            )
+        }
+
+        private static func monitorUnavailableState(entityID: UUID) -> EntityMonitorState {
+            EntityMonitorState(
+                entityID: entityID,
+                canMonitor: false,
+                canRequest: false,
+                trackableProviders: [],
+                discoversChildren: false,
+                canSearchMissingChildren: false,
+                missingChildEntityKind: nil,
+                monitor: nil,
+                latestAcquisition: nil
+            )
+        }
 
         private static func monitorState(
             entityID: UUID,

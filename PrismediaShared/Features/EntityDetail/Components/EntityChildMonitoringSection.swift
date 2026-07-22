@@ -14,6 +14,49 @@ struct EntityChildMonitoringSection: View {
     let primaryAccent: Color
     let service: EntityAcquisitionService
     let onChanged: @MainActor () async -> Void
+    #if DEBUG
+        private var disablesLiveLoadingForPreview = false
+    #endif
+
+    init(
+        title: String,
+        entities: [EntityThumbnail],
+        primaryAccent: Color,
+        service: EntityAcquisitionService,
+        onChanged: @escaping @MainActor () async -> Void
+    ) {
+        self.title = title
+        self.entities = entities
+        self.primaryAccent = primaryAccent
+        self.service = service
+        self.onChanged = onChanged
+    }
+
+    #if DEBUG
+        init(
+            title: String,
+            previewItems: [EntityChildMonitoringItem],
+            primaryAccent: Color,
+            service: EntityAcquisitionService,
+            hasLoaded: Bool = true,
+            busyIDs: Set<UUID> = [],
+            errorMessage: String? = nil
+        ) {
+            self.init(
+                title: title,
+                entities: previewItems.map(\.entity),
+                primaryAccent: primaryAccent,
+                service: service,
+                onChanged: {}
+            )
+            _isExpanded = State(initialValue: true)
+            _hasLoaded = State(initialValue: hasLoaded)
+            _items = State(initialValue: previewItems)
+            _busyIDs = State(initialValue: busyIDs)
+            _errorMessage = State(initialValue: errorMessage)
+            disablesLiveLoadingForPreview = true
+        }
+    #endif
 
     var body: some View {
         #if os(tvOS)
@@ -77,6 +120,9 @@ struct EntityChildMonitoringSection: View {
                 .accessibilityAddTraits(.isHeader)
             }
             .task(id: liveTaskIdentity) {
+                #if DEBUG
+                    guard !disablesLiveLoadingForPreview else { return }
+                #endif
                 guard isExpanded, liveRefreshIsActive else { return }
                 if !hasLoaded { await load(preservingContent: false) }
                 while !Task.isCancelled, isExpanded, liveRefreshIsActive {

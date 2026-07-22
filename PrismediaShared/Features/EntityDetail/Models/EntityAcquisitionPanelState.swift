@@ -6,6 +6,22 @@ struct EntityAcquisitionPanelState: Sendable {
     private(set) var mutationError: String?
     private(set) var refreshError: String?
 
+    init() {}
+
+    #if DEBUG
+        init(
+            previewPhase: EntityAcquisitionPanelPhase,
+            isMutating: Bool = false,
+            mutationError: String? = nil,
+            refreshError: String? = nil
+        ) {
+            phase = previewPhase
+            self.isMutating = isMutating
+            self.mutationError = mutationError
+            self.refreshError = refreshError
+        }
+    #endif
+
     var latestAcquisition: RequestActivityAcquisitionDetail? {
         guard case .content(let snapshot) = phase else { return nil }
         return snapshot.latestAcquisition
