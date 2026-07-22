@@ -30,6 +30,16 @@ final class UserDefaultsMusicPlaybackStateStoreTests: XCTestCase {
         XCTAssertEqual(store.load()?.elapsedTime, 0)
     }
 
+    func testLegacyPersistedTrackWithoutWantedFlagRemainsPlayable() throws {
+        let trackID = UUID()
+        let data = Data(#"{"id":"\#(trackID)","title":"Legacy Track","sortOrder":0}"#.utf8)
+
+        let track = try JSONDecoder().decode(MusicTrack.self, from: data)
+
+        XCTAssertFalse(track.isWanted)
+        XCTAssertTrue(track.isPlayable)
+    }
+
     func testClearingQueueRestorationKeepsGlobalPlaybackPreferences() {
         let suiteName = "UserDefaultsMusicPlaybackStateStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

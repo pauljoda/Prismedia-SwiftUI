@@ -33,6 +33,25 @@ final class MusicPresentationTests: XCTestCase {
         XCTAssertEqual(tracks.first?.album, "1")
     }
 
+    func testAlbumTrackProjectionExcludesWantedPlaceholderWithoutMutatingDetailChildren() throws {
+        let playableID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1")!
+        let wantedID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2")!
+        let json = """
+            {"id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","kind":"audio-library","title":"Album","hasSourceMedia":true,"capabilities":[],"relationships":[],
+            "childrenByKind":[{"kind":"audio-track","label":"Tracks","entities":[
+              {"id":"\(playableID)","kind":"audio-track","title":"Playable","sortOrder":1,"isWanted":false},
+              {"id":"\(wantedID)","kind":"audio-track","title":"Wanted","sortOrder":2,"isWanted":true,"wantedStatus":"searching"}
+            ]}]}
+            """
+        let detail = try PrismediaJSON.decoder().decode(EntityDetail.self, from: Data(json.utf8))
+
+        let tracks = MusicEntityProjection.tracks(in: detail)
+
+        XCTAssertEqual(tracks.map(\.id), [playableID])
+        XCTAssertEqual(detail.childrenByKind.flatMap(\.entities).map(\.id), [playableID, wantedID])
+        XCTAssertTrue(detail.childrenByKind.flatMap(\.entities).last?.isWanted == true)
+    }
+
     func testLibraryTrackProjectionHydratesAlbumArtistAndInheritedArtwork() {
         let artistID = UUID()
         let albumID = UUID()

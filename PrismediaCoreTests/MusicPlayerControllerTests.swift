@@ -239,6 +239,40 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(engine.playCallCount, 0)
     }
 
+    func testDirectWantedTrackPlayDoesNotCreateAQueueOrRequestAStream() {
+        let wanted = makeTrack(idSuffix: 1, isWanted: true)
+        let engine = AudioPlaybackEngineSpy()
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(engine: engine, service: service)
+
+        controller.play(tracks: [wanted], startingAt: wanted.id)
+
+        XCTAssertTrue(controller.queue.tracks.isEmpty)
+        XCTAssertNil(controller.currentTrack)
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertTrue(service.requestedStreamIDs.isEmpty)
+        XCTAssertTrue(engine.loadedURLs.isEmpty)
+        XCTAssertEqual(engine.playCallCount, 0)
+    }
+
+    func testDirectWantedTrackPlayDoesNotInterruptExistingPlayback() {
+        let playable = makeTrack(idSuffix: 1)
+        let wanted = makeTrack(idSuffix: 2, isWanted: true)
+        let engine = AudioPlaybackEngineSpy()
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(engine: engine, service: service)
+        controller.play(tracks: [playable])
+
+        controller.play(tracks: [wanted], startingAt: wanted.id)
+
+        XCTAssertEqual(controller.queue.tracks, [playable])
+        XCTAssertEqual(controller.currentTrack, playable)
+        XCTAssertTrue(controller.isPlaying)
+        XCTAssertEqual(service.requestedStreamIDs, [playable.id])
+        XCTAssertEqual(engine.playCallCount, 1)
+        XCTAssertEqual(engine.pauseCallCount, 0)
+    }
+
     func testClearPlaybackStopsEngineAndRemovesQueueAndRestoration() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
         let engine = AudioPlaybackEngineSpy()
@@ -319,6 +353,38 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(engine.seekPositions, [37.5])
         XCTAssertEqual(engine.playCallCount, 0)
         XCTAssertFalse(controller.isPlaying)
+    }
+
+    func testRestorationFiltersWantedCurrentTrackAndResetsElapsedPosition() {
+        let wanted = makeTrack(idSuffix: 1, isWanted: true)
+        let playable = makeTrack(idSuffix: 2)
+        let restoration = MusicPlaybackRestoration(
+            tracks: [wanted, playable],
+            orderedTrackIDs: [wanted.id, playable.id],
+            currentTrackID: wanted.id,
+            repeatMode: .off,
+            isShuffled: false,
+            elapsedTime: 37.5,
+            history: [MusicQueueHistoryEntry(sequence: 0, track: wanted)]
+        )
+        let engine = AudioPlaybackEngineSpy()
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: service,
+            stateStore: MusicPlaybackStateStoreSpy(restoration: restoration)
+        )
+
+        controller.restoreIfNeeded()
+
+        XCTAssertEqual(controller.queue.tracks, [playable])
+        XCTAssertEqual(controller.currentTrack, playable)
+        XCTAssertTrue(controller.queue.history.isEmpty)
+        XCTAssertEqual(controller.elapsedTime, 0)
+        XCTAssertEqual(service.requestedStreamIDs, [playable.id])
+        XCTAssertFalse(service.requestedStreamIDs.contains(wanted.id))
+        XCTAssertTrue(engine.seekPositions.isEmpty)
+        XCTAssertEqual(engine.playCallCount, 0)
     }
 
     func testRemoteResumeWaitsForPlaybackServiceAfterColdRestoration() {
@@ -533,14 +599,19 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.queue.isShuffled)
     }
 
-    private func makeTrack(idSuffix: Int, duration: Double? = nil) -> MusicTrack {
+    private func makeTrack(
+        idSuffix: Int,
+        duration: Double? = nil,
+        isWanted: Bool = false
+    ) -> MusicTrack {
         MusicTrack(
             id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", idSuffix))!,
             title: "Track \(idSuffix)",
             artist: "Artist",
             album: "Album",
             duration: duration,
-            sortOrder: idSuffix - 1
+            sortOrder: idSuffix - 1,
+            isWanted: isWanted
         )
     }
 }
@@ -607,6 +678,7 @@ private final class AudioPlaybackEngineSpy: AudioPlaybackEngine {
 @MainActor
 private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private let missingStreamIDs: Set<UUID>
+    private(set) var requestedStreamIDs: [UUID] = []
     private(set) var recordedTrackIDs: [UUID] = []
     private(set) var skippedTrackIDs: [UUID] = []
     private(set) var skippedPositions: [Double?] = []
@@ -618,6 +690,7 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     }
 
     func audioStreamURL(for trackID: UUID) -> URL? {
+        requestedStreamIDs.append(trackID)
         guard !missingStreamIDs.contains(trackID) else { return nil }
         return URL(string: "https://media.example.test/api/audio-stream/\(trackID)?api_key=token")
     }

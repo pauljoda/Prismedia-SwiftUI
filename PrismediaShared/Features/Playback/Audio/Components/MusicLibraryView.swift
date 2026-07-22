@@ -115,10 +115,15 @@
 
         private var presentedLibrarySections: [MusicLibrarySection] {
             MusicLibrarySection.sections(
-                for: snapshot.items,
+                for: playableLibraryItems,
                 sort: snapshot.controls.sort,
                 sortDescending: snapshot.controls.sortDescending
             )
+        }
+
+        private var playableLibraryItems: [EntityThumbnail] {
+            guard layout == .tracks else { return snapshot.items }
+            return snapshot.items.filter { !$0.isWanted }
         }
 
         private var librarySections: some View {
@@ -306,7 +311,7 @@
                 context: EntityGridTopContentContext(
                     query: snapshot.controls.applying(to: configuration.query),
                     search: snapshot.activeSearch,
-                    visibleItemCount: snapshot.items.count
+                    visibleItemCount: playableLibraryItems.count
                 )
             )
             .padding(.top, PrismediaSpacing.extraSmall)
@@ -442,7 +447,7 @@
 
         private var visibleTrackIDs: [UUID] {
             guard layout == .tracks else { return [] }
-            return snapshot.items.map(\.id)
+            return playableLibraryItems.map(\.id)
         }
 
         private func resolveParentArtists() async {
@@ -457,7 +462,7 @@
 
         private func resolveVisibleTracks() async {
             guard layout == .tracks, let client = environment.client else { return }
-            let unresolved = snapshot.items.filter { visibleTracksByID[$0.id] == nil }
+            let unresolved = playableLibraryItems.filter { visibleTracksByID[$0.id] == nil }
             guard !unresolved.isEmpty else { return }
             guard let tracks = try? await MusicLibraryQueueLoader(client: client).hydrate(unresolved) else { return }
             guard !Task.isCancelled else { return }

@@ -165,12 +165,63 @@ final class MusicCollectionQueueLoaderTests: XCTestCase {
         XCTAssertEqual(snapshot.sections.map(\.title), ["First", "Second"])
     }
 
+    func testFiltersWantedTracksFromLooseAlbumAndArtistCollectionMembers() async throws {
+        let collectionID = UUID()
+        let loosePlayable = thumbnail(UUID().uuidString, .audioTrack, "Loose Playable")
+        let looseWanted = thumbnail(UUID().uuidString, .audioTrack, "Loose Wanted", isWanted: true)
+        let album = thumbnail(UUID().uuidString, .audioLibrary, "Album")
+        let albumPlayable = thumbnail(UUID().uuidString, .audioTrack, "Album Playable", order: 1)
+        let albumWanted = thumbnail(UUID().uuidString, .audioTrack, "Album Wanted", order: 2, isWanted: true)
+        let artist = thumbnail(UUID().uuidString, .musicArtist, "Artist")
+        let artistPlayable = thumbnail(UUID().uuidString, .audioTrack, "Artist Playable", order: 1)
+        let artistWanted = thumbnail(UUID().uuidString, .audioTrack, "Artist Wanted", order: 2, isWanted: true)
+        let items = MusicCollectionItemsLoaderStub(itemsByCollection: [
+            collectionID: [loosePlayable, looseWanted, album, artist]
+        ])
+        let details = MusicCollectionDetailLoaderStub(detailsByID: [
+            album.id: detail(
+                album,
+                children: [
+                    EntityGroup(
+                        kind: .audioTrack,
+                        label: "Tracks",
+                        entities: [albumPlayable, albumWanted],
+                        code: nil
+                    )
+                ]
+            ),
+            artist.id: detail(
+                artist,
+                children: [
+                    EntityGroup(
+                        kind: .audioTrack,
+                        label: "Tracks",
+                        entities: [artistPlayable, artistWanted],
+                        code: nil
+                    )
+                ]
+            ),
+        ])
+
+        let snapshot = try await MusicCollectionQueueLoader(
+            collectionItemsLoader: items,
+            detailLoader: details
+        ).load(collectionID: collectionID)
+
+        XCTAssertEqual(
+            snapshot.tracks.map(\.id),
+            [loosePlayable.id, albumPlayable.id, artistPlayable.id]
+        )
+        XCTAssertFalse(snapshot.tracks.contains { $0.isWanted })
+    }
+
     private func thumbnail(
         _ id: String,
         _ kind: EntityKind,
         _ title: String,
         order: Int? = nil,
-        parent: EntityThumbnail? = nil
+        parent: EntityThumbnail? = nil,
+        isWanted: Bool = false
     ) -> EntityThumbnail {
         EntityThumbnail(
             id: UUID(uuidString: id)!,
@@ -178,7 +229,8 @@ final class MusicCollectionQueueLoaderTests: XCTestCase {
             title: title,
             parentEntityID: parent?.id,
             parentKind: parent?.kind,
-            sortOrder: order
+            sortOrder: order,
+            isWanted: isWanted
         )
     }
 

@@ -22,7 +22,7 @@ struct MusicLibraryQueueLoader: Sendable {
         if query.kind == .audioLibrary {
             return try await tracks(in: thumbnails, artist: nil)
         }
-        return thumbnails.map { MusicTrack(thumbnail: $0) }
+        return thumbnails.filter { !$0.isWanted }.map { MusicTrack(thumbnail: $0) }
     }
 
     func shuffledTrackBatches(
@@ -52,6 +52,7 @@ struct MusicLibraryQueueLoader: Sendable {
     }
 
     func hydrate(_ tracks: [EntityThumbnail]) async throws -> [MusicTrack] {
+        let tracks = tracks.filter { !$0.isWanted }
         var albumsByID: [UUID: EntityThumbnail] = [:]
         var artistsByID: [UUID: EntityThumbnail] = [:]
         return try await hydrate(
@@ -150,7 +151,8 @@ struct MusicLibraryQueueLoader: Sendable {
             let batchEnd = min(batchStart + 6, albums.count)
             try await withThrowingTaskGroup(of: [MusicTrack].self) { group in
                 for album in albums[batchStart..<batchEnd] {
-                    let artist = album.parentEntityID.flatMap { artistsByID[$0]?.title }
+                    let artist =
+                        album.parentEntityID.flatMap { artistsByID[$0]?.title }
                         ?? album.musicMetadataValue(matching: ["artist", "person"])
                     group.addTask {
                         let detail = try await client.fetchEntity(id: album.id)
@@ -171,13 +173,15 @@ struct MusicLibraryQueueLoader: Sendable {
         artistsByID: inout [UUID: EntityThumbnail]
     ) async throws -> [MusicTrack] {
         let albumIDs = unique(tracks.compactMap(\.parentEntityID))
-        let unresolvedAlbumIDs = albumIDs
+        let unresolvedAlbumIDs =
+            albumIDs
             .filter { albumsByID[$0] == nil }
         let albums = try await thumbnails(ids: unresolvedAlbumIDs)
         for album in albums { albumsByID[album.id] = album }
 
         let artistIDs = unique(albumIDs.compactMap { albumsByID[$0]?.parentEntityID })
-        let unresolvedArtistIDs = artistIDs
+        let unresolvedArtistIDs =
+            artistIDs
             .filter { artistsByID[$0] == nil }
         let artists = try await thumbnails(ids: unresolvedArtistIDs)
         for artist in artists { artistsByID[artist.id] = artist }

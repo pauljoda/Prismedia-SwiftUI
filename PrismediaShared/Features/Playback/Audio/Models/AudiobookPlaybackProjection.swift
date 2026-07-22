@@ -8,7 +8,7 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
     public init(bookID: UUID, title: String, tracks: [MusicTrack]) {
         self.bookID = bookID
         self.title = title
-        self.tracks = tracks
+        self.tracks = tracks.filter(\.isPlayable)
     }
 
     public init?(detail: EntityDetail) {
@@ -28,7 +28,7 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
         }
         let audioParts = detail.childrenByKind
             .flatMap(\.entities)
-            .filter { $0.kind == .audioTrack }
+            .filter { $0.kind == .audioTrack && !$0.isWanted }
             .sorted { lhs, rhs in
                 (lhs.sortOrder ?? 0, lhs.title, lhs.id.uuidString)
                     < (rhs.sortOrder ?? 0, rhs.title, rhs.id.uuidString)

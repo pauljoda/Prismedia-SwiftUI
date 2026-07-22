@@ -69,7 +69,8 @@ struct AudiobookQueueLoader: Sendable {
             discNumber: track.discNumber,
             discTitle: track.discTitle,
             trackNumber: track.trackNumber,
-            sortOrder: track.sortOrder
+            sortOrder: track.sortOrder,
+            isWanted: track.isWanted
         )
     }
 }

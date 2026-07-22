@@ -67,6 +67,53 @@ final class MusicLibraryQueueLoaderTests: XCTestCase {
         XCTAssertEqual(values["query"], "favorite")
     }
 
+    func testSearchTrackQueueDefensivelyExcludesWantedResults() async throws {
+        let playableID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let wantedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                #"{"items":[{"id":"\#(playableID)","kind":"audio-track","title":"Playable"},{"id":"\#(wantedID)","kind":"audio-track","title":"Wanted","isWanted":true}],"nextCursor":null,"totalCount":2}"#
+            )
+        ])
+        let client = PrismediaAPIClient(
+            serverURL: URL(string: "https://media.example.test")!,
+            accessToken: "token",
+            loader: loader
+        )
+
+        let tracks = try await MusicLibraryQueueLoader(client: client).tracks(
+            matching: EntityListQuery(kind: .audioTrack),
+            search: "track"
+        )
+
+        XCTAssertEqual(tracks.map(\.id), [playableID])
+    }
+
+    func testArtistAlbumExpansionExcludesWantedTrackChildren() async throws {
+        let albumID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let playableID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1")!
+        let wantedID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2")!
+        let album = EntityThumbnail(id: albumID, kind: .audioLibrary, title: "Album")
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                #"{"id":"\#(albumID)","kind":"audio-library","title":"Album","hasSourceMedia":true,"capabilities":[],"relationships":[],"childrenByKind":[{"kind":"audio-track","label":"Tracks","entities":[{"id":"\#(playableID)","kind":"audio-track","title":"Playable","sortOrder":1},{"id":"\#(wantedID)","kind":"audio-track","title":"Wanted","sortOrder":2,"isWanted":true}]}]}"#
+            )
+        ])
+        let client = PrismediaAPIClient(
+            serverURL: URL(string: "https://media.example.test")!,
+            accessToken: "token",
+            loader: loader
+        )
+
+        let tracks = try await MusicLibraryQueueLoader(client: client).tracks(
+            in: [album],
+            artist: "Artist"
+        )
+
+        XCTAssertEqual(tracks.map(\.id), [playableID])
+        XCTAssertEqual(tracks.map(\.artist), ["Artist"])
+    }
+
     func testShuffledTrackBatchesYieldRandomizedPagesWithoutWaitingForTheWholeLibrary() async throws {
         let firstID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let secondID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!

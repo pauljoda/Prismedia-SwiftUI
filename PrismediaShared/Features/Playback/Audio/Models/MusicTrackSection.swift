@@ -3,7 +3,13 @@ public struct MusicTrackSection: Identifiable, Equatable, Sendable {
     public let tracks: [MusicTrack]
     public var id: String { title ?? "tracks" }
 
+    public init(title: String?, tracks: [MusicTrack]) {
+        self.title = title
+        self.tracks = tracks.filter(\.isPlayable)
+    }
+
     public static func sections(for tracks: [MusicTrack]) -> [Self] {
+        let tracks = tracks.filter(\.isPlayable)
         var titles: [String?] = []
         var grouped: [String: [MusicTrack]] = [:]
         for track in tracks {

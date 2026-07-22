@@ -18,18 +18,20 @@ public struct MusicQueue: Equatable, Sendable {
         startingAt trackID: UUID? = nil,
         history: [MusicQueueHistoryEntry] = []
     ) {
-        self.tracks = tracks
-        order = Array(tracks.indices)
+        let playableTracks = tracks.filter(\.isPlayable)
+        self.tracks = playableTracks
+        order = Array(playableTracks.indices)
         position =
             trackID
-            .flatMap { id in tracks.firstIndex { $0.id == id } }
-            ?? (tracks.isEmpty ? -1 : 0)
-        self.history = Array(history.suffix(Self.historyLimit))
-        nextHistorySequence = (history.map(\.sequence).max() ?? 0) + (history.isEmpty ? 0 : 1)
+            .flatMap { id in playableTracks.firstIndex { $0.id == id } }
+            ?? (playableTracks.isEmpty ? -1 : 0)
+        let playableHistory = history.filter { $0.track.isPlayable }
+        self.history = Array(playableHistory.suffix(Self.historyLimit))
+        nextHistorySequence = (playableHistory.map(\.sequence).max() ?? 0) + (playableHistory.isEmpty ? 0 : 1)
     }
 
     public init(restoration: MusicPlaybackRestoration) {
-        let restoredTracks = restoration.tracks
+        let restoredTracks = restoration.tracks.filter(\.isPlayable)
         var indexesByID: [UUID: Int] = [:]
         for (index, track) in restoredTracks.enumerated() where indexesByID[track.id] == nil {
             indexesByID[track.id] = index
@@ -56,7 +58,7 @@ public struct MusicQueue: Equatable, Sendable {
         position = restoredPosition
         repeatMode = restoration.repeatMode
         isShuffled = restoration.context?.isAudiobook == true ? false : restoration.isShuffled
-        history = Array((restoration.history ?? []).suffix(Self.historyLimit))
+        history = Array((restoration.history ?? []).filter { $0.track.isPlayable }.suffix(Self.historyLimit))
         nextHistorySequence = (history.map(\.sequence).max() ?? 0) + (history.isEmpty ? 0 : 1)
     }
 
@@ -192,7 +194,7 @@ public struct MusicQueue: Equatable, Sendable {
 
     public mutating func appendUpcomingTracks(_ newTracks: [MusicTrack]) {
         var existingIDs = Set(tracks.map(\.id))
-        let uniqueTracks = newTracks.filter { existingIDs.insert($0.id).inserted }
+        let uniqueTracks = newTracks.filter { $0.isPlayable && existingIDs.insert($0.id).inserted }
         guard !uniqueTracks.isEmpty else { return }
 
         let firstNewIndex = tracks.count

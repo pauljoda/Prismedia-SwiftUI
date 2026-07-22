@@ -13,7 +13,7 @@ public enum MusicEntityProjection {
                 .thumbnail2xURL ?? images.thumbnailURL
         }
         return (detail.childrenByKind + detail.relationships).flatMap(\.entities)
-            .filter { $0.kind == .audioTrack || $0.kind == .audio }
+            .filter { ($0.kind == .audioTrack || $0.kind == .audio) && !$0.isWanted }
             .map { MusicTrack(thumbnail: $0, album: detail.title, artist: projectedArtist, artworkPath: artwork) }
             .sorted { ($0.discNumber ?? 0, $0.sortOrder) < ($1.discNumber ?? 0, $1.sortOrder) }
     }
@@ -21,7 +21,7 @@ public enum MusicEntityProjection {
     public static func libraryTracks(
         _ tracks: [EntityThumbnail], albumsByID: [UUID: EntityThumbnail], artistsByID: [UUID: EntityThumbnail]
     ) -> [MusicTrack] {
-        tracks.map { track in
+        tracks.filter { !$0.isWanted }.map { track in
             let album = track.parentEntityID.flatMap { albumsByID[$0] }
             let artist = album?.parentEntityID.flatMap { artistsByID[$0] }
             return MusicTrack(

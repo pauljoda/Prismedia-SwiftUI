@@ -81,7 +81,8 @@ extension MusicTrack {
             discNumber: discTitle.flatMap(Self.trailingInteger),
             discTitle: discTitle,
             trackNumber: trackNumber,
-            sortOrder: thumbnail.sortOrder ?? 0
+            sortOrder: thumbnail.sortOrder ?? 0,
+            isWanted: thumbnail.isWanted
         )
     }
 

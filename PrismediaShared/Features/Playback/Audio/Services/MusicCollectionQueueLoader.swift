@@ -38,6 +38,7 @@ struct MusicCollectionQueueLoader: Sendable {
     ) async throws -> [MusicTrack] {
         switch member.kind {
         case .audioTrack, .audio:
+            guard !member.isWanted else { return [] }
             return [try await hydratedTrack(member, detailsByID: &detailsByID)]
         case .audioLibrary:
             return try await libraryTracks(

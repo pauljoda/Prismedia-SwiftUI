@@ -81,6 +81,7 @@ public final class MusicPlayerController {
         context: MusicPlaybackContext? = nil,
         startSeconds: Double = 0
     ) {
+        guard tracks.contains(where: \.isPlayable) else { return }
         preparePlayback(
             tracks: tracks,
             startingAt: trackID,
@@ -99,6 +100,8 @@ public final class MusicPlayerController {
         context: MusicPlaybackContext? = nil,
         startSeconds: Double = 0
     ) -> UUID {
+        let tracks = tracks.filter(\.isPlayable)
+        guard !tracks.isEmpty else { return activeQueueID }
         reportAudiobookProgress(completed: false)
         if currentTrack != nil { engine.pause() }
         var previousQueue = queue
@@ -321,12 +324,18 @@ public final class MusicPlayerController {
         guard !didAttemptRestoration else { return }
         didAttemptRestoration = true
         guard let restoration = stateStore?.load(), !restoration.tracks.isEmpty else { return }
+        let restoredQueue = MusicQueue(restoration: restoration)
+        guard let restoredTrack = restoredQueue.currentTrack else {
+            stateStore?.clear()
+            return
+        }
         context = restoration.context
         audiobookCompleted = restoration.audiobookCompleted ?? false
-        queue = MusicQueue(restoration: restoration)
+        queue = restoredQueue
         activeQueueID = UUID()
-        elapsedTime = restoration.elapsedTime
-        lastPersistedElapsedTime = restoration.elapsedTime
+        let restoredElapsedTime = restoredTrack.id == restoration.currentTrackID ? restoration.elapsedTime : 0
+        elapsedTime = restoredElapsedTime
+        lastPersistedElapsedTime = restoredElapsedTime
         _ = prepareCurrentTrack()
         isPlaying = false
         publishNowPlayingState()
@@ -404,6 +413,7 @@ public final class MusicPlayerController {
 
     private func prepareCurrentTrack() -> Bool {
         guard let currentTrack else { return false }
+        guard currentTrack.isPlayable else { return false }
         guard service.isPlaybackAvailable else { return false }
         guard let url = service.audioStreamURL(for: currentTrack.id) else {
             errorMessage = "This track does not have a playable stream."
