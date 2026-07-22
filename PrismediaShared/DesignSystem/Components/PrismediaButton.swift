@@ -9,6 +9,7 @@ struct PrismediaButton: View {
     let isLoading: Bool
     let loadingTitle: String?
     let action: () -> Void
+    private let menuContent: (() -> AnyView)?
 
     init(
         _ title: String,
@@ -32,6 +33,30 @@ struct PrismediaButton: View {
         self.isLoading = isLoading
         self.loadingTitle = loadingTitle
         self.action = action
+        menuContent = nil
+    }
+
+    init<MenuContent: View>(
+        _ title: String,
+        systemImage: String,
+        variant: PrismediaButtonVariant = .standard,
+        form: PrismediaButtonForm = .automatic,
+        primaryTint: Color? = nil,
+        @ViewBuilder menuContent: @escaping () -> MenuContent
+    ) {
+        precondition(
+            !form.requiresSystemImage || !systemImage.isEmpty,
+            "An icon-only menu requires a system image."
+        )
+        self.title = title
+        self.systemImage = systemImage
+        self.variant = variant
+        self.form = form
+        self.primaryTint = primaryTint
+        isLoading = false
+        loadingTitle = nil
+        action = {}
+        self.menuContent = { AnyView(menuContent()) }
     }
 
     var body: some View {
@@ -71,12 +96,25 @@ struct PrismediaButton: View {
             .buttonBorderShape(form.buttonBorderShape)
     }
 
+    @ViewBuilder
     private var button: some View {
-        Button(role: variant.buttonRole, action: action) {
-            buttonLabel
-                .padding(.horizontal, PrismediaSpacing.small)
-                .padding(.vertical, PrismediaSpacing.extraSmall)
+        if let menuContent {
+            Menu {
+                menuContent()
+            } label: {
+                paddedButtonLabel
+            }
+        } else {
+            Button(role: variant.buttonRole, action: action) {
+                paddedButtonLabel
+            }
         }
+    }
+
+    private var paddedButtonLabel: some View {
+        buttonLabel
+            .padding(.horizontal, PrismediaSpacing.small)
+            .padding(.vertical, PrismediaSpacing.extraSmall)
     }
 
     @ViewBuilder

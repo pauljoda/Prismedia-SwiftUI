@@ -373,64 +373,31 @@ struct EntityAcquisitionPanel: View {
         _ monitorState: EntityMonitorState,
         service: EntityAcquisitionService
     ) -> some View {
-        Button {
+        PrismediaButton(
+            "Check for New Content Now",
+            systemImage: "arrow.clockwise",
+            form: .fill,
+            isLoading: activeCommand == .syncContainer(entityID),
+            loadingTitle: "Checking…"
+        ) {
             Task { await perform(.syncContainer(entityID), using: service) }
-        } label: {
-            Label("Check for New Content Now", systemImage: "arrow.clockwise")
-                .font(.headline.weight(.semibold))
-                .frame(
-                    maxWidth: .infinity,
-                    minHeight: fullWidthActionMinimumHeight
-                )
         }
-        .buttonStyle(.glass)
-        .buttonBorderShape(fullWidthActionBorderShape)
         .frame(maxWidth: .infinity)
 
         if monitorState.canSearchMissingChildren {
-            Button {
+            PrismediaButton(
+                missingChildCount(for: monitorState) > 0
+                    ? "Search \(missingChildCount(for: monitorState)) Missing"
+                    : "Search for Missing Content",
+                systemImage: "magnifyingglass",
+                form: .fill,
+                isLoading: activeCommand == .searchMissingChildren(entityID),
+                loadingTitle: "Searching…"
+            ) {
                 Task { await perform(.searchMissingChildren(entityID), using: service) }
-            } label: {
-                if missingChildCount(for: monitorState) > 0 {
-                    Label {
-                        Text("Search \(missingChildCount(for: monitorState)) Missing")
-                    } icon: {
-                        Image(systemName: "magnifyingglass")
-                    }
-                    .font(.headline.weight(.semibold))
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: fullWidthActionMinimumHeight
-                    )
-                } else {
-                    Label("Search for Missing Content", systemImage: "magnifyingglass")
-                        .font(.headline.weight(.semibold))
-                        .frame(
-                            maxWidth: .infinity,
-                            minHeight: fullWidthActionMinimumHeight
-                        )
-                }
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(fullWidthActionBorderShape)
             .frame(maxWidth: .infinity)
         }
-    }
-
-    private var fullWidthActionBorderShape: ButtonBorderShape {
-        #if os(macOS)
-            .roundedRectangle(radius: PrismediaRadius.compact)
-        #else
-            .capsule
-        #endif
-    }
-
-    private var fullWidthActionMinimumHeight: CGFloat {
-        #if os(macOS)
-            28
-        #else
-            44
-        #endif
     }
 
     private func monitoringChildren(
@@ -471,18 +438,13 @@ struct EntityAcquisitionPanel: View {
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        ViewThatFits(in: .horizontal) {
-            GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                HStack(spacing: PrismediaSpacing.small) {
-                    actionButtons(snapshot, service: service)
-                }
+        GlassEffectContainer(spacing: PrismediaSpacing.small) {
+            VStack(spacing: PrismediaSpacing.small) {
+                actionButtons(snapshot, service: service)
             }
-            GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                    actionButtons(snapshot, service: service)
-                }
-            }
+            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
         .prismediaCompactActionControlSize()
         .disabled(state.isMutating || activeCommand != nil)
     }
@@ -497,6 +459,7 @@ struct EntityAcquisitionPanel: View {
                 "Search for release",
                 systemImage: "magnifyingglass",
                 variant: .prominent,
+                form: .fill,
                 primaryTint: artworkPrimaryAccent,
                 isLoading: activeCommand == .searchForRelease(entityID),
                 loadingTitle: "Searching…"
@@ -509,6 +472,7 @@ struct EntityAcquisitionPanel: View {
             PrismediaButton(
                 "Search Again",
                 systemImage: "arrow.clockwise",
+                form: .fill,
                 isLoading: activeCommand == .searchAgain(acquisition.id),
                 loadingTitle: "Searching…"
             ) {

@@ -71,8 +71,7 @@ struct EntityChildMonitoringSection: View {
             DisclosureGroup(isExpanded: $isExpanded) {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                     if !hasLoaded {
-                        ProgressView("Loading monitoring…")
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        PrismediaLoadingView("Loading monitoring…")
                     } else if items.isEmpty {
                         Text("No child items can be monitored yet.")
                             .font(.subheadline)
@@ -137,23 +136,31 @@ struct EntityChildMonitoringSection: View {
 
     private var bulkActions: some View {
         HStack {
-            Text("Manage all \(items.count) items")
-                .font(.subheadline)
-                .foregroundStyle(PrismediaColor.textSecondary)
-            Spacer(minLength: PrismediaSpacing.medium)
-            Menu("More", systemImage: "ellipsis.circle") {
-                Button("Monitor All", systemImage: "bell") {
-                    Task { await mutateAll(to: true) }
-                }
-                .disabled(!items.contains { $0.command(to: true) != nil })
+            Spacer(minLength: 0)
+            PrismediaButton(
+                "Monitoring actions",
+                systemImage: "ellipsis",
+                form: .compactIcon,
+                menuContent: {
+                    Section("Manage all \(items.count) items") {
+                        Button("Monitor All", systemImage: "bell") {
+                            Task { await mutateAll(to: true) }
+                        }
+                        .disabled(!items.contains { $0.command(to: true) != nil })
 
-                Button("Unmonitor All", systemImage: "bell.slash", role: .destructive) {
-                    Task { await mutateAll(to: false) }
+                        Button("Unmonitor All", systemImage: "bell.slash", role: .destructive) {
+                            Task { await mutateAll(to: false) }
+                        }
+                        .disabled(!items.contains { $0.command(to: false) != nil })
+                    }
                 }
-                .disabled(!items.contains { $0.command(to: false) != nil })
-            }
+            )
             .disabled(isBulkMutating || !busyIDs.isEmpty)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, PrismediaSpacing.extraSmall)
+        .padding(.trailing, PrismediaSpacing.small)
+        .prismediaCompactActionControlSize()
     }
 
     private func mutate(_ item: EntityChildMonitoringItem, to nextValue: Bool) async {
