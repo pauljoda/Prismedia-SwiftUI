@@ -10,6 +10,14 @@ extension EntityDetailView {
     }
 
     func isEnabled(_ action: EntityDetailAction) -> Bool {
+        if action.id == .audio {
+            #if os(iOS) || os(macOS)
+                return currentDetail?.kind == .collection
+                    && dependencies.collectionItemsLoader != nil
+            #else
+                return false
+            #endif
+        }
         if action.id == .edit {
             return !state.isMutating
                 && dependencies.metadataMutator != nil
@@ -37,6 +45,14 @@ extension EntityDetailView {
     }
 
     func isSupported(_ action: EntityDetailAction) -> Bool {
+        if action.id == .audio {
+            #if os(iOS) || os(macOS)
+                return currentDetail?.kind == .collection
+                    && dependencies.collectionItemsLoader != nil
+            #else
+                return false
+            #endif
+        }
         if action.id == .edit {
             #if os(tvOS)
                 return false
@@ -93,6 +109,23 @@ extension EntityDetailView {
                     beginListening(to: detail)
                 }
             #endif
+        case .audio:
+            #if os(iOS) || os(macOS)
+                guard case .content(let detail) = state.phase,
+                    detail.kind == .collection,
+                    dependencies.collectionItemsLoader != nil
+                else { return }
+                advancedEntityLink = EntityLink(
+                    entityID: detail.id,
+                    kind: detail.kind,
+                    parentEntityID: link.parentEntityID,
+                    parentKind: link.parentKind,
+                    intent: .audioCollection,
+                    sourceThumbnail: link.sourceThumbnail,
+                    thumbnailPreview: link.thumbnailPreview,
+                    mediaSequence: link.mediaSequence
+                )
+            #endif
         case .edit:
             guard case .content(let detail) = state.phase,
                 dependencies.metadataMutator != nil,
@@ -125,6 +158,11 @@ extension EntityDetailView {
             return isEnabled(action)
                 ? "Opens the native reader"
                 : "This item cannot be opened in the native reader"
+        }
+        if action.id == .audio {
+            return isEnabled(action)
+                ? "Opens Play and Shuffle controls for audio in this collection"
+                : "Audio playback is unavailable for this collection"
         }
         if action.id == .edit {
             return isEnabled(action)

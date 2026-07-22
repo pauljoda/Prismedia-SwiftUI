@@ -9,5 +9,6 @@ enum EntityDetailActionID: String, Hashable, Sendable {
     case resume
     case read
     case listen
+    case audio
     case shuffle
 }

@@ -121,6 +121,23 @@ extension EntityDetailView {
             fallback: fallback,
             entityKind: detail.kind
         )
+
+        #if os(iOS) || os(macOS)
+            if detail.kind == .collection,
+                dependencies.collectionItemsLoader != nil
+            {
+                actions.append(
+                    EntityDetailAction(
+                        id: .audio,
+                        title: "Audio",
+                        systemImage: "music.note.list",
+                        isSelected: false,
+                        isPrimary: true
+                    )
+                )
+            }
+        #endif
+
         if readingState.progressPresentation?.canResume == true {
             actions.removeAll { $0.id == .read || $0.id == .resume }
         }
