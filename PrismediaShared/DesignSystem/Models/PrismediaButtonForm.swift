@@ -9,9 +9,9 @@ enum PrismediaButtonForm: Hashable, Sendable {
     var buttonBorderShape: ButtonBorderShape {
         switch self {
         case .automatic:
-            .roundedRectangle(radius: PrismediaRadius.compact)
+            .automatic
         case .fill, .fillIcon:
-            .roundedRectangle(radius: PrismediaRadius.control)
+            .capsule
         case .compactIcon:
             .circle
         }

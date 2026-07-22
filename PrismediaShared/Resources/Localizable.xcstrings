@@ -66,6 +66,9 @@
     "%@ times" : {
 
     },
+    "%@ will not be downloaded now or offered by future searches. You can allow it again from Blocklist settings." : {
+
+    },
     "%@, %@" : {
       "localizations" : {
         "en" : {
@@ -82,6 +85,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, %2$@ size"
+          }
+        }
+      }
+    },
+    "%@, %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@, %3$@"
           }
         }
       }
@@ -148,6 +161,16 @@
     "%lld barren" : {
 
     },
+    "%lld eligible · %lld total" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld eligible · %2$lld total"
+          }
+        }
+      }
+    },
     "%lld failed job%@ not included in recent runs." : {
       "localizations" : {
         "en" : {
@@ -162,6 +185,9 @@
 
     },
     "%lld found" : {
+
+    },
+    "%lld hidden" : {
 
     },
     "%lld item%@ still need attention" : {
@@ -180,12 +206,25 @@
     "%lld loaded results" : {
 
     },
+    "%lld more files selected" : {
+
+    },
     "%lld of %lld" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld files processed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld files processed"
           }
         }
       }
@@ -221,6 +260,16 @@
     },
     "%lld seeders" : {
 
+    },
+    "%lld seeds · %lld peers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld seeds · %2$lld peers"
+          }
+        }
+      }
     },
     "%lld selected" : {
 
@@ -490,7 +539,13 @@
     "Best" : {
 
     },
+    "Block this release?" : {
+
+    },
     "Blocklist" : {
+
+    },
+    "Blocklist Release" : {
 
     },
     "Book Format" : {
@@ -602,6 +657,9 @@
     "Choose Chapter" : {
 
     },
+    "Choose local content to use for this item. Prismedia will validate it, upload it securely, then continue through the normal import lifecycle." : {
+
+    },
     "Classification" : {
 
     },
@@ -686,6 +744,12 @@
     "Continue" : {
 
     },
+    "Copy" : {
+
+    },
+    "Copy %@" : {
+
+    },
     "Couldn’t Add to Collection" : {
 
     },
@@ -738,6 +802,9 @@
 
     },
     "Couldn’t Start Playback" : {
+
+    },
+    "Couldn’t Start Search" : {
 
     },
     "Couldn’t Update Details" : {
@@ -893,10 +960,16 @@
     "Download Folder" : {
 
     },
+    "Download piece availability" : {
+
+    },
     "Download progress" : {
 
     },
     "Downloaded" : {
+
+    },
+    "Downloaded Files" : {
 
     },
     "Edit" : {
@@ -1140,7 +1213,7 @@
     "Import Into" : {
 
     },
-    "Import Torrent" : {
+    "Import progress" : {
 
     },
     "Imported Files" : {
@@ -1174,6 +1247,9 @@
 
     },
     "Installed" : {
+
+    },
+    "Interrupted files and remaining download data will be removed, then Prismedia will begin a clean search." : {
 
     },
     "Item Size" : {
@@ -1251,6 +1327,9 @@
     "Listening" : {
 
     },
+    "Live transfer data may be out of date. Prismedia is still retrying." : {
+
+    },
     "Load More" : {
 
     },
@@ -1296,6 +1375,9 @@
     "Loading favorites…" : {
 
     },
+    "Loading files…" : {
+
+    },
     "Loading folder…" : {
 
     },
@@ -1332,6 +1414,9 @@
     "Loading reading progress…" : {
 
     },
+    "Loading release candidates…" : {
+
+    },
     "Loading roots…" : {
 
     },
@@ -1366,6 +1451,12 @@
 
     },
     "Manage all %lld items" : {
+
+    },
+    "Manual Acquisition" : {
+
+    },
+    "Manual acquisition error. %@" : {
 
     },
     "Margins" : {
@@ -1554,9 +1645,6 @@
     "No Bookmarks" : {
 
     },
-    "No Candidates" : {
-
-    },
     "No Candidates Found" : {
 
     },
@@ -1579,9 +1667,6 @@
 
     },
     "No Favorites Yet" : {
-
-    },
-    "No files reported yet." : {
 
     },
     "No Gallery Content" : {
@@ -1705,9 +1790,6 @@
 
     },
     "Open %@" : {
-
-    },
-    "Open a release page above, download its .torrent, then upload it here to download directly." : {
 
     },
     "Open bookmark, %@, page %lld of %lld" : {
@@ -1856,6 +1938,9 @@
     "Permissions" : {
 
     },
+    "Piece availability" : {
+
+    },
     "Play" : {
 
     },
@@ -1907,10 +1992,16 @@
     "PREPARING" : {
 
     },
+    "Preparing download…" : {
+
+    },
     "Preparing media…" : {
 
     },
     "Preparing playback options…" : {
+
+    },
+    "Preparing search…" : {
 
     },
     "Preparing video…" : {
@@ -2118,7 +2209,7 @@
     "Release Candidates" : {
 
     },
-    "Releases" : {
+    "Release Page" : {
 
     },
     "Reload" : {
@@ -2232,9 +2323,6 @@
     "Retry" : {
 
     },
-    "Retry and Allow Format Change" : {
-
-    },
     "Retry Cleanup" : {
 
     },
@@ -2319,6 +2407,9 @@
     "Save the current sort, filters, layout, density, and page size." : {
 
     },
+    "Saved file information may be out of date." : {
+
+    },
     "Saved Locations" : {
 
     },
@@ -2337,6 +2428,9 @@
     "Scans" : {
 
     },
+    "Score" : {
+
+    },
     "Score %@" : {
 
     },
@@ -2353,9 +2447,6 @@
 
     },
     "Search Again" : {
-
-    },
-    "Search again or import a torrent file manually." : {
 
     },
     "Search book" : {
@@ -2412,10 +2503,16 @@
     "Searching book…" : {
 
     },
+    "Searching indexers…" : {
+
+    },
     "Searching with %@" : {
 
     },
     "Searching…" : {
+
+    },
+    "Seeders —" : {
 
     },
     "Seeks playback by one preview frame" : {
@@ -2458,6 +2555,18 @@
 
     },
     "Selected · Tried in Order" : {
+
+    },
+    "Selected file" : {
+
+    },
+    "Selected File" : {
+
+    },
+    "Selected files" : {
+
+    },
+    "Selected Files" : {
 
     },
     "Selected Item Actions" : {
@@ -2512,6 +2621,9 @@
 
     },
     "Show Now Playing for %@" : {
+
+    },
+    "Show Only Relevant" : {
 
     },
     "Show Password" : {
@@ -2572,6 +2684,12 @@
 
     },
     "Sort" : {
+
+    },
+    "Sort by %@" : {
+
+    },
+    "Sort by best match" : {
 
     },
     "Source" : {
@@ -2661,6 +2779,9 @@
     "Subtitles" : {
 
     },
+    "Swarm" : {
+
+    },
     "Table of Contents" : {
 
     },
@@ -2716,9 +2837,6 @@
 
     },
     "This PDF does not include an outline." : {
-
-    },
-    "This permanently deletes every file owned by the interrupted import, removes any remaining download data it can reach, clears the partial state, and starts a clean search for the still-wanted item." : {
 
     },
     "This publication does not include a readable contents list." : {
@@ -2862,6 +2980,12 @@
     "Update to %@" : {
 
     },
+    "Updated" : {
+
+    },
+    "Updated %@" : {
+
+    },
     "Updates the selected episode" : {
 
     },
@@ -2899,6 +3023,9 @@
         }
       }
     },
+    "Use a downloaded .torrent when a release page cannot hand the release to Prismedia directly." : {
+
+    },
     "Use as Toggle bookmark" : {
 
     },
@@ -2909,6 +3036,9 @@
 
     },
     "Use Publisher Formatting" : {
+
+    },
+    "Use the Choose Files button if drag and drop is unavailable." : {
 
     },
     "User Actions" : {
