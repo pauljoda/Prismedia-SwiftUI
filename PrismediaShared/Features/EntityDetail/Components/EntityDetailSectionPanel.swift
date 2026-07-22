@@ -42,7 +42,7 @@ struct EntityDetailSectionPanel: View {
             case .details:
                 detailsContent
             case .metadata:
-                metadataContent
+                EntityDetailMetadataView(items: presentation.metadata)
             case .markers:
                 markersContent
             case .transcript:
@@ -124,80 +124,6 @@ struct EntityDetailSectionPanel: View {
         }
     }
 
-    @ViewBuilder
-    private var metadataContent: some View {
-        if presentation.metadata.isEmpty {
-            placeholder(
-                title: "Metadata",
-                message: "No metadata is available yet.",
-                systemImage: "info.circle"
-            )
-        } else {
-            LazyVGrid(
-                columns: [
-                    GridItem(
-                        .adaptive(minimum: 220),
-                        spacing: PrismediaSpacing.extraLarge,
-                        alignment: .topLeading
-                    )
-                ],
-                alignment: .leading,
-                spacing: 0
-            ) {
-                ForEach(presentation.metadata) { item in
-                    metadataItem(item)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func metadataItem(_ item: EntityDetailMetadataItem) -> some View {
-        #if os(tvOS)
-            metadataItemContent(item)
-        #else
-            if let url = item.url {
-                Link(destination: url) {
-                    metadataItemContent(item)
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens in your default browser")
-            } else {
-                metadataItemContent(item)
-            }
-        #endif
-    }
-
-    private func metadataItemContent(_ item: EntityDetailMetadataItem) -> some View {
-        HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-            Image(systemName: item.systemImage)
-                .frame(width: 20)
-                .foregroundStyle(artworkPrimaryAccent)
-
-            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                Text(item.label)
-                    .font(.caption)
-                    .foregroundStyle(artworkSecondaryText)
-                Text(item.value)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PrismediaColor.textPrimary)
-                    .lineLimit(3)
-                if item.url != nil {
-                    Label("Open Link", systemImage: "arrow.up.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(artworkPrimaryAccent)
-                }
-            }
-        }
-        .padding(.vertical, PrismediaSpacing.medium)
-        .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
-        .contentShape(Rectangle())
-        .overlay(alignment: .bottom) {
-            Divider()
-                .overlay(PrismediaColor.borderSubtle)
-        }
-    }
-
     private var markersContent: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
             ForEach(presentation.markers, id: \.id) { marker in
@@ -262,19 +188,6 @@ struct EntityDetailSectionPanel: View {
             )
         else { return nil }
         return videoPlaybackSession?.activeController
-    }
-
-    private func placeholder(
-        title: String,
-        message: String,
-        systemImage: String
-    ) -> some View {
-        ContentUnavailableView(
-            title,
-            systemImage: systemImage,
-            description: Text(message)
-        )
-        .frame(maxWidth: .infinity)
     }
 
     private func sectionTitle(_ value: String) -> some View {

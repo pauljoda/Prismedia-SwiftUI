@@ -10,19 +10,15 @@ struct EntityDetailPlatformSurface<StandardContent: View, BackdropContent: View>
     @ViewBuilder let backdropContent: () -> BackdropContent
 
     var body: some View {
-        if detail.kind == .movie {
-            TVEntityDetailBackdropSurface(
-                heroPath: presentation.heroPath,
-                posterPath: presentation.posterPath,
-                previewPath: previewPath,
-                fallbackSeed: detail.title,
-                systemImage: presentation.systemImage,
-                palette: $palette,
-                content: backdropContent
-            )
-        } else {
-            standardContent()
-        }
+        TVEntityDetailBackdropSurface(
+            heroPath: presentation.heroPath,
+            posterPath: presentation.posterPath,
+            previewPath: previewPath,
+            fallbackSeed: detail.title,
+            systemImage: presentation.systemImage,
+            palette: $palette,
+            content: backdropContent
+        )
     }
 }
 

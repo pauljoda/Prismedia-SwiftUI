@@ -53,7 +53,9 @@ struct CollectionMembersView: View {
             presentation: .embedded,
             horizontalContentPadding: horizontalPadding,
             actionPolicy: collectionActionPolicy,
-            mutationService: environment.client,
+            mutationService: EntityDetailPlatformCollectionActionPolicy.mutationService(
+                environment.client
+            ),
             prefersInitialTVFocus: true
         ) { item, layout in
             EntityThumbnailNavigationSurface(item: item, layout: layout)
@@ -96,7 +98,9 @@ struct CollectionMembersView: View {
                 )
             }
         }
-        return .library(user: user, customActions: [removal])
+        return EntityDetailPlatformCollectionActionPolicy.adapt(
+            .library(user: user, customActions: [removal])
+        )
     }
 
     private var loadingView: some View {

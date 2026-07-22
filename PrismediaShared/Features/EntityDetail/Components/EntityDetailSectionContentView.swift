@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct EntityDetailSectionContentView: View {
+struct EntityDetailSectionContentView<Actions: View>: View {
     let presentation: EntityDetailPresentation
     @Binding var selection: EntityDetailSectionID
     let horizontalPadding: CGFloat
@@ -10,22 +10,27 @@ struct EntityDetailSectionContentView: View {
     let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
     let onAcquisitionMutated: @MainActor () async -> Void
     let onEntityPruned: @MainActor () -> Void
+    @ViewBuilder let actions: () -> Actions
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-            if presentation.sections.isEmpty {
-                sectionPanel(section: .details)
-            } else {
-                EntityDetailSectionPicker(
-                    sections: presentation.sections,
-                    selection: $selection,
-                    horizontalPadding: horizontalPadding
+        EntityDetailPlatformSectionLayout(
+            selectedSection: selection,
+            actions: actions,
+            picker: {
+                if !presentation.sections.isEmpty {
+                    EntityDetailSectionPicker(
+                        sections: presentation.sections,
+                        selection: $selection,
+                        horizontalPadding: horizontalPadding
+                    )
+                }
+            },
+            panel: {
+                sectionPanel(
+                    section: presentation.sections.isEmpty ? .details : selection
                 )
-
-                sectionPanel(section: selection)
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        )
     }
 
     private func sectionPanel(section: EntityDetailSectionID) -> some View {
@@ -58,7 +63,8 @@ struct EntityDetailSectionContentView: View {
                     requestActivityService: nil,
                     transcriptSourceLoader: nil,
                     onAcquisitionMutated: {},
-                    onEntityPruned: {}
+                    onEntityPruned: {},
+                    actions: { EmptyView() }
                 )
             }
         }

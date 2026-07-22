@@ -3,39 +3,37 @@ import SwiftUI
 
 struct EntityDetailPlatformActionsView: View {
     let presentation: EntityDetailPresentation
-    let isMutating: Bool
-    let canMutate: Bool
     let palette: ArtworkPalette?
     let horizontalPadding: CGFloat
     let isActionSupported: (EntityDetailAction) -> Bool
     let isActionEnabled: (EntityDetailAction) -> Bool
     let actionHint: (EntityDetailAction) -> String
-    let onRatingChange: (Int?) -> Void
     let onAction: (EntityDetailAction) -> Void
 
     var body: some View {
-        Group {
-            if presentation.hasRatingCapability {
-                EntityDetailStarRatingControl(
-                    value: presentation.rating,
-                    isDisabled: isMutating || !canMutate,
-                    onChange: onRatingChange
-                )
-                .padding(.horizontal, horizontalPadding)
-                .prismediaFocusSection()
-            }
+        let supportedActions = presentation.modificationActions.filter(isActionSupported)
+        if !supportedActions.isEmpty {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                Text("Library Controls")
+                    .font(.title2.bold())
+                    .foregroundStyle(PrismediaColor.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
 
-            let supportedActions = presentation.modificationActions.filter(isActionSupported)
-            if !supportedActions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: PrismediaSpacing.section) {
                         ForEach(supportedActions) { action in
                             Button {
                                 onAction(action)
                             } label: {
-                                Image(systemName: action.isSelected ? selectedImage(for: action) : action.systemImage)
-                                    .font(.title3.weight(.semibold))
-                                    .frame(width: 64, height: 58)
+                                Label(
+                                    accessibilityLabel(for: action),
+                                    systemImage: action.isSelected
+                                        ? selectedImage(for: action)
+                                        : action.systemImage
+                                )
+                                .font(.headline)
+                                .padding(.horizontal, PrismediaSpacing.medium)
+                                .frame(minHeight: 66)
                             }
                             .buttonStyle(.glass)
                             .foregroundStyle(
@@ -44,20 +42,19 @@ struct EntityDetailPlatformActionsView: View {
                                     : PrismediaColor.onMedia
                             )
                             .disabled(!isActionEnabled(action))
-                            .accessibilityLabel(accessibilityLabel(for: action))
                             .accessibilityHint(actionHint(action))
                             .accessibilityAddTraits(action.isSelected ? .isSelected : [])
                             .accessibilityIdentifier("entity-detail.action.\(action.id.rawValue)")
                         }
                     }
-                    .padding(.horizontal, horizontalPadding)
                     .padding(.vertical, PrismediaSpacing.large)
                 }
                 .prismediaFocusSection()
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel("Entity actions")
+                .accessibilityLabel("Library controls")
                 .accessibilityIdentifier("entity-detail.modification-actions")
             }
+            .padding(.horizontal, horizontalPadding)
         }
     }
 
@@ -81,14 +78,11 @@ struct EntityDetailPlatformActionsView: View {
 #Preview("TV Entity Detail Actions") {
     EntityDetailPlatformActionsView(
         presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
-        isMutating: false,
-        canMutate: true,
         palette: nil,
         horizontalPadding: 72,
         isActionSupported: { _ in true },
         isActionEnabled: { _ in true },
         actionHint: { _ in "Updates this entity" },
-        onRatingChange: { _ in },
         onAction: { _ in }
     )
 }

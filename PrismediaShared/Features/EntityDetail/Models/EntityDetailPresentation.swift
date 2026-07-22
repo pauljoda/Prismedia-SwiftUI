@@ -134,6 +134,51 @@ struct EntityDetailPresentation {
                     items.append(
                         .init(label: "Classification", value: classification, systemImage: "rectangle.3.group"))
                 }
+            case .rating(let rating):
+                items.append(
+                    .init(
+                        label: "Rating",
+                        value: rating.value.map { "\($0) / 5" } ?? "Not rated",
+                        systemImage: "star.fill"
+                    )
+                )
+            case .flags(let flags):
+                if let isFavorite = flags.isFavorite {
+                    items.append(
+                        .init(
+                            label: "Favorite",
+                            value: Self.yesNo(isFavorite),
+                            systemImage: isFavorite ? "heart.fill" : "heart"
+                        )
+                    )
+                }
+                if let isOrganized = flags.isOrganized {
+                    items.append(
+                        .init(
+                            label: "Organized",
+                            value: Self.yesNo(isOrganized),
+                            systemImage: isOrganized ? "checkmark.circle.fill" : "circle"
+                        )
+                    )
+                }
+                if let isWanted = flags.isWanted {
+                    items.append(
+                        .init(
+                            label: "Wanted",
+                            value: Self.yesNo(isWanted),
+                            systemImage: isWanted ? "arrow.down.circle.fill" : "arrow.down.circle"
+                        )
+                    )
+                }
+                if let isNsfw = flags.isNsfw {
+                    items.append(
+                        .init(
+                            label: "Sensitive Content",
+                            value: Self.yesNo(isNsfw),
+                            systemImage: isNsfw ? "eye.slash.fill" : "eye"
+                        )
+                    )
+                }
             case .dates(let dates):
                 items += dates.items.prefix(3).map {
                     .init(label: Self.titleCase($0.code), value: $0.value, systemImage: "calendar")
@@ -256,6 +301,10 @@ struct EntityDetailPresentation {
         value.replacingOccurrences(of: "-", with: " ").split(separator: " ").map {
             $0.prefix(1).uppercased() + $0.dropFirst()
         }.joined(separator: " ")
+    }
+
+    private static func yesNo(_ value: Bool) -> String {
+        value ? "Yes" : "No"
     }
 
     private static func nonemptyPath(_ value: String?) -> String? {
