@@ -64,14 +64,7 @@ extension EntityDetailView {
                             EntityDetailPlatformContentLayout(
                                 selectedSection: selectedSection,
                                 browseContent: {
-                                    mainSupplementView(for: detail) {
-                                        withAnimation(.easeInOut(duration: 0.32)) {
-                                            proxy.scrollTo(
-                                                "entity-detail.collection-grid",
-                                                anchor: .top
-                                            )
-                                        }
-                                    }
+                                    mainSupplementView(for: detail)
                                 },
                                 secondaryContent: {
                                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {

@@ -2,6 +2,33 @@ import XCTest
 
 final class PrismediaTVCollectionDetailUITests: XCTestCase {
     @MainActor
+    func testCollectionGridHeaderControlsRemainAvailable() {
+        let app = launchCollectionDetail()
+        let firstItem = focusedSurface(
+            "entity.thumbnail.media.33333333-3333-3333-3333-333333333333",
+            in: app
+        )
+
+        XCTAssertTrue(firstItem.waitForExistence(timeout: 20))
+        let sort = element(label: "Sort", in: app)
+        XCTAssertTrue(element(label: "Display options", in: app).exists)
+        XCTAssertTrue(sort.exists)
+        XCTAssertTrue(element(label: "Filters", in: app).exists)
+
+        for _ in 0..<7 {
+            XCUIRemote.shared.press(.right)
+        }
+        XCUIRemote.shared.press(.up)
+        XCUIRemote.shared.press(.select)
+
+        XCTAssertTrue(
+            element(label: "Title", in: app).waitForExistence(timeout: 5),
+            "The embedded EntityGrid sort control should open its native menu."
+        )
+        XCUIRemote.shared.press(.menu)
+    }
+
+    @MainActor
     func testLongPressRetainsAddToCollectionMenu() {
         let app = launchCollectionDetail()
         let firstItem = focusedSurface(
@@ -30,6 +57,9 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
         XCTAssertTrue(firstItem.waitForExistence(timeout: 20))
         XCTAssertTrue(waitForFocus(on: firstItem, timeout: 8))
         XCTAssertTrue(element("entity-detail.hero-information", in: app).exists)
+        XCTAssertTrue(element(label: "Display options", in: app).exists)
+        XCTAssertTrue(element(label: "Sort", in: app).exists)
+        XCTAssertTrue(element(label: "Filters", in: app).exists)
 
         XCUIRemote.shared.press(.up)
 
@@ -44,7 +74,7 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
     }
 
     @MainActor
-    func testFirstLateralMoveRaisesGridAndAdvancesFocus() {
+    func testFirstLateralMoveAdvancesFocus() {
         let app = launchCollectionDetail()
         let firstItem = focusedSurface(
             "entity.thumbnail.media.33333333-3333-3333-3333-333333333333",
@@ -57,16 +87,10 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
 
         XCTAssertTrue(firstItem.waitForExistence(timeout: 20))
         XCTAssertTrue(waitForFocus(on: firstItem, timeout: 8))
-        let initialGridY = firstItem.frame.minY
 
         XCUIRemote.shared.press(.right)
 
         XCTAssertTrue(waitForFocus(on: secondItem, timeout: 5))
-        XCTAssertTrue(
-            waitForFrame(on: secondItem, above: initialGridY - 80, timeout: 5),
-            "The first grid movement should slide the item grid upward into the primary viewport "
-                + "(initial: \(initialGridY), current: \(secondItem.frame.minY))."
-        )
     }
 
     @MainActor
@@ -89,22 +113,6 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
     private func waitForFocus(on element: XCUIElement, timeout: TimeInterval) -> Bool {
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "hasFocus == true"),
-            object: element
-        )
-        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
-    }
-
-    @MainActor
-    private func waitForFrame(
-        on element: XCUIElement,
-        above maximumY: CGFloat,
-        timeout: TimeInterval
-    ) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate { object, _ in
-                guard let element = object as? XCUIElement else { return false }
-                return element.frame.minY < maximumY
-            },
             object: element
         )
         return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed

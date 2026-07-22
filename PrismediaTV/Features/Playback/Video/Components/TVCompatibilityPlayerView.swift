@@ -75,7 +75,10 @@
             .prismediaFocusSection()
             .onPlayPauseCommand(perform: handlePlayPauseCommand)
             .onExitCommand(perform: handleExitCommand)
-            .onChange(of: controller.isPlaying) { _, isPlaying in
+            .onChange(of: controller.isPlaying) { wasPlaying, isPlaying in
+                if wasPlaying, !isPlaying {
+                    revealControlsAfterPause()
+                }
                 handlePlaybackStateChange(isPlaying: isPlaying)
             }
             .onAppear {
@@ -336,6 +339,14 @@
             hasStartedAutoDismiss = true
             awaitsAutoDismissAfterResume = false
             if shouldArmTimer { resetControlsDismissTimer() }
+        }
+
+        private func revealControlsAfterPause() {
+            Task { @MainActor in
+                await Task.yield()
+                guard !controller.isPlaying, !controller.isWaiting else { return }
+                revealControls()
+            }
         }
 
         private func moveToPlaybackOptions() {

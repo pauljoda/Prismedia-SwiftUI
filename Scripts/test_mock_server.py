@@ -369,11 +369,31 @@ class EntityListHTTPTests(unittest.TestCase):
             payload = json.load(response)
 
         self.assertEqual(
-            ["Mock Movie One", "Mock Book", "Mock Artist"],
+            [
+                "Mock Movie One",
+                "Mock Book",
+                "Mock Artist",
+                "Mock Long Movie 01",
+                "Mock Long Movie 02",
+                "Mock Long Movie 03",
+                "Mock Long Movie 04",
+                "Mock Long Movie 05",
+                "Mock Long Movie 06",
+            ],
             [item["entity"]["title"] for item in payload["items"]],
         )
         self.assertEqual(
-            ["movie", "book", "music-artist"],
+            [
+                "movie",
+                "book",
+                "music-artist",
+                "movie",
+                "movie",
+                "movie",
+                "movie",
+                "movie",
+                "movie",
+            ],
             [item["entity"]["kind"] for item in payload["items"]],
         )
 

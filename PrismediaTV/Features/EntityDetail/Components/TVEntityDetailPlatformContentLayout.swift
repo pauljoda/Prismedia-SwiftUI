@@ -13,10 +13,6 @@
                 }
 
                 secondaryContent()
-
-                Color.clear
-                    .frame(height: 420)
-                    .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

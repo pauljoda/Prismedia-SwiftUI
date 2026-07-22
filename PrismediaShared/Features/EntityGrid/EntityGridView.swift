@@ -24,11 +24,13 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     #endif
     #if os(tvOS)
         @Environment(TVTabFocusCoordinator.self) private var tabFocusCoordinator
+        @Environment(\.resetFocus) private var resetFocus
         @State private var lastFocusedItemID: UUID?
         @State private var tvCollectionOptions: [EntityThumbnail] = []
         @State private var tvCollectionOptionsAreLoading = false
         @State private var tvCollectionOptionsLoadFailed = false
         @FocusState private var tvGridFocus: TVGridFocus?
+        @Namespace private var tvGridFocusNamespace
     #endif
 
     private let configuration: EntityGridConfiguration
@@ -43,7 +45,6 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     private let actionPolicy: EntityGridActionPolicy
     private let mutationService: (any EntityGridMutationServicing)?
     private let prefersInitialTVFocus: Bool
-    private let onTVGridFocusMoved: (() -> Void)?
     private let topContent: (EntityGridTopContentContext) -> TopContent
     private let itemContent: (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
 
@@ -60,7 +61,6 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil,
         prefersInitialTVFocus: Bool = false,
-        onTVGridFocusMoved: (() -> Void)? = nil,
         @ViewBuilder topContent: @escaping (EntityGridTopContentContext) -> TopContent,
         @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
     ) {
@@ -78,7 +78,6 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         self.actionPolicy = actionPolicy
         self.mutationService = mutationService
         self.prefersInitialTVFocus = prefersInitialTVFocus
-        self.onTVGridFocusMoved = onTVGridFocusMoved
         self.topContent = topContent
         self.itemContent = itemContent
         let restoredPreferences = preferencesStore.load(for: configuration.preferencesID)
@@ -190,13 +189,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                     await loadTVCollectionOptionsIfNeeded()
                 }
                 .defaultFocus($tvGridFocus, defaultTVGridFocus)
+                .focusScope(tvGridFocusNamespace)
                 .onChange(of: tvGridFocus) { _, focus in
                     guard case .item(let itemID) = focus else { return }
-                    let previousItemID = lastFocusedItemID
                     lastFocusedItemID = itemID
-                    if previousItemID != nil, previousItemID != itemID {
-                        onTVGridFocusMoved?()
-                    }
                 }
                 .onAppear(perform: restoreTVGridFocusIfNeeded)
                 .onChange(of: snapshot.items.map(\.id)) {
@@ -363,17 +359,18 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             Spacer(minLength: PrismediaSpacing.medium)
 
             #if os(tvOS)
-                if !prefersInitialTVFocus {
-                    displayMenu
+                sortMenu
+                    .buttonStyle(.glass)
+                    .focused($tvGridFocus, equals: .sort)
+                filterButton
+                    .buttonStyle(.glass)
+                    .focused($tvGridFocus, equals: .filter)
+                displayMenu
+                    .buttonStyle(.glass)
+                    .focused($tvGridFocus, equals: .display)
+                if actionPolicy.selectionEnabled {
+                    selectionToggleButton
                         .buttonStyle(.glass)
-                    sortMenu
-                        .buttonStyle(.glass)
-                    filterButton
-                        .buttonStyle(.glass)
-                    if actionPolicy.selectionEnabled {
-                        selectionToggleButton
-                            .buttonStyle(.glass)
-                    }
                 }
             #else
                 displayMenu
@@ -385,6 +382,9 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             #endif
         }
         .controlSize(.small)
+        #if os(tvOS)
+            .onMoveCommand(perform: moveFromTVGridHeader)
+        #endif
     }
 
     @ViewBuilder
@@ -495,6 +495,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 }
                 #if os(tvOS)
                     .focused($tvGridFocus, equals: .item(item.id))
+                    .prefersDefaultFocus(
+                        prefersInitialTVFocus && item.id == snapshot.items.first?.id,
+                        in: tvGridFocusNamespace
+                    )
                 #endif
                 .onAppear { itemDidAppear(item.id) }
             }
@@ -1188,6 +1192,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             Task { @MainActor in
                 await Task.yield()
                 tvGridFocus = target
+                resetFocus(in: tvGridFocusNamespace)
             }
         }
 
@@ -1262,7 +1267,6 @@ extension EntityGridView where TopContent == EmptyView {
         actionPolicy: EntityGridActionPolicy = .disabled,
         mutationService: (any EntityGridMutationServicing)? = nil,
         prefersInitialTVFocus: Bool = false,
-        onTVGridFocusMoved: (() -> Void)? = nil,
         @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
     ) {
         self.init(
@@ -1278,7 +1282,6 @@ extension EntityGridView where TopContent == EmptyView {
             actionPolicy: actionPolicy,
             mutationService: mutationService,
             prefersInitialTVFocus: prefersInitialTVFocus,
-            onTVGridFocusMoved: onTVGridFocusMoved,
             topContent: { _ in EmptyView() },
             itemContent: itemContent
         )

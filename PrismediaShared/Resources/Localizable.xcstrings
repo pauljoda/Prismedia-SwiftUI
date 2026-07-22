@@ -1194,6 +1194,12 @@
     "Library Access" : {
 
     },
+    "Library controls" : {
+
+    },
+    "Library Controls" : {
+
+    },
     "Library Root" : {
 
     },
@@ -1531,6 +1537,9 @@
 
     },
     "No Matching Plugins" : {
+
+    },
+    "No metadata is available yet." : {
 
     },
     "No more tracks in the queue" : {
