@@ -88,17 +88,16 @@ enum RequestActivityAcquisitionLifecyclePolicy {
 
     static func showsReleasePicker(
         for status: AcquisitionStatus,
-        hasResumableImport: Bool,
-        hasCandidates: Bool
+        hasResumableImport: Bool
     ) -> Bool {
         guard !RequestActivityStatusPolicy.isTransitionLocked(status) else { return false }
         switch status.rawValue {
         case "awaiting-selection", "manual-import-required":
             return true
         case "failed":
-            return !hasResumableImport && hasCandidates
+            return !hasResumableImport
         case "cancelled":
-            return hasCandidates
+            return true
         default:
             return false
         }

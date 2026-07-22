@@ -13,10 +13,8 @@ import SwiftUI
         let isLoading: Bool
         let isBusy: Bool
         let activeAction: RequestActivityCandidateAction?
-        let showsTorrentFallback: Bool
         let onDownload: (RequestActivityReleaseCandidate) -> Void
         let onBlocklist: (RequestActivityReleaseCandidate) -> Void
-        let onUploadTorrent: () -> Void
 
         init(
             candidates: [RequestActivityReleaseCandidate],
@@ -24,20 +22,16 @@ import SwiftUI
             isLoading: Bool = false,
             isBusy: Bool,
             activeAction: RequestActivityCandidateAction? = nil,
-            showsTorrentFallback: Bool = true,
             onDownload: @escaping (RequestActivityReleaseCandidate) -> Void,
-            onBlocklist: @escaping (RequestActivityReleaseCandidate) -> Void,
-            onUploadTorrent: @escaping () -> Void
+            onBlocklist: @escaping (RequestActivityReleaseCandidate) -> Void
         ) {
             self.candidates = candidates
             self.canPickRelease = canPickRelease
             self.isLoading = isLoading
             self.isBusy = isBusy
             self.activeAction = activeAction
-            self.showsTorrentFallback = showsTorrentFallback
             self.onDownload = onDownload
             self.onBlocklist = onBlocklist
-            self.onUploadTorrent = onUploadTorrent
         }
 
         #if DEBUG
@@ -58,10 +52,8 @@ import SwiftUI
                     isLoading: isLoading,
                     isBusy: isBusy,
                     activeAction: activeAction,
-                    showsTorrentFallback: false,
                     onDownload: { _ in },
-                    onBlocklist: { _ in },
-                    onUploadTorrent: {}
+                    onBlocklist: { _ in }
                 )
                 _showsOnlyRelevant = State(initialValue: showsOnlyRelevant)
                 _sort = State(initialValue: sort)
@@ -75,7 +67,6 @@ import SwiftUI
                 header
                 if !candidates.isEmpty { controls }
                 candidateContent
-                if canPickRelease && showsTorrentFallback { torrentUploadFallback }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: Bool.self) { proxy in
@@ -318,34 +309,6 @@ import SwiftUI
             .frame(maxWidth: .infinity)
             .prismediaCompactActionControlSize()
             .padding(.vertical, PrismediaSpacing.small)
-        }
-
-        private var torrentUploadFallback: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text("Have a .torrent file?")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                    Text(
-                        "Open a release page above, download its .torrent, then upload it here to download directly."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(PrismediaColor.textMuted)
-                }
-
-                PrismediaButton(
-                    "Upload .torrent",
-                    systemImage: "doc.badge.plus",
-                    form: .fill
-                ) {
-                    onUploadTorrent()
-                }
-                .frame(maxWidth: .infinity)
-                .prismediaCompactActionControlSize()
-                .disabled(isBusy)
-            }
-            .padding(PrismediaSpacing.medium)
-            .prismediaPanel()
         }
 
         private var filteredCandidates: [RequestActivityReleaseCandidate] {

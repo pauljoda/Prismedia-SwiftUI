@@ -135,6 +135,30 @@ extension PrismediaAPIClient {
         )
     }
 
+    public func uploadRequestActivityContent(
+        _ upload: RequestActivityManualContentUpload,
+        progress: @escaping @MainActor @Sendable (Double) -> Void
+    ) async throws -> RequestActivityAcquisitionDetail {
+        try await sendMultipartFiles(
+            RequestActivityAcquisitionDetail.self,
+            path: "/api/acquisitions/for-entity/\(upload.entityID.uuidString.lowercased())/upload",
+            files: upload.files.map { file in
+                HTTPMultipartUploadFile(
+                    fieldName: "files",
+                    fileName: file.fileName,
+                    contentType: file.contentType,
+                    sourceURL: file.url,
+                    sizeBytes: file.sizeBytes,
+                    relativePathFieldName: "relativePaths",
+                    relativePath: file.relativePath
+                )
+            },
+            progress: { value in
+                Task { @MainActor in progress(value) }
+            }
+        )
+    }
+
     public func removeRequestActivityAcquisition(id: UUID) async throws {
         try await sendExpectingNoContent(path: requestActivityAcquisitionPath(id), method: "DELETE")
     }

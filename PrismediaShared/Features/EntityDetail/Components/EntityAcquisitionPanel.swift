@@ -14,7 +14,10 @@ struct EntityAcquisitionPanel: View {
     @State private var failedCommand: EntityAcquisitionCommand?
     @State private var failedPendingMonitorValue: Bool?
     @State private var actionNotice: String?
+    @State private var isManualAcquisitionBusy = false
     private let entityID: UUID
+    private let entityKind: EntityKind
+    private let hasOwnedContent: Bool
     private let childGroups: [EntityGroup]
     private let service: EntityAcquisitionService?
     private let requestActivityService: (any RequestActivityServicing)?
@@ -26,6 +29,8 @@ struct EntityAcquisitionPanel: View {
 
     init(
         entityID: UUID,
+        entityKind: EntityKind = .book,
+        hasOwnedContent: Bool = false,
         childGroups: [EntityGroup] = [],
         acquisitionService: (any EntityAcquisitionServicing)?,
         requestActivityService: (any RequestActivityServicing)? = nil,
@@ -33,6 +38,8 @@ struct EntityAcquisitionPanel: View {
         onEntityPruned: @escaping @MainActor () -> Void
     ) {
         self.entityID = entityID
+        self.entityKind = entityKind
+        self.hasOwnedContent = hasOwnedContent
         self.childGroups = childGroups
         service = acquisitionService.map(EntityAcquisitionService.init(port:))
         self.requestActivityService = requestActivityService
@@ -43,6 +50,8 @@ struct EntityAcquisitionPanel: View {
     #if DEBUG
         init(
             entityID: UUID,
+            entityKind: EntityKind = .book,
+            hasOwnedContent: Bool = false,
             childGroups: [EntityGroup] = [],
             previewPhase: EntityAcquisitionPanelPhase,
             acquisitionService: any EntityAcquisitionServicing,
@@ -61,6 +70,8 @@ struct EntityAcquisitionPanel: View {
         ) {
             self.init(
                 entityID: entityID,
+                entityKind: entityKind,
+                hasOwnedContent: hasOwnedContent,
                 childGroups: childGroups,
                 acquisitionService: acquisitionService,
                 requestActivityService: requestActivityService,
@@ -173,7 +184,7 @@ struct EntityAcquisitionPanel: View {
     ) -> some View {
         let presentation = EntityMonitorPresentation(
             state: monitorState,
-            isMutating: state.isMutating,
+            isMutating: state.isMutating || isManualAcquisitionBusy,
             pendingValue: pendingMonitorValue,
             confirmedValue: confirmedMonitorValue
         )
@@ -310,6 +321,27 @@ struct EntityAcquisitionPanel: View {
         }
 
         #if os(iOS) || os(macOS)
+            if let requestActivityService,
+                RequestActivityManualUploadPolicy.canUploadContent(
+                    kind: entityKind,
+                    hasOwnedContent: hasOwnedContent,
+                    acquisitionStatus: snapshot.latestAcquisition?.summary.status
+                        ?? snapshot.state.latestAcquisition?.status
+                )
+            {
+                Divider()
+                EntityManualContentUploadSection(
+                    entityID: entityID,
+                    kind: entityKind,
+                    bookRendition: snapshot.latestAcquisition?.summary.bookRendition,
+                    service: requestActivityService,
+                    isParentBusy: $isManualAcquisitionBusy,
+                    onUploaded: { detail in
+                        await manualContentUploaded(detail, using: service)
+                    }
+                )
+            }
+
             if let acquisition = snapshot.latestAcquisition, let requestActivityService {
                 Divider()
                 RequestActivityAcquisitionManagementSections(
@@ -324,7 +356,8 @@ struct EntityAcquisitionPanel: View {
                     onReset: {
                         await load(using: service)
                         await onMutated()
-                    }
+                    },
+                    isExternallyDisabled: isManualAcquisitionBusy
                 )
                 .id(acquisition.summary.id)
             } else if snapshot.state.latestAcquisition != nil {
@@ -372,7 +405,7 @@ struct EntityAcquisitionPanel: View {
             }
             .frame(maxWidth: .infinity)
             .prismediaCompactActionControlSize()
-            .disabled(state.isMutating)
+            .disabled(state.isMutating || isManualAcquisitionBusy)
         }
     }
 
@@ -454,7 +487,7 @@ struct EntityAcquisitionPanel: View {
         }
         .frame(maxWidth: .infinity)
         .prismediaCompactActionControlSize()
-        .disabled(state.isMutating || activeCommand != nil)
+        .disabled(state.isMutating || activeCommand != nil || isManualAcquisitionBusy)
     }
 
     @ViewBuilder
@@ -606,6 +639,20 @@ struct EntityAcquisitionPanel: View {
         )
         state.finishBackgroundLoad(outcome)
         if case .content = outcome { confirmedMonitorValue = nil }
+        await loadHistory()
+    }
+
+    private func manualContentUploaded(
+        _ detail: RequestActivityAcquisitionDetail,
+        using service: EntityAcquisitionService
+    ) async {
+        state.applyLatestAcquisition(detail)
+        await onMutated()
+        let outcome = await service.load(
+            entityID: entityID,
+            fallbackAcquisition: detail
+        )
+        _ = state.finishMutationRefresh(outcome)
         await loadHistory()
     }
 

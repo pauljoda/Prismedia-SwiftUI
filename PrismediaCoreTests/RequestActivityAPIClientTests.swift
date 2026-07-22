@@ -214,6 +214,57 @@ final class RequestActivityAPIClientTests: XCTestCase {
         XCTAssertTrue(body.range(of: torrent) != nil)
     }
 
+    @MainActor
+    func testManualContentUploadStreamsCanonicalMultipartContractAndProgress() async throws {
+        let uploadLoader = RecordingHTTPUploadLoader(responseJSON: acquisitionDetailJSON)
+        let client = PrismediaAPIClient(
+            serverURL: serverURL,
+            accessToken: "token",
+            loader: MockHTTPDataLoader(responses: []),
+            uploadLoader: uploadLoader
+        )
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("prismedia-manual-upload-\(UUID().uuidString).epub")
+        let payload = Data("native manual acquisition".utf8)
+        try payload.write(to: fileURL)
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+        var progress: [Double] = []
+
+        _ = try await client.uploadRequestActivityContent(
+            RequestActivityManualContentUpload(
+                entityID: entityID,
+                files: [
+                    RequestActivityManualUploadFile(
+                        url: fileURL,
+                        fileName: "Dune.epub",
+                        relativePath: "Dune/Dune.epub",
+                        sizeBytes: Int64(payload.count),
+                        contentType: "application/epub+zip"
+                    )
+                ]
+            ),
+            progress: { progress.append($0) }
+        )
+        for _ in 0..<10 where progress.count < 2 {
+            await Task.yield()
+        }
+
+        let request = try XCTUnwrap(uploadLoader.request)
+        XCTAssertEqual(
+            request.url?.path,
+            "/api/acquisitions/for-entity/\(entityID.uuidString.lowercased())/upload"
+        )
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
+        XCTAssertEqual(progress, [0.5, 1])
+        let body = String(decoding: uploadLoader.uploadedData, as: UTF8.self)
+        XCTAssertTrue(body.contains("name=\"files\"; filename=\"Dune.epub\""))
+        XCTAssertTrue(body.contains("Content-Type: application/epub+zip"))
+        XCTAssertTrue(body.contains("name=\"relativePaths\""))
+        XCTAssertTrue(body.contains("Dune/Dune.epub"))
+        XCTAssertTrue(uploadLoader.uploadedData.range(of: payload) != nil)
+    }
+
     func testRequestActivityPortIncludesExistingMonitorCommands() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json("", statusCode: 204),

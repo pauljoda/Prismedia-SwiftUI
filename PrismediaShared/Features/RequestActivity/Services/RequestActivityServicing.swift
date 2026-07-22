@@ -19,6 +19,10 @@ public protocol RequestActivityServicing: Sendable {
     func cancelRequestActivityAcquisition(id: UUID) async throws -> RequestActivityAcquisitionDetail
     func uploadRequestActivityTorrent(_ upload: RequestActivityManualTorrentUpload) async throws
         -> RequestActivityAcquisitionDetail
+    func uploadRequestActivityContent(
+        _ upload: RequestActivityManualContentUpload,
+        progress: @escaping @MainActor @Sendable (Double) -> Void
+    ) async throws -> RequestActivityAcquisitionDetail
     func removeRequestActivityAcquisition(id: UUID) async throws
     func fetchRequestActivityTransfer(id: UUID) async throws -> RequestActivityTransfer?
     func fetchRequestActivityFiles(id: UUID) async throws -> RequestActivityFiles

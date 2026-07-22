@@ -27,6 +27,17 @@ struct EntityAcquisitionPanelState: Sendable {
         return snapshot.latestAcquisition
     }
 
+    mutating func applyLatestAcquisition(_ detail: RequestActivityAcquisitionDetail) {
+        guard case .content(let snapshot) = phase else { return }
+        phase = .content(
+            EntityAcquisitionPanelSnapshot(
+                state: snapshot.state,
+                latestAcquisition: detail
+            )
+        )
+        refreshError = nil
+    }
+
     mutating func finishLoad(_ outcome: EntityAcquisitionLoadOutcome) {
         switch outcome {
         case .content(let snapshot):

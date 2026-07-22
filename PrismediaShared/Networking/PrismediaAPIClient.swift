@@ -12,30 +12,35 @@ public struct PrismediaAPIClient: Sendable {
     public let accessToken: String?
     public var allowsNsfwContent: Bool { nsfwPolicy.isAllowed }
     private let loader: HTTPDataLoading
+    private let uploadLoader: HTTPUploadLoading
     private let nsfwPolicy: NsfwContentPolicy
 
     public init(
         serverURL: URL,
         accessToken: String? = nil,
         allowsNsfwContent: Bool = false,
-        loader: HTTPDataLoading = URLSession.shared
+        loader: HTTPDataLoading = URLSession.shared,
+        uploadLoader: HTTPUploadLoading = URLSessionHTTPUploadLoader()
     ) {
         self.serverURL = serverURL
         self.accessToken = accessToken
         nsfwPolicy = NsfwContentPolicy(isAllowed: allowsNsfwContent)
         self.loader = loader
+        self.uploadLoader = uploadLoader
     }
 
     private init(
         serverURL: URL,
         accessToken: String?,
         nsfwPolicy: NsfwContentPolicy,
-        loader: HTTPDataLoading
+        loader: HTTPDataLoading,
+        uploadLoader: HTTPUploadLoading
     ) {
         self.serverURL = serverURL
         self.accessToken = accessToken
         self.nsfwPolicy = nsfwPolicy
         self.loader = loader
+        self.uploadLoader = uploadLoader
     }
 
     public func authenticated(with accessToken: String) -> PrismediaAPIClient {
@@ -43,7 +48,8 @@ public struct PrismediaAPIClient: Sendable {
             serverURL: serverURL,
             accessToken: accessToken,
             nsfwPolicy: nsfwPolicy,
-            loader: loader
+            loader: loader,
+            uploadLoader: uploadLoader
         )
     }
 
@@ -52,7 +58,8 @@ public struct PrismediaAPIClient: Sendable {
             serverURL: serverURL,
             accessToken: accessToken,
             allowsNsfwContent: allowsNsfwContent,
-            loader: loader
+            loader: loader,
+            uploadLoader: uploadLoader
         )
     }
 
@@ -755,6 +762,52 @@ public struct PrismediaAPIClient: Sendable {
         }
 
         let (responseData, response) = try await loader.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw PrismediaAPIError.invalidResponse
+        }
+        if 300..<400 ~= httpResponse.statusCode {
+            let location = httpResponse.value(forHTTPHeaderField: "Location").flatMap(URL.init(string:))
+            throw PrismediaAPIError.redirectedToSignIn(location)
+        }
+        guard 200..<300 ~= httpResponse.statusCode else {
+            let problem = try? PrismediaJSON.decoder().decode(APIProblem.self, from: responseData)
+            throw PrismediaAPIError.httpStatus(httpResponse.statusCode, problem)
+        }
+        do {
+            return try PrismediaJSON.decoder().decode(type, from: responseData)
+        } catch {
+            throw PrismediaAPIError.decoding(error)
+        }
+    }
+
+    func sendMultipartFiles<T: Decodable>(
+        _ type: T.Type,
+        path: String,
+        files: [HTTPMultipartUploadFile],
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws -> T {
+        let body = HTTPMultipartUploadBody(files: files)
+        var request = URLRequest(url: try url(path: path))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("multipart/form-data; boundary=\(body.boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue(String(body.contentLength), forHTTPHeaderField: "Content-Length")
+        if let accessToken, let requestURL = request.url, isSameOrigin(requestURL) {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+
+        let accessedURLs = files.compactMap { file -> URL? in
+            file.sourceURL.startAccessingSecurityScopedResource() ? file.sourceURL : nil
+        }
+        defer {
+            for url in accessedURLs { url.stopAccessingSecurityScopedResource() }
+        }
+
+        let (responseData, response) = try await uploadLoader.upload(
+            for: request,
+            body: body,
+            progress: progress
+        )
         guard let httpResponse = response as? HTTPURLResponse else {
             throw PrismediaAPIError.invalidResponse
         }

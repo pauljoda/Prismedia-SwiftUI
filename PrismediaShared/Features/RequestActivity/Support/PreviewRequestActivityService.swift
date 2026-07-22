@@ -76,6 +76,14 @@ import Foundation
             try decode(detailJSON)
         }
 
+        func uploadRequestActivityContent(
+            _ upload: RequestActivityManualContentUpload,
+            progress: @escaping @MainActor @Sendable (Double) -> Void
+        ) async throws -> RequestActivityAcquisitionDetail {
+            await progress(1)
+            return try decode(detailJSON)
+        }
+
         func removeRequestActivityAcquisition(id: UUID) async throws {}
 
         func fetchRequestActivityTransfer(id: UUID) async throws -> RequestActivityTransfer? {

@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 #if canImport(Accessibility)
     import Accessibility
@@ -29,7 +28,6 @@ import UniformTypeIdentifiers
         @State private var activeLifecycleAction: RequestActivityAcquisitionAction?
         @State private var failedLifecycleAction: RequestActivityAcquisitionAction?
         @State private var activeCandidateAction: RequestActivityCandidateAction?
-        @State private var isImportingTorrent = false
         @State private var confirmsStartOver = false
         @State private var lastObservedStatus: AcquisitionStatus?
         @State private var importedNotificationSent = false
@@ -40,6 +38,7 @@ import UniformTypeIdentifiers
         let onCancelled: (@MainActor () async -> Void)?
         let onImported: (@MainActor () async -> Void)?
         let onReset: (@MainActor () async -> Void)?
+        let isExternallyDisabled: Bool
         #if DEBUG
             private var disablesLiveLoadingForPreview = false
         #endif
@@ -50,7 +49,8 @@ import UniformTypeIdentifiers
             style: RequestActivityAcquisitionManagementStyle,
             onCancelled: (@MainActor () async -> Void)? = nil,
             onImported: (@MainActor () async -> Void)? = nil,
-            onReset: (@MainActor () async -> Void)? = nil
+            onReset: (@MainActor () async -> Void)? = nil,
+            isExternallyDisabled: Bool = false
         ) {
             self.acquisitionID = acquisitionID
             self.service = service
@@ -58,6 +58,7 @@ import UniformTypeIdentifiers
             self.onCancelled = onCancelled
             self.onImported = onImported
             self.onReset = onReset
+            self.isExternallyDisabled = isExternallyDisabled
         }
 
         #if DEBUG
@@ -122,12 +123,6 @@ import UniformTypeIdentifiers
                     embeddedContent
                 }
             }
-            .fileImporter(
-                isPresented: $isImportingTorrent,
-                allowedContentTypes: [UTType(filenameExtension: "torrent") ?? .data],
-                allowsMultipleSelection: false,
-                onCompletion: importTorrent
-            )
             .task(id: liveRefreshTaskIdentity) {
                 #if DEBUG
                     guard !disablesLiveLoadingForPreview else { return }
@@ -292,12 +287,17 @@ import UniformTypeIdentifiers
                 RequestActivityReleasesSection(
                     candidates: detail.candidates,
                     canPickRelease: canPickRelease(detail),
-                    isBusy: isActing,
+                    isBusy: isInteractionDisabled,
                     activeAction: activeCandidateAction,
-                    showsTorrentFallback: false,
                     onDownload: { target in Task { await queue(target) } },
-                    onBlocklist: { target in Task { await blocklist(target) } },
-                    onUploadTorrent: {}
+                    onBlocklist: { target in Task { await blocklist(target) } }
+                )
+                RequestActivityManualTorrentSection(
+                    acquisitionID: acquisitionID,
+                    service: service,
+                    isDisabled: isExternallyDisabled,
+                    isParentBusy: $isActing,
+                    onUploaded: applyManualUploadResult
                 )
             }
         }
@@ -320,22 +320,16 @@ import UniformTypeIdentifiers
         @ToolbarContentBuilder
         private var listToolbarContent: some ToolbarContent {
             ToolbarItem(placement: .primaryAction) {
-                if let detail, hasLifecycleActions(detail) || canPickRelease(detail) {
+                if let detail, hasLifecycleActions(detail) {
                     Menu {
                         ForEach(allLifecycleActions(for: detail), id: \.self) { action in
                             lifecycleMenuButton(action)
-                        }
-                        if canPickRelease(detail) {
-                            if hasLifecycleActions(detail) { Divider() }
-                            Button("Import Torrent", systemImage: "doc.badge.plus") {
-                                isImportingTorrent = true
-                            }
                         }
                     } label: {
                         Image(systemName: "ellipsis")
                     }
                     .accessibilityLabel("Acquisition Actions")
-                    .disabled(isActing)
+                    .disabled(isInteractionDisabled)
                 }
             }
         }
@@ -519,7 +513,7 @@ import UniformTypeIdentifiers
                     Task { await performLifecycleAction(action) }
                 }
             }
-            .disabled(isActing)
+            .disabled(isInteractionDisabled)
             .frame(maxWidth: .infinity)
         }
 
@@ -562,22 +556,30 @@ import UniformTypeIdentifiers
         }
 
         private func releasePicker(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            RequestActivityReleasesSection(
-                candidates: detail.candidates,
-                canPickRelease: canPickRelease(detail),
-                isBusy: isActing,
-                activeAction: activeCandidateAction,
-                onDownload: { target in Task { await queue(target) } },
-                onBlocklist: { target in Task { await blocklist(target) } },
-                onUploadTorrent: { isImportingTorrent = true }
-            )
+            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                RequestActivityReleasesSection(
+                    candidates: detail.candidates,
+                    canPickRelease: canPickRelease(detail),
+                    isBusy: isInteractionDisabled,
+                    activeAction: activeCandidateAction,
+                    onDownload: { target in Task { await queue(target) } },
+                    onBlocklist: { target in Task { await blocklist(target) } }
+                )
+                RequestActivityManualTorrentSection(
+                    acquisitionID: acquisitionID,
+                    service: service,
+                    isDisabled: isExternallyDisabled,
+                    isParentBusy: $isActing,
+                    onUploaded: applyManualUploadResult
+                )
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
 
         private func canPickRelease(_ detail: RequestActivityAcquisitionDetail) -> Bool {
             RequestActivityAcquisitionLifecyclePolicy.showsReleasePicker(
                 for: detail.summary.status,
-                hasResumableImport: detail.summary.hasResumableImport,
-                hasCandidates: !detail.candidates.isEmpty
+                hasResumableImport: detail.summary.hasResumableImport
             )
         }
 
@@ -781,57 +783,26 @@ import UniformTypeIdentifiers
             }
         }
 
-        private func importTorrent(_ result: Result<[URL], any Error>) {
-            Task {
-                do {
-                    guard let url = try result.get().first else {
-                        throw RequestActivityFileImportError.noFileSelected
-                    }
-                    let targetAcquisitionID = acquisitionID
-                    let upload = try await Task.detached {
-                        let accessing = url.startAccessingSecurityScopedResource()
-                        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-                        return RequestActivityManualTorrentUpload(
-                            acquisitionID: targetAcquisitionID,
-                            fileName: url.lastPathComponent,
-                            data: try Data(contentsOf: url)
-                        )
-                    }.value
-                    await mutate { try await service.uploadRequestActivityTorrent(upload) }
-                } catch {
-                    actionErrorMessage = error.localizedDescription
-                    failedLifecycleAction = nil
-                }
+        private func applyManualUploadResult(_ nextDetail: RequestActivityAcquisitionDetail) async {
+            detail = nextDetail
+            let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
+            await refreshFiles(for: nextDetail.summary.status, isInitial: filesLoadState.files == nil)
+            blocklist =
+                (try? await service.listRequestActivityBlocklist())?.filter {
+                    $0.acquisitionID == acquisitionID
+                } ?? []
+            actionErrorMessage = nil
+            failedLifecycleAction = nil
+            if transferRefreshed {
+                refreshState.recordSuccess()
+            } else {
+                refreshState.recordFailure()
             }
+            await observeStatusTransition(nextDetail.summary.status)
         }
 
-        private func mutate(
-            _ operation: () async throws -> RequestActivityAcquisitionDetail
-        ) async {
-            guard !isActing else { return }
-            isActing = true
-            defer { isActing = false }
-            do {
-                let nextDetail = try await operation()
-                detail = nextDetail
-                let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
-                await refreshFiles(for: nextDetail.summary.status, isInitial: filesLoadState.files == nil)
-                blocklist =
-                    (try? await service.listRequestActivityBlocklist())?.filter {
-                        $0.acquisitionID == acquisitionID
-                    } ?? []
-                actionErrorMessage = nil
-                failedLifecycleAction = nil
-                if transferRefreshed {
-                    refreshState.recordSuccess()
-                } else {
-                    refreshState.recordFailure()
-                }
-                await observeStatusTransition(nextDetail.summary.status)
-            } catch {
-                actionErrorMessage = error.localizedDescription
-                failedLifecycleAction = nil
-            }
+        private var isInteractionDisabled: Bool {
+            isActing || isExternallyDisabled
         }
 
         @discardableResult

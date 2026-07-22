@@ -387,6 +387,7 @@ final class RequestActivityPresentationPolicyTests: XCTestCase {
         XCTAssertTrue(showsReleasePicker(status: "awaiting-selection", hasCandidates: false))
         XCTAssertTrue(showsReleasePicker(status: "manual-import-required", hasCandidates: false))
         XCTAssertTrue(showsReleasePicker(status: "failed", hasCandidates: true))
+        XCTAssertTrue(showsReleasePicker(status: "failed", hasCandidates: false))
         XCTAssertFalse(
             showsReleasePicker(
                 status: "failed",
@@ -395,7 +396,7 @@ final class RequestActivityPresentationPolicyTests: XCTestCase {
             )
         )
         XCTAssertTrue(showsReleasePicker(status: "cancelled", hasCandidates: true))
-        XCTAssertFalse(showsReleasePicker(status: "cancelled", hasCandidates: false))
+        XCTAssertTrue(showsReleasePicker(status: "cancelled", hasCandidates: false))
         XCTAssertFalse(showsReleasePicker(status: "searching", hasCandidates: true))
         XCTAssertFalse(showsReleasePicker(status: "future-state", hasCandidates: true))
     }
@@ -403,12 +404,11 @@ final class RequestActivityPresentationPolicyTests: XCTestCase {
     private func showsReleasePicker(
         status: String,
         hasResumableImport: Bool = false,
-        hasCandidates: Bool
+        hasCandidates _: Bool
     ) -> Bool {
         RequestActivityAcquisitionLifecyclePolicy.showsReleasePicker(
             for: AcquisitionStatus(rawValue: status),
-            hasResumableImport: hasResumableImport,
-            hasCandidates: hasCandidates
+            hasResumableImport: hasResumableImport
         )
     }
 
