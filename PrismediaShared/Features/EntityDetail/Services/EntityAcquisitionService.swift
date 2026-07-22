@@ -8,12 +8,20 @@ struct EntityAcquisitionService {
         self.port = port
     }
 
-    func load(entityID: UUID) async -> EntityAcquisitionLoadOutcome {
+    func load(
+        entityID: UUID,
+        fallbackAcquisition: RequestActivityAcquisitionDetail? = nil
+    ) async -> EntityAcquisitionLoadOutcome {
         do {
             let state = try await port.loadState(entityID: entityID)
             // Best-effort like the web: a transient acquisition-read failure keeps the
             // monitor state usable instead of failing the whole panel.
-            let latestAcquisition = (try? await port.latestAcquisition(entityID: entityID)) ?? nil
+            let latestAcquisition: RequestActivityAcquisitionDetail?
+            do {
+                latestAcquisition = try await port.latestAcquisition(entityID: entityID)
+            } catch {
+                latestAcquisition = fallbackAcquisition
+            }
             guard !Task.isCancelled else { return .cancelled }
             return .content(
                 EntityAcquisitionPanelSnapshot(state: state, latestAcquisition: latestAcquisition)

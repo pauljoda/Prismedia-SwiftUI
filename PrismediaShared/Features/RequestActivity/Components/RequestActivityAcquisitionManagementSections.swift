@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
     /// Entity monitoring stays in the owning panel so a stable entity monitor is never
     /// duplicated by an acquisition-scoped control.
     struct RequestActivityAcquisitionManagementSections: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @Environment(\.prismediaPageIsActive) private var pageIsActive
         @Environment(\.scenePhase) private var scenePhase
         @State private var detail: RequestActivityAcquisitionDetail?
@@ -17,7 +18,11 @@ import UniformTypeIdentifiers
         @State private var blocklist: [RequestActivityBlocklistEntry] = []
         @State private var isLoading = true
         @State private var isActing = false
-        @State private var errorMessage: String?
+        @State private var loadErrorMessage: String?
+        @State private var actionErrorMessage: String?
+        @State private var refreshState = RequestActivityAcquisitionRefreshState()
+        @State private var activeLifecycleAction: RequestActivityAcquisitionAction?
+        @State private var failedLifecycleAction: RequestActivityAcquisitionAction?
         @State private var isImportingTorrent = false
         @State private var confirmsStartOver = false
         @State private var lastObservedStatus: AcquisitionStatus?
@@ -63,7 +68,7 @@ import UniformTypeIdentifiers
             )
             .task(id: liveRefreshTaskIdentity) {
                 guard liveRefreshIsActive else { return }
-                await load(showSpinner: detail == nil, reportsErrors: detail == nil)
+                await load(showSpinner: detail == nil)
                 await pollWhileVisible()
             }
             .confirmationDialog(
@@ -77,16 +82,8 @@ import UniformTypeIdentifiers
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text(
-                    "This permanently deletes every file owned by the interrupted import, removes any remaining download data it can reach, clears the partial state, and starts a clean search for the still-wanted item."
+                    "Interrupted files and remaining download data will be removed, then Prismedia will begin a clean search."
                 )
-            }
-            .alert(
-                "Acquisition Action Failed",
-                isPresented: errorPresented
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "Unknown error")
             }
         }
 
@@ -94,12 +91,12 @@ import UniformTypeIdentifiers
 
         private var listStyleContent: some View {
             List {
-                if let summary = detail?.summary {
-                    summarySection(summary)
-                    transferSection
-                    filesSection
-                    blocklistSection
-                    candidatesSection
+                if let detail {
+                    summarySection(detail.summary)
+                    if hasLifecycleMessage {
+                        Section { lifecycleMessages }
+                    }
+                    listDownstreamSections(detail)
                 }
             }
             .prismediaScreenBackground()
@@ -113,20 +110,47 @@ import UniformTypeIdentifiers
             Section("Status") {
                 LabeledContent("State") {
                     Label(
-                        RequestActivityStatusPolicy.label(for: summary.status),
+                        RequestActivityAcquisitionLifecyclePolicy.label(for: summary.status),
                         systemImage: RequestActivityStatusPolicy.systemImage(for: summary.status)
                     )
                     .foregroundStyle(RequestActivityStatusPolicy.tone(for: summary.status).foregroundStyle)
                 }
-                if let message = summary.statusMessage { Text(message) }
-                if let progress = summary.progress {
-                    ProgressView(value: min(max(progress, 0), 1)) {
-                        Text("Progress")
-                    } currentValueLabel: {
-                        Text(progress, format: .percent.precision(.fractionLength(0)))
-                    }
+                if let description = RequestActivityAcquisitionLifecyclePolicy.description(
+                    for: summary.status,
+                    message: summary.statusMessage
+                ) {
+                    Text(description)
+                        .foregroundStyle(PrismediaColor.textSecondary)
                 }
-                if let description = summary.description { Text(description) }
+                LabeledContent("Updated") {
+                    Text(summary.updatedAt, style: .relative)
+                        .monospacedDigit()
+                }
+                if [.preparingSearch, .searching].contains(
+                    RequestActivityAcquisitionLifecyclePolicy.content(for: summary.status)
+                ) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityLabel(
+                            RequestActivityAcquisitionLifecyclePolicy.label(for: summary.status)
+                        )
+                }
+            }
+        }
+
+        @ViewBuilder
+        private func listDownstreamSections(_ detail: RequestActivityAcquisitionDetail) -> some View {
+            switch RequestActivityAcquisitionLifecyclePolicy.content(for: detail.summary.status) {
+            case .download:
+                transferSection
+                filesSection
+            case .files:
+                filesSection
+            case .releases:
+                blocklistSection
+                candidatesSection
+            case .preparingSearch, .searching, .lifecycleOnly, .locked:
+                EmptyView()
             }
         }
 
@@ -232,42 +256,54 @@ import UniformTypeIdentifiers
         private var overlayContent: some View {
             if isLoading && detail == nil {
                 PrismediaLoadingView("Loading acquisition…")
-            } else if detail == nil, let errorMessage {
-                ContentUnavailableView(
-                    "Unable to Load Acquisition",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(errorMessage)
+            } else if detail == nil, let loadErrorMessage {
+                RequestActivityLifecycleMessage(
+                    title: "Unable to Load Acquisition",
+                    message: loadErrorMessage,
+                    retryTitle: "Try Again",
+                    onRetry: { Task { await load(showSpinner: true) } }
                 )
+                .padding()
             }
         }
 
         @ToolbarContentBuilder
         private var listToolbarContent: some ToolbarContent {
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button("Search Again", systemImage: "arrow.clockwise") {
-                        Task { await research() }
+                if let detail, hasLifecycleActions(detail) || canPickRelease(detail) {
+                    Menu {
+                        ForEach(allLifecycleActions(for: detail), id: \.self) { action in
+                            lifecycleMenuButton(action)
+                        }
+                        if canPickRelease(detail) {
+                            if hasLifecycleActions(detail) { Divider() }
+                            Button("Import Torrent", systemImage: "doc.badge.plus") {
+                                isImportingTorrent = true
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
                     }
-                    Button("Import Torrent", systemImage: "doc.badge.plus") {
-                        isImportingTorrent = true
-                    }
-                    Button("Retry Import", systemImage: "arrow.down.doc") {
-                        Task { await retryImport(allowFormatChange: false) }
-                    }
-                    Button("Retry and Allow Format Change", systemImage: "arrow.trianglehead.2.clockwise") {
-                        Task { await retryImport(allowFormatChange: true) }
-                    }
-                    Divider()
-                    Button("Cancel Acquisition", systemImage: "xmark.circle", role: .destructive) {
-                        Task { await cancel() }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
+                    .accessibilityLabel("Acquisition Actions")
+                    .disabled(isActing)
                 }
-                .accessibilityLabel("Acquisition Actions")
-                .disabled(
-                    isActing || detail.map { RequestActivityStatusPolicy.isTransitionLocked($0.summary.status) } == true
-                )
+            }
+        }
+
+        @ViewBuilder
+        private func lifecycleMenuButton(_ action: RequestActivityAcquisitionAction) -> some View {
+            if action == .startOver {
+                Button(action.title, systemImage: action.systemImage, role: .destructive) {
+                    confirmsStartOver = true
+                }
+            } else if action == .cancel {
+                Button(action.title, systemImage: action.systemImage, role: .destructive) {
+                    Task { await performLifecycleAction(action) }
+                }
+            } else {
+                Button(action.title, systemImage: action.systemImage) {
+                    Task { await performLifecycleAction(action) }
+                }
             }
         }
 
@@ -278,6 +314,7 @@ import UniformTypeIdentifiers
             if let detail {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                     embeddedStatusHeader(detail)
+                    lifecycleMessages
                     embeddedBody(detail)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -290,11 +327,12 @@ import UniformTypeIdentifiers
                         .foregroundStyle(PrismediaColor.textSecondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-            } else if let errorMessage {
-                RequestActivityStatePlaceholder(
-                    title: "Unable to load acquisition",
-                    message: errorMessage,
-                    systemImage: "exclamationmark.triangle"
+            } else if let loadErrorMessage {
+                RequestActivityLifecycleMessage(
+                    title: "Unable to Load Acquisition",
+                    message: loadErrorMessage,
+                    retryTitle: "Try Again",
+                    onRetry: { Task { await load(showSpinner: true) } }
                 )
             }
         }
@@ -304,10 +342,10 @@ import UniformTypeIdentifiers
                 HStack(alignment: .top, spacing: PrismediaSpacing.large) {
                     embeddedStatusSummary(detail)
                     Spacer(minLength: PrismediaSpacing.medium)
-                    if hasEmbeddedActions(detail) {
+                    if hasLifecycleActions(detail) {
                         GlassEffectContainer(spacing: PrismediaSpacing.small) {
                             HStack(spacing: PrismediaSpacing.small) {
-                                embeddedActions(detail)
+                                wideLifecycleActions(detail)
                             }
                         }
                         .prismediaCompactActionControlSize()
@@ -315,17 +353,14 @@ import UniformTypeIdentifiers
                 }
                 VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                     embeddedStatusSummary(detail)
-                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                        ViewThatFits(in: .horizontal) {
+                    if hasLifecycleActions(detail) {
+                        GlassEffectContainer(spacing: PrismediaSpacing.small) {
                             HStack(spacing: PrismediaSpacing.small) {
-                                embeddedActions(detail)
-                            }
-                            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                                embeddedActions(detail)
+                                compactLifecycleActions(detail)
                             }
                         }
+                        .prismediaCompactActionControlSize()
                     }
-                    .prismediaCompactActionControlSize()
                 }
             }
         }
@@ -333,7 +368,7 @@ import UniformTypeIdentifiers
         private func embeddedStatusSummary(_ detail: RequestActivityAcquisitionDetail) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                 Label(
-                    RequestActivityStatusPolicy.label(for: detail.summary.status),
+                    RequestActivityAcquisitionLifecyclePolicy.label(for: detail.summary.status),
                     systemImage: RequestActivityStatusPolicy.systemImage(for: detail.summary.status)
                 )
                 .font(.headline)
@@ -341,78 +376,157 @@ import UniformTypeIdentifiers
                     RequestActivityStatusPolicy.tone(for: detail.summary.status).foregroundStyle
                 )
 
-                if let description = RequestActivityStatusPolicy.description(
+                if let description = RequestActivityAcquisitionLifecyclePolicy.description(
                     for: detail.summary.status,
                     message: detail.summary.statusMessage
                 ) {
                     Text(description)
                         .font(.subheadline)
                         .foregroundStyle(PrismediaColor.textSecondary)
-                } else if let message = detail.summary.statusMessage, !message.isEmpty {
-                    Text(message)
-                        .font(.subheadline)
-                        .foregroundStyle(PrismediaColor.textSecondary)
                 }
+                Text("Updated \(detail.summary.updatedAt, style: .relative)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(PrismediaColor.textMuted)
             }
             .accessibilityElement(children: .combine)
         }
 
-        private func hasEmbeddedActions(_ detail: RequestActivityAcquisitionDetail) -> Bool {
-            let status = detail.summary.status
-            return canRetryImport(detail) || canStartOver(detail) || canReSearch(detail)
-                || canCancel(status) || status.rawValue == "awaiting-selection"
+        private var hasLifecycleMessage: Bool {
+            actionErrorMessage != nil || refreshState.message != nil
         }
 
         @ViewBuilder
-        private func embeddedActions(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            let status = detail.summary.status
-            if canRetryImport(detail) {
-                PrismediaButton(
-                    status.rawValue == "manual-import-required" ? "Import anyway" : "Retry import",
-                    systemImage: "arrow.down.doc",
-                    variant: .prominent
-                ) {
-                    Task {
-                        await retryImport(allowFormatChange: status.rawValue == "manual-import-required")
+        private var lifecycleMessages: some View {
+            if let actionErrorMessage {
+                if failedLifecycleAction != nil {
+                    RequestActivityLifecycleMessage(
+                        title: "Acquisition Action Failed",
+                        message: actionErrorMessage,
+                        retryTitle: "Retry",
+                        onRetry: retryFailedLifecycleAction,
+                        onDismiss: dismissActionError
+                    )
+                } else {
+                    RequestActivityLifecycleMessage(
+                        title: "Acquisition Action Failed",
+                        message: actionErrorMessage,
+                        onDismiss: dismissActionError
+                    )
+                }
+            }
+
+            if let refreshMessage = refreshState.message {
+                RequestActivityLifecycleMessage(
+                    title: "Live Updates Delayed",
+                    message: refreshMessage,
+                    isWarning: true,
+                    retryTitle: "Retry Now",
+                    onRetry: { Task { await load(showSpinner: false) } },
+                    onDismiss: { refreshState.dismiss() }
+                )
+            }
+        }
+
+        private func hasLifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> Bool {
+            !allLifecycleActions(for: detail).isEmpty
+        }
+
+        private func allLifecycleActions(
+            for detail: RequestActivityAcquisitionDetail
+        ) -> [RequestActivityAcquisitionAction] {
+            var actions: [RequestActivityAcquisitionAction] = []
+            if let primary = primaryLifecycleAction(for: detail) {
+                actions.append(primary)
+            }
+            actions.append(contentsOf: secondaryLifecycleActions(for: detail))
+            return actions
+        }
+
+        private func primaryLifecycleAction(
+            for detail: RequestActivityAcquisitionDetail
+        ) -> RequestActivityAcquisitionAction? {
+            RequestActivityAcquisitionLifecyclePolicy.primaryAction(
+                for: detail.summary.status,
+                hasResumableImport: detail.summary.hasResumableImport
+            )
+        }
+
+        private func secondaryLifecycleActions(
+            for detail: RequestActivityAcquisitionDetail
+        ) -> [RequestActivityAcquisitionAction] {
+            RequestActivityAcquisitionLifecyclePolicy.secondaryActions(
+                for: detail.summary.status,
+                hasResumableImport: detail.summary.hasResumableImport
+            )
+        }
+
+        @ViewBuilder
+        private func wideLifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> some View {
+            ForEach(allLifecycleActions(for: detail), id: \.self) { action in
+                lifecycleButton(action, primaryAction: primaryLifecycleAction(for: detail))
+            }
+        }
+
+        @ViewBuilder
+        private func compactLifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> some View {
+            let visibleActions = compactVisibleActions(for: detail)
+            let overflowActions = allLifecycleActions(for: detail).filter { !visibleActions.contains($0) }
+
+            ForEach(visibleActions, id: \.self) { action in
+                lifecycleButton(action, primaryAction: primaryLifecycleAction(for: detail))
+            }
+
+            if !overflowActions.isEmpty {
+                Menu {
+                    ForEach(overflowActions, id: \.self) { action in
+                        lifecycleMenuButton(action)
                     }
+                } label: {
+                    Label("More Acquisition Actions", systemImage: "ellipsis")
+                        .labelStyle(.iconOnly)
                 }
+                .buttonStyle(.glass)
+                .accessibilityLabel("More Acquisition Actions")
                 .disabled(isActing)
             }
-            if canStartOver(detail) {
-                PrismediaButton(
-                    "Start over",
-                    systemImage: "arrow.counterclockwise",
-                    variant: .destructive
-                ) {
+        }
+
+        private func compactVisibleActions(
+            for detail: RequestActivityAcquisitionDetail
+        ) -> [RequestActivityAcquisitionAction] {
+            if let primary = primaryLifecycleAction(for: detail) { return [primary] }
+            let secondary = secondaryLifecycleActions(for: detail)
+            return secondary == [.cancel] ? [.cancel] : []
+        }
+
+        private func lifecycleButton(
+            _ action: RequestActivityAcquisitionAction,
+            primaryAction: RequestActivityAcquisitionAction?
+        ) -> some View {
+            PrismediaButton(
+                action.title,
+                systemImage: action.systemImage,
+                variant: action == primaryAction
+                    ? .prominent
+                    : action == .cancel || action == .startOver ? .destructive : .standard,
+                primaryTint: action == primaryAction ? artworkPrimaryAccent : nil,
+                isLoading: activeLifecycleAction == action,
+                loadingTitle: action.progressTitle
+            ) {
+                if action == .startOver {
                     confirmsStartOver = true
+                } else {
+                    Task { await performLifecycleAction(action) }
                 }
-                .disabled(isActing)
             }
-            if canReSearch(detail) {
-                PrismediaButton(
-                    "Search again",
-                    systemImage: "arrow.clockwise"
-                ) {
-                    Task { await research() }
-                }
-                .disabled(isActing)
-            }
-            if canCancel(status) || status.rawValue == "awaiting-selection" {
-                PrismediaButton(
-                    "Cancel acquisition",
-                    systemImage: "xmark",
-                    variant: .destructive
-                ) {
-                    Task { await cancel() }
-                }
-                .disabled(isActing)
-            }
+            .disabled(isActing)
         }
 
         @ViewBuilder
         private func embeddedBody(_ detail: RequestActivityAcquisitionDetail) -> some View {
             let status = detail.summary.status
-            if RequestActivityStatusPolicy.isTransitionLocked(status) {
+            switch RequestActivityAcquisitionLifecyclePolicy.content(for: status) {
+            case .locked:
                 RequestActivityStatePlaceholder(
                     title: status.rawValue == "stopping"
                         ? "Cleaning up acquisition"
@@ -423,21 +537,22 @@ import UniformTypeIdentifiers
                     systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
                     isBusy: true
                 )
-            } else if status.rawValue == "searching" || status.rawValue == "pending" {
-                RequestActivityStatePlaceholder(
-                    title: "Searching indexers",
-                    message: "Querying your configured indexers for matching releases. This can take a moment.",
-                    systemImage: "magnifyingglass",
-                    isBusy: true
-                )
-            } else if isDownloading(status) {
+            case .preparingSearch:
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Preparing search")
+            case .searching:
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Searching indexers")
+            case .download:
                 RequestActivityDownloadSection(transfer: transfer)
-            } else if isDone(status) {
+            case .files:
                 RequestActivityFilesSection(
                     files: files,
                     isActive: RequestActivityStatusPolicy.shouldPoll(status)
                 )
-            } else {
+            case .releases:
                 RequestActivityReleasesSection(
                     candidates: detail.candidates,
                     canPickRelease: canPickRelease(detail),
@@ -446,59 +561,20 @@ import UniformTypeIdentifiers
                     onBlocklist: { target in Task { await blocklist(target) } },
                     onUploadTorrent: { isImportingTorrent = true }
                 )
+            case .lifecycleOnly:
+                EmptyView()
             }
-        }
-
-        // MARK: - Status gates (web parity)
-
-        private func canRetryImport(_ detail: RequestActivityAcquisitionDetail) -> Bool {
-            let status = detail.summary.status.rawValue
-            return status == "manual-import-required"
-                || (status == "failed" && detail.summary.hasResumableImport)
-        }
-
-        private func canStartOver(_ detail: RequestActivityAcquisitionDetail) -> Bool {
-            detail.summary.hasResumableImport && detail.summary.status.rawValue != "stopping"
-        }
-
-        private func canReSearch(_ detail: RequestActivityAcquisitionDetail) -> Bool {
-            let status = detail.summary.status.rawValue
-            return status == "awaiting-selection"
-                || (status == "failed" && !detail.summary.hasResumableImport)
-                || status == "manual-import-required"
-        }
-
-        private func canCancel(_ status: AcquisitionStatus) -> Bool {
-            RequestActivityStatusPolicy.shouldPoll(status)
-                && !RequestActivityStatusPolicy.isTransitionLocked(status)
         }
 
         private func canPickRelease(_ detail: RequestActivityAcquisitionDetail) -> Bool {
             let status = detail.summary.status.rawValue
             return status == "awaiting-selection"
-                || (status == "failed" && !detail.summary.hasResumableImport)
-                || status == "cancelled"
                 || status == "manual-import-required"
-        }
-
-        private func isDownloading(_ status: AcquisitionStatus) -> Bool {
-            status.rawValue == "queued" || status.rawValue == "downloading"
-        }
-
-        private func isDone(_ status: AcquisitionStatus) -> Bool {
-            ["downloaded", "importing", "imported"].contains(status.rawValue)
         }
 
         // MARK: - Loading and actions
 
-        private var errorPresented: Binding<Bool> {
-            Binding(
-                get: { errorMessage != nil && detail != nil },
-                set: { presented in if !presented { errorMessage = nil } }
-            )
-        }
-
-        private func load(showSpinner: Bool, reportsErrors: Bool = true) async {
+        private func load(showSpinner: Bool) async {
             if showSpinner { isLoading = true }
             defer { if showSpinner { isLoading = false } }
             do {
@@ -513,12 +589,17 @@ import UniformTypeIdentifiers
                         $0.acquisitionID == acquisitionID
                     } ?? []
                 if blocklist != nextBlocklist { blocklist = nextBlocklist }
-                if errorMessage != nil { errorMessage = nil }
+                loadErrorMessage = nil
+                refreshState.recordSuccess()
                 await observeStatusTransition(nextDetail.summary.status)
             } catch is CancellationError {
                 return
             } catch {
-                if reportsErrors { errorMessage = error.localizedDescription }
+                if detail == nil {
+                    loadErrorMessage = error.localizedDescription
+                } else {
+                    refreshState.recordFailure()
+                }
             }
         }
 
@@ -526,7 +607,7 @@ import UniformTypeIdentifiers
             while liveRefreshIsActive {
                 do { try await Task.sleep(for: liveRefreshInterval) } catch { return }
                 guard !Task.isCancelled, liveRefreshIsActive else { return }
-                await load(showSpinner: false, reportsErrors: false)
+                await load(showSpinner: false)
             }
         }
 
@@ -557,39 +638,50 @@ import UniformTypeIdentifiers
             await onImported?()
         }
 
-        private func research() async {
-            await mutate { try await service.researchRequestActivityAcquisition(id: acquisitionID) }
-        }
-
-        private func retryImport(allowFormatChange: Bool) async {
-            await mutate {
-                try await service.retryRequestActivityImport(
-                    id: acquisitionID,
-                    allowFormatChange: allowFormatChange
-                )
-            }
-        }
-
-        private func cancel() async {
-            await mutate { try await service.cancelRequestActivityAcquisition(id: acquisitionID) }
-            if errorMessage == nil {
-                await onCancelled?()
+        private func performLifecycleAction(_ action: RequestActivityAcquisitionAction) async {
+            switch action {
+            case .research:
+                await mutateLifecycle(action) {
+                    try await service.researchRequestActivityAcquisition(id: acquisitionID)
+                }
+            case .cancel:
+                let succeeded = await mutateLifecycle(action) {
+                    try await service.cancelRequestActivityAcquisition(id: acquisitionID)
+                }
+                if succeeded { await onCancelled?() }
+            case .retryImport(let allowFormatChange):
+                await mutateLifecycle(action) {
+                    try await service.retryRequestActivityImport(
+                        id: acquisitionID,
+                        allowFormatChange: allowFormatChange
+                    )
+                }
+            case .startOver:
+                await startOver()
             }
         }
 
         private func startOver() async {
             guard !isActing else { return }
             isActing = true
-            defer { isActing = false }
+            activeLifecycleAction = .startOver
+            actionErrorMessage = nil
+            failedLifecycleAction = nil
+            defer {
+                activeLifecycleAction = nil
+                isActing = false
+            }
             do {
                 try await service.removeRequestActivityAcquisition(id: acquisitionID)
                 detail = nil
                 transfer = nil
                 files = nil
-                errorMessage = nil
+                blocklist = []
+                refreshState.recordSuccess()
                 await onReset?()
             } catch {
-                errorMessage = error.localizedDescription
+                actionErrorMessage = error.localizedDescription
+                failedLifecycleAction = .startOver
             }
         }
 
@@ -618,9 +710,10 @@ import UniformTypeIdentifiers
             do {
                 try await service.removeRequestActivityBlocklistEntry(id: entry.id)
                 blocklist.removeAll { $0.id == entry.id }
-                errorMessage = nil
+                actionErrorMessage = nil
             } catch {
-                errorMessage = error.localizedDescription
+                actionErrorMessage = error.localizedDescription
+                failedLifecycleAction = nil
             }
         }
 
@@ -642,7 +735,8 @@ import UniformTypeIdentifiers
                     }.value
                     await mutate { try await service.uploadRequestActivityTorrent(upload) }
                 } catch {
-                    errorMessage = error.localizedDescription
+                    actionErrorMessage = error.localizedDescription
+                    failedLifecycleAction = nil
                 }
             }
         }
@@ -662,11 +756,64 @@ import UniformTypeIdentifiers
                     (try? await service.listRequestActivityBlocklist())?.filter {
                         $0.acquisitionID == acquisitionID
                     } ?? []
-                errorMessage = nil
+                actionErrorMessage = nil
+                failedLifecycleAction = nil
+                refreshState.recordSuccess()
                 await observeStatusTransition(nextDetail.summary.status)
             } catch {
-                errorMessage = error.localizedDescription
+                actionErrorMessage = error.localizedDescription
+                failedLifecycleAction = nil
             }
+        }
+
+        @discardableResult
+        private func mutateLifecycle(
+            _ action: RequestActivityAcquisitionAction,
+            operation: () async throws -> RequestActivityAcquisitionDetail
+        ) async -> Bool {
+            guard !isActing else { return false }
+            isActing = true
+            activeLifecycleAction = action
+            actionErrorMessage = nil
+            failedLifecycleAction = nil
+            defer {
+                activeLifecycleAction = nil
+                isActing = false
+            }
+            do {
+                let nextDetail = try await operation()
+                detail = nextDetail
+                transfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
+                files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
+                blocklist =
+                    (try? await service.listRequestActivityBlocklist())?.filter {
+                        $0.acquisitionID == acquisitionID
+                    } ?? []
+                refreshState.recordSuccess()
+                await observeStatusTransition(nextDetail.summary.status)
+                return true
+            } catch is CancellationError {
+                return false
+            } catch {
+                actionErrorMessage = error.localizedDescription
+                failedLifecycleAction = action
+                return false
+            }
+        }
+
+        private func retryFailedLifecycleAction() {
+            guard let failedLifecycleAction else { return }
+            actionErrorMessage = nil
+            if failedLifecycleAction == .startOver {
+                confirmsStartOver = true
+            } else {
+                Task { await performLifecycleAction(failedLifecycleAction) }
+            }
+        }
+
+        private func dismissActionError() {
+            actionErrorMessage = nil
+            failedLifecycleAction = nil
         }
     }
 
@@ -680,6 +827,34 @@ import UniformTypeIdentifiers
                 )
                 .padding()
             }
+        }
+
+        #Preview("Lifecycle · Preparing Search") {
+            RequestActivityAcquisitionManagementSections(
+                acquisitionID: RequestActivityPreviewFixtures.acquisitionID,
+                service: PreviewRequestActivityService(scenario: .pending),
+                style: .embedded
+            )
+            .padding()
+        }
+
+        #Preview("Lifecycle · Failed Resumable") {
+            RequestActivityAcquisitionManagementSections(
+                acquisitionID: RequestActivityPreviewFixtures.acquisitionID,
+                service: PreviewRequestActivityService(scenario: .failedResumable),
+                style: .embedded
+            )
+            .padding()
+        }
+
+        #Preview("Lifecycle · Cancelled · Accessibility") {
+            RequestActivityAcquisitionManagementSections(
+                acquisitionID: RequestActivityPreviewFixtures.acquisitionID,
+                service: PreviewRequestActivityService(scenario: .cancelled),
+                style: .embedded
+            )
+            .padding()
+            .environment(\.dynamicTypeSize, .accessibility3)
         }
     #endif
 #endif

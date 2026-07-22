@@ -34,6 +34,9 @@ import Foundation
             switch scenario {
             case .downloading: try decode(downloadingDetailJSON)
             case .releases: try decode(releasesDetailJSON)
+            case .pending: try decode(pendingDetailJSON)
+            case .failedResumable: try decode(failedResumableDetailJSON)
+            case .cancelled: try decode(cancelledDetailJSON)
             default: try decode(detailJSON)
             }
         }
@@ -101,7 +104,7 @@ import Foundation
 
         private func prepare() async throws {
             switch scenario {
-            case .content, .empty, .downloading, .releases:
+            case .content, .empty, .downloading, .releases, .pending, .failedResumable, .cancelled:
                 return
             case .loading:
                 try await Task.sleep(for: .seconds(3_600))
@@ -306,6 +309,55 @@ import Foundation
               "candidates":[]
             }
             """
+        }
+
+        private var pendingDetailJSON: String {
+            lifecycleDetailJSON(
+                status: "pending",
+                statusMessage: nil,
+                hasResumableImport: false
+            )
+        }
+
+        private var failedResumableDetailJSON: String {
+            lifecycleDetailJSON(
+                status: "failed",
+                statusMessage: "The imported file could not be finalized.",
+                hasResumableImport: true
+            )
+        }
+
+        private var cancelledDetailJSON: String {
+            lifecycleDetailJSON(
+                status: "cancelled",
+                statusMessage: nil,
+                hasResumableImport: false
+            )
+        }
+
+        private func lifecycleDetailJSON(
+            status: String,
+            statusMessage: String?,
+            hasResumableImport: Bool
+        ) -> String {
+            let encodedMessage = statusMessage.map { #""statusMessage":"\#($0)","# } ?? ""
+            return """
+                {
+                  "summary":{
+                    "id":"11111111-1111-1111-1111-111111111111",
+                    "status":"\(status)",
+                    \(encodedMessage)
+                    "title":"Dune",
+                    "author":"Frank Herbert",
+                    "kind":"book",
+                    "createdAt":"2026-07-12T17:00:00Z",
+                    "updatedAt":"2026-07-12T18:00:00Z",
+                    "entityId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                    "hasResumableImport":\(hasResumableImport)
+                  },
+                  "candidates":[]
+                }
+                """
         }
     }
 #endif

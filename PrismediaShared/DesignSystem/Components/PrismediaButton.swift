@@ -7,6 +7,7 @@ struct PrismediaButton: View {
     let form: PrismediaButtonForm
     let primaryTint: Color?
     let isLoading: Bool
+    let loadingTitle: String?
     let action: () -> Void
 
     init(
@@ -16,6 +17,7 @@ struct PrismediaButton: View {
         form: PrismediaButtonForm = .automatic,
         primaryTint: Color? = nil,
         isLoading: Bool = false,
+        loadingTitle: String? = nil,
         action: @escaping () -> Void
     ) {
         precondition(
@@ -28,6 +30,7 @@ struct PrismediaButton: View {
         self.form = form
         self.primaryTint = primaryTint
         self.isLoading = isLoading
+        self.loadingTitle = loadingTitle
         self.action = action
     }
 
@@ -101,9 +104,18 @@ struct PrismediaButton: View {
     private var standardLabel: some View {
         Group {
             if isLoading {
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityHidden(true)
+                if let loadingTitle {
+                    HStack(spacing: PrismediaSpacing.small) {
+                        ProgressView()
+                            .controlSize(.small)
+                            .accessibilityHidden(true)
+                        Text(loadingTitle)
+                    }
+                } else {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityHidden(true)
+                }
             } else if let systemImage {
                 Label(title, systemImage: systemImage)
             } else {

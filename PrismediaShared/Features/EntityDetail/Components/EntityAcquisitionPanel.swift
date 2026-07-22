@@ -10,6 +10,7 @@ struct EntityAcquisitionPanel: View {
     @State private var historyEntries: [RequestActivityHistoryEntry] = []
     @State private var pendingMonitorValue: Bool?
     @State private var confirmedMonitorValue: Bool?
+    @State private var activeCommand: EntityAcquisitionCommand?
     @State private var failedCommand: EntityAcquisitionCommand?
     @State private var failedPendingMonitorValue: Bool?
     @State private var actionNotice: String?
@@ -195,7 +196,7 @@ struct EntityAcquisitionPanel: View {
 
         if let mutationError = state.mutationError {
             EntityAcquisitionMessageCard(
-                title: "Couldn’t Update Monitoring",
+                title: mutationErrorTitle,
                 message: mutationError,
                 retryTitle: failedCommand == nil ? nil : "Retry",
                 onRetry: failedCommand.map { command in
@@ -425,27 +426,16 @@ struct EntityAcquisitionPanel: View {
             GlassEffectContainer(spacing: PrismediaSpacing.small) {
                 HStack(spacing: PrismediaSpacing.small) {
                     actionButtons(snapshot, service: service)
-                    mutationProgress
                 }
             }
             GlassEffectContainer(spacing: PrismediaSpacing.small) {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                     actionButtons(snapshot, service: service)
-                    mutationProgress
                 }
             }
         }
         .prismediaCompactActionControlSize()
-        .disabled(state.isMutating)
-    }
-
-    @ViewBuilder
-    private var mutationProgress: some View {
-        if state.isMutating {
-            ProgressView()
-                .controlSize(.small)
-                .accessibilityLabel("Updating acquisition")
-        }
+        .disabled(state.isMutating || activeCommand != nil)
     }
 
     @ViewBuilder
@@ -458,14 +448,21 @@ struct EntityAcquisitionPanel: View {
                 "Search for release",
                 systemImage: "magnifyingglass",
                 variant: .prominent,
-                primaryTint: artworkPrimaryAccent
+                primaryTint: artworkPrimaryAccent,
+                isLoading: activeCommand == .searchForRelease(entityID),
+                loadingTitle: "Searching…"
             ) {
                 Task { await perform(.searchForRelease(entityID), using: service) }
             }
         }
 
         if !embedsManagement(snapshot), let acquisition = snapshot.state.latestAcquisition {
-            PrismediaButton("Search Again", systemImage: "arrow.clockwise") {
+            PrismediaButton(
+                "Search Again",
+                systemImage: "arrow.clockwise",
+                isLoading: activeCommand == .searchAgain(acquisition.id),
+                loadingTitle: "Searching…"
+            ) {
                 Task { await perform(.searchAgain(acquisition.id), using: service) }
             }
         }
@@ -582,7 +579,10 @@ struct EntityAcquisitionPanel: View {
     }
 
     private func backgroundLoad(using service: EntityAcquisitionService) async {
-        let outcome = await service.load(entityID: entityID)
+        let outcome = await service.load(
+            entityID: entityID,
+            fallbackAcquisition: state.latestAcquisition
+        )
         state.finishBackgroundLoad(outcome)
         if case .content = outcome { confirmedMonitorValue = nil }
         await loadHistory()
@@ -651,6 +651,8 @@ struct EntityAcquisitionPanel: View {
         using service: EntityAcquisitionService
     ) async {
         guard state.beginMutation() else { return }
+        activeCommand = command
+        defer { activeCommand = nil }
         failedCommand = nil
         failedPendingMonitorValue = nil
         pendingMonitorValue = nextMonitorValue
@@ -667,7 +669,10 @@ struct EntityAcquisitionPanel: View {
         case .refresh:
             if let nextMonitorValue { confirmedMonitorValue = nextMonitorValue }
             pendingMonitorValue = nil
-            let refreshOutcome = await service.load(entityID: entityID)
+            let refreshOutcome = await service.load(
+                entityID: entityID,
+                fallbackAcquisition: state.latestAcquisition
+            )
             if state.finishMutationRefresh(refreshOutcome) {
                 confirmedMonitorValue = nil
             }
@@ -695,7 +700,10 @@ struct EntityAcquisitionPanel: View {
     }
 
     private func retryRefresh(using service: EntityAcquisitionService) async {
-        let outcome = await service.load(entityID: entityID)
+        let outcome = await service.load(
+            entityID: entityID,
+            fallbackAcquisition: state.latestAcquisition
+        )
         if state.finishMutationRefresh(outcome) {
             confirmedMonitorValue = nil
             await loadHistory()
@@ -710,6 +718,15 @@ struct EntityAcquisitionPanel: View {
             return "Searches were queued for \(result.covered) missing items."
         }
         return "Searches were queued for \(result.covered) items; \(result.missing) could not be searched yet."
+    }
+
+    private var mutationErrorTitle: LocalizedStringKey {
+        switch failedCommand {
+        case .searchForRelease, .searchAgain:
+            return "Couldn’t Start Search"
+        default:
+            return "Couldn’t Update Monitoring"
+        }
     }
 }
 
