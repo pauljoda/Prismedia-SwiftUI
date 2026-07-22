@@ -6,6 +6,17 @@ struct EntityDetailSectionPicker: View {
     let horizontalPadding: CGFloat
 
     var body: some View {
+        #if os(tvOS)
+            picker
+        #else
+            picker
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        #endif
+    }
+
+    private var picker: some View {
         Picker("Detail section", selection: $selection) {
             ForEach(sections) { section in
                 Label(sectionTitle(section), systemImage: section.systemImage)

@@ -6,10 +6,24 @@
         @State private var phase: MusicCollectionPlaybackPhase = .loading
         @State private var artworkPalette: ArtworkPalette?
         @State private var loadingQueueMode: MusicQueueStartMode?
+        @State private var selectedSection = EntityDetailSectionID.details
 
         let detail: EntityDetail
         let preview: EntityLinkPreview?
         let loader: MusicCollectionQueueLoader
+        let sectionSupport: EntityDetailSectionSupport
+
+        init(
+            detail: EntityDetail,
+            preview: EntityLinkPreview?,
+            loader: MusicCollectionQueueLoader,
+            sectionSupport: EntityDetailSectionSupport = EntityDetailSectionSupport()
+        ) {
+            self.detail = detail
+            self.preview = preview
+            self.loader = loader
+            self.sectionSupport = sectionSupport
+        }
 
         var body: some View {
             MusicBrowseBackdrop(
@@ -25,7 +39,20 @@
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
 
-                    phaseContent
+                    EntityDetailSectionPicker(
+                        sections: sections,
+                        selection: $selectedSection,
+                        horizontalPadding: PrismediaSpacing.large
+                    )
+
+                    EntityDetailSectionSwitcher(
+                        presentation: sectionPresentation,
+                        selection: selectedSection,
+                        horizontalPadding: PrismediaSpacing.large,
+                        support: sectionSupport
+                    ) {
+                        phaseContent
+                    }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -105,6 +132,20 @@
         private var currentSnapshot: MusicCollectionPlaybackSnapshot? {
             guard case .content(let snapshot) = phase else { return nil }
             return snapshot
+        }
+
+        private var sectionPresentation: EntityDetailPresentation {
+            EntityDetailPresentation(
+                detail: detail,
+                canEditMetadata: sectionSupport.canEditMetadata
+            )
+        }
+
+        private var sections: [EntityDetailSection] {
+            sectionPresentation.sections(
+                mainTitle: "Tracks",
+                mainSystemImage: "music.note.list"
+            )
         }
 
         private var collectionSummary: String {

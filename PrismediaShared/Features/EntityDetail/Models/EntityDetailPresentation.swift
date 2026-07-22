@@ -10,7 +10,14 @@ struct EntityDetailPresentation {
     }
 
     var sections: [EntityDetailSection] {
-        var values = [section(.details, "Main", "square.text.square")]
+        sections(mainTitle: "Main", mainSystemImage: "square.text.square")
+    }
+
+    func sections(
+        mainTitle: String,
+        mainSystemImage: String
+    ) -> [EntityDetailSection] {
+        var values = [section(.details, mainTitle, mainSystemImage)]
         if !metadata.isEmpty || hasMetadataCapability || canEditMetadata {
             values.append(section(.metadata, "Metadata", "info.circle"))
         }

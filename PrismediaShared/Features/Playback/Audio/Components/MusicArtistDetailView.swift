@@ -8,7 +8,17 @@
         @State private var artworkPalette: ArtworkPalette?
         @State private var loadingQueueMode: MusicQueueStartMode?
         @State private var playbackError: String?
+        @State private var selectedSection = EntityDetailSectionID.details
         let detail: EntityDetail
+        let sectionSupport: EntityDetailSectionSupport
+
+        init(
+            detail: EntityDetail,
+            sectionSupport: EntityDetailSectionSupport = EntityDetailSectionSupport()
+        ) {
+            self.detail = detail
+            self.sectionSupport = sectionSupport
+        }
 
         private var albums: [EntityThumbnail] {
             (detail.childrenByKind + detail.relationships)
@@ -28,6 +38,20 @@
             }
         }
 
+        private var sectionPresentation: EntityDetailPresentation {
+            EntityDetailPresentation(
+                detail: detail,
+                canEditMetadata: sectionSupport.canEditMetadata
+            )
+        }
+
+        private var sections: [EntityDetailSection] {
+            sectionPresentation.sections(
+                mainTitle: "Albums",
+                mainSystemImage: "square.stack"
+            )
+        }
+
         var body: some View {
             MusicBrowseBackdrop(
                 artworkPath: portraitPath,
@@ -40,10 +64,24 @@
                     LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
                         artistHeader
                         playbackButtons
-                        if !albums.isEmpty {
-                            Text("Albums")
-                                .font(.title3.bold())
-                            albumGrid
+                        EntityDetailSectionPicker(
+                            sections: sections,
+                            selection: $selectedSection,
+                            horizontalPadding: 0
+                        )
+                        EntityDetailSectionSwitcher(
+                            presentation: sectionPresentation,
+                            selection: selectedSection,
+                            horizontalPadding: 0,
+                            support: sectionSupport
+                        ) {
+                            if !albums.isEmpty {
+                                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                                    Text("Albums")
+                                        .font(.title3.bold())
+                                    albumGrid
+                                }
+                            }
                         }
                     }
                     .padding(PrismediaSpacing.large)

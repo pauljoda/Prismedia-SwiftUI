@@ -4,12 +4,7 @@ struct EntityDetailSectionContentView<Actions: View>: View {
     let presentation: EntityDetailPresentation
     @Binding var selection: EntityDetailSectionID
     let horizontalPadding: CGFloat
-    let ownerLink: EntityLink?
-    let acquisitionService: (any EntityAcquisitionServicing)?
-    let requestActivityService: (any RequestActivityServicing)?
-    let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
-    let onAcquisitionMutated: @MainActor () async -> Void
-    let onEntityPruned: @MainActor () -> Void
+    let support: EntityDetailSectionSupport
     @ViewBuilder let actions: () -> Actions
 
     var body: some View {
@@ -26,9 +21,14 @@ struct EntityDetailSectionContentView<Actions: View>: View {
                 }
             },
             panel: {
-                sectionPanel(
-                    section: presentation.sections.isEmpty ? .details : selection
-                )
+                EntityDetailSectionSwitcher(
+                    presentation: presentation,
+                    selection: presentation.sections.isEmpty ? .details : selection,
+                    horizontalPadding: horizontalPadding,
+                    support: support
+                ) {
+                    sectionPanel(section: .details)
+                }
             }
         )
     }
@@ -38,12 +38,12 @@ struct EntityDetailSectionContentView<Actions: View>: View {
             presentation: presentation,
             section: section,
             horizontalPadding: horizontalPadding,
-            ownerLink: ownerLink,
-            acquisitionService: acquisitionService,
-            requestActivityService: requestActivityService,
-            transcriptSourceLoader: transcriptSourceLoader,
-            onAcquisitionMutated: onAcquisitionMutated,
-            onEntityPruned: onEntityPruned
+            ownerLink: support.ownerLink,
+            acquisitionService: support.acquisitionService,
+            requestActivityService: support.requestActivityService,
+            transcriptSourceLoader: support.transcriptSourceLoader,
+            onAcquisitionMutated: support.onAcquisitionMutated,
+            onEntityPruned: support.onEntityPruned
         )
     }
 }
@@ -58,12 +58,7 @@ struct EntityDetailSectionContentView<Actions: View>: View {
                     presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
                     selection: $selection,
                     horizontalPadding: PrismediaSpacing.extraLarge,
-                    ownerLink: nil,
-                    acquisitionService: nil,
-                    requestActivityService: nil,
-                    transcriptSourceLoader: nil,
-                    onAcquisitionMutated: {},
-                    onEntityPruned: {},
+                    support: EntityDetailSectionSupport(),
                     actions: { EmptyView() }
                 )
             }

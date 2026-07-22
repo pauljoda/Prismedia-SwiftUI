@@ -20,6 +20,8 @@ extension EntityDetailView {
             link: link,
             dependencies: dependencies,
             imageViewerSession: imageViewerSession,
+            onAcquisitionMutated: refreshAfterAcquisitionMutation,
+            onEntityPruned: handlePrunedEntity,
             standardContent: standardDetailView
         )
     }

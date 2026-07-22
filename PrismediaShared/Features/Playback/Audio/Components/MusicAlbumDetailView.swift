@@ -7,8 +7,20 @@
         @State private var artworkPalette: ArtworkPalette?
         @State private var resolvedParentArtist: String?
         @State private var trackForCollection: MusicTrack?
+        @State private var selectedSection = EntityDetailSectionID.details
         let detail: EntityDetail
-        var preview: EntityLinkPreview? = nil
+        let preview: EntityLinkPreview?
+        let sectionSupport: EntityDetailSectionSupport
+
+        init(
+            detail: EntityDetail,
+            preview: EntityLinkPreview? = nil,
+            sectionSupport: EntityDetailSectionSupport = EntityDetailSectionSupport()
+        ) {
+            self.detail = detail
+            self.preview = preview
+            self.sectionSupport = sectionSupport
+        }
 
         private var artist: String {
             MusicPresentation.albumArtist(detail: detail, resolvedParentArtist: resolvedParentArtist)
@@ -38,6 +50,20 @@
             MusicPresentation.albumFacts(detail: detail, tracks: tracks)
         }
 
+        private var sectionPresentation: EntityDetailPresentation {
+            EntityDetailPresentation(
+                detail: detail,
+                canEditMetadata: sectionSupport.canEditMetadata
+            )
+        }
+
+        private var sections: [EntityDetailSection] {
+            sectionPresentation.sections(
+                mainTitle: "Tracks",
+                mainSystemImage: "music.note.list"
+            )
+        }
+
         var body: some View {
             MusicBrowseBackdrop(
                 artworkPath: artworkPath,
@@ -52,13 +78,26 @@
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
 
-                    MusicTrackSectionsView(
-                        sections: trackSections,
-                        onPlay: { track in
-                            controller.play(tracks: tracks, startingAt: track.id)
-                        },
-                        onAddToCollection: { trackForCollection = $0 }
+                    EntityDetailSectionPicker(
+                        sections: sections,
+                        selection: $selectedSection,
+                        horizontalPadding: PrismediaSpacing.large
                     )
+
+                    EntityDetailSectionSwitcher(
+                        presentation: sectionPresentation,
+                        selection: selectedSection,
+                        horizontalPadding: PrismediaSpacing.large,
+                        support: sectionSupport
+                    ) {
+                        MusicTrackSectionsView(
+                            sections: trackSections,
+                            onPlay: { track in
+                                controller.play(tracks: tracks, startingAt: track.id)
+                            },
+                            onAddToCollection: { trackForCollection = $0 }
+                        )
+                    }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)

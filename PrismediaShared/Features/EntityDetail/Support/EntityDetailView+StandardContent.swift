@@ -144,12 +144,12 @@ extension EntityDetailView {
                                             presentation: presentation,
                                             selection: $selectedSection,
                                             horizontalPadding: detailHorizontalPadding,
-                                            ownerLink: link,
-                                            acquisitionService: dependencies.acquisitionService,
-                                            requestActivityService: dependencies.requestActivityService,
-                                            transcriptSourceLoader: dependencies.transcriptSourceLoader,
-                                            onAcquisitionMutated: refreshAfterAcquisitionMutation,
-                                            onEntityPruned: handlePrunedEntity,
+                                            support: EntityDetailSectionSupport(
+                                                ownerLink: link,
+                                                dependencies: dependencies,
+                                                onAcquisitionMutated: refreshAfterAcquisitionMutation,
+                                                onEntityPruned: handlePrunedEntity
+                                            ),
                                             actions: {
                                                 EntityDetailPlatformActionsView(
                                                     presentation: presentation,

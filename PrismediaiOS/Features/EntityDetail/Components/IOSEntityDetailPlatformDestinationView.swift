@@ -6,6 +6,8 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
     let link: EntityLink
     let dependencies: EntityDetailDependencies
     let imageViewerSession: EntityImageViewerSession?
+    let onAcquisitionMutated: @MainActor () async -> Void
+    let onEntityPruned: @MainActor () -> Void
     @ViewBuilder let standardContent: (EntityDetail) -> StandardContent
 
     var body: some View {
@@ -17,10 +19,14 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
         case .nativeAlbum:
             MusicAlbumDetailView(
                 detail: detail,
-                preview: link.thumbnailPreview
+                preview: link.thumbnailPreview,
+                sectionSupport: sectionSupport
             )
         case .nativeArtist:
-            MusicArtistDetailView(detail: detail)
+            MusicArtistDetailView(
+                detail: detail,
+                sectionSupport: sectionSupport
+            )
         case .nativeAudioCollection:
             if let collectionItemsLoader = dependencies.collectionItemsLoader {
                 MusicCollectionDetailView(
@@ -29,7 +35,8 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
                     loader: MusicCollectionQueueLoader(
                         collectionItemsLoader: collectionItemsLoader,
                         detailLoader: dependencies.detailLoader
-                    )
+                    ),
+                    sectionSupport: sectionSupport
                 )
             } else {
                 standardContent(detail)
@@ -48,6 +55,15 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
             standardContent(detail)
         }
     }
+
+    private var sectionSupport: EntityDetailSectionSupport {
+        EntityDetailSectionSupport(
+            ownerLink: link,
+            dependencies: dependencies,
+            onAcquisitionMutated: onAcquisitionMutated,
+            onEntityPruned: onEntityPruned
+        )
+    }
 }
 
 #Preview("iOS Entity Detail Destination") {
@@ -65,6 +81,8 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
         link: EntityLink(entityID: detail.id, kind: detail.kind),
         dependencies: dependencies,
         imageViewerSession: nil,
+        onAcquisitionMutated: {},
+        onEntityPruned: {},
         standardContent: { Text($0.title).padding() }
     )
 }
