@@ -39,10 +39,29 @@ public struct SignInView: View {
     public var body: some View {
         Group {
             #if os(tvOS)
-                televisionBody
+                TVSignInSurface(
+                    title: title,
+                    subtitle: subtitle,
+                    serverName: state.serverDisplayName,
+                    primaryActionTitle: state.primaryActionTitle,
+                    primaryActionSystemImage: primaryActionSystemImage,
+                    isBusy: state.isBusy,
+                    canSubmit: state.canSubmit,
+                    showsChangeServer: state.step != .server,
+                    showsPasswordHelp: isLoginStep,
+                    errorMessage: state.errorMessage,
+                    onAdvance: advance,
+                    form: { form },
+                    changeServer: { changeServerButton },
+                    errorContent: errorMessageView,
+                    passwordHelp: { passwordHelpLink }
+                )
             #else
                 compactPlatformBody
             #endif
+        }
+        .onChange(of: state.errorMessage) { _, message in
+            errorIsFocused = message != nil
         }
         .onAppear {
             guard state.serverURLText.isEmpty,
@@ -88,115 +107,7 @@ public struct SignInView: View {
                 }
             }
         }
-        .onChange(of: state.errorMessage) { _, message in
-            errorIsFocused = message != nil
-        }
     }
-
-    #if os(tvOS)
-        private var televisionBody: some View {
-            NavigationStack {
-                GeometryReader { geometry in
-                    ZStack {
-                        PrismediaBackdrop()
-
-                        HStack(spacing: 96) {
-                            televisionIdentity
-                                .frame(maxWidth: 560, alignment: .leading)
-
-                            televisionFormPanel
-                                .frame(width: 620)
-                        }
-                        .padding(.horizontal, 112)
-                        .padding(.vertical, 72)
-                        .frame(
-                            width: geometry.size.width,
-                            height: geometry.size.height,
-                            alignment: .center
-                        )
-                    }
-                }
-            }
-            .onChange(of: state.errorMessage) { _, message in
-                errorIsFocused = message != nil
-            }
-        }
-
-        private var televisionIdentity: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.section) {
-                PrismediaBrandView(markSize: PrismediaLayout.televisionBrandMark)
-
-                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                    Text("PRISMEDIA")
-                        .font(.headline.weight(.bold))
-                        .tracking(4)
-                        .foregroundStyle(PrismediaColor.accent)
-
-                    Text("Your library,\nmade cinematic.")
-                        .font(.system(size: 62, weight: .bold, design: .rounded))
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                        .lineSpacing(-3)
-
-                    Text("Movies, series, and the collections you love—ready for the biggest screen in the house.")
-                        .font(.title3)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                        .lineSpacing(7)
-                        .frame(maxWidth: 520, alignment: .leading)
-                }
-            }
-            .accessibilityElement(children: .combine)
-        }
-
-        private var televisionFormPanel: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-                Text(title)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundStyle(PrismediaColor.textPrimary)
-
-                Text(subtitle)
-                    .font(.title3)
-                    .foregroundStyle(PrismediaColor.textSecondary)
-
-                if let serverName = state.serverDisplayName {
-                    Label(serverName, systemImage: "server.rack")
-                        .font(.headline)
-                        .foregroundStyle(PrismediaColor.accent)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
-                    if state.step != .server {
-                        changeServerButton
-                            .buttonStyle(.plain)
-                    }
-
-                    form
-
-                    if let errorMessage = state.errorMessage {
-                        errorMessageView(errorMessage)
-                    }
-
-                    PrismediaButton(
-                        state.primaryActionTitle,
-                        systemImage: primaryActionSystemImage,
-                        variant: .prominent,
-                        form: .fill,
-                        isLoading: state.isBusy,
-                        action: advance
-                    )
-                    .disabled(!state.canSubmit)
-                    .accessibilityIdentifier("auth.primary")
-
-                    if isLoginStep {
-                        passwordHelpLink
-                            .buttonStyle(.plain)
-                    }
-                }
-            }
-            .tint(PrismediaColor.accent)
-        }
-    #endif
 
     private func authenticationContent(compact: Bool) -> some View {
         VStack(alignment: .leading, spacing: compact ? 20 : 28) {

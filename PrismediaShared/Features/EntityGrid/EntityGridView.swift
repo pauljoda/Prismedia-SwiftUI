@@ -228,7 +228,14 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                         #if os(tvOS)
-                            tvGridHeader
+                            TVEntityGridHeader(
+                                title: configuration.title,
+                                focus: $tvGridFocus,
+                                onMove: moveFromTVGridHeader,
+                                sortMenu: { sortMenu },
+                                filterButton: { filterButton },
+                                displayMenu: { displayMenu }
+                            )
                                 .padding(.horizontal, horizontalContentPadding)
                         #endif
 
@@ -370,31 +377,6 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         }
         .controlSize(.small)
     }
-
-    #if os(tvOS)
-        private var tvGridHeader: some View {
-            HStack(alignment: .center, spacing: PrismediaSpacing.extraExtraLarge) {
-                Text(configuration.title)
-                    .font(.largeTitle.bold())
-                    .foregroundStyle(PrismediaColor.textPrimary)
-
-                sortMenu
-                    .buttonStyle(.glass)
-                    .focused($tvGridFocus, equals: .sort)
-                filterButton
-                    .buttonStyle(.glass)
-                    .focused($tvGridFocus, equals: .filter)
-                displayMenu
-                    .buttonStyle(.glass)
-                    .focused($tvGridFocus, equals: .display)
-
-                Spacer(minLength: 0)
-            }
-            .onMoveCommand(perform: moveFromTVGridHeader)
-            .padding(.bottom, PrismediaSpacing.medium)
-            .accessibilityIdentifier("entity.grid.header")
-        }
-    #endif
 
     @ViewBuilder
     private var stateContent: some View {
