@@ -1638,6 +1638,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, detail)
             return self._send(404, {"code": "entity_not_found", "message": "Entity was not found."})
 
+        if path.startswith("/api/collections/"):
+            entity_id = path.rsplit("/", 1)[-1]
+            if DETAIL_DELAY_SECONDS > 0:
+                time.sleep(DETAIL_DELAY_SECONDS)
+            detail = build_entity_detail_response(entity_id)
+            if detail is not None:
+                return self._send(200, detail)
+            return self._send(404, {"code": "collection_not_found", "message": "Collection was not found."})
+
         if path.startswith("/api/entities/"):
             entity_id = path.removeprefix("/api/entities/")
             if DETAIL_DELAY_SECONDS > 0:

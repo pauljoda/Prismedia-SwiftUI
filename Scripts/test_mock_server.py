@@ -332,6 +332,19 @@ class EntityListHTTPTests(unittest.TestCase):
         self.assertEqual("Mock Movie One", payload["title"])
         self.assertEqual("movie", payload["kind"])
 
+    def test_authenticated_collection_detail_endpoint_returns_the_collection_document(self):
+        port = self.server.server_address[1]
+        request = Request(
+            f"http://127.0.0.1:{port}/api/collections/{mock_server.COLLECTION_ID}",
+            headers={"Authorization": f"Bearer {mock_server.TOKEN}"},
+        )
+
+        with urlopen(request) as response:
+            payload = json.load(response)
+
+        self.assertEqual("Mock Collection", payload["title"])
+        self.assertEqual("collection", payload["kind"])
+
     def test_authenticated_book_endpoint_returns_the_specialized_contract(self):
         port = self.server.server_address[1]
         request = Request(

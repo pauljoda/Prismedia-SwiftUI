@@ -11,6 +11,7 @@ struct CollectionMembersView: View {
     let phase: CollectionMembersPhase
     let horizontalPadding: CGFloat
     let retry: @MainActor @Sendable () -> Void
+    let onTVGridFocusMoved: @MainActor () -> Void
 
     var body: some View {
         switch phase {
@@ -56,7 +57,8 @@ struct CollectionMembersView: View {
             mutationService: EntityDetailPlatformCollectionActionPolicy.mutationService(
                 environment.client
             ),
-            prefersInitialTVFocus: true
+            prefersInitialTVFocus: true,
+            onTVGridFocusMoved: onTVGridFocusMoved
         ) { item, layout in
             EntityThumbnailNavigationSurface(item: item, layout: layout)
         }
@@ -151,7 +153,8 @@ struct CollectionMembersView: View {
                     collectionID: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
                     phase: .content(CollectionMembersPreviewFixture.mixed),
                     horizontalPadding: PrismediaSpacing.extraLarge,
-                    retry: {}
+                    retry: {},
+                    onTVGridFocusMoved: {}
                 )
             }
         }
@@ -163,7 +166,8 @@ struct CollectionMembersView: View {
             collectionID: UUID(),
             phase: .loading,
             horizontalPadding: PrismediaSpacing.extraLarge,
-            retry: {}
+            retry: {},
+            onTVGridFocusMoved: {}
         )
         .preferredColorScheme(.dark)
     }
@@ -173,7 +177,8 @@ struct CollectionMembersView: View {
             collectionID: UUID(),
             phase: .content([]),
             horizontalPadding: PrismediaSpacing.extraLarge,
-            retry: {}
+            retry: {},
+            onTVGridFocusMoved: {}
         )
         .environment(\.dynamicTypeSize, .accessibility3)
     }
@@ -183,7 +188,8 @@ struct CollectionMembersView: View {
             collectionID: UUID(),
             phase: .failure("The server couldn’t return this collection."),
             horizontalPadding: PrismediaSpacing.extraLarge,
-            retry: {}
+            retry: {},
+            onTVGridFocusMoved: {}
         )
         .preferredColorScheme(.dark)
     }

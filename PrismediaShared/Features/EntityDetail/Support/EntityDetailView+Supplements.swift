@@ -50,7 +50,10 @@ extension EntityDetailView {
     }
 
     @ViewBuilder
-    func mainSupplementView(for detail: EntityDetail) -> some View {
+    func mainSupplementView(
+        for detail: EntityDetail,
+        onTVGridFocusMoved: @MainActor @escaping () -> Void
+    ) -> some View {
         if let referencePresentation = EntityDetailReferencedContentPresentation(detail: detail),
             let entityGridLoader = dependencies.entityGridLoader
         {
@@ -68,8 +71,10 @@ extension EntityDetailView {
                 horizontalPadding: detailHorizontalPadding,
                 retry: {
                     Task { await reloadCollectionMembers() }
-                }
+                },
+                onTVGridFocusMoved: onTVGridFocusMoved
             )
+            .id("entity-detail.collection-grid")
         } else if !visibleChildGroups(in: detail).isEmpty {
             childGroupsView(for: detail)
         }
