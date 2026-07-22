@@ -167,6 +167,40 @@ final class RequestActivityPresentationPolicyTests: XCTestCase {
         XCTAssertEqual(state.consecutiveFailures, 0)
     }
 
+    func testTransferPolicyNormalizesKnownClientStagesAndSettledStates() {
+        XCTAssertEqual(RequestActivityTransferPolicy.stageLabel(for: "stalledDL"), "Stalled — looking for peers")
+        XCTAssertEqual(RequestActivityTransferPolicy.stageLabel(for: "checking"), "Verifying")
+        XCTAssertEqual(RequestActivityTransferPolicy.stageLabel(for: "Extracting"), "Extracting")
+        XCTAssertEqual(RequestActivityTransferPolicy.stageLabel(for: "Completed"), "Download complete")
+        XCTAssertEqual(RequestActivityTransferPolicy.stageLabel(for: "FutureClientState"), "FutureClientState")
+
+        XCTAssertTrue(RequestActivityTransferPolicy.isActive("downloading"))
+        XCTAssertTrue(RequestActivityTransferPolicy.isActive("Extracting"))
+        XCTAssertFalse(RequestActivityTransferPolicy.isActive("stalledDL"))
+        XCTAssertFalse(RequestActivityTransferPolicy.isActive("pausedDL"))
+        XCTAssertFalse(RequestActivityTransferPolicy.isActive("Failed"))
+        XCTAssertFalse(RequestActivityTransferPolicy.isActive("Completed"))
+        XCTAssertTrue(RequestActivityTransferPolicy.expectsDownloadTelemetry("metaDL"))
+        XCTAssertFalse(RequestActivityTransferPolicy.expectsDownloadTelemetry("Extracting"))
+
+        XCTAssertEqual(RequestActivityTransferPolicy.tone(for: "stalledDL"), .attention)
+        XCTAssertEqual(RequestActivityTransferPolicy.tone(for: "error"), .failed)
+        XCTAssertEqual(RequestActivityTransferPolicy.tone(for: "Completed"), .done)
+        XCTAssertEqual(RequestActivityTransferPolicy.tone(for: "queuedDL"), .queued)
+    }
+
+    func testTransferPolicySuppressesProtocolZeroesUnlessSwarmTelemetryIsMeaningful() throws {
+        let usenet = try transfer(state: "Extracting")
+        let torrentWithPieces = try transfer(state: "downloading", pieces: [2, 1, 0])
+        let torrentWithoutMetadata = try transfer(state: "metaDL")
+        let connectedSwarm = try transfer(state: "downloading", seeds: 3, peers: 1)
+
+        XCTAssertFalse(RequestActivityTransferPolicy.showsSwarmTelemetry(usenet))
+        XCTAssertTrue(RequestActivityTransferPolicy.showsSwarmTelemetry(torrentWithPieces))
+        XCTAssertTrue(RequestActivityTransferPolicy.showsSwarmTelemetry(torrentWithoutMetadata))
+        XCTAssertTrue(RequestActivityTransferPolicy.showsSwarmTelemetry(connectedSwarm))
+    }
+
     func testEntityAcquisitionLifecycleKeepsCompletedAndUnknownStatesReadOnly() {
         let imported = AcquisitionStatus(rawValue: "imported")
         XCTAssertEqual(
@@ -404,6 +438,27 @@ final class RequestActivityPresentationPolicyTests: XCTestCase {
         if let infoURL { json["infoUrl"] = infoURL }
         let data = try JSONSerialization.data(withJSONObject: json)
         return try PrismediaJSON.decoder().decode(RequestActivityReleaseCandidate.self, from: data)
+    }
+
+    private func transfer(
+        state: String,
+        seeds: Int = 0,
+        peers: Int = 0,
+        pieces: [Int] = []
+    ) throws -> RequestActivityTransfer {
+        let json: [String: Any] = [
+            "progress": 0.5,
+            "state": state,
+            "totalSizeBytes": 1_000,
+            "downloadSpeedBytesPerSecond": 0,
+            "etaSeconds": 0,
+            "seeds": seeds,
+            "peers": peers,
+            "savePath": NSNull(),
+            "pieceStates": pieces,
+        ]
+        let data = try JSONSerialization.data(withJSONObject: json)
+        return try PrismediaJSON.decoder().decode(RequestActivityTransfer.self, from: data)
     }
 
 }

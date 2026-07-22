@@ -1,83 +1,50 @@
 import SwiftUI
 
 #if os(iOS) || os(macOS)
-    /// The embedded live-transfer block: stage label, percent, progress bar, and the
-    /// Speed / ETA / Seeds / Size stats grid — mirroring the web download section.
+    /// The full-width embedded transfer section. The lifecycle owns actions while this
+    /// section distinguishes preparation, live/stale telemetry, and probe unavailability.
     struct RequestActivityDownloadSection: View {
         let transfer: RequestActivityTransfer?
+        let loadState: RequestActivityTransferLoadState
 
         var body: some View {
-            if let transfer {
-                transferContent(transfer)
-            } else {
-                RequestActivityStatePlaceholder(
-                    title: "Preparing download",
-                    message:
-                        "Connecting to the download client and waiting for the first progress report…",
-                    systemImage: "arrow.down.circle",
-                    isBusy: true
-                )
-            }
-        }
-
-        private func transferContent(_ transfer: RequestActivityTransfer) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                ProgressView(value: min(max(transfer.progress, 0), 1)) {
-                    HStack {
-                        if RequestActivityTransferPolicy.isActive(transfer.state) {
-                            ProgressView()
-                                .controlSize(.mini)
-                        }
-                        Text(RequestActivityTransferPolicy.stageLabel(for: transfer.state))
-                            .font(.subheadline.weight(.medium))
-                        Spacer()
-                        Text(transfer.progress, format: .percent.precision(.fractionLength(0)))
-                            .font(.subheadline.monospacedDigit())
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                }
-                .accessibilityValue(
-                    Text(transfer.progress, format: .percent.precision(.fractionLength(0)))
-                )
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: PrismediaSpacing.extraLarge) { stats(transfer) }
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) { stats(transfer) }
-                }
-            }
-        }
-
-        @ViewBuilder
-        private func stats(_ transfer: RequestActivityTransfer) -> some View {
-            stat(
-                "Speed",
-                RequestActivityFormatting.speed(transfer.downloadSpeedBytesPerSecond)
-            )
-            stat("ETA", RequestActivityFormatting.eta(transfer.etaSeconds))
-            stat("Seeds / Peers", "\(transfer.seeds) / \(transfer.peers)")
-            stat("Size", RequestActivityFormatting.bytes(transfer.totalSizeBytes))
-        }
-
-        private func stat(_ label: String, _ value: String) -> some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                Text(label)
-                    .font(.caption2)
-                    .foregroundStyle(PrismediaColor.textMuted)
-                Text(value)
-                    .font(.caption.monospacedDigit())
+                Text("Download")
+                    .font(.headline)
                     .foregroundStyle(PrismediaColor.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+
+                if let transfer {
+                    RequestActivityTransferSummary(
+                        transfer: transfer,
+                        isStale: loadState == .stale
+                    )
+                } else if loadState == .unavailable || loadState == .stale {
+                    RequestActivityStatePlaceholder(
+                        title: "Transfer Information Unavailable",
+                        message: "Prismedia could not reach the download client and will keep retrying.",
+                        systemImage: "wifi.exclamationmark"
+                    )
+                } else {
+                    PrismediaLoadingView("Preparing download…")
+                        .frame(maxWidth: .infinity, minHeight: 220)
+                        .prismediaPanel()
+                }
             }
-            .accessibilityElement(children: .combine)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     #if DEBUG
         #Preview("Download Section") {
             VStack(spacing: PrismediaSpacing.large) {
-                RequestActivityDownloadSection(transfer: RequestActivityPreviewFixtures.transfer)
-                    .padding(PrismediaSpacing.extraLarge)
-                    .prismediaCard()
-                RequestActivityDownloadSection(transfer: nil)
+                RequestActivityDownloadSection(
+                    transfer: RequestActivityPreviewFixtures.transfer,
+                    loadState: .current
+                )
+                .padding(PrismediaSpacing.extraLarge)
+                .prismediaCard()
+                RequestActivityDownloadSection(transfer: nil, loadState: .preparing)
             }
             .padding()
         }

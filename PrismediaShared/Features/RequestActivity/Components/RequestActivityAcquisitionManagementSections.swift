@@ -18,6 +18,7 @@ import UniformTypeIdentifiers
         @Environment(\.scenePhase) private var scenePhase
         @State private var detail: RequestActivityAcquisitionDetail?
         @State private var transfer: RequestActivityTransfer?
+        @State private var transferLoadState: RequestActivityTransferLoadState = .preparing
         @State private var files: RequestActivityFiles?
         @State private var blocklist: [RequestActivityBlocklistEntry] = []
         @State private var isLoading = true
@@ -66,6 +67,7 @@ import UniformTypeIdentifiers
                 style: RequestActivityAcquisitionManagementStyle = .embedded,
                 previewDetail: RequestActivityAcquisitionDetail? = nil,
                 previewTransfer: RequestActivityTransfer? = nil,
+                previewTransferLoadState: RequestActivityTransferLoadState? = nil,
                 previewFiles: RequestActivityFiles? = nil,
                 isLoading: Bool = false,
                 loadErrorMessage: String? = nil,
@@ -84,6 +86,10 @@ import UniformTypeIdentifiers
                 )
                 _detail = State(initialValue: previewDetail)
                 _transfer = State(initialValue: previewTransfer)
+                _transferLoadState = State(
+                    initialValue: previewTransferLoadState
+                        ?? (previewTransfer == nil ? .preparing : .current)
+                )
                 _files = State(initialValue: previewFiles)
                 _isLoading = State(initialValue: isLoading)
                 _loadErrorMessage = State(initialValue: loadErrorMessage)
@@ -542,7 +548,10 @@ import UniformTypeIdentifiers
                 case .searching:
                     PrismediaLoadingView("Searching indexers…")
                 case .download:
-                    RequestActivityDownloadSection(transfer: transfer)
+                    RequestActivityDownloadSection(
+                        transfer: transfer,
+                        loadState: transferLoadState
+                    )
                 case .files:
                     RequestActivityFilesSection(
                         files: files,
@@ -582,8 +591,7 @@ import UniformTypeIdentifiers
             do {
                 let nextDetail = try await service.fetchRequestActivityAcquisition(id: acquisitionID)
                 if detail != nextDetail { detail = nextDetail }
-                let nextTransfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
-                if transfer != nextTransfer { transfer = nextTransfer }
+                let transferRefreshed = try await refreshTransfer(for: nextDetail.summary.status)
                 let nextFiles = try? await service.fetchRequestActivityFiles(id: acquisitionID)
                 if files != nextFiles { files = nextFiles }
                 let nextBlocklist =
@@ -592,7 +600,11 @@ import UniformTypeIdentifiers
                     } ?? []
                 if blocklist != nextBlocklist { blocklist = nextBlocklist }
                 loadErrorMessage = nil
-                refreshState.recordSuccess()
+                if transferRefreshed {
+                    refreshState.recordSuccess()
+                } else {
+                    refreshState.recordFailure()
+                }
                 await observeStatusTransition(nextDetail.summary.status)
             } catch is CancellationError {
                 return
@@ -600,8 +612,31 @@ import UniformTypeIdentifiers
                 if detail == nil {
                     loadErrorMessage = error.localizedDescription
                 } else {
+                    if transfer != nil { transferLoadState = .stale }
                     refreshState.recordFailure()
                 }
+            }
+        }
+
+        /// Refreshes only the transfer slice needed by the Download section. A client
+        /// probe failure retains the last known telemetry and is reported separately
+        /// from a successful 204 response, which means the handoff is still preparing.
+        private func refreshTransfer(for status: AcquisitionStatus) async throws -> Bool {
+            guard RequestActivityAcquisitionLifecyclePolicy.content(for: status) == .download else {
+                transfer = nil
+                transferLoadState = .preparing
+                return true
+            }
+
+            do {
+                let nextTransfer = try await service.fetchRequestActivityTransfer(id: acquisitionID)
+                if transfer != nextTransfer { transfer = nextTransfer }
+                transferLoadState = nextTransfer == nil ? .preparing : .current
+                return true
+            } catch {
+                if error is CancellationError { throw error }
+                transferLoadState = transfer == nil ? .unavailable : .stale
+                return false
             }
         }
 
@@ -677,6 +712,7 @@ import UniformTypeIdentifiers
                 try await service.removeRequestActivityAcquisition(id: acquisitionID)
                 detail = nil
                 transfer = nil
+                transferLoadState = .preparing
                 files = nil
                 blocklist = []
                 refreshState.recordSuccess()
@@ -757,7 +793,7 @@ import UniformTypeIdentifiers
             do {
                 let nextDetail = try await operation()
                 detail = nextDetail
-                transfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
+                let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
                 files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
                 blocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
@@ -765,7 +801,11 @@ import UniformTypeIdentifiers
                     } ?? []
                 actionErrorMessage = nil
                 failedLifecycleAction = nil
-                refreshState.recordSuccess()
+                if transferRefreshed {
+                    refreshState.recordSuccess()
+                } else {
+                    refreshState.recordFailure()
+                }
                 await observeStatusTransition(nextDetail.summary.status)
             } catch {
                 actionErrorMessage = error.localizedDescription
@@ -788,7 +828,7 @@ import UniformTypeIdentifiers
             do {
                 let nextDetail = try await operation()
                 detail = nextDetail
-                transfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
+                let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
                 files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
                 blocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
@@ -796,7 +836,11 @@ import UniformTypeIdentifiers
                     } ?? []
                 actionErrorMessage = nil
                 failedLifecycleAction = nil
-                refreshState.recordSuccess()
+                if transferRefreshed {
+                    refreshState.recordSuccess()
+                } else {
+                    refreshState.recordFailure()
+                }
                 await observeStatusTransition(nextDetail.summary.status)
                 return true
             } catch is CancellationError {
@@ -825,13 +869,17 @@ import UniformTypeIdentifiers
             do {
                 let nextDetail = try await operation()
                 detail = nextDetail
-                transfer = try? await service.fetchRequestActivityTransfer(id: acquisitionID)
+                let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
                 files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
                 blocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
                         $0.acquisitionID == acquisitionID
                     } ?? []
-                refreshState.recordSuccess()
+                if transferRefreshed {
+                    refreshState.recordSuccess()
+                } else {
+                    refreshState.recordFailure()
+                }
                 await observeStatusTransition(nextDetail.summary.status)
                 return true
             } catch is CancellationError {

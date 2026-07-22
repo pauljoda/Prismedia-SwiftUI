@@ -95,6 +95,102 @@ import Foundation
             """
         )
 
+        static let stalledTransfer: RequestActivityTransfer = decode(
+            """
+            {
+              "progress":0.42,
+              "state":"stalledDL",
+              "totalSizeBytes":2800000000,
+              "downloadSpeedBytesPerSecond":0,
+              "etaSeconds":0,
+              "seeds":0,
+              "peers":0,
+              "savePath":"/downloads/dune",
+              "pieceStates":[2,2,1,0,0,0]
+            }
+            """
+        )
+
+        static let pausedTransfer: RequestActivityTransfer = decode(
+            """
+            {
+              "progress":0.51,
+              "state":"pausedDL",
+              "totalSizeBytes":2800000000,
+              "downloadSpeedBytesPerSecond":0,
+              "etaSeconds":0,
+              "seeds":12,
+              "peers":3,
+              "savePath":"/downloads/dune",
+              "pieceStates":[2,2,2,1,0,0]
+            }
+            """
+        )
+
+        static let failedTransfer: RequestActivityTransfer = decode(
+            """
+            {
+              "progress":0.28,
+              "state":"error",
+              "totalSizeBytes":2800000000,
+              "downloadSpeedBytesPerSecond":0,
+              "etaSeconds":0,
+              "seeds":0,
+              "peers":0,
+              "savePath":"/downloads/dune",
+              "pieceStates":[2,1,0,0,0]
+            }
+            """
+        )
+
+        static let noSwarmTransfer: RequestActivityTransfer = decode(
+            """
+            {
+              "progress":0.92,
+              "state":"Extracting",
+              "totalSizeBytes":1400000000,
+              "downloadSpeedBytesPerSecond":0,
+              "etaSeconds":0,
+              "seeds":0,
+              "peers":0,
+              "savePath":"/downloads/complete/dune",
+              "pieceStates":[]
+            }
+            """
+        )
+
+        static let completedTransfer: RequestActivityTransfer = decode(
+            """
+            {
+              "progress":1,
+              "state":"Completed",
+              "totalSizeBytes":1400000000,
+              "downloadSpeedBytesPerSecond":0,
+              "etaSeconds":0,
+              "seeds":0,
+              "peers":0,
+              "savePath":"/downloads/complete/dune",
+              "pieceStates":[]
+            }
+            """
+        )
+
+        static let unknownStateTransfer: RequestActivityTransfer = decode(
+            """
+            {
+              "progress":0.17,
+              "state":"WaitingForRemoteSlot",
+              "totalSizeBytes":684000000,
+              "downloadSpeedBytesPerSecond":0,
+              "etaSeconds":0,
+              "seeds":0,
+              "peers":0,
+              "savePath":null,
+              "pieceStates":[]
+            }
+            """
+        )
+
         static let files: RequestActivityFiles = decode(
             """
             {
