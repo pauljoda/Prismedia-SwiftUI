@@ -13,16 +13,20 @@ struct PrismediaTextFieldStyle: TextFieldStyle {
                 fieldLayout(configuration)
                     .glassEffect(
                         .regular.interactive(),
-                        in: .rect(cornerRadius: PrismediaRadius.control)
+                        in: PrismediaStableRoundedRectangle(
+                            cornerRadius: PrismediaRadius.control
+                        )
                     )
             case .embedded:
                 fieldLayout(configuration)
                     .background(
                         PrismediaColor.controlFill,
-                        in: .rect(cornerRadius: PrismediaRadius.control)
+                        in: PrismediaStableRoundedRectangle(
+                            cornerRadius: PrismediaRadius.control
+                        )
                     )
                     .overlay {
-                        RoundedRectangle(cornerRadius: PrismediaRadius.control, style: .continuous)
+                        PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.control)
                             .stroke(PrismediaColor.border, lineWidth: PrismediaLayout.hairline)
                     }
             }

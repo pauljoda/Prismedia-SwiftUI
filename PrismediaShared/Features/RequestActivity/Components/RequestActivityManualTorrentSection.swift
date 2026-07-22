@@ -91,7 +91,7 @@ import UniformTypeIdentifiers
                 if selectedFile != nil { submitButton }
             }
             .padding(PrismediaSpacing.medium)
-            .prismediaPanel()
+            .prismediaCard(cornerRadius: PrismediaRadius.control)
             .frame(maxWidth: .infinity, alignment: .leading)
             .fileImporter(
                 isPresented: $isImporting,
@@ -102,7 +102,7 @@ import UniformTypeIdentifiers
         }
 
         private var utilityActions: some View {
-            HStack(spacing: PrismediaSpacing.small) {
+            VStack(spacing: PrismediaSpacing.small) {
                 PrismediaButton(
                     selectedFile == nil ? "Choose Torrent" : "Replace Torrent",
                     systemImage: "doc.badge.plus",

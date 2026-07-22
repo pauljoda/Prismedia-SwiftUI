@@ -42,7 +42,7 @@ import SwiftUI
             .padding(PrismediaSpacing.medium)
             .background(
                 PrismediaColor.controlFill,
-                in: RoundedRectangle(cornerRadius: PrismediaRadius.control, style: .continuous)
+                in: PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.control)
             )
             .accessibilityElement(children: .contain)
         }

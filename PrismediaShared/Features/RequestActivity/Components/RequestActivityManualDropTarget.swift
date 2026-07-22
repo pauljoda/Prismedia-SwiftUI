@@ -23,9 +23,11 @@ import SwiftUI
             .frame(maxWidth: .infinity, minHeight: 112)
             .padding(PrismediaSpacing.medium)
             .background(PrismediaColor.groupedContentBackground.opacity(0.5))
-            .clipShape(.rect(cornerRadius: PrismediaRadius.control))
+            .clipShape(
+                PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.control)
+            )
             .overlay {
-                RoundedRectangle(cornerRadius: PrismediaRadius.control)
+                PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.control)
                     .strokeBorder(PrismediaColor.borderSubtle, style: StrokeStyle(lineWidth: 1, dash: [6, 5]))
             }
             .dropDestination(for: URL.self) { urls, _ in

@@ -47,7 +47,7 @@ import SwiftUI
                 }
             }
             .padding(PrismediaSpacing.medium)
-            .prismediaPanel()
+            .prismediaCard(cornerRadius: PrismediaRadius.control)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .contain)
             .accessibilityLabel(files.count == 1 ? "Selected file" : "Selected files")

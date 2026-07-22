@@ -9,10 +9,7 @@ public struct PrismediaCardModifier: ViewModifier {
     }
 
     public func body(content: Content) -> some View {
-        let shape = RoundedRectangle(
-            cornerRadius: cornerRadius,
-            style: .continuous
-        )
+        let shape = PrismediaStableRoundedRectangle(cornerRadius: cornerRadius)
 
         content
             .background(PrismediaColor.elevatedContentBackground, in: shape)

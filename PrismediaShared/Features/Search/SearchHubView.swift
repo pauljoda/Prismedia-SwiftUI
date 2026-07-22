@@ -214,8 +214,12 @@ struct SearchHubView: View {
                     .multilineTextAlignment(.leading)
                     .padding(PrismediaSpacing.large)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.card, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: PrismediaRadius.card, style: .continuous))
+                .clipShape(
+                    PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.card)
+                )
+                .contentShape(
+                    PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.card)
+                )
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)

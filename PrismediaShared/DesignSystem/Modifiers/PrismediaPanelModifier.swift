@@ -5,10 +5,7 @@ public struct PrismediaPanelModifier: ViewModifier {
     public init() {}
 
     public func body(content: Content) -> some View {
-        let shape = RoundedRectangle(
-            cornerRadius: PrismediaRadius.panel,
-            style: .continuous
-        )
+        let shape = PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.panel)
 
         content
             .background(PrismediaColor.groupedContentBackground, in: shape)

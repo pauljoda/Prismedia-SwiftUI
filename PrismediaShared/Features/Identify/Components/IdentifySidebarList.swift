@@ -108,9 +108,8 @@ import SwiftUI
         }
 
         private func kindCard(_ summary: IdentifyKindSummary) -> some View {
-            let shape = RoundedRectangle(
-                cornerRadius: PrismediaRadius.card,
-                style: .continuous
+            let shape = PrismediaStableRoundedRectangle(
+                cornerRadius: PrismediaRadius.card
             )
 
             return Button {

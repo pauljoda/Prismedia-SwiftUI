@@ -127,12 +127,10 @@ struct PrismediaButton: View {
                 .font(.headline.weight(.bold))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, PrismediaSpacing.large)
                 .frame(maxWidth: .infinity)
         case .fillIcon:
             compactIconLabel
                 .font(.headline.weight(.bold))
-                .padding(.horizontal, PrismediaSpacing.large)
                 .frame(maxWidth: .infinity)
         case .compactIcon:
             compactIconLabel
@@ -230,6 +228,19 @@ struct PrismediaButton: View {
         ) {}
         .padding(PrismediaSpacing.extraLarge)
         .environment(\.dynamicTypeSize, .accessibility4)
+        .preferredColorScheme(.dark)
+    }
+
+    #Preview("Prismedia Buttons · Stable Side by Side") {
+        ZStack {
+            PrismediaBackdrop()
+            HStack(spacing: PrismediaSpacing.small) {
+                PrismediaButton("Replace Files", systemImage: "doc.badge.plus", form: .fill) {}
+                PrismediaButton("Remove All", systemImage: "xmark", form: .fill) {}
+            }
+            .padding(PrismediaSpacing.extraLarge)
+        }
+        .frame(width: 390)
         .preferredColorScheme(.dark)
     }
 #endif

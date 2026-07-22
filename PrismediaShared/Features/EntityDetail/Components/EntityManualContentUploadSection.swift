@@ -107,7 +107,7 @@ import UniformTypeIdentifiers
         }
 
         private var utilityActions: some View {
-            HStack(spacing: PrismediaSpacing.small) {
+            VStack(spacing: PrismediaSpacing.small) {
                 PrismediaButton(
                     files.isEmpty ? "Choose Files" : "Replace Files",
                     systemImage: "doc.badge.plus",

@@ -81,7 +81,9 @@ struct SearchHubResultGroup: View {
                     systemImage: SearchHubKindCatalog.systemImage(for: item.kind)
                 )
                 .frame(width: usesRegularLayout ? 48 : 56, height: usesRegularLayout ? 48 : 56)
-                .clipShape(.rect(cornerRadius: PrismediaRadius.control))
+                .clipShape(
+                    PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.control)
+                )
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
