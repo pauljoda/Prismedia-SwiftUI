@@ -19,6 +19,7 @@ struct EntityMonitorControl: View {
                 }
                 .disabled(!presentation.isEnabled)
                 .tint(primaryAccent)
+                .padding(.trailing, PrismediaSpacing.small)
                 .accessibilityHint(toggleHint(isOn: isOn))
             } else {
                 HStack(alignment: .center, spacing: PrismediaSpacing.medium) {

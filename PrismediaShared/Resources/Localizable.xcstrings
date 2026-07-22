@@ -575,6 +575,9 @@
     "Check Again" : {
 
     },
+    "Check for New Content Now" : {
+
+    },
     "Check your connection and try again." : {
 
     },
@@ -2346,6 +2349,9 @@
     "Search %@" : {
 
     },
+    "Search %lld Missing" : {
+
+    },
     "Search Again" : {
 
     },
@@ -2362,6 +2368,9 @@
 
     },
     "Search for a Match" : {
+
+    },
+    "Search for Missing Content" : {
 
     },
     "Search In" : {

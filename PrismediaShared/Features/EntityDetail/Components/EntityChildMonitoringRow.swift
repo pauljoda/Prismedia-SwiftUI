@@ -17,6 +17,7 @@ struct EntityChildMonitoringRow: View {
                 }
                 .disabled(isBusy || item.command(to: !isOn) == nil)
                 .tint(primaryAccent)
+                .padding(.trailing, PrismediaSpacing.small)
             } else {
                 HStack(spacing: PrismediaSpacing.medium) {
                     rowLabel
