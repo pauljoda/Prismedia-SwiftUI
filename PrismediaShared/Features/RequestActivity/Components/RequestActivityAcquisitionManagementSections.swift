@@ -19,7 +19,7 @@ import UniformTypeIdentifiers
         @State private var detail: RequestActivityAcquisitionDetail?
         @State private var transfer: RequestActivityTransfer?
         @State private var transferLoadState: RequestActivityTransferLoadState = .preparing
-        @State private var files: RequestActivityFiles?
+        @State private var filesLoadState = RequestActivityFilesLoadState.initialLoading
         @State private var blocklist: [RequestActivityBlocklistEntry] = []
         @State private var isLoading = true
         @State private var isActing = false
@@ -69,6 +69,7 @@ import UniformTypeIdentifiers
                 previewTransfer: RequestActivityTransfer? = nil,
                 previewTransferLoadState: RequestActivityTransferLoadState? = nil,
                 previewFiles: RequestActivityFiles? = nil,
+                previewFilesLoadState: RequestActivityFilesLoadState? = nil,
                 isLoading: Bool = false,
                 loadErrorMessage: String? = nil,
                 isActing: Bool = false,
@@ -90,7 +91,11 @@ import UniformTypeIdentifiers
                     initialValue: previewTransferLoadState
                         ?? (previewTransfer == nil ? .preparing : .current)
                 )
-                _files = State(initialValue: previewFiles)
+                _filesLoadState = State(
+                    initialValue: previewFilesLoadState
+                        ?? previewFiles.map(RequestActivityFilesLoadState.loaded)
+                        ?? .initialLoading
+                )
                 _isLoading = State(initialValue: isLoading)
                 _loadErrorMessage = State(initialValue: loadErrorMessage)
                 _isActing = State(initialValue: isActing)
@@ -239,23 +244,16 @@ import UniformTypeIdentifiers
 
         @ViewBuilder
         private var filesSection: some View {
-            if let files {
-                Section(files.imported ? "Imported Files" : "Files") {
-                    if files.files.isEmpty {
-                        Text("No files reported yet.")
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    } else {
-                        ForEach(files.files, id: \.name) { file in
-                            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                                Text(file.name)
-                                ProgressView(value: min(max(file.progress, 0), 1))
-                                Text(RequestActivityFormatting.bytes(file.sizeBytes))
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(PrismediaColor.textSecondary)
-                            }
+            Section {
+                RequestActivityFilesSection(
+                    loadState: filesLoadState,
+                    retry: {
+                        Task {
+                            guard let status = detail?.summary.status else { return }
+                            await refreshFiles(for: status, isInitial: filesLoadState.files == nil)
                         }
                     }
-                }
+                )
             }
         }
 
@@ -554,8 +552,8 @@ import UniformTypeIdentifiers
                     )
                 case .files:
                     RequestActivityFilesSection(
-                        files: files,
-                        isActive: RequestActivityStatusPolicy.shouldPoll(status)
+                        loadState: filesLoadState,
+                        retry: { Task { await refreshFiles(for: status, isInitial: filesLoadState.files == nil) } }
                     )
                 case .releases, .lifecycleOnly:
                     EmptyView()
@@ -592,8 +590,7 @@ import UniformTypeIdentifiers
                 let nextDetail = try await service.fetchRequestActivityAcquisition(id: acquisitionID)
                 if detail != nextDetail { detail = nextDetail }
                 let transferRefreshed = try await refreshTransfer(for: nextDetail.summary.status)
-                let nextFiles = try? await service.fetchRequestActivityFiles(id: acquisitionID)
-                if files != nextFiles { files = nextFiles }
+                await refreshFiles(for: nextDetail.summary.status, isInitial: filesLoadState.files == nil)
                 let nextBlocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
                         $0.acquisitionID == acquisitionID
@@ -637,6 +634,30 @@ import UniformTypeIdentifiers
                 if error is CancellationError { throw error }
                 transferLoadState = transfer == nil ? .unavailable : .stale
                 return false
+            }
+        }
+
+        private func refreshFiles(for status: AcquisitionStatus, isInitial: Bool) async {
+            guard RequestActivityAcquisitionLifecyclePolicy.content(for: status) == .files else { return }
+            do {
+                let nextFiles = try await service.fetchRequestActivityFiles(id: acquisitionID)
+                if !nextFiles.files.isEmpty {
+                    filesLoadState.recordSuccess(nextFiles)
+                } else if nextFiles.importInformationUnavailable == true {
+                    filesLoadState.recordUnavailable()
+                } else if status.rawValue == "imported" {
+                    filesLoadState.recordEmpty()
+                } else {
+                    filesLoadState.recordWaiting()
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                if filesLoadState.files != nil {
+                    filesLoadState.recordRefreshFailure()
+                } else if isInitial {
+                    filesLoadState.recordInitialFailure(error.localizedDescription)
+                }
             }
         }
 
@@ -713,7 +734,7 @@ import UniformTypeIdentifiers
                 detail = nil
                 transfer = nil
                 transferLoadState = .preparing
-                files = nil
+                filesLoadState = .initialLoading
                 blocklist = []
                 refreshState.recordSuccess()
                 await onReset?()
@@ -794,7 +815,7 @@ import UniformTypeIdentifiers
                 let nextDetail = try await operation()
                 detail = nextDetail
                 let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
-                files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
+                await refreshFiles(for: nextDetail.summary.status, isInitial: filesLoadState.files == nil)
                 blocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
                         $0.acquisitionID == acquisitionID
@@ -829,7 +850,7 @@ import UniformTypeIdentifiers
                 let nextDetail = try await operation()
                 detail = nextDetail
                 let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
-                files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
+                await refreshFiles(for: nextDetail.summary.status, isInitial: filesLoadState.files == nil)
                 blocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
                         $0.acquisitionID == acquisitionID
@@ -870,7 +891,7 @@ import UniformTypeIdentifiers
                 let nextDetail = try await operation()
                 detail = nextDetail
                 let transferRefreshed = (try? await refreshTransfer(for: nextDetail.summary.status)) ?? false
-                files = try? await service.fetchRequestActivityFiles(id: acquisitionID)
+                await refreshFiles(for: nextDetail.summary.status, isInitial: filesLoadState.files == nil)
                 blocklist =
                     (try? await service.listRequestActivityBlocklist())?.filter {
                         $0.acquisitionID == acquisitionID
