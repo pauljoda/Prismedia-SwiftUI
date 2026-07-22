@@ -378,29 +378,17 @@ import UniformTypeIdentifiers
         }
 
         private func embeddedStatusHeader(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: PrismediaSpacing.large) {
-                    embeddedStatusSummary(detail)
-                    Spacer(minLength: PrismediaSpacing.medium)
-                    if hasLifecycleActions(detail) {
-                        GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                            HStack(spacing: PrismediaSpacing.small) {
-                                wideLifecycleActions(detail)
-                            }
+            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                embeddedStatusSummary(detail)
+                if hasLifecycleActions(detail) {
+                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                        VStack(spacing: PrismediaSpacing.small) {
+                            lifecycleActions(detail)
                         }
-                        .prismediaCompactActionControlSize()
+                        .frame(maxWidth: .infinity)
                     }
-                }
-                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                    embeddedStatusSummary(detail)
-                    if hasLifecycleActions(detail) {
-                        GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                            HStack(spacing: PrismediaSpacing.small) {
-                                compactLifecycleActions(detail)
-                            }
-                        }
-                        .prismediaCompactActionControlSize()
-                    }
+                    .frame(maxWidth: .infinity)
+                    .prismediaCompactActionControlSize()
                 }
             }
         }
@@ -501,42 +489,10 @@ import UniformTypeIdentifiers
         }
 
         @ViewBuilder
-        private func wideLifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> some View {
+        private func lifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> some View {
             ForEach(allLifecycleActions(for: detail), id: \.self) { action in
                 lifecycleButton(action, primaryAction: primaryLifecycleAction(for: detail))
             }
-        }
-
-        @ViewBuilder
-        private func compactLifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            let visibleActions = compactVisibleActions(for: detail)
-            let overflowActions = allLifecycleActions(for: detail).filter { !visibleActions.contains($0) }
-
-            ForEach(visibleActions, id: \.self) { action in
-                lifecycleButton(action, primaryAction: primaryLifecycleAction(for: detail))
-            }
-
-            if !overflowActions.isEmpty {
-                Menu {
-                    ForEach(overflowActions, id: \.self) { action in
-                        lifecycleMenuButton(action)
-                    }
-                } label: {
-                    Label("More Acquisition Actions", systemImage: "ellipsis")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.glass)
-                .accessibilityLabel("More Acquisition Actions")
-                .disabled(isActing)
-            }
-        }
-
-        private func compactVisibleActions(
-            for detail: RequestActivityAcquisitionDetail
-        ) -> [RequestActivityAcquisitionAction] {
-            if let primary = primaryLifecycleAction(for: detail) { return [primary] }
-            let secondary = secondaryLifecycleActions(for: detail)
-            return secondary == [.cancel] ? [.cancel] : []
         }
 
         private func lifecycleButton(
@@ -549,6 +505,7 @@ import UniformTypeIdentifiers
                 variant: action == primaryAction
                     ? .prominent
                     : action == .cancel || action == .startOver ? .destructive : .standard,
+                form: .fill,
                 primaryTint: action == primaryAction ? artworkPrimaryAccent : nil,
                 isLoading: activeLifecycleAction == action,
                 loadingTitle: action.progressTitle
@@ -560,6 +517,7 @@ import UniformTypeIdentifiers
                 }
             }
             .disabled(isActing)
+            .frame(maxWidth: .infinity)
         }
 
         @ViewBuilder

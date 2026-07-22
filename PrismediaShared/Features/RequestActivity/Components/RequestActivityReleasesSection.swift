@@ -74,10 +74,12 @@ import SwiftUI
         private var loadMoreButton: some View {
             PrismediaButton(
                 "Load \(nextPageCount) more releases",
-                systemImage: "chevron.down"
+                systemImage: "chevron.down",
+                form: .fill
             ) {
                 visibleCount += pageSize
             }
+            .frame(maxWidth: .infinity)
             .prismediaCompactActionControlSize()
             .padding(.top, PrismediaSpacing.small)
         }
@@ -85,16 +87,9 @@ import SwiftUI
         private var pageSize: Int { 10 }
 
         private var torrentUploadFallback: some View {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: PrismediaSpacing.medium) {
-                    torrentUploadCopy
-                    Spacer(minLength: PrismediaSpacing.small)
-                    torrentUploadButton
-                }
-                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                    torrentUploadCopy
-                    torrentUploadButton
-                }
+            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                torrentUploadCopy
+                torrentUploadButton
             }
             .padding(PrismediaSpacing.medium)
             .prismediaPanel()
@@ -114,9 +109,14 @@ import SwiftUI
         }
 
         private var torrentUploadButton: some View {
-            PrismediaButton("Upload .torrent", systemImage: "doc.badge.plus") {
+            PrismediaButton(
+                "Upload .torrent",
+                systemImage: "doc.badge.plus",
+                form: .fill
+            ) {
                 onUploadTorrent()
             }
+            .frame(maxWidth: .infinity)
             .prismediaCompactActionControlSize()
             .disabled(isBusy)
         }

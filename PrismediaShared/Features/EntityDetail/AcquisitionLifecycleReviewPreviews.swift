@@ -379,6 +379,7 @@
                         "Search for release",
                         systemImage: "magnifyingglass",
                         variant: .prominent,
+                        form: .fill,
                         primaryTint: PrismediaColor.spectrumCyan,
                         isLoading: true,
                         loadingTitle: "Searching…"
@@ -387,6 +388,7 @@
                         "Search Again",
                         systemImage: "arrow.clockwise",
                         variant: .prominent,
+                        form: .fill,
                         primaryTint: PrismediaColor.spectrumCyan,
                         isLoading: true,
                         loadingTitle: "Searching…"
@@ -395,6 +397,7 @@
                         "Cancel Acquisition",
                         systemImage: "xmark",
                         variant: .destructive,
+                        form: .fill,
                         isLoading: true,
                         loadingTitle: "Cancelling…"
                     ) {}
@@ -402,6 +405,7 @@
                         "Retry Import",
                         systemImage: "arrow.down.doc",
                         variant: .prominent,
+                        form: .fill,
                         primaryTint: PrismediaColor.spectrumCyan,
                         isLoading: true,
                         loadingTitle: "Importing…"
@@ -410,6 +414,7 @@
                         "Import Anyway",
                         systemImage: "arrow.down.doc",
                         variant: .prominent,
+                        form: .fill,
                         primaryTint: PrismediaColor.spectrumCyan,
                         isLoading: true,
                         loadingTitle: "Importing…"
@@ -418,11 +423,14 @@
                         "Start Over",
                         systemImage: "arrow.counterclockwise",
                         variant: .destructive,
+                        form: .fill,
                         isLoading: true,
                         loadingTitle: "Starting Over…"
                     ) {}
                 }
+                .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: .infinity)
             .prismediaCompactActionControlSize()
             .padding(PrismediaSpacing.extraLarge)
             .prismediaCard()

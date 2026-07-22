@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct RequestActivityCandidateRow: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         let candidate: RequestActivityReleaseCandidate
         let isDisabled: Bool
         let variant: RequestActivityCandidateRowVariant
@@ -38,30 +39,49 @@ import SwiftUI
                         .font(.caption)
                         .foregroundStyle(rejectionStyle)
                 }
-                ViewThatFits(in: .horizontal) {
-                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                        HStack(spacing: PrismediaSpacing.small) {
-                            actionButtons
-                        }
-                    }
-                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                            actionButtons
-                        }
-                    }
-                }
-                .prismediaCompactActionControlSize()
+                actionControls
             }
             .padding(.vertical, PrismediaSpacing.extraSmall)
             .accessibilityElement(children: .contain)
         }
 
         @ViewBuilder
-        private var actionButtons: some View {
+        private var actionControls: some View {
+            switch variant {
+            case .queue:
+                ViewThatFits(in: .horizontal) {
+                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                        HStack(spacing: PrismediaSpacing.small) {
+                            actionButtons(form: .automatic)
+                        }
+                    }
+                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                            actionButtons(form: .automatic)
+                        }
+                    }
+                }
+                .prismediaCompactActionControlSize()
+            case .download:
+                GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                    VStack(spacing: PrismediaSpacing.small) {
+                        actionButtons(form: .fill)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .frame(maxWidth: .infinity)
+                .prismediaCompactActionControlSize()
+            }
+        }
+
+        @ViewBuilder
+        private func actionButtons(form: PrismediaButtonForm) -> some View {
             PrismediaButton(
                 primaryActionTitle,
                 systemImage: "arrow.down.circle",
-                variant: primaryActionVariant
+                variant: primaryActionVariant,
+                form: form,
+                primaryTint: primaryActionVariant == .prominent ? artworkPrimaryAccent : nil
             ) {
                 onQueue(candidate)
             }
@@ -69,7 +89,8 @@ import SwiftUI
             PrismediaButton(
                 "Blocklist",
                 systemImage: "hand.raised",
-                variant: .destructive
+                variant: .destructive,
+                form: form
             ) {
                 onBlocklist(candidate)
             }
