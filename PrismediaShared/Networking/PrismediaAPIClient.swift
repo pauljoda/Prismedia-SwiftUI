@@ -198,12 +198,25 @@ public struct PrismediaAPIClient: Sendable {
 
     public func fetchEntityMonitorStates(entityIDs: [UUID]) async throws -> [EntityMonitorState] {
         guard !entityIDs.isEmpty else { return [] }
-        return try await send(
-            [EntityMonitorState].self,
-            path: "/api/monitors/states",
-            method: "POST",
-            body: EntityMonitorStateRequest(entityIds: entityIDs)
-        )
+
+        var seenIDs = Set<UUID>()
+        let uniqueIDs = entityIDs.filter { seenIDs.insert($0).inserted }
+        var states: [EntityMonitorState] = []
+
+        for startIndex in stride(from: 0, to: uniqueIDs.count, by: 500) {
+            try Task.checkCancellation()
+            let endIndex = min(startIndex + 500, uniqueIDs.count)
+            let batch = Array(uniqueIDs[startIndex ..< endIndex])
+            let batchStates = try await send(
+                [EntityMonitorState].self,
+                path: "/api/monitors/states",
+                method: "POST",
+                body: EntityMonitorStateRequest(entityIds: batch)
+            )
+            states.append(contentsOf: batchStates)
+        }
+
+        return states
     }
 
     @discardableResult

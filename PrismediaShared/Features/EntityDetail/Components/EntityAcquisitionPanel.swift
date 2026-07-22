@@ -220,6 +220,12 @@ struct EntityAcquisitionPanel: View {
             if presentation.showsExpandedContent, let snapshot {
                 expandedContent(snapshot, service: service)
             }
+
+            #if os(iOS) || os(macOS)
+                if !presentation.showsExpandedContent || snapshot == nil {
+                    childActivityContent(service: service)
+                }
+            #endif
         }
         .padding(PrismediaSpacing.extraLarge)
         .prismediaCard()
@@ -377,6 +383,8 @@ struct EntityAcquisitionPanel: View {
                 )
             }
 
+            childActivityContent(service: service)
+
             if !historyEntries.isEmpty {
                 Divider()
                 EntityAcquisitionHistorySection(entries: historyEntries)
@@ -448,6 +456,22 @@ struct EntityAcquisitionPanel: View {
             return childGroups.flatMap(\.entities)
         }
         return childGroups.first(where: { $0.kind == kind })?.entities ?? []
+    }
+
+    @ViewBuilder
+    private func childActivityContent(service: EntityAcquisitionService) -> some View {
+        let children = EntityChildAcquisitionActivityPolicy.eligibleChildren(
+            parentID: entityID,
+            groups: childGroups
+        )
+        if !children.isEmpty {
+            Divider()
+            EntityChildAcquisitionActivitySection(
+                entities: children,
+                service: service,
+                onChanged: onMutated
+            )
+        }
     }
 
     private func childMonitoringTitle(for monitorState: EntityMonitorState) -> String {

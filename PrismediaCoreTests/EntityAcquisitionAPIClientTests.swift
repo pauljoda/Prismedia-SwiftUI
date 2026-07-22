@@ -43,6 +43,27 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
         XCTAssertEqual(body["entityIds"] as? [String], [entityID.uuidString, secondID.uuidString])
     }
 
+    func testFetchMonitorStatesBatchesMoreThanFiveHundredEntityIDs() async throws {
+        let entityIDs = (0 ... 500).map { value in
+            UUID(
+                uuidString: String(format: "70000000-0000-0000-0000-%012d", value)
+            )!
+        }
+        let loader = MockHTTPDataLoader(responses: [.json("[]"), .json("[]")])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        _ = try await client.fetchEntityMonitorStates(entityIDs: entityIDs)
+
+        XCTAssertEqual(loader.requests.count, 2)
+        let requestBodies = try loader.requests.map { request in
+            try XCTUnwrap(
+                JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+            )
+        }
+        XCTAssertEqual((requestBodies[0]["entityIds"] as? [String])?.count, 500)
+        XCTAssertEqual(requestBodies[1]["entityIds"] as? [String], [entityIDs[500].uuidString])
+    }
+
     func testStartMonitorPostsEntityIDWithoutNarrowingPreset() async throws {
         let loader = MockHTTPDataLoader(responses: [.json(monitorJSON)])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
