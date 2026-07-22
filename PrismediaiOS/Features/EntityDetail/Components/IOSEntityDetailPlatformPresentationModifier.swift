@@ -49,25 +49,27 @@ struct EntityDetailPlatformPresentationModifier<EditContent: View>: ViewModifier
     }
 }
 
-#Preview("iOS Entity Detail Presentation") {
-    @Previewable @State var editPresentation: EntityDetailEditPresentation?
-    @Previewable @State var collectionSheetPresented = false
-    let detail = EntityDetailPreviewFixture.detail
-    Text(detail.title)
-        .modifier(
-            EntityDetailPlatformPresentationModifier(
-                navigationTitle: detail.title,
-                detail: detail,
-                presentation: EntityDetailPresentation(detail: detail),
-                editPresentation: $editPresentation,
-                collectionSheetPresented: $collectionSheetPresented,
-                isActionSupported: { _ in true },
-                isActionEnabled: { _ in true },
-                actionLabel: { $0.title },
-                actionHint: { _ in "Updates this entity" },
-                onAction: { _ in },
-                editContent: { _ in Text("Entity editor") }
+#if DEBUG
+    #Preview("iOS Entity Detail Presentation") {
+        @Previewable @State var editPresentation: EntityDetailEditPresentation?
+        @Previewable @State var collectionSheetPresented = false
+        let detail = EntityDetailPreviewFixture.detail
+        Text(detail.title)
+            .modifier(
+                EntityDetailPlatformPresentationModifier(
+                    navigationTitle: detail.title,
+                    detail: detail,
+                    presentation: EntityDetailPresentation(detail: detail),
+                    editPresentation: $editPresentation,
+                    collectionSheetPresented: $collectionSheetPresented,
+                    isActionSupported: { _ in true },
+                    isActionEnabled: { _ in true },
+                    actionLabel: { $0.title },
+                    actionHint: { _ in "Updates this entity" },
+                    onAction: { _ in },
+                    editContent: { _ in Text("Entity editor") }
+                )
             )
-        )
-}
+    }
+#endif
 #endif

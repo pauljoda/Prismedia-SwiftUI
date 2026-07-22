@@ -76,16 +76,18 @@ struct EntityDetailPlatformActionsView: View {
     }
 }
 
-#Preview("Mac Entity Detail Actions") {
-    EntityDetailPlatformActionsView(
-        presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
-        palette: nil,
-        horizontalPadding: 20,
-        isActionSupported: { _ in true },
-        isActionEnabled: { _ in true },
-        actionHint: { _ in "Updates this entity" },
-        onAction: { _ in }
-    )
-    .padding(.vertical)
-}
+#if DEBUG
+    #Preview("Mac Entity Detail Actions") {
+        EntityDetailPlatformActionsView(
+            presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
+            palette: nil,
+            horizontalPadding: 20,
+            isActionSupported: { _ in true },
+            isActionEnabled: { _ in true },
+            actionHint: { _ in "Updates this entity" },
+            onAction: { _ in }
+        )
+        .padding(.vertical)
+    }
+#endif
 #endif

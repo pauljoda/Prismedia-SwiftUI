@@ -66,24 +66,26 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
     }
 }
 
-#Preview("Mac Entity Detail Destination") {
-    let detail = EntityDetailPreviewFixture.detail
-    let dependencies = EntityDetailDependencies(
-        detailLoader: PreviewEntityDetailLoader(detail: detail),
-        mutator: nil,
-        collectionItemsLoader: nil,
-        readerService: nil,
-        videoPlaybackService: nil,
-        onEntityMutated: {}
-    )
-    EntityDetailPlatformDestinationView(
-        detail: detail,
-        link: EntityLink(entityID: detail.id, kind: detail.kind),
-        dependencies: dependencies,
-        imageViewerSession: nil,
-        onAcquisitionMutated: {},
-        onEntityPruned: {},
-        standardContent: { Text($0.title).padding() }
-    )
-}
+#if DEBUG
+    #Preview("Mac Entity Detail Destination") {
+        let detail = EntityDetailPreviewFixture.detail
+        let dependencies = EntityDetailDependencies(
+            detailLoader: PreviewEntityDetailLoader(detail: detail),
+            mutator: nil,
+            collectionItemsLoader: nil,
+            readerService: nil,
+            videoPlaybackService: nil,
+            onEntityMutated: {}
+        )
+        EntityDetailPlatformDestinationView(
+            detail: detail,
+            link: EntityLink(entityID: detail.id, kind: detail.kind),
+            dependencies: dependencies,
+            imageViewerSession: nil,
+            onAcquisitionMutated: {},
+            onEntityPruned: {},
+            standardContent: { Text($0.title).padding() }
+        )
+    }
+#endif
 #endif

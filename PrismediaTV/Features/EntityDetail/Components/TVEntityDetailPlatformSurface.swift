@@ -22,16 +22,18 @@ struct EntityDetailPlatformSurface<StandardContent: View, BackdropContent: View>
     }
 }
 
-#Preview("TV Entity Detail Surface") {
-    @Previewable @State var palette: ArtworkPalette?
-    let detail = EntityDetailPreviewFixture.detail
-    EntityDetailPlatformSurface(
-        detail: detail,
-        presentation: EntityDetailPresentation(detail: detail),
-        previewPath: nil,
-        palette: $palette,
-        standardContent: { Text(detail.title).padding(72) },
-        backdropContent: { Text(detail.title).padding(72) }
-    )
-}
+#if DEBUG
+    #Preview("TV Entity Detail Surface") {
+        @Previewable @State var palette: ArtworkPalette?
+        let detail = EntityDetailPreviewFixture.detail
+        EntityDetailPlatformSurface(
+            detail: detail,
+            presentation: EntityDetailPresentation(detail: detail),
+            previewPath: nil,
+            palette: $palette,
+            standardContent: { Text(detail.title).padding(72) },
+            backdropContent: { Text(detail.title).padding(72) }
+        )
+    }
+#endif
 #endif

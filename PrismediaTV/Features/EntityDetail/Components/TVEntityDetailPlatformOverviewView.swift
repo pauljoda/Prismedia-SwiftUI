@@ -76,29 +76,31 @@
         }
     }
 
-    #Preview("TV Entity Detail Overview · Collection") {
-        let source = EntityDetailPreviewFixture.detail
-        let collection = EntityDetail(
-            id: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
-            kind: .collection,
-            title: "Atmospheric Favorites",
-            parentEntityID: nil,
-            sortOrder: nil,
-            hasSourceMedia: false,
-            capabilities: source.capabilities,
-            childrenByKind: [],
-            relationships: []
-        )
+    #if DEBUG
+        #Preview("TV Entity Detail Overview · Collection") {
+            let source = EntityDetailPreviewFixture.detail
+            let collection = EntityDetail(
+                id: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
+                kind: .collection,
+                title: "Atmospheric Favorites",
+                parentEntityID: nil,
+                sortOrder: nil,
+                hasSourceMedia: false,
+                capabilities: source.capabilities,
+                childrenByKind: [],
+                relationships: []
+            )
 
-        PreviewShell(signedIn: true) {
-            EntityDetailPlatformOverviewView(
-                presentation: EntityDetailPresentation(detail: collection),
-                previewPath: nil,
-                showsArtwork: true
-            ) {
-                Text("Unused platform fallback")
+            PreviewShell(signedIn: true) {
+                EntityDetailPlatformOverviewView(
+                    presentation: EntityDetailPresentation(detail: collection),
+                    previewPath: nil,
+                    showsArtwork: true
+                ) {
+                    Text("Unused platform fallback")
+                }
             }
+            .frame(width: 1_920, height: 720)
         }
-        .frame(width: 1_920, height: 720)
-    }
+    #endif
 #endif

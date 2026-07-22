@@ -15,15 +15,17 @@ struct EntityDetailPlatformActionsView: View {
     }
 }
 
-#Preview("iOS Entity Detail Actions") {
-    EntityDetailPlatformActionsView(
-        presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
-        palette: nil,
-        horizontalPadding: 20,
-        isActionSupported: { _ in true },
-        isActionEnabled: { _ in true },
-        actionHint: { _ in "Updates this entity" },
-        onAction: { _ in }
-    )
-}
+#if DEBUG
+    #Preview("iOS Entity Detail Actions") {
+        EntityDetailPlatformActionsView(
+            presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
+            palette: nil,
+            horizontalPadding: 20,
+            isActionSupported: { _ in true },
+            isActionEnabled: { _ in true },
+            actionHint: { _ in "Updates this entity" },
+            onAction: { _ in }
+        )
+    }
+#endif
 #endif

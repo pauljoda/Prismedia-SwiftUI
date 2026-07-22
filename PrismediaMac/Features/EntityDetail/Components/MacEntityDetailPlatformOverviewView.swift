@@ -12,13 +12,15 @@
         }
     }
 
-    #Preview("Mac Entity Detail Overview") {
-        EntityDetailPlatformOverviewView(
-            presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
-            previewPath: nil,
-            showsArtwork: true
-        ) {
-            Text("Overview")
+    #if DEBUG
+        #Preview("Mac Entity Detail Overview") {
+            EntityDetailPlatformOverviewView(
+                presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
+                previewPath: nil,
+                showsArtwork: true
+            ) {
+                Text("Overview")
+            }
         }
-    }
+    #endif
 #endif

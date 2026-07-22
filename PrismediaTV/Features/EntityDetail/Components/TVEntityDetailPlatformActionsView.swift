@@ -75,15 +75,17 @@ struct EntityDetailPlatformActionsView: View {
     }
 }
 
-#Preview("TV Entity Detail Actions") {
-    EntityDetailPlatformActionsView(
-        presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
-        palette: nil,
-        horizontalPadding: 72,
-        isActionSupported: { _ in true },
-        isActionEnabled: { _ in true },
-        actionHint: { _ in "Updates this entity" },
-        onAction: { _ in }
-    )
-}
+#if DEBUG
+    #Preview("TV Entity Detail Actions") {
+        EntityDetailPlatformActionsView(
+            presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
+            palette: nil,
+            horizontalPadding: 72,
+            isActionSupported: { _ in true },
+            isActionEnabled: { _ in true },
+            actionHint: { _ in "Updates this entity" },
+            onAction: { _ in }
+        )
+    }
+#endif
 #endif

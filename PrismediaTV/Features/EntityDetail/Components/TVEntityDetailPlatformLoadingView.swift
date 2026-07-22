@@ -10,9 +10,11 @@ struct EntityDetailPlatformLoadingView: View {
     }
 }
 
-#Preview("TV Entity Detail Loading") {
-    EntityDetailPlatformLoadingView(
-        link: EntityLink(entityID: EntityDetailPreviewFixture.detail.id, kind: .movie)
-    )
-}
+#if DEBUG
+    #Preview("TV Entity Detail Loading") {
+        EntityDetailPlatformLoadingView(
+            link: EntityLink(entityID: EntityDetailPreviewFixture.detail.id, kind: .movie)
+        )
+    }
+#endif
 #endif
