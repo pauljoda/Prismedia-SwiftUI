@@ -6,5 +6,7 @@ enum EntityAcquisitionCommand: Equatable, Sendable {
     case resume(UUID)
     case searchAgain(UUID)
     case searchForRelease(UUID)
+    case syncContainer(UUID)
+    case searchMissingChildren(UUID)
     case unmonitor(UUID)
 }

@@ -4,12 +4,14 @@ struct EntityAcquisitionPanelState: Sendable {
     private(set) var phase: EntityAcquisitionPanelPhase = .loading
     private(set) var isMutating = false
     private(set) var mutationError: String?
+    private(set) var refreshError: String?
 
     mutating func finishLoad(_ outcome: EntityAcquisitionLoadOutcome) {
         switch outcome {
         case .content(let snapshot):
             let nextPhase = EntityAcquisitionPanelPhase.content(snapshot)
             if phase != nextPhase { phase = nextPhase }
+            refreshError = nil
         case .failure(let message):
             let nextPhase = EntityAcquisitionPanelPhase.failure(message)
             if phase != nextPhase { phase = nextPhase }
@@ -25,6 +27,7 @@ struct EntityAcquisitionPanelState: Sendable {
         case .content(let snapshot):
             let nextPhase = EntityAcquisitionPanelPhase.content(snapshot)
             if phase != nextPhase { phase = nextPhase }
+            refreshError = nil
         case .failure(let message):
             if case .content = phase { return }
             let nextPhase = EntityAcquisitionPanelPhase.failure(message)
@@ -48,6 +51,8 @@ struct EntityAcquisitionPanelState: Sendable {
         switch outcome {
         case .completed(let entityPruned):
             return entityPruned ? .entityPruned : .refresh
+        case .missingChildrenSearchCompleted:
+            return .refresh
         case .failure(let message):
             mutationError = message
             return .none
@@ -58,5 +63,25 @@ struct EntityAcquisitionPanelState: Sendable {
 
     mutating func dismissMutationError() {
         mutationError = nil
+    }
+
+    @discardableResult
+    mutating func finishMutationRefresh(_ outcome: EntityAcquisitionLoadOutcome) -> Bool {
+        switch outcome {
+        case .content(let snapshot):
+            let nextPhase = EntityAcquisitionPanelPhase.content(snapshot)
+            if phase != nextPhase { phase = nextPhase }
+            refreshError = nil
+            return true
+        case .failure(let message):
+            refreshError = message
+            return false
+        case .cancelled:
+            return false
+        }
+    }
+
+    mutating func dismissRefreshError() {
+        refreshError = nil
     }
 }

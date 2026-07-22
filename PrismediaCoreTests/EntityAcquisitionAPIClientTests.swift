@@ -25,6 +25,24 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
         XCTAssertEqual(body["entityIds"] as? [String], [entityID.uuidString])
     }
 
+    func testFetchMonitorStatesPostsAllBoundedEntityIDs() async throws {
+        let secondID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        let secondState = monitorStateJSON.replacingOccurrences(
+            of: entityID.uuidString,
+            with: secondID.uuidString
+        )
+        let response = "[\(monitorStateJSON.dropFirst().dropLast()),\(secondState.dropFirst().dropLast())]"
+        let loader = MockHTTPDataLoader(responses: [.json(response)])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let states = try await client.fetchEntityMonitorStates(entityIDs: [entityID, secondID])
+
+        XCTAssertEqual(states.map(\.entityID), [entityID, secondID])
+        let request = try XCTUnwrap(loader.requests.first)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
+        XCTAssertEqual(body["entityIds"] as? [String], [entityID.uuidString, secondID.uuidString])
+    }
+
     func testStartMonitorPostsEntityIDWithoutNarrowingPreset() async throws {
         let loader = MockHTTPDataLoader(responses: [.json(monitorJSON)])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
@@ -73,6 +91,30 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/api/monitors/\(monitorID.uuidString.lowercased())")
         XCTAssertEqual(request.httpMethod, "DELETE")
+    }
+
+    func testGroupingActionsUseWebParityEndpoints() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json("", statusCode: 204),
+            .json(#"{"covered":3,"missing":2}"#),
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        try await client.syncEntityContainer(entityID: entityID)
+        let result = try await client.commitMissingChildren(entityID: entityID)
+
+        XCTAssertEqual(result, EntityMissingChildrenSearchResponse(covered: 3, missing: 2))
+        XCTAssertEqual(
+            loader.requests.map { $0.url?.path },
+            ["/api/requests/sync-container", "/api/requests/commit-missing-children"]
+        )
+        for request in loader.requests {
+            XCTAssertEqual(request.httpMethod, "POST")
+            let body = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+            )
+            XCTAssertEqual(body["entityId"] as? String, entityID.uuidString)
+        }
     }
 
     private var monitorStateJSON: String {

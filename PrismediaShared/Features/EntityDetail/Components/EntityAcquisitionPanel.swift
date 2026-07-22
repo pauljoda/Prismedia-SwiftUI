@@ -9,7 +9,12 @@ struct EntityAcquisitionPanel: View {
     @State private var confirmsUnmonitor = false
     @State private var historyEntries: [RequestActivityHistoryEntry] = []
     @State private var pendingMonitorValue: Bool?
+    @State private var confirmedMonitorValue: Bool?
+    @State private var failedCommand: EntityAcquisitionCommand?
+    @State private var failedPendingMonitorValue: Bool?
+    @State private var actionNotice: String?
     private let entityID: UUID
+    private let childGroups: [EntityGroup]
     private let service: EntityAcquisitionService?
     private let requestActivityService: (any RequestActivityServicing)?
     private let onMutated: @MainActor () async -> Void
@@ -17,12 +22,14 @@ struct EntityAcquisitionPanel: View {
 
     init(
         entityID: UUID,
+        childGroups: [EntityGroup] = [],
         acquisitionService: (any EntityAcquisitionServicing)?,
         requestActivityService: (any RequestActivityServicing)? = nil,
         onMutated: @escaping @MainActor () async -> Void,
         onEntityPruned: @escaping @MainActor () -> Void
     ) {
         self.entityID = entityID
+        self.childGroups = childGroups
         service = acquisitionService.map(EntityAcquisitionService.init(port:))
         self.requestActivityService = requestActivityService
         self.onMutated = onMutated
@@ -34,10 +41,14 @@ struct EntityAcquisitionPanel: View {
             if let service {
                 switch state.phase {
                 case .loading:
-                    ProgressView("Loading acquisition status…")
-                        .frame(maxWidth: .infinity, minHeight: 150)
+                    monitorSurface(monitorState: nil, snapshot: nil, service: service)
                 case .failure(let message):
-                    failureView(message, service: service)
+                    monitorSurface(
+                        monitorState: nil,
+                        snapshot: nil,
+                        service: service,
+                        loadError: message
+                    )
                 case .content(let snapshot):
                     contentView(snapshot, service: service)
                 }
@@ -78,11 +89,6 @@ struct EntityAcquisitionPanel: View {
                 "This removes its acquisition and downloads. A fileless wanted placeholder may also be removed from the library."
             )
         }
-        .alert("Couldn’t Update Acquisition", isPresented: mutationErrorPresented) {
-            Button("OK", role: .cancel) { state.dismissMutationError() }
-        } message: {
-            Text(state.mutationError ?? "Please try again.")
-        }
         .accessibilityIdentifier("entity-detail.acquisition")
     }
 
@@ -95,31 +101,54 @@ struct EntityAcquisitionPanel: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func failureView(
-        _ message: String,
-        service: EntityAcquisitionService
-    ) -> some View {
-        ContentUnavailableView {
-            Label("Couldn’t Load Acquisition", systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(message)
-        } actions: {
-            PrismediaButton("Try Again", variant: .prominent) {
-                Task { await load(using: service) }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     @ViewBuilder
     private func contentView(
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-            monitorToggle(snapshot.state, service: service)
+        monitorSurface(
+            monitorState: snapshot.state,
+            snapshot: snapshot,
+            service: service
+        )
+    }
 
-            if displayedMonitorValue(snapshot.state) {
+    private func monitorSurface(
+        monitorState: EntityMonitorState?,
+        snapshot: EntityAcquisitionPanelSnapshot?,
+        service: EntityAcquisitionService,
+        loadError: String? = nil
+    ) -> some View {
+        let presentation = EntityMonitorPresentation(
+            state: monitorState,
+            isMutating: state.isMutating,
+            pendingValue: pendingMonitorValue,
+            confirmedValue: confirmedMonitorValue
+        )
+
+        return VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+            EntityMonitorControl(
+                monitorState: monitorState,
+                presentation: presentation,
+                primaryAccent: artworkPrimaryAccent,
+                onChange: { nextValue in
+                    guard let monitorState else { return }
+                    updateMonitor(
+                        to: nextValue,
+                        monitorState: monitorState,
+                        service: service
+                    )
+                }
+            )
+
+            messageContent(
+                presentation: presentation,
+                monitorState: monitorState,
+                service: service,
+                loadError: loadError
+            )
+
+            if presentation.showsExpandedContent, let snapshot {
                 expandedContent(snapshot, service: service)
             }
         }
@@ -129,11 +158,94 @@ struct EntityAcquisitionPanel: View {
     }
 
     @ViewBuilder
+    private func messageContent(
+        presentation: EntityMonitorPresentation,
+        monitorState: EntityMonitorState?,
+        service: EntityAcquisitionService,
+        loadError: String?
+    ) -> some View {
+        if let loadError {
+            EntityAcquisitionMessageCard(
+                title: "Couldn’t Load Monitoring",
+                message: loadError,
+                retryTitle: "Try Again",
+                onRetry: { Task { await load(using: service) } }
+            )
+        }
+
+        if presentation.canRetryCleanup,
+            let monitorID = monitorState?.monitor?.id
+        {
+            EntityAcquisitionMessageCard(
+                title: "Cleanup Needs Attention",
+                message: "Monitoring is off, but server cleanup has not finished.",
+                isWarning: true,
+                retryTitle: "Finish Unmonitoring",
+                onRetry: {
+                    Task {
+                        await performMonitorMutation(
+                            .unmonitor(monitorID),
+                            pendingValue: false,
+                            using: service
+                        )
+                    }
+                }
+            )
+        }
+
+        if let mutationError = state.mutationError {
+            EntityAcquisitionMessageCard(
+                title: "Couldn’t Update Monitoring",
+                message: mutationError,
+                retryTitle: failedCommand == nil ? nil : "Retry",
+                onRetry: failedCommand.map { command in
+                    {
+                        Task {
+                            await performCommand(
+                                command,
+                                pendingMonitorValue: failedPendingMonitorValue,
+                                using: service
+                            )
+                        }
+                    }
+                },
+                onDismiss: {
+                    state.dismissMutationError()
+                    failedCommand = nil
+                    failedPendingMonitorValue = nil
+                }
+            )
+        }
+
+        if let refreshError = state.refreshError {
+            EntityAcquisitionMessageCard(
+                title: "Monitoring Updated",
+                message: "The change was saved, but this page couldn’t refresh. \(refreshError)",
+                isWarning: true,
+                retryTitle: "Refresh",
+                onRetry: { Task { await retryRefresh(using: service) } },
+                onDismiss: { state.dismissRefreshError() }
+            )
+        }
+
+        if let actionNotice {
+            EntityAcquisitionMessageCard(
+                title: "Search Started",
+                message: actionNotice,
+                isInformational: true,
+                onDismiss: { self.actionNotice = nil }
+            )
+        }
+    }
+
+    @ViewBuilder
     private func expandedContent(
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        guidanceContent(snapshot)
+        if snapshot.state.discoversChildren {
+            groupingContent(snapshot.state, service: service)
+        }
 
         if hasPanelActions(snapshot) {
             actionContent(snapshot, service: service)
@@ -157,8 +269,21 @@ struct EntityAcquisitionPanel: View {
                     }
                 )
                 .id(acquisition.summary.id)
-            } else {
+            } else if snapshot.state.latestAcquisition != nil {
                 fallbackContent(snapshot)
+            }
+
+            if snapshot.state.discoversChildren,
+                !monitoringChildren(for: snapshot.state).isEmpty
+            {
+                Divider()
+                EntityChildMonitoringSection(
+                    title: childMonitoringTitle(for: snapshot.state),
+                    entities: monitoringChildren(for: snapshot.state),
+                    primaryAccent: artworkPrimaryAccent,
+                    service: service,
+                    onChanged: onMutated
+                )
             }
 
             if !historyEntries.isEmpty {
@@ -168,6 +293,126 @@ struct EntityAcquisitionPanel: View {
         #else
             fallbackContent(snapshot)
         #endif
+    }
+
+    private func groupingContent(
+        _ monitorState: EntityMonitorState,
+        service: EntityAcquisitionService
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+            Divider()
+            if let monitor = monitorState.monitor {
+                LabeledContent("Monitoring Scope", value: scopeLabel(monitor.preset))
+                    .foregroundStyle(PrismediaColor.textPrimary)
+            }
+
+            GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                VStack(spacing: PrismediaSpacing.small) {
+                    groupingButtons(monitorState, service: service)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity)
+            .prismediaCompactActionControlSize()
+            .disabled(state.isMutating)
+        }
+    }
+
+    @ViewBuilder
+    private func groupingButtons(
+        _ monitorState: EntityMonitorState,
+        service: EntityAcquisitionService
+    ) -> some View {
+        Button {
+            Task { await perform(.syncContainer(entityID), using: service) }
+        } label: {
+            Label("Check for New Content Now", systemImage: "arrow.clockwise")
+                .font(.headline.weight(.semibold))
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: fullWidthActionMinimumHeight
+                )
+        }
+        .buttonStyle(.glass)
+        .buttonBorderShape(fullWidthActionBorderShape)
+        .frame(maxWidth: .infinity)
+
+        if monitorState.canSearchMissingChildren {
+            Button {
+                Task { await perform(.searchMissingChildren(entityID), using: service) }
+            } label: {
+                if missingChildCount(for: monitorState) > 0 {
+                    Label {
+                        Text("Search \(missingChildCount(for: monitorState)) Missing")
+                    } icon: {
+                        Image(systemName: "magnifyingglass")
+                    }
+                    .font(.headline.weight(.semibold))
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: fullWidthActionMinimumHeight
+                    )
+                } else {
+                    Label("Search for Missing Content", systemImage: "magnifyingglass")
+                        .font(.headline.weight(.semibold))
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: fullWidthActionMinimumHeight
+                        )
+                }
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(fullWidthActionBorderShape)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var fullWidthActionBorderShape: ButtonBorderShape {
+        #if os(macOS)
+            .roundedRectangle(radius: PrismediaRadius.compact)
+        #else
+            .capsule
+        #endif
+    }
+
+    private var fullWidthActionMinimumHeight: CGFloat {
+        #if os(macOS)
+            28
+        #else
+            44
+        #endif
+    }
+
+    private func monitoringChildren(
+        for monitorState: EntityMonitorState
+    ) -> [EntityThumbnail] {
+        guard let kind = monitorState.missingChildEntityKind else {
+            return childGroups.flatMap(\.entities)
+        }
+        return childGroups.first(where: { $0.kind == kind })?.entities ?? []
+    }
+
+    private func childMonitoringTitle(for monitorState: EntityMonitorState) -> String {
+        guard let childKind = monitorState.missingChildEntityKind else {
+            return "Child Monitoring"
+        }
+        if monitorState.monitor?.kind == .videoSeason, childKind == .video {
+            return "Episode Monitoring"
+        }
+        return "\(childKind.displayLabel) Monitoring"
+    }
+
+    private func missingChildCount(for monitorState: EntityMonitorState) -> Int {
+        guard let kind = monitorState.missingChildEntityKind else { return 0 }
+        return monitoringChildren(for: monitorState).filter {
+            $0.kind == kind && $0.isWanted && $0.wantedStatus == nil
+        }.count
+    }
+
+    private func scopeLabel(_ preset: String) -> String {
+        preset == "all"
+            ? "All current and future"
+            : preset.replacingOccurrences(of: "-", with: " ").capitalized
     }
 
     // MARK: - Actions
@@ -226,37 +471,18 @@ struct EntityAcquisitionPanel: View {
         }
     }
 
-    private func monitorToggle(
-        _ monitorState: EntityMonitorState,
-        service: EntityAcquisitionService
-    ) -> some View {
-        Toggle(
-            "Monitor",
-            isOn: Binding(
-                get: { displayedMonitorValue(monitorState) },
-                set: { nextValue in
-                    updateMonitor(
-                        to: nextValue,
-                        monitorState: monitorState,
-                        service: service
-                    )
-                }
-            )
-        )
-        .disabled(state.isMutating || monitorToggleIsLocked(monitorState))
-        .accessibilityHint(
-            displayedMonitorValue(monitorState)
-                ? "Turns off monitoring after confirmation"
-                : "Turns on monitoring for this item"
-        )
-    }
-
     private func updateMonitor(
         to nextValue: Bool,
         monitorState: EntityMonitorState,
         service: EntityAcquisitionService
     ) {
-        guard nextValue != displayedMonitorValue(monitorState) else { return }
+        let presentation = EntityMonitorPresentation(
+            state: monitorState,
+            isMutating: state.isMutating,
+            pendingValue: pendingMonitorValue,
+            confirmedValue: confirmedMonitorValue
+        )
+        guard nextValue != presentation.isOn else { return }
 
         if nextValue {
             let command =
@@ -274,66 +500,7 @@ struct EntityAcquisitionPanel: View {
         }
     }
 
-    private func displayedMonitorValue(_ monitorState: EntityMonitorState) -> Bool {
-        guard let status = monitorState.monitor?.status else {
-            return pendingMonitorValue ?? false
-        }
-        return pendingMonitorValue ?? (status == .active || status == .deletingFiles)
-    }
-
-    private func monitorToggleIsLocked(_ monitorState: EntityMonitorState) -> Bool {
-        guard let monitor = monitorState.monitor else { return !monitorState.canMonitor }
-        return isMonitorTransitionLocked(monitor.status)
-    }
-
-    // MARK: - Guidance lines
-
-    @ViewBuilder
-    private func guidanceContent(_ snapshot: EntityAcquisitionPanelSnapshot) -> some View {
-        let monitorState = snapshot.state
-        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            if showsMonitorControl(monitorState), !monitorState.trackableProviders.isEmpty {
-                Text(trackedViaLine(monitorState))
-                    .font(.caption)
-                    .foregroundStyle(artworkSecondaryText)
-            } else if monitorState.monitor == nil, !monitorState.canMonitor,
-                monitorState.trackableProviders.isEmpty
-            {
-                Text(
-                    "No enabled metadata provider can track this entity yet. Identify it with a supported provider first."
-                )
-                .font(.caption)
-                .foregroundStyle(artworkSecondaryText)
-            }
-
-            if showsSearchForRelease(snapshot) {
-                Text("No file yet. Searching starts an auto-grabbing, monitored acquisition for this item.")
-                    .font(.caption)
-                    .foregroundStyle(artworkSecondaryText)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func trackedViaLine(_ monitorState: EntityMonitorState) -> String {
-        let via = monitorState.trackableProviders.joined(separator: ", ")
-        if monitorState.monitor?.status == .deletingFiles {
-            return "Tracking stays enabled via \(via) while files are deleted."
-        }
-        if monitorState.monitor?.status == .active {
-            if monitorState.discoversChildren {
-                return "Checked daily for new works via \(via)."
-            }
-            return "Tracked via \(via)."
-        }
-        return "Tracking is available via \(via)."
-    }
-
     // MARK: - Gates
-
-    private func showsMonitorControl(_ monitorState: EntityMonitorState) -> Bool {
-        monitorState.monitor != nil || monitorState.canMonitor
-    }
 
     private func hasPanelActions(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
         showsSearchForRelease(snapshot)
@@ -357,19 +524,15 @@ struct EntityAcquisitionPanel: View {
         #endif
     }
 
-    private func isUnknownMonitorStatus(_ status: EntityMonitorStatus) -> Bool {
-        ![.active, .paused, .fulfilled, .deletingFiles, .stopping].contains(status)
-    }
-
     private func isMonitorTransitionLocked(_ status: EntityMonitorStatus) -> Bool {
-        status == .stopping || status == .deletingFiles || isUnknownMonitorStatus(status)
+        ![.active, .paused, .fulfilled].contains(status)
     }
 
     // MARK: - Fallback summary (tvOS and missing request-activity service)
 
     @ViewBuilder
     private func fallbackContent(_ snapshot: EntityAcquisitionPanelSnapshot) -> some View {
-        if snapshot.state.monitor != nil || snapshot.state.latestAcquisition != nil {
+        if snapshot.state.latestAcquisition != nil {
             Divider()
             summaryFallback(snapshot)
         }
@@ -377,22 +540,8 @@ struct EntityAcquisitionPanel: View {
 
     @ViewBuilder
     private func summaryFallback(_ snapshot: EntityAcquisitionPanelSnapshot) -> some View {
-        if let monitor = snapshot.state.monitor {
-            monitorContent(monitor)
-        }
         if let acquisition = snapshot.state.latestAcquisition {
             acquisitionContent(acquisition)
-        }
-    }
-
-    private func monitorContent(_ monitor: EntityMonitor) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            Text("Monitor")
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-            LabeledContent("Status", value: monitor.status.displayName)
-            LabeledContent("Preset", value: monitor.preset.displayName)
-            LabeledContent("Updated", value: monitor.updatedAt.formatted(date: .abbreviated, time: .shortened))
         }
     }
 
@@ -428,12 +577,14 @@ struct EntityAcquisitionPanel: View {
     private func load(using service: EntityAcquisitionService) async {
         let outcome = await service.load(entityID: entityID)
         state.finishLoad(outcome)
+        if case .content = outcome { confirmedMonitorValue = nil }
         await loadHistory()
     }
 
     private func backgroundLoad(using service: EntityAcquisitionService) async {
         let outcome = await service.load(entityID: entityID)
         state.finishBackgroundLoad(outcome)
+        if case .content = outcome { confirmedMonitorValue = nil }
         await loadHistory()
     }
 
@@ -491,16 +642,43 @@ struct EntityAcquisitionPanel: View {
         _ command: EntityAcquisitionCommand,
         using service: EntityAcquisitionService
     ) async {
+        await performCommand(command, pendingMonitorValue: nil, using: service)
+    }
+
+    private func performCommand(
+        _ command: EntityAcquisitionCommand,
+        pendingMonitorValue nextMonitorValue: Bool?,
+        using service: EntityAcquisitionService
+    ) async {
         guard state.beginMutation() else { return }
+        failedCommand = nil
+        failedPendingMonitorValue = nil
+        pendingMonitorValue = nextMonitorValue
         let outcome = await service.perform(command)
+
+        if case .missingChildrenSearchCompleted(let result) = outcome {
+            actionNotice = missingChildrenResultMessage(result)
+        }
+
         switch state.finishMutation(outcome) {
         case .entityPruned:
+            pendingMonitorValue = nil
             onEntityPruned()
         case .refresh:
-            await load(using: service)
+            if let nextMonitorValue { confirmedMonitorValue = nextMonitorValue }
+            pendingMonitorValue = nil
+            let refreshOutcome = await service.load(entityID: entityID)
+            if state.finishMutationRefresh(refreshOutcome) {
+                confirmedMonitorValue = nil
+            }
+            await loadHistory()
             await onMutated()
         case .none:
-            break
+            pendingMonitorValue = nil
+            if case .failure = outcome {
+                failedCommand = command
+                failedPendingMonitorValue = nextMonitorValue
+            }
         }
     }
 
@@ -509,36 +687,35 @@ struct EntityAcquisitionPanel: View {
         pendingValue: Bool,
         using service: EntityAcquisitionService
     ) async {
-        pendingMonitorValue = pendingValue
-        await perform(command, using: service)
-        pendingMonitorValue = nil
-    }
-
-    private var mutationErrorPresented: Binding<Bool> {
-        Binding(
-            get: { state.mutationError != nil },
-            set: { isPresented in
-                if !isPresented { state.dismissMutationError() }
-            }
+        await performCommand(
+            command,
+            pendingMonitorValue: pendingValue,
+            using: service
         )
     }
-}
 
-extension EntityMonitorStatus {
-    fileprivate var displayName: String {
-        rawValue.replacingOccurrences(of: "-", with: " ").capitalized
+    private func retryRefresh(using service: EntityAcquisitionService) async {
+        let outcome = await service.load(entityID: entityID)
+        if state.finishMutationRefresh(outcome) {
+            confirmedMonitorValue = nil
+            await loadHistory()
+            await onMutated()
+        }
+    }
+
+    private func missingChildrenResultMessage(
+        _ result: EntityMissingChildrenSearchResponse
+    ) -> String {
+        if result.missing == 0 {
+            return "Searches were queued for \(result.covered) missing items."
+        }
+        return "Searches were queued for \(result.covered) items; \(result.missing) could not be searched yet."
     }
 }
 
 extension AcquisitionStatus {
     fileprivate var displayName: String {
         rawValue.replacingOccurrences(of: "-", with: " ").capitalized
-    }
-}
-
-extension String {
-    fileprivate var displayName: String {
-        replacingOccurrences(of: "-", with: " ").capitalized
     }
 }
 
@@ -589,6 +766,71 @@ extension String {
             onEntityPruned: {}
         )
         .padding()
+    }
+
+    #Preview("Entity Acquisition · Active Group") {
+        ScrollView {
+            EntityAcquisitionPanel(
+                entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+                childGroups: [EntityAcquisitionPanelPreviewFixtures.childGroup],
+                acquisitionService: PreviewEntityAcquisitionService(
+                    snapshot: EntityAcquisitionPanelPreviewFixtures.groupingState,
+                    additionalSnapshots: EntityAcquisitionPanelPreviewFixtures.childStates
+                ),
+                onMutated: {},
+                onEntityPruned: {}
+            )
+            .padding()
+        }
+    }
+
+    #Preview("Entity Acquisition · Paused") {
+        EntityAcquisitionPanel(
+            entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+            acquisitionService: PreviewEntityAcquisitionService(
+                snapshot: EntityAcquisitionPanelPreviewFixtures.pausedState
+            ),
+            onMutated: {},
+            onEntityPruned: {}
+        )
+        .padding()
+    }
+
+    #Preview("Entity Acquisition · Unavailable") {
+        EntityAcquisitionPanel(
+            entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+            acquisitionService: PreviewEntityAcquisitionService(
+                snapshot: EntityAcquisitionPanelPreviewFixtures.unavailableState
+            ),
+            onMutated: {},
+            onEntityPruned: {}
+        )
+        .padding()
+    }
+
+    #Preview("Entity Acquisition · Stopping") {
+        EntityAcquisitionPanel(
+            entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+            acquisitionService: PreviewEntityAcquisitionService(
+                snapshot: EntityAcquisitionPanelPreviewFixtures.stoppingState
+            ),
+            onMutated: {},
+            onEntityPruned: {}
+        )
+        .padding()
+    }
+
+    #Preview("Entity Acquisition · Unknown") {
+        EntityAcquisitionPanel(
+            entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+            acquisitionService: PreviewEntityAcquisitionService(
+                snapshot: EntityAcquisitionPanelPreviewFixtures.unknownState
+            ),
+            onMutated: {},
+            onEntityPruned: {}
+        )
+        .padding()
+        .environment(\.dynamicTypeSize, .accessibility3)
     }
 
     #Preview("Entity Acquisition · Error") {

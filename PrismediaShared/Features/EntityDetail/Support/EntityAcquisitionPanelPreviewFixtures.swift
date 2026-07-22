@@ -51,6 +51,76 @@ import Foundation
             )
         }
 
+        static var groupingState: EntityMonitorState {
+            monitorState(
+                entityID: entityID,
+                status: .active,
+                kind: .videoSeason,
+                title: "Season 15",
+                discoversChildren: true,
+                canSearchMissingChildren: true,
+                missingChildEntityKind: .video
+            )
+        }
+
+        static var pausedState: EntityMonitorState {
+            monitorState(entityID: entityID, status: .paused)
+        }
+
+        static var unavailableState: EntityMonitorState {
+            EntityMonitorState(
+                entityID: entityID,
+                canMonitor: false,
+                canRequest: false,
+                trackableProviders: [],
+                discoversChildren: false,
+                canSearchMissingChildren: false,
+                missingChildEntityKind: nil,
+                monitor: nil,
+                latestAcquisition: nil
+            )
+        }
+
+        static var stoppingState: EntityMonitorState {
+            monitorState(entityID: entityID, status: .stopping)
+        }
+
+        static var unknownState: EntityMonitorState {
+            monitorState(
+                entityID: entityID,
+                status: EntityMonitorStatus(rawValue: "future-state")
+            )
+        }
+
+        static var childGroup: EntityGroup {
+            EntityGroup(
+                kind: .video,
+                label: "Episodes",
+                entities: [
+                    EntityThumbnail(
+                        id: childOneID,
+                        kind: .video,
+                        title: "Failure to Hard Launch",
+                        isWanted: true
+                    ),
+                    EntityThumbnail(
+                        id: childTwoID,
+                        kind: .video,
+                        title: "The Maharelle Sisters",
+                        isWanted: true
+                    ),
+                ],
+                code: "episodes"
+            )
+        }
+
+        static var childStates: [UUID: EntityMonitorState] {
+            [
+                childOneID: monitorState(entityID: childOneID, status: .active),
+                childTwoID: monitorState(entityID: childTwoID, status: .paused),
+            ]
+        }
+
         static var downloadingDetail: RequestActivityAcquisitionDetail {
             detail(status: "downloading", statusMessage: "Fetching release")
         }
@@ -78,6 +148,43 @@ import Foundation
                 updatedAt: referenceDate,
                 entityID: entityID,
                 preset: "all"
+            )
+        }
+
+        private static let childOneID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        private static let childTwoID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
+
+        private static func monitorState(
+            entityID: UUID,
+            status: EntityMonitorStatus,
+            kind: EntityKind = .book,
+            title: String = "Dune",
+            discoversChildren: Bool = false,
+            canSearchMissingChildren: Bool = false,
+            missingChildEntityKind: EntityKind? = nil
+        ) -> EntityMonitorState {
+            EntityMonitorState(
+                entityID: entityID,
+                canMonitor: true,
+                canRequest: true,
+                trackableProviders: [discoversChildren ? "TMDB" : "Open Library"],
+                discoversChildren: discoversChildren,
+                canSearchMissingChildren: canSearchMissingChildren,
+                missingChildEntityKind: missingChildEntityKind,
+                monitor: EntityMonitor(
+                    id: monitorID,
+                    kind: kind,
+                    acquisitionID: nil,
+                    status: status,
+                    title: title,
+                    author: nil,
+                    acquisitionStatus: nil,
+                    createdAt: referenceDate,
+                    updatedAt: referenceDate,
+                    entityID: entityID,
+                    preset: "all"
+                ),
+                latestAcquisition: nil
             )
         }
 

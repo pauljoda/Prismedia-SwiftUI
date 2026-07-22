@@ -50,6 +50,7 @@ struct EntityDetailSectionPanel: View {
             case .acquisition:
                 EntityAcquisitionPanel(
                     entityID: presentation.detail.id,
+                    childGroups: presentation.detail.childrenByKind,
                     acquisitionService: acquisitionService,
                     requestActivityService: requestActivityService,
                     onMutated: onAcquisitionMutated,

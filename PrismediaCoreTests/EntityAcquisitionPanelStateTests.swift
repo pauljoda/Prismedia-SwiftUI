@@ -27,6 +27,33 @@ final class EntityAcquisitionPanelStateTests: XCTestCase {
         )
     }
 
+    func testFailedRefreshAfterSuccessfulMutationKeepsConfirmedContent() {
+        var state = EntityAcquisitionPanelState()
+        state.finishLoad(.content(snapshot))
+
+        XCTAssertTrue(state.beginMutation())
+        XCTAssertEqual(
+            state.finishMutation(.completed(entityPruned: false)),
+            .refresh
+        )
+
+        XCTAssertFalse(
+            state.finishMutationRefresh(.failure("The server is unavailable."))
+        )
+        XCTAssertEqual(state.phase, .content(snapshot))
+        XCTAssertEqual(state.refreshError, "The server is unavailable.")
+    }
+
+    func testSuccessfulRefreshClearsRefreshWarning() {
+        var state = EntityAcquisitionPanelState()
+        state.finishLoad(.content(snapshot))
+        _ = state.finishMutationRefresh(.failure("The server is unavailable."))
+
+        XCTAssertTrue(state.finishMutationRefresh(.content(snapshot)))
+        XCTAssertNil(state.refreshError)
+        XCTAssertEqual(state.phase, .content(snapshot))
+    }
+
     private var snapshot: EntityAcquisitionPanelSnapshot {
         EntityAcquisitionPanelSnapshot(
             state: EntityMonitorState(

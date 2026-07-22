@@ -28,9 +28,9 @@ struct EntityAcquisitionService {
 
     func perform(_ command: EntityAcquisitionCommand) async -> EntityAcquisitionMutationOutcome {
         do {
-            let entityPruned = try await execute(command)
+            let outcome = try await execute(command)
             guard !Task.isCancelled else { return .cancelled }
-            return .completed(entityPruned: entityPruned)
+            return outcome
         } catch is CancellationError {
             return .cancelled
         } catch {
@@ -39,7 +39,13 @@ struct EntityAcquisitionService {
         }
     }
 
-    private func execute(_ command: EntityAcquisitionCommand) async throws -> Bool {
+    func loadStates(entityIDs: [UUID]) async throws -> [EntityMonitorState] {
+        try await port.loadStates(entityIDs: entityIDs)
+    }
+
+    private func execute(
+        _ command: EntityAcquisitionCommand
+    ) async throws -> EntityAcquisitionMutationOutcome {
         switch command {
         case .start(let entityID):
             try await port.startMonitor(entityID: entityID)
@@ -51,9 +57,14 @@ struct EntityAcquisitionService {
             try await port.searchAgain(acquisitionID: acquisitionID)
         case .searchForRelease(let entityID):
             try await port.searchForRelease(entityID: entityID)
+        case .syncContainer(let entityID):
+            try await port.syncContainer(entityID: entityID)
+        case .searchMissingChildren(let entityID):
+            let result = try await port.searchMissingChildren(entityID: entityID)
+            return .missingChildrenSearchCompleted(result)
         case .unmonitor(let id):
-            return try await port.unmonitor(id: id)
+            return .completed(entityPruned: try await port.unmonitor(id: id))
         }
-        return false
+        return .completed(entityPruned: false)
     }
 }

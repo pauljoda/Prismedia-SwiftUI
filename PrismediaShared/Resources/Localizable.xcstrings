@@ -289,7 +289,13 @@
     "Actions" : {
 
     },
+    "Active" : {
+
+    },
     "Active %@" : {
+
+    },
+    "Actively monitoring this item." : {
 
     },
     "Activity" : {
@@ -451,6 +457,9 @@
     "Available Update" : {
 
     },
+    "Available via %@." : {
+
+    },
     "Back" : {
 
     },
@@ -569,6 +578,15 @@
     "Check your connection and try again." : {
 
     },
+    "Checking monitoring status…" : {
+
+    },
+    "Checks daily for new content via %@." : {
+
+    },
+    "Checks daily for new content." : {
+
+    },
     "Choose a different server" : {
 
     },
@@ -582,6 +600,12 @@
 
     },
     "Classification" : {
+
+    },
+    "Cleanup needs attention" : {
+
+    },
+    "Cleanup Needs Attention" : {
 
     },
     "Clear" : {
@@ -668,9 +692,6 @@
     "Couldn’t Load %@" : {
 
     },
-    "Couldn’t Load Acquisition" : {
-
-    },
     "Couldn’t Load Chapters" : {
 
     },
@@ -678,6 +699,9 @@
 
     },
     "Couldn’t Load Details" : {
+
+    },
+    "Couldn’t Load Monitoring" : {
 
     },
     "Couldn’t Load Reading Progress" : {
@@ -713,10 +737,10 @@
     "Couldn’t Start Playback" : {
 
     },
-    "Couldn’t Update Acquisition" : {
+    "Couldn’t Update Details" : {
 
     },
-    "Couldn’t Update Details" : {
+    "Couldn’t Update Monitoring" : {
 
     },
     "Create a collection first, then it will appear here." : {
@@ -801,6 +825,9 @@
 
     },
     "Delete User" : {
+
+    },
+    "Deleting files" : {
 
     },
     "Descending" : {
@@ -1020,6 +1047,9 @@
     "Filters, %lld active" : {
 
     },
+    "Finish Unmonitoring" : {
+
+    },
     "Finished" : {
 
     },
@@ -1045,6 +1075,12 @@
 
     },
     "Gentle" : {
+
+    },
+    "Goal fulfilled" : {
+
+    },
+    "Goal fulfilled. Turn Monitor on to watch for changes." : {
 
     },
     "Has references" : {
@@ -1221,9 +1257,6 @@
     "Loading acquisition settings…" : {
 
     },
-    "Loading acquisition status…" : {
-
-    },
     "Loading acquisition…" : {
 
     },
@@ -1267,6 +1300,9 @@
 
     },
     "Loading jobs…" : {
+
+    },
+    "Loading monitoring…" : {
 
     },
     "Loading more results" : {
@@ -1326,6 +1362,9 @@
     "Maintenance" : {
 
     },
+    "Manage all %lld items" : {
+
+    },
     "Margins" : {
 
     },
@@ -1371,10 +1410,34 @@
     "Monitor" : {
 
     },
-    "Monitoring" : {
+    "Monitor All" : {
 
     },
     "Monitoring and acquisition controls are managed by server administrators." : {
+
+    },
+    "Monitoring cannot be changed right now" : {
+
+    },
+    "Monitoring changed. Refreshing the latest status…" : {
+
+    },
+    "Monitoring is unavailable for this item." : {
+
+    },
+    "Monitoring returned an unfamiliar status. Changes are disabled for safety." : {
+
+    },
+    "Monitoring Scope" : {
+
+    },
+    "Monitoring stays on while files are being deleted." : {
+
+    },
+    "Monitoring Updated" : {
+
+    },
+    "Monitoring via %@." : {
 
     },
     "More" : {
@@ -1494,6 +1557,9 @@
     "No Candidates Found" : {
 
     },
+    "No child items can be monitored yet." : {
+
+    },
     "No Collections" : {
 
     },
@@ -1503,9 +1569,6 @@
     "No enabled library supports %@. Add one in Settings first." : {
 
     },
-    "No enabled metadata provider can track this entity yet. Identify it with a supported provider first." : {
-
-    },
     "No enabled provider supports %@." : {
 
     },
@@ -1513,9 +1576,6 @@
 
     },
     "No Favorites Yet" : {
-
-    },
-    "No file yet. Searching starts an auto-grabbing, monitored acquisition for this item." : {
 
     },
     "No files reported yet." : {
@@ -1597,6 +1657,9 @@
 
     },
     "Normalize Text Styles" : {
+
+    },
+    "Not monitored" : {
 
     },
     "Not organized" : {
@@ -1775,6 +1838,9 @@
     "Paused" : {
 
     },
+    "Paused. Turn Monitor on to resume." : {
+
+    },
     "PDF reader" : {
 
     },
@@ -1845,9 +1911,6 @@
 
     },
     "Preparing video…" : {
-
-    },
-    "Preset" : {
 
     },
     "Preset name" : {
@@ -2163,7 +2226,13 @@
     "Retention" : {
 
     },
+    "Retry" : {
+
+    },
     "Retry and Allow Format Change" : {
+
+    },
+    "Retry Cleanup" : {
 
     },
     "Retry Import" : {
@@ -2307,6 +2376,9 @@
     "Search Selected" : {
 
     },
+    "Search Started" : {
+
+    },
     "Search This Book" : {
 
     },
@@ -2445,9 +2517,6 @@
     "Shows file details and actions" : {
 
     },
-    "Shows monitoring options" : {
-
-    },
     "Shows playback and navigation actions" : {
 
     },
@@ -2485,6 +2554,9 @@
 
     },
     "Some Items Couldn’t Be Updated" : {
+
+    },
+    "Some Monitoring Changes Failed" : {
 
     },
     "Some providers could not be searched" : {
@@ -2550,10 +2622,13 @@
     "Stop %@" : {
 
     },
-    "Stop Monitoring" : {
+    "Stop monitoring this item?" : {
 
     },
-    "Stop monitoring this item?" : {
+    "Stopping and cleaning up files…" : {
+
+    },
+    "Stopping monitoring…" : {
 
     },
     "Storage" : {
@@ -2694,6 +2769,15 @@
     "Try Loading Collections Again" : {
 
     },
+    "Turning on monitoring…" : {
+
+    },
+    "Turns off monitoring after confirmation" : {
+
+    },
+    "Turns on monitoring for this item" : {
+
+    },
     "Two" : {
 
     },
@@ -2721,7 +2805,19 @@
     "Unable to Save" : {
 
     },
+    "Unavailable" : {
+
+    },
+    "Unavailable until this item is matched to a supported provider." : {
+
+    },
+    "Unknown status" : {
+
+    },
     "Unmonitor" : {
+
+    },
+    "Unmonitor All" : {
 
     },
     "Unmonitor Selected" : {
@@ -2755,9 +2851,6 @@
 
     },
     "Update to %@" : {
-
-    },
-    "Updated" : {
 
     },
     "Updates the selected episode" : {

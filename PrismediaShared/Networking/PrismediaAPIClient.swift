@@ -182,16 +182,21 @@ public struct PrismediaAPIClient: Sendable {
     }
 
     public func fetchEntityMonitorState(entityID: UUID) async throws -> EntityMonitorState {
-        let states = try await send(
-            [EntityMonitorState].self,
-            path: "/api/monitors/states",
-            method: "POST",
-            body: EntityMonitorStateRequest(entityIds: [entityID])
-        )
+        let states = try await fetchEntityMonitorStates(entityIDs: [entityID])
         guard let state = states.first(where: { $0.entityID == entityID }) else {
             throw PrismediaAPIError.invalidResponse
         }
         return state
+    }
+
+    public func fetchEntityMonitorStates(entityIDs: [UUID]) async throws -> [EntityMonitorState] {
+        guard !entityIDs.isEmpty else { return [] }
+        return try await send(
+            [EntityMonitorState].self,
+            path: "/api/monitors/states",
+            method: "POST",
+            body: EntityMonitorStateRequest(entityIds: entityIDs)
+        )
     }
 
     @discardableResult
@@ -230,6 +235,25 @@ public struct PrismediaAPIClient: Sendable {
             EntityMonitorStopResponse.self,
             path: "/api/monitors/\(id.uuidString.lowercased())",
             method: "DELETE"
+        )
+    }
+
+    public func syncEntityContainer(entityID: UUID) async throws {
+        try await sendExpectingNoContent(
+            path: "/api/requests/sync-container",
+            method: "POST",
+            body: EntityAcquisitionEntityRequest(entityId: entityID)
+        )
+    }
+
+    public func commitMissingChildren(
+        entityID: UUID
+    ) async throws -> EntityMissingChildrenSearchResponse {
+        try await send(
+            EntityMissingChildrenSearchResponse.self,
+            path: "/api/requests/commit-missing-children",
+            method: "POST",
+            body: EntityAcquisitionEntityRequest(entityId: entityID)
         )
     }
 
