@@ -8,6 +8,7 @@ struct EntityAcquisitionPanel: View {
     @State private var state = EntityAcquisitionPanelState()
     @State private var confirmsUnmonitor = false
     @State private var historyEntries: [RequestActivityHistoryEntry] = []
+    @State private var pendingMonitorValue: Bool?
     private let entityID: UUID
     private let service: EntityAcquisitionService?
     private let requestActivityService: (any RequestActivityServicing)?
@@ -63,7 +64,13 @@ struct EntityAcquisitionPanel: View {
                     let monitor = snapshot.state.monitor,
                     let service
                 else { return }
-                Task { await perform(.unmonitor(monitor.id), using: service) }
+                Task {
+                    await performMonitorMutation(
+                        .unmonitor(monitor.id),
+                        pendingValue: false,
+                        using: service
+                    )
+                }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -110,59 +117,57 @@ struct EntityAcquisitionPanel: View {
         service: EntityAcquisitionService
     ) -> some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-            panelHeader(snapshot, service: service)
+            monitorToggle(snapshot.state, service: service)
 
-            #if os(iOS) || os(macOS)
-                if let acquisition = snapshot.latestAcquisition, let requestActivityService {
-                    Divider()
-                    RequestActivityAcquisitionManagementSections(
-                        acquisitionID: acquisition.summary.id,
-                        service: requestActivityService,
-                        style: .embedded,
-                        onCancelled: { await load(using: service) },
-                        onImported: {
-                            await load(using: service)
-                            await onMutated()
-                        },
-                        onReset: {
-                            await load(using: service)
-                            await onMutated()
-                        }
-                    )
-                    .id(acquisition.summary.id)
-                } else {
-                    fallbackContent(snapshot)
-                }
-
-                if !historyEntries.isEmpty {
-                    Divider()
-                    EntityAcquisitionHistorySection(entries: historyEntries)
-                }
-            #else
-                fallbackContent(snapshot)
-            #endif
+            if displayedMonitorValue(snapshot.state) {
+                expandedContent(snapshot, service: service)
+            }
         }
         .padding(PrismediaSpacing.extraLarge)
         .prismediaCard()
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func panelHeader(
+    @ViewBuilder
+    private func expandedContent(
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-            Text("Acquisition")
-                .font(.title3.bold())
-                .foregroundStyle(PrismediaColor.textPrimary)
-                .accessibilityAddTraits(.isHeader)
+        guidanceContent(snapshot)
 
-            guidanceContent(snapshot)
-
-            if hasPanelActions(snapshot) {
-                actionContent(snapshot, service: service)
-            }
+        if hasPanelActions(snapshot) {
+            actionContent(snapshot, service: service)
         }
+
+        #if os(iOS) || os(macOS)
+            if let acquisition = snapshot.latestAcquisition, let requestActivityService {
+                Divider()
+                RequestActivityAcquisitionManagementSections(
+                    acquisitionID: acquisition.summary.id,
+                    service: requestActivityService,
+                    style: .embedded,
+                    onCancelled: { await load(using: service) },
+                    onImported: {
+                        await load(using: service)
+                        await onMutated()
+                    },
+                    onReset: {
+                        await load(using: service)
+                        await onMutated()
+                    }
+                )
+                .id(acquisition.summary.id)
+            } else {
+                fallbackContent(snapshot)
+            }
+
+            if !historyEntries.isEmpty {
+                Divider()
+                EntityAcquisitionHistorySection(entries: historyEntries)
+            }
+        #else
+            fallbackContent(snapshot)
+        #endif
     }
 
     // MARK: - Actions
@@ -203,14 +208,6 @@ struct EntityAcquisitionPanel: View {
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        if let monitor = snapshot.state.monitor {
-            monitorToggle(monitor, service: service)
-        } else if snapshot.state.canMonitor {
-            PrismediaButton("Monitor", systemImage: "bell") {
-                Task { await perform(.start(entityID), using: service) }
-            }
-        }
-
         if showsSearchForRelease(snapshot) {
             PrismediaButton(
                 "Search for release",
@@ -229,39 +226,64 @@ struct EntityAcquisitionPanel: View {
         }
     }
 
-    @ViewBuilder
     private func monitorToggle(
-        _ monitor: EntityMonitor,
+        _ monitorState: EntityMonitorState,
         service: EntityAcquisitionService
     ) -> some View {
-        if monitor.status == .stopping {
-            PrismediaButton(
-                "Finish unmonitoring",
-                systemImage: "arrow.clockwise"
-            ) {
-                Task { await perform(.unmonitor(monitor.id), using: service) }
-            }
-        } else if monitor.status == .deletingFiles {
-            PrismediaButton("Deleting files…", systemImage: "trash") {}
-                .disabled(true)
-        } else if isUnknownMonitorStatus(monitor.status) {
-            PrismediaButton("Updating…", systemImage: "arrow.clockwise") {}
-                .disabled(true)
-        } else if monitor.status == .active {
-            Menu {
-                Button("Stop Monitoring", systemImage: "bell.slash", role: .destructive) {
-                    confirmsUnmonitor = true
+        Toggle(
+            "Monitor",
+            isOn: Binding(
+                get: { displayedMonitorValue(monitorState) },
+                set: { nextValue in
+                    updateMonitor(
+                        to: nextValue,
+                        monitorState: monitorState,
+                        service: service
+                    )
                 }
-            } label: {
-                Label("Monitoring", systemImage: "bell.and.waves.left.and.right")
+            )
+        )
+        .disabled(state.isMutating || monitorToggleIsLocked(monitorState))
+        .accessibilityHint(
+            displayedMonitorValue(monitorState)
+                ? "Turns off monitoring after confirmation"
+                : "Turns on monitoring for this item"
+        )
+    }
+
+    private func updateMonitor(
+        to nextValue: Bool,
+        monitorState: EntityMonitorState,
+        service: EntityAcquisitionService
+    ) {
+        guard nextValue != displayedMonitorValue(monitorState) else { return }
+
+        if nextValue {
+            let command =
+                monitorState.monitor.map { EntityAcquisitionCommand.resume($0.id) }
+                ?? .start(entityID)
+            Task {
+                await performMonitorMutation(
+                    command,
+                    pendingValue: true,
+                    using: service
+                )
             }
-            .buttonStyle(.glass)
-            .accessibilityHint("Shows monitoring options")
         } else {
-            PrismediaButton("Resume monitoring", systemImage: "bell") {
-                Task { await perform(.resume(monitor.id), using: service) }
-            }
+            confirmsUnmonitor = true
         }
+    }
+
+    private func displayedMonitorValue(_ monitorState: EntityMonitorState) -> Bool {
+        guard let status = monitorState.monitor?.status else {
+            return pendingMonitorValue ?? false
+        }
+        return pendingMonitorValue ?? (status == .active || status == .deletingFiles)
+    }
+
+    private func monitorToggleIsLocked(_ monitorState: EntityMonitorState) -> Bool {
+        guard let monitor = monitorState.monitor else { return !monitorState.canMonitor }
+        return isMonitorTransitionLocked(monitor.status)
     }
 
     // MARK: - Guidance lines
@@ -314,8 +336,7 @@ struct EntityAcquisitionPanel: View {
     }
 
     private func hasPanelActions(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
-        showsMonitorControl(snapshot.state)
-            || showsSearchForRelease(snapshot)
+        showsSearchForRelease(snapshot)
             || (!embedsManagement(snapshot) && snapshot.state.latestAcquisition != nil)
     }
 
@@ -481,6 +502,16 @@ struct EntityAcquisitionPanel: View {
         case .none:
             break
         }
+    }
+
+    private func performMonitorMutation(
+        _ command: EntityAcquisitionCommand,
+        pendingValue: Bool,
+        using service: EntityAcquisitionService
+    ) async {
+        pendingMonitorValue = pendingValue
+        await perform(command, using: service)
+        pendingMonitorValue = nil
     }
 
     private var mutationErrorPresented: Binding<Bool> {
