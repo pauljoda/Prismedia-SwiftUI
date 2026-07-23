@@ -50,8 +50,10 @@ struct EntityDetailSectionPanel: View {
             case .acquisition:
                 EntityAcquisitionPanel(
                     entityID: presentation.detail.id,
+                    entityTitle: presentation.detail.title,
                     entityKind: presentation.detail.kind,
                     hasOwnedContent: presentation.detail.hasSourceMedia,
+                    canDeleteFiles: canDeleteAcquisitionFiles,
                     childGroups: presentation.detail.childrenByKind,
                     acquisitionService: acquisitionService,
                     requestActivityService: requestActivityService,
@@ -64,6 +66,14 @@ struct EntityDetailSectionPanel: View {
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, PrismediaSpacing.medium)
         .accessibilityIdentifier("entity-detail.panel.\(section.rawValue)")
+    }
+
+    private var canDeleteAcquisitionFiles: Bool {
+        #if os(iOS) || os(macOS)
+            presentation.detail.capability(EntityFileManagementCapability.self)?.canDeleteFiles == true
+        #else
+            false
+        #endif
     }
 
     @ViewBuilder

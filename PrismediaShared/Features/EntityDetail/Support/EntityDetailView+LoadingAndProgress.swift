@@ -136,6 +136,7 @@ extension EntityDetailView {
     }
 
     func handlePrunedEntity() {
+        videoPlaybackSession?.inlinePlaybackWillNavigate()
         dependencies.onEntityMutated()
         dismiss()
     }

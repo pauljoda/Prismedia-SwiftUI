@@ -10,6 +10,7 @@ struct EntityAcquisitionPanel: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var state = EntityAcquisitionPanelState()
     @State private var confirmsUnmonitor = false
+    @State private var confirmsDeleteFiles = false
     @State private var historyEntries: [RequestActivityHistoryEntry] = []
     @State private var pendingMonitorValue: Bool?
     @State private var confirmedMonitorValue: Bool?
@@ -17,14 +18,18 @@ struct EntityAcquisitionPanel: View {
     @State private var failedCommand: EntityAcquisitionCommand?
     @State private var failedPendingMonitorValue: Bool?
     @State private var actionNotice: String?
+    @State private var deletionResult: EntityDeleteResponse?
+    @State private var savedMutationCommand: EntityAcquisitionCommand?
     @State private var isManualAcquisitionBusy = false
     @State private var didAnnounceFailedParentActivity = false
     @State private var previousActiveChildAcquisitionCount: Int?
     @State private var liveChildActivityEntityIDs: Set<UUID>?
     @State private var liveActiveChildAcquisitionIDs: Set<UUID>?
     private let entityID: UUID
+    private let entityTitle: String
     private let entityKind: EntityKind
     private let hasOwnedContent: Bool
+    private let canDeleteFiles: Bool
     private let childGroups: [EntityGroup]
     private let service: EntityAcquisitionService?
     private let requestActivityService: (any RequestActivityServicing)?
@@ -36,8 +41,10 @@ struct EntityAcquisitionPanel: View {
 
     init(
         entityID: UUID,
+        entityTitle: String = "this item",
         entityKind: EntityKind = .book,
         hasOwnedContent: Bool = false,
+        canDeleteFiles: Bool = false,
         childGroups: [EntityGroup] = [],
         acquisitionService: (any EntityAcquisitionServicing)?,
         requestActivityService: (any RequestActivityServicing)? = nil,
@@ -45,8 +52,10 @@ struct EntityAcquisitionPanel: View {
         onEntityPruned: @escaping @MainActor () -> Void
     ) {
         self.entityID = entityID
+        self.entityTitle = entityTitle
         self.entityKind = entityKind
         self.hasOwnedContent = hasOwnedContent
+        self.canDeleteFiles = canDeleteFiles
         self.childGroups = childGroups
         service = acquisitionService.map(EntityAcquisitionService.init(port:))
         self.requestActivityService = requestActivityService
@@ -57,8 +66,10 @@ struct EntityAcquisitionPanel: View {
     #if DEBUG
         init(
             entityID: UUID,
+            entityTitle: String = "Preview Item",
             entityKind: EntityKind = .book,
             hasOwnedContent: Bool = false,
+            canDeleteFiles: Bool = false,
             childGroups: [EntityGroup] = [],
             previewPhase: EntityAcquisitionPanelPhase,
             acquisitionService: any EntityAcquisitionServicing,
@@ -72,13 +83,19 @@ struct EntityAcquisitionPanel: View {
             failedCommand: EntityAcquisitionCommand? = nil,
             failedPendingMonitorValue: Bool? = nil,
             actionNotice: String? = nil,
+            deletionResult: EntityDeleteResponse? = nil,
+            savedMutationCommand: EntityAcquisitionCommand? = nil,
+            confirmsUnmonitor: Bool = false,
+            confirmsDeleteFiles: Bool = false,
             onMutated: @escaping @MainActor () async -> Void = {},
             onEntityPruned: @escaping @MainActor () -> Void = {}
         ) {
             self.init(
                 entityID: entityID,
+                entityTitle: entityTitle,
                 entityKind: entityKind,
                 hasOwnedContent: hasOwnedContent,
+                canDeleteFiles: canDeleteFiles,
                 childGroups: childGroups,
                 acquisitionService: acquisitionService,
                 requestActivityService: requestActivityService,
@@ -99,6 +116,10 @@ struct EntityAcquisitionPanel: View {
             _failedCommand = State(initialValue: failedCommand)
             _failedPendingMonitorValue = State(initialValue: failedPendingMonitorValue)
             _actionNotice = State(initialValue: actionNotice)
+            _deletionResult = State(initialValue: deletionResult)
+            _savedMutationCommand = State(initialValue: savedMutationCommand)
+            _confirmsUnmonitor = State(initialValue: confirmsUnmonitor)
+            _confirmsDeleteFiles = State(initialValue: confirmsDeleteFiles)
             disablesLiveLoadingForPreview = true
         }
     #endif
@@ -136,7 +157,7 @@ struct EntityAcquisitionPanel: View {
             await pollWhileVisible(using: service)
         }
         .confirmationDialog(
-            "Stop monitoring this item?",
+            unmonitorConfirmationTitle,
             isPresented: $confirmsUnmonitor,
             titleVisibility: .visible
         ) {
@@ -155,9 +176,24 @@ struct EntityAcquisitionPanel: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(
-                "This removes its acquisition and downloads. A fileless wanted placeholder may also be removed from the library."
-            )
+            Text(unmonitorConfirmationMessage)
+        }
+        .alert(
+            "Delete files for \(entityTitle)?",
+            isPresented: $confirmsDeleteFiles
+        ) {
+            Button("Delete Files", role: .destructive) {
+                guard let service else { return }
+                Task {
+                    await perform(
+                        .deleteFiles(entityID),
+                        using: service
+                    )
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(deleteFilesConfirmationMessage)
         }
         .accessibilityIdentifier("entity-detail.acquisition")
         .onChange(of: failedParentAccessibilityIdentity, initial: true) {
@@ -196,25 +232,47 @@ struct EntityAcquisitionPanel: View {
             state: monitorState,
             isMutating: state.isMutating || isManualAcquisitionBusy,
             pendingValue: pendingMonitorValue,
-            confirmedValue: confirmedMonitorValue
+            confirmedValue: confirmedMonitorValue,
+            preservesExpandedContentWhileBusy: activeCommand == .deleteFiles(entityID)
         )
 
         return VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-            EntityMonitorControl(
-                monitorState: monitorState,
-                presentation: presentation,
-                showsMutationProgress: pendingMonitorValue != nil
-                    || confirmedMonitorValue != nil,
-                primaryAccent: artworkPrimaryAccent,
-                onChange: { nextValue in
-                    guard let monitorState else { return }
-                    updateMonitor(
-                        to: nextValue,
-                        monitorState: monitorState,
-                        service: service
-                    )
-                }
-            )
+            HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+                EntityMonitorControl(
+                    monitorState: monitorState,
+                    presentation: presentation,
+                    showsMutationProgress: pendingMonitorValue != nil
+                        || confirmedMonitorValue != nil,
+                    primaryAccent: artworkPrimaryAccent,
+                    onChange: { nextValue in
+                        guard let monitorState else { return }
+                        updateMonitor(
+                            to: nextValue,
+                            monitorState: monitorState,
+                            service: service
+                        )
+                    }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                #if os(iOS) || os(macOS)
+                    if showsStandaloneDeletionMenu(
+                        snapshot: snapshot,
+                        presentation: presentation
+                    ) {
+                        RequestActivityAcquisitionActionMenu(
+                            lifecycleActions: [],
+                            showsDeleteFiles: true,
+                            isLifecycleDisabled: true,
+                            isDeleteFilesDisabled: deleteFilesIsDisabled(
+                                monitorState: monitorState
+                            ),
+                            onPerform: { _ in },
+                            onDeleteFiles: { confirmsDeleteFiles = true }
+                        )
+                    }
+                #endif
+            }
 
             messageContent(
                 presentation: presentation,
@@ -222,6 +280,23 @@ struct EntityAcquisitionPanel: View {
                 service: service,
                 loadError: loadError
             )
+
+            if activeCommand == .deleteFiles(entityID) {
+                HStack(spacing: PrismediaSpacing.small) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                        Text("Deleting Files")
+                            .font(.headline)
+                            .foregroundStyle(PrismediaColor.textPrimary)
+                        Text("Removing managed source files while keeping safe acquisition content visible.")
+                            .font(.subheadline)
+                            .foregroundStyle(PrismediaColor.textSecondary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
 
             if loadError == nil, monitorState == nil {
                 PrismediaLoadingView("Loading monitoring…")
@@ -281,7 +356,7 @@ struct EntityAcquisitionPanel: View {
         if let mutationError = state.mutationError {
             EntityAcquisitionMessageCard(
                 title: mutationErrorTitle,
-                message: mutationError,
+                message: mutationErrorMessage(mutationError),
                 retryTitle: failedCommand == nil ? nil : "Retry",
                 onRetry: failedCommand.map { command in
                     {
@@ -298,18 +373,35 @@ struct EntityAcquisitionPanel: View {
                     state.dismissMutationError()
                     failedCommand = nil
                     failedPendingMonitorValue = nil
+                    deletionResult = nil
                 }
             )
         }
 
         if let refreshError = state.refreshError {
             EntityAcquisitionMessageCard(
-                title: "Monitoring Updated",
-                message: "The change was saved, but this page couldn’t refresh. \(refreshError)",
+                title: savedMutationCommand == .deleteFiles(entityID)
+                    ? "Files Deleted"
+                    : "Monitoring Updated",
+                message: savedMutationCommand == .deleteFiles(entityID)
+                    ? "The managed files were deleted, but this page couldn’t refresh the updated Wanted state. \(refreshError)"
+                    : "The change was saved, but this page couldn’t refresh. \(refreshError)",
                 isWarning: true,
                 retryTitle: "Refresh",
                 onRetry: { Task { await retryRefresh(using: service) } },
                 onDismiss: { state.dismissRefreshError() }
+            )
+        }
+
+        if let deletionResult,
+            deletionResult.failures.isEmpty,
+            deletionResult.reverted > 0
+        {
+            EntityAcquisitionMessageCard(
+                title: "Files Deleted",
+                message: deleteFilesCompletionMessage(deletionResult),
+                isInformational: true,
+                onDismiss: { self.deletionResult = nil }
             )
         }
 
@@ -427,7 +519,12 @@ struct EntityAcquisitionPanel: View {
                         await load(using: service)
                         await onMutated()
                     },
-                    isExternallyDisabled: isManualAcquisitionBusy
+                    isExternallyDisabled: isManualAcquisitionBusy || state.isMutating,
+                    showsDeleteFilesAction: canDeleteFiles,
+                    isDeleteFilesDisabled: deleteFilesIsDisabled(
+                        monitorState: snapshot.state
+                    ),
+                    onDeleteFiles: { confirmsDeleteFiles = true }
                 )
                 .id(acquisition.summary.id)
             } else if snapshot.state.latestAcquisition != nil {
@@ -663,11 +760,63 @@ struct EntityAcquisitionPanel: View {
         }
     }
 
+    private var unmonitorConfirmationTitle: String {
+        guard let rendition = currentMonitorRendition else {
+            return "Stop monitoring this item?"
+        }
+        return "Stop monitoring this \(renditionLabel(rendition)) rendition?"
+    }
+
+    private var unmonitorConfirmationMessage: String {
+        guard let rendition = currentMonitorRendition else {
+            return "This removes monitor intent, acquisition state, and reachable download data for this item and its acquisition-only children. Existing library media and history remain. Fileless wanted placeholders may be removed, and automatic rediscovery stops."
+        }
+        return "This stops monitoring only the \(renditionLabel(rendition)) rendition and removes that rendition’s acquisition and reachable download state. Other rendition monitoring, existing library files, and history remain."
+    }
+
+    private var currentMonitorRendition: RequestActivityBookRendition? {
+        guard case .content(let snapshot) = state.phase else { return nil }
+        return snapshot.state.monitor?.bookRendition
+    }
+
+    private func renditionLabel(_ rendition: RequestActivityBookRendition) -> String {
+        rendition.rawValue == "audiobook" ? "audiobook" : "ebook"
+    }
+
+    private var deleteFilesConfirmationMessage: String {
+        let scope =
+            entityKind == .book
+            ? "This permanently deletes every managed source file for “\(entityTitle)” and its structural children, which can include both ebook and audiobook files."
+            : "This permanently deletes every managed source file for “\(entityTitle)” and its structural children."
+        return "\(scope) Directly monitored content returns to Wanted and starts a clean search; unmonitored content is removed from the library. Acquisition history remains. This can’t be undone."
+    }
+
     // MARK: - Gates
 
     private func hasPanelActions(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
         showsSearchForRelease(snapshot)
             || (!embedsManagement(snapshot) && snapshot.state.latestAcquisition != nil)
+    }
+
+    private func showsStandaloneDeletionMenu(
+        snapshot: EntityAcquisitionPanelSnapshot?,
+        presentation: EntityMonitorPresentation
+    ) -> Bool {
+        guard canDeleteFiles else { return false }
+        guard let snapshot else { return true }
+        return !presentation.showsExpandedContent || !embedsManagement(snapshot)
+    }
+
+    private func deleteFilesIsDisabled(
+        monitorState: EntityMonitorState?
+    ) -> Bool {
+        guard !state.isMutating,
+            activeCommand == nil,
+            !isManualAcquisitionBusy,
+            let monitorState
+        else { return true }
+        guard let monitor = monitorState.monitor else { return false }
+        return ![.active, .paused, .fulfilled].contains(monitor.status)
     }
 
     private func showsSearchForRelease(_ snapshot: EntityAcquisitionPanelSnapshot) -> Bool {
@@ -819,18 +968,29 @@ struct EntityAcquisitionPanel: View {
         defer { activeCommand = nil }
         failedCommand = nil
         failedPendingMonitorValue = nil
+        if command == .deleteFiles(entityID) {
+            deletionResult = nil
+            postAccessibilityAnnouncement("Deleting managed files.")
+        } else if case .unmonitor = command {
+            postAccessibilityAnnouncement("Stopping monitoring and cleaning up acquisition data.")
+        }
         pendingMonitorValue = nextMonitorValue
         let outcome = await service.perform(command)
 
         if case .missingChildrenSearchCompleted(let result) = outcome {
             actionNotice = missingChildrenResultMessage(result)
         }
+        if case .filesDeleted(let result) = outcome {
+            deletionResult = result
+        }
 
         switch state.finishMutation(outcome) {
         case .entityPruned:
             pendingMonitorValue = nil
+            postAccessibilityAnnouncement(prunedEntityAnnouncement(for: command))
             onEntityPruned()
         case .refresh:
+            savedMutationCommand = command
             if let nextMonitorValue { confirmedMonitorValue = nextMonitorValue }
             pendingMonitorValue = nil
             let refreshOutcome = await service.load(
@@ -839,6 +999,7 @@ struct EntityAcquisitionPanel: View {
             )
             if state.finishMutationRefresh(refreshOutcome) {
                 confirmedMonitorValue = nil
+                savedMutationCommand = nil
             }
             await loadHistory()
             await onMutated()
@@ -847,6 +1008,12 @@ struct EntityAcquisitionPanel: View {
             if case .failure = outcome {
                 failedCommand = command
                 failedPendingMonitorValue = nextMonitorValue
+                postAccessibilityAnnouncement(mutationFailureAnnouncement(for: command))
+            } else if case .filesDeleted(let response) = outcome,
+                !response.failures.isEmpty
+            {
+                failedCommand = command
+                postAccessibilityAnnouncement("Some files could not be deleted. Retry is available.")
             }
         }
     }
@@ -870,6 +1037,7 @@ struct EntityAcquisitionPanel: View {
         )
         if state.finishMutationRefresh(outcome) {
             confirmedMonitorValue = nil
+            savedMutationCommand = nil
             await loadHistory()
             await onMutated()
         }
@@ -886,10 +1054,60 @@ struct EntityAcquisitionPanel: View {
 
     private var mutationErrorTitle: LocalizedStringKey {
         switch failedCommand {
+        case .deleteFiles:
+            return "Couldn’t Delete Files"
         case .searchForRelease, .searchAgain:
             return "Couldn’t Start Search"
         default:
             return "Couldn’t Update Monitoring"
+        }
+    }
+
+    private func mutationErrorMessage(_ fallback: String) -> String {
+        guard failedCommand == .deleteFiles(entityID),
+            let deletionResult,
+            !deletionResult.failures.isEmpty
+        else { return fallback }
+        let removed = deleteFilesRemovedSummary(deletionResult)
+        return "\(removed) Prismedia couldn’t finish deleting every scoped file. Retry Delete Files to continue cleanup.\n\(fallback)"
+    }
+
+    private func deleteFilesCompletionMessage(
+        _ response: EntityDeleteResponse
+    ) -> String {
+        "\(deleteFilesRemovedSummary(response)) Monitoring remains on, so the item is Wanted and a clean search is starting. Acquisition history remains."
+    }
+
+    private func deleteFilesRemovedSummary(
+        _ response: EntityDeleteResponse
+    ) -> String {
+        let pathLabel = response.filesDeleted == 1 ? "managed file path" : "managed file paths"
+        return "Removed \(response.filesDeleted) \(pathLabel)."
+    }
+
+    private func mutationFailureAnnouncement(
+        for command: EntityAcquisitionCommand
+    ) -> String {
+        switch command {
+        case .deleteFiles:
+            return "Files could not be deleted. Retry is available."
+        case .unmonitor:
+            return "Monitoring cleanup failed. Retry is available."
+        default:
+            return "The acquisition action failed. Retry is available."
+        }
+    }
+
+    private func prunedEntityAnnouncement(
+        for command: EntityAcquisitionCommand
+    ) -> String {
+        switch command {
+        case .deleteFiles:
+            return "Files deleted. Closing this item."
+        case .unmonitor:
+            return "Monitoring stopped. Closing this item."
+        default:
+            return "The item was removed. Closing this view."
         }
     }
 }

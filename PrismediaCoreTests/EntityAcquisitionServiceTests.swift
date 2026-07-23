@@ -55,6 +55,29 @@ final class EntityAcquisitionServiceTests: XCTestCase {
         )
     }
 
+    func testDeleteFilesPreservesStructuredPartialFailureOutcome() async {
+        let service = EntityAcquisitionService(
+            port: EntityAcquisitionServiceStub(
+                state: monitorState,
+                acquisition: nil,
+                failsAcquisitionLoad: false
+            )
+        )
+
+        let outcome = await service.perform(.deleteFiles(entityID))
+
+        XCTAssertEqual(
+            outcome,
+            .filesDeleted(
+                EntityDeleteResponse(
+                    deleted: 1,
+                    filesDeleted: 2,
+                    reverted: 1
+                )
+            )
+        )
+    }
+
     private var entityID: UUID {
         UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
     }
@@ -132,4 +155,8 @@ private actor EntityAcquisitionServiceStub: EntityAcquisitionServicing {
     }
 
     func unmonitor(id _: UUID) async throws -> Bool { false }
+
+    func deleteFiles(entityID _: UUID) async throws -> EntityDeleteResponse {
+        EntityDeleteResponse(deleted: 1, filesDeleted: 2, reverted: 1)
+    }
 }

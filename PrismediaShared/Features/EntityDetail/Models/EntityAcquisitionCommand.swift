@@ -9,4 +9,5 @@ enum EntityAcquisitionCommand: Equatable, Sendable {
     case syncContainer(UUID)
     case searchMissingChildren(UUID)
     case unmonitor(UUID)
+    case deleteFiles(UUID)
 }

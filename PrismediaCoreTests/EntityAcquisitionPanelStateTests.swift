@@ -54,6 +54,67 @@ final class EntityAcquisitionPanelStateTests: XCTestCase {
         XCTAssertEqual(state.phase, .content(snapshot))
     }
 
+    func testDeleteFilesRefreshesWhenMonitoredEntityRevertsToWanted() {
+        var state = EntityAcquisitionPanelState()
+        XCTAssertTrue(state.beginMutation())
+
+        XCTAssertEqual(
+            state.finishMutation(
+                .filesDeleted(
+                    EntityDeleteResponse(
+                        deleted: 0,
+                        filesDeleted: 2,
+                        reverted: 1
+                    )
+                )
+            ),
+            .refresh
+        )
+    }
+
+    func testDeleteFilesPrunesWhenNothingRevertsToWanted() {
+        var state = EntityAcquisitionPanelState()
+        XCTAssertTrue(state.beginMutation())
+
+        XCTAssertEqual(
+            state.finishMutation(
+                .filesDeleted(
+                    EntityDeleteResponse(
+                        deleted: 1,
+                        filesDeleted: 2
+                    )
+                )
+            ),
+            .entityPruned
+        )
+    }
+
+    func testPartialDeleteFilesKeepsContentAndOffersRetry() {
+        let failure = EntityDeleteFailure(
+            id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
+            message: "The audiobook folder is in use."
+        )
+        var state = EntityAcquisitionPanelState()
+        state.finishLoad(.content(snapshot))
+        XCTAssertTrue(state.beginMutation())
+
+        XCTAssertEqual(
+            state.finishMutation(
+                .filesDeleted(
+                    EntityDeleteResponse(
+                        deleted: 0,
+                        filesDeleted: 1,
+                        failures: [failure],
+                        reverted: 1
+                    )
+                )
+            ),
+            .none
+        )
+        XCTAssertEqual(state.phase, .content(snapshot))
+        XCTAssertEqual(state.mutationError, failure.message)
+    }
+
     private var snapshot: EntityAcquisitionPanelSnapshot {
         EntityAcquisitionPanelSnapshot(
             state: EntityMonitorState(

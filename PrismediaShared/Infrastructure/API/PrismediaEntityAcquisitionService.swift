@@ -59,4 +59,8 @@ struct PrismediaEntityAcquisitionService: EntityAcquisitionServicing {
     func unmonitor(id: UUID) async throws -> Bool {
         try await client.unmonitor(id: id).entityPruned
     }
+
+    func deleteFiles(entityID: UUID) async throws -> EntityDeleteResponse {
+        try await client.deleteEntityFiles(id: entityID)
+    }
 }

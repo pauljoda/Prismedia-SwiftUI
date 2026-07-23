@@ -125,6 +125,60 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
         XCTAssertEqual(request.httpMethod, "DELETE")
     }
 
+    func testDeleteFilesUsesEntityScopeAndDecodesPartialOutcome() async throws {
+        let failedID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+        let loader = MockHTTPDataLoader(
+            responses: [
+                .json(
+                    """
+                    {
+                      "deleted":"0",
+                      "filesDeleted":"2",
+                      "reverted":"1",
+                      "failures":[
+                        {
+                          "id":"\(failedID.uuidString)",
+                          "message":"The audiobook folder is in use."
+                        }
+                      ]
+                    }
+                    """
+                )
+            ]
+        )
+        let client = PrismediaAPIClient(
+            serverURL: serverURL,
+            accessToken: "token",
+            loader: loader
+        )
+
+        let response = try await client.deleteEntityFiles(id: entityID)
+
+        XCTAssertEqual(response.deleted, 0)
+        XCTAssertEqual(response.filesDeleted, 2)
+        XCTAssertEqual(response.reverted, 1)
+        XCTAssertEqual(
+            response.failures,
+            [
+                EntityDeleteFailure(
+                    id: failedID,
+                    message: "The audiobook folder is in use."
+                )
+            ]
+        )
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(
+            request.url?.path,
+            "/api/entities/\(entityID.uuidString.lowercased())"
+        )
+        XCTAssertEqual(request.httpMethod, "DELETE")
+        XCTAssertEqual(
+            URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?
+                .queryItems,
+            [URLQueryItem(name: "deleteFiles", value: "true")]
+        )
+    }
+
     func testGroupingActionsUseWebParityEndpoints() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json("", statusCode: 204),

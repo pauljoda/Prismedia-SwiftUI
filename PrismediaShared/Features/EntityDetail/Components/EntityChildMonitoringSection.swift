@@ -9,6 +9,7 @@ struct EntityChildMonitoringSection: View {
     @State private var busyIDs: Set<UUID> = []
     @State private var isBulkMutating = false
     @State private var errorMessage: String?
+    @State private var pendingConfirmation: EntityChildMonitoringConfirmation?
     let title: String
     let entities: [EntityThumbnail]
     let primaryAccent: Color
@@ -40,7 +41,8 @@ struct EntityChildMonitoringSection: View {
             service: EntityAcquisitionService,
             hasLoaded: Bool = true,
             busyIDs: Set<UUID> = [],
-            errorMessage: String? = nil
+            errorMessage: String? = nil,
+            pendingConfirmation: EntityChildMonitoringConfirmation? = nil
         ) {
             self.init(
                 title: title,
@@ -54,6 +56,7 @@ struct EntityChildMonitoringSection: View {
             _items = State(initialValue: previewItems)
             _busyIDs = State(initialValue: busyIDs)
             _errorMessage = State(initialValue: errorMessage)
+            _pendingConfirmation = State(initialValue: pendingConfirmation)
             disablesLiveLoadingForPreview = true
         }
     #endif
@@ -85,7 +88,7 @@ struct EntityChildMonitoringSection: View {
                                 isBusy: isBulkMutating || busyIDs.contains(item.id),
                                 primaryAccent: primaryAccent,
                                 onToggle: { nextValue in
-                                    Task { await mutate(item, to: nextValue) }
+                                    requestMutation(item, to: nextValue)
                                 },
                                 onRetryCleanup: {
                                     guard let command = item.cleanupCommand else { return }
@@ -131,6 +134,20 @@ struct EntityChildMonitoringSection: View {
                 }
             }
             .accessibilityIdentifier("entity-detail.acquisition.children")
+            .confirmationDialog(
+                unmonitorConfirmationTitle,
+                isPresented: unmonitorConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                Button(unmonitorConfirmationButtonTitle, role: .destructive) {
+                    confirmUnmonitor()
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingConfirmation = nil
+                }
+            } message: {
+                Text(unmonitorConfirmationMessage)
+            }
         }
     #endif
 
@@ -149,7 +166,7 @@ struct EntityChildMonitoringSection: View {
                         .disabled(!items.contains { $0.command(to: true) != nil })
 
                         Button("Unmonitor All", systemImage: "bell.slash", role: .destructive) {
-                            Task { await mutateAll(to: false) }
+                            pendingConfirmation = .all
                         }
                         .disabled(!items.contains { $0.command(to: false) != nil })
                     }
@@ -168,13 +185,74 @@ struct EntityChildMonitoringSection: View {
         await perform(command, for: item.id)
     }
 
+    private func requestMutation(
+        _ item: EntityChildMonitoringItem,
+        to nextValue: Bool
+    ) {
+        if nextValue {
+            Task { await mutate(item, to: true) }
+        } else {
+            pendingConfirmation = .item(item.id)
+        }
+    }
+
+    private var unmonitorConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: { pendingConfirmation != nil },
+            set: { isPresented in
+                if !isPresented { pendingConfirmation = nil }
+            }
+        )
+    }
+
+    private var unmonitorConfirmationTitle: String {
+        switch pendingConfirmation {
+        case .item(let id):
+            let title = items.first(where: { $0.id == id })?.entity.title ?? "this item"
+            return "Stop monitoring \(title)?"
+        case .all:
+            return "Stop monitoring all \(items.count) items?"
+        case nil:
+            return "Stop monitoring?"
+        }
+    }
+
+    private var unmonitorConfirmationButtonTitle: String {
+        pendingConfirmation == .all ? "Unmonitor All" : "Unmonitor"
+    }
+
+    private var unmonitorConfirmationMessage: String {
+        switch pendingConfirmation {
+        case .item:
+            return "This removes this child’s monitor intent, acquisition state, and reachable download data. Existing library files and history remain; a fileless wanted placeholder may be removed."
+        case .all:
+            return "This applies the same cleanup to every eligible child. Existing library files and history remain; fileless wanted placeholders may be removed."
+        case nil:
+            return ""
+        }
+    }
+
+    private func confirmUnmonitor() {
+        let confirmation = pendingConfirmation
+        pendingConfirmation = nil
+        switch confirmation {
+        case .item(let id):
+            guard let item = items.first(where: { $0.id == id }) else { return }
+            Task { await mutate(item, to: false) }
+        case .all:
+            Task { await mutateAll(to: false) }
+        case nil:
+            break
+        }
+    }
+
     private func perform(_ command: EntityAcquisitionCommand, for id: UUID) async {
         guard busyIDs.insert(id).inserted else { return }
         defer { busyIDs.remove(id) }
         errorMessage = nil
 
         switch await service.perform(command) {
-        case .completed, .missingChildrenSearchCompleted:
+        case .completed, .filesDeleted, .missingChildrenSearchCompleted:
             if !(await load(preservingContent: true)) {
                 errorMessage = "Monitoring changed, but the child list couldn’t refresh."
             }
@@ -196,7 +274,7 @@ struct EntityChildMonitoringSection: View {
         for item in items {
             guard let command = item.command(to: nextValue) else { continue }
             switch await service.perform(command) {
-            case .completed, .missingChildrenSearchCompleted:
+            case .completed, .filesDeleted, .missingChildrenSearchCompleted:
                 break
             case .failure(let message):
                 failures.append("\(item.entity.title): \(message)")

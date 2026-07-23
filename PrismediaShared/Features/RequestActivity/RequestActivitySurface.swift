@@ -22,6 +22,7 @@ import SwiftUI
         @State private var page = 1
         @State private var selectedIDs = Set<UUID>()
         @State private var pendingRemovalIDs = Set<UUID>()
+        @State private var pendingUnmonitorTargets: [RequestActivityWantedItem] = []
         @State private var selectedAcquisition: RequestActivityDownload?
 
         private let section: RequestActivitySection
@@ -30,6 +31,9 @@ import SwiftUI
         private let resolveAssetURL: (String) -> URL?
         private let onOpenEntity: ((UUID, EntityKind) -> Void)?
         private let onChooseRelease: ((UUID) -> Void)?
+        #if DEBUG
+            private var disablesLiveLoadingForPreview = false
+        #endif
 
         public init(
             section: RequestActivitySection,
@@ -46,6 +50,29 @@ import SwiftUI
             self.onOpenEntity = onOpenEntity
             self.onChooseRelease = onChooseRelease
         }
+
+        #if DEBUG
+            init(
+                section: RequestActivitySection,
+                service: any RequestActivityServicing,
+                previewDownloads: [RequestActivityDownload],
+                previewWantedPage: RequestActivityWantedPage? = nil,
+                pendingRemovalIDs: Set<UUID> = [],
+                pendingUnmonitorTargets: [RequestActivityWantedItem] = [],
+                selectedIDs: Set<UUID> = [],
+                errorMessage: String? = nil
+            ) {
+                self.init(section: section, service: service)
+                _downloads = State(initialValue: previewDownloads)
+                _wantedPage = State(initialValue: previewWantedPage)
+                _pendingRemovalIDs = State(initialValue: pendingRemovalIDs)
+                _pendingUnmonitorTargets = State(initialValue: pendingUnmonitorTargets)
+                _selectedIDs = State(initialValue: selectedIDs)
+                _errorMessage = State(initialValue: errorMessage)
+                _isLoading = State(initialValue: false)
+                disablesLiveLoadingForPreview = true
+            }
+        #endif
 
         public var body: some View {
             content
@@ -67,8 +94,24 @@ import SwiftUI
                     Button("Cancel", role: .cancel) { pendingRemovalIDs = [] }
                 } message: {
                     Text(
-                        "This removes the selected download data from the client. Monitored items remain Wanted and can search again."
+                        "This removes the selected acquisition records, deletes associated transfer data when reachable, and clears interrupted import state and partial files. Monitored items stay Wanted and start again with a clean search; use Unmonitor or Remove Wanted when you mean to stop tracking them."
                     )
+                }
+                .confirmationDialog(
+                    unmonitorTitle,
+                    isPresented: unmonitorPresented,
+                    titleVisibility: .visible
+                ) {
+                    Button(unmonitorButtonTitle, role: .destructive) {
+                        let targets = pendingUnmonitorTargets
+                        pendingUnmonitorTargets = []
+                        Task { await unmonitor(targets) }
+                    }
+                    Button("Cancel", role: .cancel) {
+                        pendingUnmonitorTargets = []
+                    }
+                } message: {
+                    Text(unmonitorMessage)
                 }
                 .sheet(item: $selectedAcquisition) { item in
                     RequestActivityAcquisitionDetailView(
@@ -77,6 +120,9 @@ import SwiftUI
                     )
                 }
                 .task(id: taskIdentity) {
+                    #if DEBUG
+                        guard !disablesLiveLoadingForPreview else { return }
+                    #endif
                     guard liveRefreshIsActive else { return }
                     await load(showSpinner: currentSourceIsEmpty)
                     await pollWhileVisible()
@@ -232,7 +278,7 @@ import SwiftUI
 
         private func requestUnmonitorSelected() {
             let targets = wantedPage?.items.filter { selectedIDs.contains($0.id) } ?? []
-            Task { await unmonitor(targets) }
+            pendingUnmonitorTargets = targets.filter(canRequestUnmonitor)
         }
 
         private func requestSearchWanted(_ item: RequestActivityWantedItem) {
@@ -240,7 +286,15 @@ import SwiftUI
         }
 
         private func requestUnmonitor(_ item: RequestActivityWantedItem) {
-            Task { await unmonitor([item]) }
+            guard canRequestUnmonitor(item) else { return }
+            pendingUnmonitorTargets = [item]
+        }
+
+        private func canRequestUnmonitor(_ item: RequestActivityWantedItem) -> Bool {
+            !RequestActivityWantedPolicy.isTransitionLocked(
+                monitorStatus: item.monitorStatus,
+                acquisitionStatus: item.acquisitionStatus
+            )
         }
 
         private var trailingToolbarPlacement: ToolbarItemPlacement {
@@ -345,7 +399,47 @@ import SwiftUI
             return "Remove \(count) \(count == 1 ? "Download" : "Downloads")?"
         }
 
-        private func load(showSpinner: Bool, reportsErrors: Bool = true) async {
+        private var unmonitorPresented: Binding<Bool> {
+            Binding(
+                get: { !pendingUnmonitorTargets.isEmpty },
+                set: { presented in
+                    if !presented { pendingUnmonitorTargets = [] }
+                }
+            )
+        }
+
+        private var unmonitorTitle: String {
+            guard pendingUnmonitorTargets.count == 1,
+                let target = pendingUnmonitorTargets.first
+            else {
+                return "Stop monitoring \(pendingUnmonitorTargets.count) items?"
+            }
+            if let rendition = target.bookRendition {
+                let label = rendition.rawValue == "audiobook" ? "audiobook" : "ebook"
+                return "Stop monitoring the \(label) rendition of \(target.title)?"
+            }
+            return "Stop monitoring \(target.title)?"
+        }
+
+        private var unmonitorButtonTitle: String {
+            pendingUnmonitorTargets.count == 1 ? "Unmonitor" : "Unmonitor Selected"
+        }
+
+        private var unmonitorMessage: String {
+            guard pendingUnmonitorTargets.count == 1,
+                let target = pendingUnmonitorTargets.first
+            else {
+                return "This removes monitor intent, acquisition state, and reachable download data for the selected items and their acquisition-only children. Existing library media and history remain. Fileless wanted placeholders may be removed, and automatic rediscovery stops."
+            }
+            if let rendition = target.bookRendition {
+                let label = rendition.rawValue == "audiobook" ? "audiobook" : "ebook"
+                return "This stops monitoring only the \(label) rendition and removes that rendition’s acquisition and reachable download state. Other rendition monitoring, existing library files, and history remain."
+            }
+            return "This removes monitor intent, acquisition state, and reachable download data for this item and its acquisition-only children. Existing library media and history remain. A fileless wanted placeholder may be removed, and automatic rediscovery stops."
+        }
+
+        @discardableResult
+        private func load(showSpinner: Bool, reportsErrors: Bool = true) async -> Bool {
             if showSpinner { isLoading = true }
             defer { if showSpinner { isLoading = false } }
             do {
@@ -376,10 +470,12 @@ import SwiftUI
                 if errorMessage != nil { errorMessage = nil }
                 let validSelection = selectedIDs.intersection(currentIDs)
                 if selectedIDs != validSelection { selectedIDs = validSelection }
+                return true
             } catch is CancellationError {
-                return
+                return false
             } catch {
                 if reportsErrors { errorMessage = error.localizedDescription }
+                return false
             }
         }
 
@@ -469,21 +565,26 @@ import SwiftUI
             defer { isActing = false }
             let titles = Dictionary(uniqueKeysWithValues: downloads.map { ($0.id, $0.title) })
             var failures: [String] = []
+            var failedIDs = Set<UUID>()
             for id in ids {
                 do {
                     try await service.removeRequestActivityAcquisition(id: id)
                 } catch {
+                    failedIDs.insert(id)
                     failures.append("\(titles[id] ?? id.uuidString): \(error.localizedDescription)")
                 }
             }
-            selectedIDs = []
-            await load(showSpinner: false)
+            selectedIDs = failedIDs
+            let refreshed = await load(showSpinner: false, reportsErrors: false)
             if !failures.isEmpty {
                 errorMessage =
                     RequestActivityRemovalSummary(
                         attempted: ids.count,
                         failures: failures
                     ).message
+            } else if !refreshed {
+                errorMessage =
+                    "The selected acquisitions were removed, but Downloads couldn’t refresh. Pull to refresh to confirm the latest state."
             }
         }
 
@@ -510,16 +611,26 @@ import SwiftUI
             isActing = true
             defer { isActing = false }
             var failures: [String] = []
+            var failedIDs = Set<UUID>()
             for item in targets {
                 do {
                     _ = try await service.unmonitor(id: item.id)
                 } catch {
+                    failedIDs.insert(item.id)
                     failures.append("\(item.title): \(error.localizedDescription)")
                 }
             }
-            selectedIDs = []
-            await load(showSpinner: false)
-            if !failures.isEmpty { errorMessage = failures.joined(separator: " · ") }
+            selectedIDs = failedIDs
+            let refreshed = await load(showSpinner: false, reportsErrors: false)
+            if !failures.isEmpty {
+                let succeeded = targets.count - failures.count
+                errorMessage =
+                    "Stopped monitoring \(succeeded) of \(targets.count) items. "
+                    + failures.joined(separator: " · ")
+            } else if !refreshed {
+                errorMessage =
+                    "Monitoring was stopped, but Wanted couldn’t refresh. Pull to refresh to confirm the latest state."
+            }
         }
     }
 #endif

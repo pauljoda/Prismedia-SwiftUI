@@ -12,6 +12,7 @@ public protocol EntityAcquisitionServicing: AcquisitionBlocklistServicing, Senda
     func syncContainer(entityID: UUID) async throws
     func searchMissingChildren(entityID: UUID) async throws -> EntityMissingChildrenSearchResponse
     func unmonitor(id: UUID) async throws -> Bool
+    func deleteFiles(entityID: UUID) async throws -> EntityDeleteResponse
 }
 
 extension EntityAcquisitionServicing {

@@ -57,7 +57,21 @@ final class EntityMonitorPresentationTests: XCTestCase {
         )
         XCTAssertEqual(stopping.isOn, false)
         XCTAssertFalse(stopping.isEnabled)
+        XCTAssertTrue(stopping.showsExpandedContent)
         XCTAssertTrue(stopping.canRetryCleanup)
+    }
+
+    func testDeleteFilesMutationLocksMonitorAndRetainsSafeContent() {
+        let presentation = EntityMonitorPresentation(
+            state: state(status: .active),
+            isMutating: true,
+            pendingValue: nil,
+            preservesExpandedContentWhileBusy: true
+        )
+
+        XCTAssertEqual(presentation.isOn, true)
+        XCTAssertFalse(presentation.isEnabled)
+        XCTAssertTrue(presentation.showsExpandedContent)
     }
 
     func testPendingMutationIsOptimisticAndLocked() {

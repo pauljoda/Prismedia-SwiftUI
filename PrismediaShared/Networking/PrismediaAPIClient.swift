@@ -168,6 +168,15 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
+    public func deleteEntityFiles(id: UUID) async throws -> EntityDeleteResponse {
+        try await send(
+            EntityDeleteResponse.self,
+            path: "/api/entities/\(id.uuidString.lowercased())",
+            method: "DELETE",
+            queryItems: [URLQueryItem(name: "deleteFiles", value: "true")]
+        )
+    }
+
     private func entityDetailRoute(for kind: EntityKind) -> String? {
         switch kind {
         case .audioLibrary: "/api/audio-libraries"

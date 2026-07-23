@@ -12,7 +12,8 @@ struct EntityMonitorPresentation: Equatable, Sendable {
         state: EntityMonitorState?,
         isMutating: Bool,
         pendingValue: Bool?,
-        confirmedValue: Bool? = nil
+        confirmedValue: Bool? = nil,
+        preservesExpandedContentWhileBusy: Bool = false
     ) {
         isBusy = isMutating || pendingValue != nil || state == nil
         isAwaitingRefresh = confirmedValue != nil
@@ -53,7 +54,7 @@ struct EntityMonitorPresentation: Equatable, Sendable {
         case .active:
             isOn = true
             isEnabled = !isMutating
-            showsExpandedContent = !isMutating
+            showsExpandedContent = !isMutating || preservesExpandedContentWhileBusy
             canRetryCleanup = false
         case .paused, .fulfilled:
             isOn = false
@@ -68,7 +69,7 @@ struct EntityMonitorPresentation: Equatable, Sendable {
         case .stopping:
             isOn = false
             isEnabled = false
-            showsExpandedContent = false
+            showsExpandedContent = true
             canRetryCleanup = !isMutating
         default:
             isOn = nil

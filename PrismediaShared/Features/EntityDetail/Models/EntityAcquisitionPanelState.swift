@@ -83,6 +83,14 @@ struct EntityAcquisitionPanelState: Sendable {
         switch outcome {
         case .completed(let entityPruned):
             return entityPruned ? .entityPruned : .refresh
+        case .filesDeleted(let response):
+            if !response.failures.isEmpty {
+                mutationError = response.failures
+                    .map { $0.message }
+                    .joined(separator: "\n")
+                return .none
+            }
+            return response.reverted > 0 ? .refresh : .entityPruned
         case .missingChildrenSearchCompleted:
             return .refresh
         case .failure(let message):

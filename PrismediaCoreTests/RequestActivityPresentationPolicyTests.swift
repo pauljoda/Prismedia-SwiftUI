@@ -79,6 +79,43 @@ final class RequestActivityPresentationPolicyTests: XCTestCase {
         )
     }
 
+    func testEmbeddedAcquisitionPlacementKeepsPersistentCancelInMenu() {
+        let actions: [RequestActivityAcquisitionAction] = [
+            .retryImport(allowFormatChange: false),
+            .startOver,
+            .cancel,
+        ]
+
+        XCTAssertEqual(
+            RequestActivityAcquisitionActionPlacementPolicy.visibleActions(from: actions),
+            [.retryImport(allowFormatChange: false), .startOver]
+        )
+        XCTAssertEqual(
+            RequestActivityAcquisitionActionPlacementPolicy.menuActions(from: actions),
+            [.cancel]
+        )
+    }
+
+    func testEmbeddedAcquisitionPlacementLeavesStateSpecificRecoveryVisible() {
+        let recoveryActions: [RequestActivityAcquisitionAction] = [
+            .research,
+            .retryImport(allowFormatChange: true),
+            .startOver,
+        ]
+
+        XCTAssertEqual(
+            RequestActivityAcquisitionActionPlacementPolicy.visibleActions(
+                from: recoveryActions
+            ),
+            recoveryActions
+        )
+        XCTAssertTrue(
+            RequestActivityAcquisitionActionPlacementPolicy.menuActions(
+                from: recoveryActions
+            ).isEmpty
+        )
+    }
+
     func testEntityAcquisitionLifecycleSplitsFailedRecoveryByDurableImportState() {
         let status = AcquisitionStatus(rawValue: "failed")
 

@@ -80,6 +80,9 @@ struct EntityAcquisitionService {
             return .missingChildrenSearchCompleted(result)
         case .unmonitor(let id):
             return .completed(entityPruned: try await port.unmonitor(id: id))
+        case .deleteFiles(let entityID):
+            let response = try await port.deleteFiles(entityID: entityID)
+            return .filesDeleted(response)
         }
         return .completed(entityPruned: false)
     }

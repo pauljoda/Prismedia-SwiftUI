@@ -7,19 +7,24 @@ import Foundation
         private let acquisitionDetail: RequestActivityAcquisitionDetail?
         private let loadError: String?
         private let blocklistEntries: [RequestActivityBlocklistEntry]
+        private let deleteFilesResult: Result<EntityDeleteResponse, PreviewEntityAcquisitionFailure>
 
         init(
             snapshot: EntityMonitorState,
             acquisitionDetail: RequestActivityAcquisitionDetail? = nil,
             loadError: String? = nil,
             additionalSnapshots: [UUID: EntityMonitorState] = [:],
-            blocklistEntries: [RequestActivityBlocklistEntry] = []
+            blocklistEntries: [RequestActivityBlocklistEntry] = [],
+            deleteFilesResult: Result<EntityDeleteResponse, PreviewEntityAcquisitionFailure> = .success(
+                EntityDeleteResponse(deleted: 1, filesDeleted: 1, reverted: 1)
+            )
         ) {
             self.snapshot = snapshot
             self.additionalSnapshots = additionalSnapshots
             self.acquisitionDetail = acquisitionDetail
             self.loadError = loadError
             self.blocklistEntries = blocklistEntries
+            self.deleteFilesResult = deleteFilesResult
         }
 
         func loadState(entityID: UUID) async throws -> EntityMonitorState {
@@ -58,6 +63,10 @@ import Foundation
 
         func unmonitor(id _: UUID) async throws -> Bool {
             false
+        }
+
+        func deleteFiles(entityID _: UUID) async throws -> EntityDeleteResponse {
+            try deleteFilesResult.get()
         }
     }
 #endif

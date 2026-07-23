@@ -39,6 +39,9 @@ import SwiftUI
         let onImported: (@MainActor () async -> Void)?
         let onReset: (@MainActor () async -> Void)?
         let isExternallyDisabled: Bool
+        let showsDeleteFilesAction: Bool
+        let isDeleteFilesDisabled: Bool
+        let onDeleteFiles: @MainActor () -> Void
         #if DEBUG
             private var disablesLiveLoadingForPreview = false
         #endif
@@ -50,7 +53,10 @@ import SwiftUI
             onCancelled: (@MainActor () async -> Void)? = nil,
             onImported: (@MainActor () async -> Void)? = nil,
             onReset: (@MainActor () async -> Void)? = nil,
-            isExternallyDisabled: Bool = false
+            isExternallyDisabled: Bool = false,
+            showsDeleteFilesAction: Bool = false,
+            isDeleteFilesDisabled: Bool = false,
+            onDeleteFiles: @escaping @MainActor () -> Void = {}
         ) {
             self.acquisitionID = acquisitionID
             self.service = service
@@ -59,6 +65,9 @@ import SwiftUI
             self.onImported = onImported
             self.onReset = onReset
             self.isExternallyDisabled = isExternallyDisabled
+            self.showsDeleteFilesAction = showsDeleteFilesAction
+            self.isDeleteFilesDisabled = isDeleteFilesDisabled
+            self.onDeleteFiles = onDeleteFiles
         }
 
         #if DEBUG
@@ -79,12 +88,18 @@ import SwiftUI
                 activeLifecycleAction: RequestActivityAcquisitionAction? = nil,
                 failedLifecycleAction: RequestActivityAcquisitionAction? = nil,
                 activeCandidateAction: RequestActivityCandidateAction? = nil,
-                confirmsStartOver: Bool = false
+                confirmsStartOver: Bool = false,
+                showsDeleteFilesAction: Bool = false,
+                isDeleteFilesDisabled: Bool = false,
+                onDeleteFiles: @escaping @MainActor () -> Void = {}
             ) {
                 self.init(
                     acquisitionID: acquisitionID,
                     service: service,
-                    style: style
+                    style: style,
+                    showsDeleteFilesAction: showsDeleteFilesAction,
+                    isDeleteFilesDisabled: isDeleteFilesDisabled,
+                    onDeleteFiles: onDeleteFiles
                 )
                 _detail = State(initialValue: previewDetail)
                 _transfer = State(initialValue: previewTransfer)
@@ -142,7 +157,7 @@ import SwiftUI
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text(
-                    "Interrupted files and remaining download data will be removed, then Prismedia will begin a clean search."
+                    "This permanently deletes every file owned by the interrupted import, removes any remaining download data it can reach, clears the partial state, and starts a clean search for the still-Wanted item. Existing library files from before an upgrade are restored when a recovery copy exists."
                 )
             }
         }
@@ -376,20 +391,48 @@ import SwiftUI
 
         private func embeddedStatusHeader(_ detail: RequestActivityAcquisitionDetail) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                RequestActivityAcquisitionStatusSummary(
-                    status: detail.summary.status,
-                    message: detail.summary.statusMessage,
-                    updatedAt: detail.summary.updatedAt
-                )
-                if hasLifecycleActions(detail) {
+                HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+                    RequestActivityAcquisitionStatusSummary(
+                        status: detail.summary.status,
+                        message: detail.summary.statusMessage,
+                        updatedAt: detail.summary.updatedAt
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if hasPersistentActions(detail) {
+                        RequestActivityAcquisitionActionMenu(
+                            lifecycleActions: menuLifecycleActions(for: detail),
+                            showsDeleteFiles: showsDeleteFilesAction,
+                            isLifecycleDisabled: isInteractionDisabled,
+                            isDeleteFilesDisabled: isDeleteFilesDisabled,
+                            onPerform: requestLifecycleAction,
+                            onDeleteFiles: onDeleteFiles
+                        )
+                    }
+                }
+
+                let visibleActions = visibleLifecycleActions(for: detail)
+                if !visibleActions.isEmpty {
                     RequestActivityAcquisitionLifecycleActions(
-                        actions: allLifecycleActions(for: detail),
+                        actions: visibleActions,
                         primaryAction: primaryLifecycleAction(for: detail),
                         activeAction: activeLifecycleAction,
                         primaryTint: artworkPrimaryAccent,
                         isDisabled: isInteractionDisabled,
                         onPerform: requestLifecycleAction
                     )
+                }
+
+                if activeLifecycleAction == .cancel {
+                    Label {
+                        Text(RequestActivityAcquisitionAction.cancel.progressTitle)
+                    } icon: {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(PrismediaColor.textSecondary)
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
@@ -412,6 +455,28 @@ import SwiftUI
 
         private func hasLifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> Bool {
             !allLifecycleActions(for: detail).isEmpty
+        }
+
+        private func hasPersistentActions(
+            _ detail: RequestActivityAcquisitionDetail
+        ) -> Bool {
+            showsDeleteFilesAction || !menuLifecycleActions(for: detail).isEmpty
+        }
+
+        private func visibleLifecycleActions(
+            for detail: RequestActivityAcquisitionDetail
+        ) -> [RequestActivityAcquisitionAction] {
+            RequestActivityAcquisitionActionPlacementPolicy.visibleActions(
+                from: allLifecycleActions(for: detail)
+            )
+        }
+
+        private func menuLifecycleActions(
+            for detail: RequestActivityAcquisitionDetail
+        ) -> [RequestActivityAcquisitionAction] {
+            RequestActivityAcquisitionActionPlacementPolicy.menuActions(
+                from: allLifecycleActions(for: detail)
+            )
         }
 
         private func allLifecycleActions(
@@ -451,16 +516,25 @@ import SwiftUI
             } else {
                 switch RequestActivityAcquisitionLifecyclePolicy.content(for: status) {
                 case .locked:
-                    RequestActivityStatePlaceholder(
-                        title: status.rawValue == "stopping"
-                            ? "Cleaning up acquisition"
-                            : "Updating acquisition",
-                        message: status.rawValue == "stopping"
-                            ? "Removing the download and managed files. Actions will return when cleanup finishes."
-                            : "Prismedia is finishing a newer lifecycle transition. Actions are temporarily unavailable.",
-                        systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
-                        isBusy: true
-                    )
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                        RequestActivityStatePlaceholder(
+                            title: status.rawValue == "stopping"
+                                ? "Cleaning up acquisition"
+                                : "Updating acquisition",
+                            message: status.rawValue == "stopping"
+                                ? "Removing acquisition-owned download data and partial import files. Existing library files remain available."
+                                : "Prismedia is finishing a newer lifecycle transition. Actions are temporarily unavailable.",
+                            systemImage: "arrow.trianglehead.2.clockwise.rotate.90",
+                            isBusy: true
+                        )
+
+                        if filesLoadState.files != nil {
+                            RequestActivityFilesSection(
+                                loadState: filesLoadState,
+                                retry: {}
+                            )
+                        }
+                    }
                 case .preparingSearch:
                     PrismediaLoadingView("Preparing search…")
                 case .searching:
