@@ -299,6 +299,9 @@
     "0.5×" : {
 
     },
+    "1 release is blocked for this item." : {
+
+    },
     "2×" : {
 
     },
@@ -425,6 +428,9 @@
     "All Quiet" : {
 
     },
+    "Allow all blocked releases for this item again?" : {
+
+    },
     "Allow NSFW content" : {
 
     },
@@ -540,6 +546,9 @@
 
     },
     "Block this release?" : {
+
+    },
+    "Blocked releases" : {
 
     },
     "Blocklist" : {
@@ -678,6 +687,18 @@
     "Clear %@ failures" : {
 
     },
+    "Clear Blocklist" : {
+
+    },
+    "Clear blocklist entries from %@?" : {
+
+    },
+    "Clear Blocklist for This Item" : {
+
+    },
+    "Clear entries from" : {
+
+    },
     "Clear Failures" : {
 
     },
@@ -691,6 +712,9 @@
 
     },
     "Clear transcode cache" : {
+
+    },
+    "Clearing entries allows matching releases to be considered for download again." : {
 
     },
     "Clearing prepared streams is safe; Prismedia recreates them when needed." : {
@@ -1489,6 +1513,9 @@
     "Mark Unread" : {
 
     },
+    "Matching releases can be selected for download again." : {
+
+    },
     "Maximum rating" : {
 
     },
@@ -1917,6 +1944,9 @@
     "Paragraph Spacing" : {
 
     },
+    "Parent Release Attempt Failed" : {
+
+    },
     "Password" : {
 
     },
@@ -2222,6 +2252,9 @@
 
     },
     "Relative path including name" : {
+
+    },
+    "Release Blocklist" : {
 
     },
     "Release Candidates" : {
@@ -2831,6 +2864,9 @@
 
     },
     "These actions enqueue background work. Preview regeneration is a heavy operation and does not delete source media." : {
+
+    },
+    "These releases can be selected for download again." : {
 
     },
     "This audiobook position could not be matched to a readable chapter." : {

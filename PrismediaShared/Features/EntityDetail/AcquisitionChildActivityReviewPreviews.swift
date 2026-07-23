@@ -1,4 +1,4 @@
-#if DEBUG && (os(iOS) || os(macOS))
+ #if DEBUG && (os(iOS) || os(macOS))
     import SwiftUI
 
     #Preview("Acquisition Review · Child Activity · Loading") {

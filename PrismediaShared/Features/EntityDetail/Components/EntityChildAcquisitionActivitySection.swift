@@ -10,6 +10,7 @@ struct EntityChildAcquisitionActivitySection: View {
     let entities: [EntityThumbnail]
     let service: EntityAcquisitionService
     let onChanged: @MainActor () async -> Void
+    let onSnapshotChanged: @MainActor ([EntityChildAcquisitionActivityItem]) -> Void
     #if DEBUG
         private var disablesLiveLoadingForPreview = false
     #endif
@@ -17,11 +18,13 @@ struct EntityChildAcquisitionActivitySection: View {
     init(
         entities: [EntityThumbnail],
         service: EntityAcquisitionService,
-        onChanged: @escaping @MainActor () async -> Void
+        onChanged: @escaping @MainActor () async -> Void,
+        onSnapshotChanged: @escaping @MainActor ([EntityChildAcquisitionActivityItem]) -> Void = { _ in }
     ) {
         self.entities = entities
         self.service = service
         self.onChanged = onChanged
+        self.onSnapshotChanged = onSnapshotChanged
         _isExpanded = State(initialValue: Self.hasInitialAttention(in: entities))
         _hasLoaded = State(initialValue: false)
         _items = State(initialValue: [])
@@ -39,6 +42,7 @@ struct EntityChildAcquisitionActivitySection: View {
             self.entities = previewItems.map(\.entity)
             self.service = service
             onChanged = {}
+            onSnapshotChanged = { _ in }
             _isExpanded = State(initialValue: isExpanded)
             _hasLoaded = State(initialValue: hasLoaded)
             _items = State(initialValue: previewItems)
@@ -188,14 +192,17 @@ struct EntityChildAcquisitionActivitySection: View {
                     EntityChildAcquisitionActivityItem(entity: entity, state: $0)
                 }
             }
-            let importedDuringRefresh = previouslyLoaded && nextItems.contains { nextItem in
-                guard nextItem.acquisition?.status.rawValue == "imported",
-                    let previousStatus = previousItemsByID[nextItem.id]?.acquisition?.status
-                else { return false }
-                return RequestActivityStatusPolicy.shouldPoll(previousStatus)
-            }
+            let importedDuringRefresh =
+                previouslyLoaded
+                && nextItems.contains { nextItem in
+                    guard nextItem.acquisition?.status.rawValue == "imported",
+                        let previousStatus = previousItemsByID[nextItem.id]?.acquisition?.status
+                    else { return false }
+                    return RequestActivityStatusPolicy.shouldPoll(previousStatus)
+                }
 
             items = nextItems
+            onSnapshotChanged(nextItems)
             hasLoaded = true
             errorMessage = nil
             if !previouslyLoaded,

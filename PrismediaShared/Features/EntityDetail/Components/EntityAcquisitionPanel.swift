@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if canImport(Accessibility)
+    import Accessibility
+#endif
+
 struct EntityAcquisitionPanel: View {
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
     @Environment(\.artworkSecondaryText) private var artworkSecondaryText
@@ -15,6 +19,10 @@ struct EntityAcquisitionPanel: View {
     @State private var failedPendingMonitorValue: Bool?
     @State private var actionNotice: String?
     @State private var isManualAcquisitionBusy = false
+    @State private var didAnnounceFailedParentActivity = false
+    @State private var previousActiveChildAcquisitionCount: Int?
+    @State private var liveChildActivityEntityIDs: Set<UUID>?
+    @State private var liveActiveChildAcquisitionIDs: Set<UUID>?
     private let entityID: UUID
     private let entityKind: EntityKind
     private let hasOwnedContent: Bool
@@ -153,6 +161,9 @@ struct EntityAcquisitionPanel: View {
             )
         }
         .accessibilityIdentifier("entity-detail.acquisition")
+        .onChange(of: failedParentAccessibilityIdentity, initial: true) {
+            updateFailedParentAccessibilityAnnouncements()
+        }
     }
 
     private var adminUnavailableView: some View {
@@ -318,6 +329,13 @@ struct EntityAcquisitionPanel: View {
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
+        let eligibleChildren = eligibleChildActivityEntities
+        let activeChildren = activeChildAcquisitionEntities
+        let demotesFailedParent = EntityFailedParentAcquisitionPolicy.shouldDemoteParent(
+            status: parentAcquisitionStatus,
+            activeChildren: activeChildren
+        )
+
         if snapshot.state.discoversChildren {
             groupingContent(snapshot.state, service: service)
         }
@@ -348,8 +366,55 @@ struct EntityAcquisitionPanel: View {
                 )
             }
 
+            // Stable IDs retain each section's local disclosure/loading state when the
+            // parent lifecycle moves behind active child work and later returns first.
+            ForEach(
+                EntityAcquisitionPanelSection.ordered(
+                    demotesFailedParent: demotesFailedParent
+                )
+            ) { section in
+                switch section {
+                case .parentAcquisition:
+                    if hasParentAcquisitionContent(snapshot) {
+                        Divider()
+                        if demotesFailedParent {
+                            EntityFailedParentAcquisitionSection(
+                                activeSummary: EntityFailedParentAcquisitionPolicy.activeSummary(
+                                    activeChildren: activeChildren,
+                                    eligibleChildren: eligibleChildren
+                                )
+                            ) {
+                                parentAcquisitionContent(snapshot, service: service)
+                            }
+                        } else {
+                            parentAcquisitionContent(snapshot, service: service)
+                        }
+                    }
+                case .childMonitoring:
+                    childMonitoringContent(snapshot.state, service: service)
+                case .childActivity:
+                    childActivityContent(service: service)
+                }
+            }
+
+            Divider()
+            EntityAcquisitionHistorySection(
+                entries: historyEntries,
+                entityID: entityID,
+                service: service
+            )
+        #else
+            fallbackContent(snapshot)
+        #endif
+    }
+
+    #if os(iOS) || os(macOS)
+        @ViewBuilder
+        private func parentAcquisitionContent(
+            _ snapshot: EntityAcquisitionPanelSnapshot,
+            service: EntityAcquisitionService
+        ) -> some View {
             if let acquisition = snapshot.latestAcquisition, let requestActivityService {
-                Divider()
                 RequestActivityAcquisitionManagementSections(
                     acquisitionID: acquisition.summary.id,
                     service: requestActivityService,
@@ -367,34 +432,36 @@ struct EntityAcquisitionPanel: View {
                 )
                 .id(acquisition.summary.id)
             } else if snapshot.state.latestAcquisition != nil {
-                fallbackContent(snapshot)
+                summaryFallback(snapshot)
             }
+        }
 
-            if snapshot.state.discoversChildren,
-                !monitoringChildren(for: snapshot.state).isEmpty
+        private func hasParentAcquisitionContent(
+            _ snapshot: EntityAcquisitionPanelSnapshot
+        ) -> Bool {
+            (snapshot.latestAcquisition != nil && requestActivityService != nil)
+                || snapshot.state.latestAcquisition != nil
+        }
+
+        @ViewBuilder
+        private func childMonitoringContent(
+            _ monitorState: EntityMonitorState,
+            service: EntityAcquisitionService
+        ) -> some View {
+            if monitorState.discoversChildren,
+                !monitoringChildren(for: monitorState).isEmpty
             {
                 Divider()
                 EntityChildMonitoringSection(
-                    title: childMonitoringTitle(for: snapshot.state),
-                    entities: monitoringChildren(for: snapshot.state),
+                    title: childMonitoringTitle(for: monitorState),
+                    entities: monitoringChildren(for: monitorState),
                     primaryAccent: artworkPrimaryAccent,
                     service: service,
                     onChanged: onMutated
                 )
             }
-
-            childActivityContent(service: service)
-
-            Divider()
-            EntityAcquisitionHistorySection(
-                entries: historyEntries,
-                entityID: entityID,
-                service: service
-            )
-        #else
-            fallbackContent(snapshot)
-        #endif
-    }
+        }
+    #endif
 
     private func groupingContent(
         _ monitorState: EntityMonitorState,
@@ -462,18 +529,97 @@ struct EntityAcquisitionPanel: View {
 
     @ViewBuilder
     private func childActivityContent(service: EntityAcquisitionService) -> some View {
-        let children = EntityChildAcquisitionActivityPolicy.eligibleChildren(
-            parentID: entityID,
-            groups: childGroups
-        )
+        let children = eligibleChildActivityEntities
         if !children.isEmpty {
             Divider()
             EntityChildAcquisitionActivitySection(
                 entities: children,
                 service: service,
-                onChanged: onMutated
+                onChanged: onMutated,
+                onSnapshotChanged: receiveChildActivitySnapshot
             )
         }
+    }
+
+    private var eligibleChildActivityEntities: [EntityThumbnail] {
+        EntityChildAcquisitionActivityPolicy.eligibleChildren(
+            parentID: entityID,
+            groups: childGroups
+        )
+    }
+
+    private var activeChildAcquisitionEntities: [EntityThumbnail] {
+        let initialChildren = EntityFailedParentAcquisitionPolicy.activeChildren(
+            parentID: entityID,
+            groups: childGroups
+        )
+        let eligibleChildren = eligibleChildActivityEntities
+        guard liveChildActivityEntityIDs == Set(eligibleChildren.map(\.id)),
+            let liveActiveChildAcquisitionIDs
+        else { return initialChildren }
+        return eligibleChildren.filter { liveActiveChildAcquisitionIDs.contains($0.id) }
+    }
+
+    private func receiveChildActivitySnapshot(
+        _ items: [EntityChildAcquisitionActivityItem]
+    ) {
+        liveChildActivityEntityIDs = Set(eligibleChildActivityEntities.map(\.id))
+        liveActiveChildAcquisitionIDs = Set(
+            items.filter { item in
+                item.isPreparingMetadata
+                    || RequestActivityStatusPolicy.shouldPoll(item.acquisition?.status)
+            }
+            .map(\.id)
+        )
+    }
+
+    private var parentAcquisitionStatus: AcquisitionStatus? {
+        guard case .content(let snapshot) = state.phase else { return nil }
+        return snapshot.latestAcquisition?.summary.status
+            ?? snapshot.state.latestAcquisition?.status
+    }
+
+    private var failedParentAccessibilityIdentity: String {
+        "\(liveRefreshIsActive)-\(parentAcquisitionStatus?.rawValue ?? "none")-\(activeChildAcquisitionEntities.count)"
+    }
+
+    private func updateFailedParentAccessibilityAnnouncements() {
+        let activeChildren = activeChildAcquisitionEntities
+        let previousCount = previousActiveChildAcquisitionCount
+        previousActiveChildAcquisitionCount = activeChildren.count
+
+        guard parentAcquisitionStatus?.rawValue == "failed" else {
+            didAnnounceFailedParentActivity = false
+            return
+        }
+
+        guard !activeChildren.isEmpty else {
+            if liveRefreshIsActive,
+                didAnnounceFailedParentActivity,
+                previousCount.map({ $0 > 0 }) == true
+            {
+                postAccessibilityAnnouncement(
+                    EntityFailedParentAcquisitionPolicy.accessibilityCompletionMessage
+                )
+            }
+            didAnnounceFailedParentActivity = false
+            return
+        }
+
+        guard liveRefreshIsActive, !didAnnounceFailedParentActivity else { return }
+        postAccessibilityAnnouncement(
+            EntityFailedParentAcquisitionPolicy.accessibilityEntryMessage(
+                activeChildren: activeChildren,
+                eligibleChildren: eligibleChildActivityEntities
+            )
+        )
+        didAnnounceFailedParentActivity = true
+    }
+
+    private func postAccessibilityAnnouncement(_ message: String) {
+        #if (os(iOS) || os(macOS)) && canImport(Accessibility)
+            AccessibilityNotification.Announcement(message).post()
+        #endif
     }
 
     private func childMonitoringTitle(for monitorState: EntityMonitorState) -> String {

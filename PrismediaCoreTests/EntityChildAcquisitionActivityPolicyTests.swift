@@ -41,7 +41,7 @@ final class EntityChildAcquisitionActivityPolicyTests: XCTestCase {
                 label: "Children",
                 entities: directChildren + [directImage, nestedEpisode],
                 code: "children"
-            ),
+            )
         ]
 
         let children = EntityChildAcquisitionActivityPolicy.eligibleChildren(
@@ -116,6 +116,95 @@ final class EntityChildAcquisitionActivityPolicyTests: XCTestCase {
         XCTAssertTrue(EntityChildAcquisitionActivityPolicy.shouldPoll([downloaded]))
     }
 
+    func testFailedParentDemotionRequiresFailedParentAndActiveDirectChild() {
+        let activeLatest = entity(
+            id: "70000000-0000-0000-0000-000000000001",
+            kind: .video,
+            parentID: parentID,
+            latestAcquisitionStatus: "downloading"
+        )
+        let activeWanted = entity(
+            id: "70000000-0000-0000-0000-000000000002",
+            kind: .video,
+            parentID: parentID,
+            wantedStatus: "searching"
+        )
+        let attentionOnly = entity(
+            id: "70000000-0000-0000-0000-000000000003",
+            kind: .video,
+            parentID: parentID,
+            latestAcquisitionStatus: "failed"
+        )
+        let nestedActive = entity(
+            id: "70000000-0000-0000-0000-000000000004",
+            kind: .video,
+            parentID: activeLatest.id,
+            latestAcquisitionStatus: "queued"
+        )
+        let groups = [
+            EntityGroup(
+                kind: .video,
+                label: "Episodes",
+                entities: [activeLatest, activeWanted, attentionOnly, nestedActive],
+                code: "episodes"
+            )
+        ]
+
+        let activeChildren = EntityFailedParentAcquisitionPolicy.activeChildren(
+            parentID: parentID,
+            groups: groups
+        )
+
+        XCTAssertEqual(activeChildren.map(\.id), [activeLatest.id, activeWanted.id])
+        XCTAssertTrue(
+            EntityFailedParentAcquisitionPolicy.shouldDemoteParent(
+                status: AcquisitionStatus(rawValue: "failed"),
+                activeChildren: activeChildren
+            )
+        )
+        XCTAssertFalse(
+            EntityFailedParentAcquisitionPolicy.shouldDemoteParent(
+                status: AcquisitionStatus(rawValue: "cancelled"),
+                activeChildren: activeChildren
+            )
+        )
+        XCTAssertFalse(
+            EntityFailedParentAcquisitionPolicy.shouldDemoteParent(
+                status: AcquisitionStatus(rawValue: "manual-import-required"),
+                activeChildren: activeChildren
+            )
+        )
+        XCTAssertFalse(
+            EntityFailedParentAcquisitionPolicy.shouldDemoteParent(
+                status: AcquisitionStatus(rawValue: "failed"),
+                activeChildren: []
+            )
+        )
+    }
+
+    func testFailedParentDemotionTreatsUnknownChildStatusAsActive() {
+        let child = entity(
+            id: "70000000-0000-0000-0000-000000000005",
+            kind: .audioTrack,
+            parentID: parentID,
+            latestAcquisitionStatus: "future-transition"
+        )
+
+        let activeChildren = EntityFailedParentAcquisitionPolicy.activeChildren(
+            parentID: parentID,
+            groups: [
+                EntityGroup(
+                    kind: .audioTrack,
+                    label: "Tracks",
+                    entities: [child],
+                    code: "tracks"
+                )
+            ]
+        )
+
+        XCTAssertEqual(activeChildren.map(\.id), [child.id])
+    }
+
     private func item(id: Int, status: String) -> EntityChildAcquisitionActivityItem {
         let entityID = UUID(
             uuidString: String(format: "40000000-0000-0000-0000-%012d", id)
@@ -138,14 +227,18 @@ final class EntityChildAcquisitionActivityPolicyTests: XCTestCase {
     private func entity(
         id: String,
         kind: EntityKind,
-        parentID: UUID? = nil
+        parentID: UUID? = nil,
+        latestAcquisitionStatus: String? = nil,
+        wantedStatus: String? = nil
     ) -> EntityThumbnail {
         EntityThumbnail(
             id: UUID(uuidString: id)!,
             kind: kind,
             title: "Child \(id.suffix(2))",
             parentEntityID: parentID,
-            isWanted: true
+            isWanted: true,
+            latestAcquisitionStatus: latestAcquisitionStatus.map(AcquisitionStatus.init(rawValue:)),
+            wantedStatus: wantedStatus.map(AcquisitionStatus.init(rawValue:))
         )
     }
 
