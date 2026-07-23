@@ -16,6 +16,7 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
     public let kind: EntityKind
     public let entityID: UUID?
     public let hasResumableImport: Bool
+    public let bookRendition: RequestActivityBookRendition?
 
     public init(
         id: UUID,
@@ -32,7 +33,8 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         description: String? = nil,
         kind: EntityKind = .book,
         entityID: UUID? = nil,
-        hasResumableImport: Bool = false
+        hasResumableImport: Bool = false,
+        bookRendition: RequestActivityBookRendition? = nil
     ) {
         self.id = id
         self.status = status
@@ -49,6 +51,7 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         self.kind = kind
         self.entityID = entityID
         self.hasResumableImport = hasResumableImport
+        self.bookRendition = bookRendition
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -67,6 +70,7 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         case kind
         case entityID = "entityId"
         case hasResumableImport
+        case bookRendition
     }
 
     public init(from decoder: any Decoder) throws {
@@ -77,14 +81,15 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         title = try container.decode(String.self, forKey: .title)
         author = try container.decodeIfPresent(String.self, forKey: .author)
         series = try container.decodeIfPresent(String.self, forKey: .series)
-        year = try container.decodeIfPresent(Int.self, forKey: .year)
+        year = try PrismediaDecoding.optionalInteger(from: container, forKey: .year)
         posterURL = try container.decodeIfPresent(String.self, forKey: .posterURL)
-        progress = try container.decodeIfPresent(Double.self, forKey: .progress)
+        progress = try PrismediaDecoding.optionalDouble(from: container, forKey: .progress)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         description = try container.decodeIfPresent(String.self, forKey: .description)
         kind = try container.decodeIfPresent(EntityKind.self, forKey: .kind) ?? .book
         entityID = try container.decodeIfPresent(UUID.self, forKey: .entityID)
         hasResumableImport = try container.decodeIfPresent(Bool.self, forKey: .hasResumableImport) ?? false
+        bookRendition = try container.decodeIfPresent(RequestActivityBookRendition.self, forKey: .bookRendition)
     }
 }

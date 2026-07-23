@@ -43,7 +43,7 @@ public struct RequestActivityHistoryEntry: Decodable, Equatable, Identifiable, S
         indexerName = try container.decodeIfPresent(String.self, forKey: .indexerName)
         downloadClientName = try container.decodeIfPresent(String.self, forKey: .downloadClientName)
         qualityCode = try container.decodeIfPresent(String.self, forKey: .qualityCode)
-        formatScore = try RequestActivityDecoding.optionalInteger(from: container, forKey: .formatScore)
+        formatScore = try PrismediaDecoding.optionalInteger(from: container, forKey: .formatScore)
         message = try container.decodeIfPresent(String.self, forKey: .message)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
     }

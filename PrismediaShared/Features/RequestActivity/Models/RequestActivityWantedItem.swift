@@ -49,7 +49,7 @@ public struct RequestActivityWantedItem: Decodable, Equatable, Identifiable, Sen
         nextSearchAt = try container.decodeIfPresent(Date.self, forKey: .nextSearchAt)
         ownedQuality = try container.decodeIfPresent(String.self, forKey: .ownedQuality)
         cutoffQuality = try container.decodeIfPresent(String.self, forKey: .cutoffQuality)
-        barrenSearches = try RequestActivityDecoding.integer(from: container, forKey: .barrenSearches)
+        barrenSearches = try PrismediaDecoding.integer(from: container, forKey: .barrenSearches)
         posterURL = try container.decodeIfPresent(String.self, forKey: .posterURL)
         author = try container.decodeIfPresent(String.self, forKey: .author)
         bookRendition = try container.decodeIfPresent(RequestActivityBookRendition.self, forKey: .bookRendition)

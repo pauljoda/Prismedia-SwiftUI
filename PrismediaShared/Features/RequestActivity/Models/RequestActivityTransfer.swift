@@ -25,16 +25,16 @@ public struct RequestActivityTransfer: Decodable, Equatable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        progress = try RequestActivityDecoding.double(from: container, forKey: .progress)
+        progress = try PrismediaDecoding.double(from: container, forKey: .progress)
         state = try container.decodeIfPresent(String.self, forKey: .state)
-        totalSizeBytes = try RequestActivityDecoding.integer64(from: container, forKey: .totalSizeBytes)
-        downloadSpeedBytesPerSecond = try RequestActivityDecoding.double(
+        totalSizeBytes = try PrismediaDecoding.integer64(from: container, forKey: .totalSizeBytes)
+        downloadSpeedBytesPerSecond = try PrismediaDecoding.double(
             from: container,
             forKey: .downloadSpeedBytesPerSecond
         )
-        etaSeconds = try RequestActivityDecoding.integer64(from: container, forKey: .etaSeconds)
-        seeds = try RequestActivityDecoding.integer(from: container, forKey: .seeds)
-        peers = try RequestActivityDecoding.integer(from: container, forKey: .peers)
+        etaSeconds = try PrismediaDecoding.integer64(from: container, forKey: .etaSeconds)
+        seeds = try PrismediaDecoding.integer(from: container, forKey: .seeds)
+        peers = try PrismediaDecoding.integer(from: container, forKey: .peers)
         savePath = try container.decodeIfPresent(String.self, forKey: .savePath)
         var pieceContainer = try container.nestedUnkeyedContainer(forKey: .pieceStates)
         var pieces: [Int] = []

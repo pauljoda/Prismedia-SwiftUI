@@ -98,7 +98,8 @@ extension PrismediaAPIClient {
         try await send(
             RequestActivityAcquisitionDetail.self,
             path: "\(requestActivityAcquisitionPath(id))/search",
-            method: "POST"
+            method: "POST",
+            body: RequestActivityAcquisitionSearchRequest()
         )
     }
 

@@ -53,23 +53,23 @@ public struct RequestActivityDownload: Decodable, Equatable, Identifiable, Senda
         title = try container.decode(String.self, forKey: .title)
         status = try container.decode(AcquisitionStatus.self, forKey: .status)
         statusMessage = try container.decodeIfPresent(String.self, forKey: .statusMessage)
-        progress = try RequestActivityDecoding.optionalDouble(from: container, forKey: .progress)
+        progress = try PrismediaDecoding.optionalDouble(from: container, forKey: .progress)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         entityID = try container.decodeIfPresent(UUID.self, forKey: .entityID)
         posterURL = try container.decodeIfPresent(String.self, forKey: .posterURL)
         transferState = try container.decodeIfPresent(String.self, forKey: .transferState)
-        totalSizeBytes = try RequestActivityDecoding.optionalInteger64(from: container, forKey: .totalSizeBytes)
-        downloadSpeedBytesPerSecond = try RequestActivityDecoding.optionalDouble(
+        totalSizeBytes = try PrismediaDecoding.optionalInteger64(from: container, forKey: .totalSizeBytes)
+        downloadSpeedBytesPerSecond = try PrismediaDecoding.optionalDouble(
             from: container,
             forKey: .downloadSpeedBytesPerSecond
         )
-        etaSeconds = try RequestActivityDecoding.optionalInteger64(from: container, forKey: .etaSeconds)
-        seeds = try RequestActivityDecoding.optionalInteger(from: container, forKey: .seeds)
-        peers = try RequestActivityDecoding.optionalInteger(from: container, forKey: .peers)
+        etaSeconds = try PrismediaDecoding.optionalInteger64(from: container, forKey: .etaSeconds)
+        seeds = try PrismediaDecoding.optionalInteger(from: container, forKey: .seeds)
+        peers = try PrismediaDecoding.optionalInteger(from: container, forKey: .peers)
         clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
         author = try container.decodeIfPresent(String.self, forKey: .author)
         series = try container.decodeIfPresent(String.self, forKey: .series)
-        year = try RequestActivityDecoding.optionalInteger(from: container, forKey: .year)
+        year = try PrismediaDecoding.optionalInteger(from: container, forKey: .year)
         bookRendition = try container.decodeIfPresent(RequestActivityBookRendition.self, forKey: .bookRendition)
     }
 }

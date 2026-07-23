@@ -8,4 +8,15 @@ public struct EntityMissingChildrenSearchResponse: Decodable, Equatable, Sendabl
         self.covered = covered
         self.missing = missing
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case covered
+        case missing
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        covered = try PrismediaDecoding.integer(from: container, forKey: .covered)
+        missing = try PrismediaDecoding.integer(from: container, forKey: .missing)
+    }
 }

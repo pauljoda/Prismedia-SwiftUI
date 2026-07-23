@@ -1,6 +1,6 @@
 import Foundation
 
-enum RequestActivityDecoding {
+enum PrismediaDecoding {
     static func integer<Key: CodingKey>(
         from container: KeyedDecodingContainer<Key>,
         forKey key: Key
@@ -60,5 +60,14 @@ enum RequestActivityDecoding {
     ) throws -> Double? {
         guard container.contains(key), try !container.decodeNil(forKey: key) else { return nil }
         return try double(from: container, forKey: key)
+    }
+
+    static func optionalIntegerDictionary<Key: CodingKey>(
+        from container: KeyedDecodingContainer<Key>,
+        forKey key: Key
+    ) throws -> [String: Int]? {
+        guard container.contains(key), try !container.decodeNil(forKey: key) else { return nil }
+        return try container.decode([String: PrismediaFlexibleInteger].self, forKey: key)
+            .mapValues(\.value)
     }
 }

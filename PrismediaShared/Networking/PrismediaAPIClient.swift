@@ -244,10 +244,7 @@ public struct PrismediaAPIClient: Sendable {
     }
 
     public func searchAcquisitionAgain(id: UUID) async throws {
-        try await sendExpectingNoContent(
-            path: "/api/acquisitions/\(id.uuidString.lowercased())/search",
-            method: "POST"
-        )
+        _ = try await researchRequestActivityAcquisition(id: id)
     }
 
     public func unmonitor(id: UUID) async throws -> EntityMonitorStopResponse {

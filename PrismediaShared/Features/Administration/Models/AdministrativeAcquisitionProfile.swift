@@ -95,4 +95,37 @@ public struct AdministrativeAcquisitionProfile: Decodable, Identifiable, Hashabl
         case cutoffSourceTier, cutoffFormatTier, downloadCategory, allowedQualities, cutoffQuality, formatScores
         case minFormatScore, cutoffFormatScore
     }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        kind = try container.decode(EntityKind.self, forKey: .kind)
+        displayName = try container.decode(String.self, forKey: .displayName)
+        isDefault = try container.decode(Bool.self, forKey: .isDefault)
+        targetLibraryRootID = try container.decode(UUID.self, forKey: .targetLibraryRootID)
+        pathTemplate = try container.decode(String.self, forKey: .pathTemplate)
+        importMode = try container.decode(String.self, forKey: .importMode)
+        allowedFormats = try container.decode([String].self, forKey: .allowedFormats)
+        preferredLanguages = try container.decode([String].self, forKey: .preferredLanguages)
+        minSeeders = try PrismediaDecoding.integer(from: container, forKey: .minSeeders)
+        minSizeBytes = try PrismediaDecoding.optionalInteger64(from: container, forKey: .minSizeBytes)
+        maxSizeBytes = try PrismediaDecoding.optionalInteger64(from: container, forKey: .maxSizeBytes)
+        requiredTerms = try container.decode([String].self, forKey: .requiredTerms)
+        ignoredTerms = try container.decode([String].self, forKey: .ignoredTerms)
+        preferredTerms = try container.decode([String].self, forKey: .preferredTerms)
+        weightedTerms = try container.decode([AdministrativeWeightedTerm].self, forKey: .weightedTerms)
+        autoPick = try container.decode(Bool.self, forKey: .autoPick)
+        autoRedownload = try container.decode(Bool.self, forKey: .autoRedownload)
+        upgradeUntilCutoff = try container.decode(Bool.self, forKey: .upgradeUntilCutoff)
+        cutoffSourceTier = try container.decode(String.self, forKey: .cutoffSourceTier)
+        cutoffFormatTier = try container.decode(String.self, forKey: .cutoffFormatTier)
+        downloadCategory = try container.decodeIfPresent(String.self, forKey: .downloadCategory)
+        allowedQualities = try container.decodeIfPresent([String].self, forKey: .allowedQualities)
+        cutoffQuality = try container.decodeIfPresent(String.self, forKey: .cutoffQuality)
+        formatScores = try PrismediaDecoding.optionalIntegerDictionary(from: container, forKey: .formatScores)
+        minFormatScore =
+            try PrismediaDecoding.optionalInteger(from: container, forKey: .minFormatScore) ?? 0
+        cutoffFormatScore =
+            try PrismediaDecoding.optionalInteger(from: container, forKey: .cutoffFormatScore)
+    }
 }

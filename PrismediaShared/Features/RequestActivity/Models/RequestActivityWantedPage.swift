@@ -12,6 +12,6 @@ public struct RequestActivityWantedPage: Decodable, Equatable, Sendable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         items = try container.decode([RequestActivityWantedItem].self, forKey: .items)
-        total = try RequestActivityDecoding.integer(from: container, forKey: .total)
+        total = try PrismediaDecoding.integer(from: container, forKey: .total)
     }
 }

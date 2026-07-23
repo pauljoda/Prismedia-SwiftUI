@@ -17,7 +17,11 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
         XCTAssertEqual(state.entityID, entityID)
         XCTAssertEqual(state.trackableProviders, ["openlibrary"])
         XCTAssertEqual(state.monitor?.id, monitorID)
+        XCTAssertEqual(state.monitor?.bookRendition?.rawValue, "audiobook")
         XCTAssertEqual(state.latestAcquisition?.id, acquisitionID)
+        XCTAssertEqual(state.latestAcquisition?.year, 2026)
+        XCTAssertEqual(state.latestAcquisition?.progress, 0.42)
+        XCTAssertEqual(state.latestAcquisition?.bookRendition?.rawValue, "audiobook")
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/api/monitors/states")
         XCTAssertEqual(request.httpMethod, "POST")
@@ -100,6 +104,13 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
                 "/api/acquisitions/\(acquisitionID.uuidString.lowercased())/search",
             ])
         XCTAssertTrue(loader.requests.allSatisfy { $0.httpMethod == "POST" })
+        let searchBody = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: XCTUnwrap(loader.requests[2].httpBody)
+            ) as? [String: Any]
+        )
+        XCTAssertTrue(searchBody.keys.contains("query"))
+        XCTAssertTrue(searchBody["query"] is NSNull)
     }
 
     func testUnmonitorDeletesMonitorAndDecodesPrunedEntityOutcome() async throws {
@@ -117,7 +128,7 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
     func testGroupingActionsUseWebParityEndpoints() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json("", statusCode: 204),
-            .json(#"{"covered":3,"missing":2}"#),
+            .json(#"{"covered":"3","missing":"2"}"#),
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
 
@@ -156,13 +167,14 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
             "title":"The Work",
             "author":"Author",
             "series":null,
-            "year":2026,
+            "year":"2026",
             "posterUrl":null,
-            "progress":0.42,
+            "progress":"0.42",
             "createdAt":"2026-07-01T12:00:00Z",
             "updatedAt":"2026-07-11T12:00:00Z",
             "kind":"book",
-            "entityId":"\(entityID.uuidString)"
+            "entityId":"\(entityID.uuidString)",
+            "bookRendition":"audiobook"
           }
         }]
         """
@@ -181,7 +193,8 @@ final class EntityAcquisitionAPIClientTests: XCTestCase {
           "createdAt":"2026-07-01T12:00:00Z",
           "updatedAt":"2026-07-11T12:00:00Z",
           "entityId":"\(entityID.uuidString)",
-          "preset":"all"
+          "preset":"all",
+          "bookRendition":"audiobook"
         }
         """
     }

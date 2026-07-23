@@ -199,7 +199,7 @@ final class AdministrativeAPIClientTests: XCTestCase {
                 #"[{"id":"\#(rootID)","path":"/media/movies","label":"Movies","enabled":true,"recursive":true,"scanVideos":true,"scanImages":false,"scanAudio":false,"scanBooks":false,"isNsfw":false,"lastScannedAt":null,"createdAt":"2026-07-12T12:00:00Z","updatedAt":"2026-07-12T12:00:00Z","autoIdentify":true,"createdByUserId":null,"accessUserIds":[]}]"#
             ),
             .json(
-                #"[{"id":"\#(profileID)","kind":"movie","displayName":"Movie HD","isDefault":true,"targetLibraryRootId":"\#(rootID)","pathTemplate":"{Title} ({Year})","importMode":"copy","allowedFormats":[],"preferredLanguages":["en"],"minSeeders":1,"minSizeBytes":null,"maxSizeBytes":null,"requiredTerms":[],"ignoredTerms":[],"preferredTerms":[],"weightedTerms":[{"term":"remux","weight":100}],"autoPick":true,"autoRedownload":false,"upgradeUntilCutoff":true,"cutoffSourceTier":"bluray","cutoffFormatTier":"epub","downloadCategory":"movies","allowedQualities":["1080p"],"cutoffQuality":"1080p","formatScores":{"remux":100},"minFormatScore":0,"cutoffFormatScore":100}]"#
+                #"[{"id":"\#(profileID)","kind":"movie","displayName":"Movie HD","isDefault":true,"targetLibraryRootId":"\#(rootID)","pathTemplate":"{Title} ({Year})","importMode":"copy","allowedFormats":[],"preferredLanguages":["en"],"minSeeders":"1","minSizeBytes":"1073741824","maxSizeBytes":"2147483648","requiredTerms":[],"ignoredTerms":[],"preferredTerms":[],"weightedTerms":[{"term":"remux","weight":"100"}],"autoPick":true,"autoRedownload":false,"upgradeUntilCutoff":true,"cutoffSourceTier":"bluray","cutoffFormatTier":"epub","downloadCategory":"movies","allowedQualities":["1080p"],"cutoffQuality":"1080p","formatScores":{"remux":"100"},"minFormatScore":"0","cutoffFormatScore":"100"}]"#
             ),
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
@@ -211,7 +211,12 @@ final class AdministrativeAPIClientTests: XCTestCase {
         XCTAssertEqual(roots.first?.scanVideos, true)
         XCTAssertEqual(profiles.first?.id, profileID)
         XCTAssertEqual(profiles.first?.targetLibraryRootID, rootID)
+        XCTAssertEqual(profiles.first?.minSeeders, 1)
+        XCTAssertEqual(profiles.first?.minSizeBytes, 1_073_741_824)
+        XCTAssertEqual(profiles.first?.maxSizeBytes, 2_147_483_648)
         XCTAssertEqual(profiles.first?.weightedTerms.first?.weight, 100)
+        XCTAssertEqual(profiles.first?.formatScores, ["remux": 100])
+        XCTAssertEqual(profiles.first?.cutoffFormatScore, 100)
         XCTAssertEqual(loader.requests.map(\.url?.path), ["/api/libraries", "/api/acquisitions/profiles"])
         XCTAssertTrue(loader.requests.allSatisfy { $0.httpMethod == "GET" })
     }

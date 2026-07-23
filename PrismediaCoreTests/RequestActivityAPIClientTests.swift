@@ -62,7 +62,7 @@ final class RequestActivityAPIClientTests: XCTestCase {
 
     func testBulkBlocklistClearUsesOptionalEntityAndTimeScope() async throws {
         let loader = MockHTTPDataLoader(responses: [
-            .json(#"{"removed":3}"#),
+            .json(#"{"removed":"3"}"#),
             .json(#"{"removed":7}"#),
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
@@ -170,10 +170,12 @@ final class RequestActivityAPIClientTests: XCTestCase {
 
         let queueBody = try body(in: loader.requests[1])
         XCTAssertEqual(queueBody["candidateId"] as? String, candidateID.uuidString)
+        let searchBody = try body(in: loader.requests[3])
+        XCTAssertTrue(searchBody.keys.contains("query"))
+        XCTAssertTrue(searchBody["query"] is NSNull)
         let retryBody = try body(in: loader.requests[4])
         XCTAssertEqual(retryBody["allowFormatChange"] as? Bool, true)
         XCTAssertNil(loader.requests[2].httpBody)
-        XCTAssertNil(loader.requests[3].httpBody)
         XCTAssertNil(loader.requests[5].httpBody)
     }
 
