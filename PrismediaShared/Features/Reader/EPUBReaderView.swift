@@ -210,15 +210,18 @@
                 {
                     currentChapter = initialIndex
                     currentChapterProgress = min(max(0, initialProgression ?? 0), 1)
-                } else {
-                    currentChapter =
-                        command == .resume
-                        ? DocumentReaderProgressMapper.initialIndex(progress: useCase.progress, locations: locations)
-                        : 0
+                } else if command == .resume,
+                    let savedLocation = locatorStore.load(bookID: useCase.book.id),
+                    let savedIndex = locations.firstIndex(where: {
+                        documentResource($0) == documentResource(savedLocation)
+                    })
+                {
+                    currentChapter = savedIndex
                     currentChapterProgress =
-                        command == .resume
-                        ? DocumentReaderProgressMapper.epubProgress(from: useCase.progress?.location) ?? 0
-                        : 0
+                        DocumentReaderProgressMapper.epubProgress(from: savedLocation) ?? 0
+                } else {
+                    currentChapter = 0
+                    currentChapterProgress = 0
                 }
                 publication = loaded
                 await signalReady()
@@ -282,25 +285,44 @@
             guard let publication,
                 publication.chapters.indices.contains(currentChapter)
             else { return }
-            let request = DocumentReaderProgressMapper.request(
+            let chapter = publication.chapters[currentChapter]
+            let location = DocumentReaderProgressMapper.epubLocation(
+                chapterLocation: chapter.location,
+                progress: currentChapterProgress
+            )
+            locatorStore.save(
+                location,
                 bookID: useCase.book.id,
-                index: currentChapter,
-                total: publication.chapters.count,
-                unit: .cfi,
+                chapterLocation: chapter.location
+            )
+            let bookProgression = DocumentReaderProgressMapper.epubBookProgression(
+                chapterIndex: currentChapter,
+                chapterCount: publication.chapters.count,
+                chapterProgression: currentChapterProgress
+            )
+            let request = DocumentReaderProgressMapper.epubRequest(
+                bookID: useCase.book.id,
+                progression: bookProgression,
                 mode: .scrolled,
-                location: DocumentReaderProgressMapper.epubLocation(
-                    chapterLocation: publication.chapters[currentChapter].location,
-                    progress: currentChapterProgress
-                ),
-                completesAtEnd: false
+                location: nil,
+                closing: false
             )
             progressWriter.queue(bookID: useCase.book.id, request: request)
         }
 
         private func selectChapter(_ index: Int) {
-            guard index != currentChapter else { return }
+            guard let publication,
+                publication.chapters.indices.contains(index),
+                index != currentChapter
+            else { return }
+            saveProgress()
+            let chapter = publication.chapters[index]
             currentChapter = index
-            currentChapterProgress = 0
+            currentChapterProgress =
+                locatorStore.load(
+                    bookID: useCase.book.id,
+                    chapterLocation: chapter.location
+                ).flatMap(DocumentReaderProgressMapper.epubProgress) ?? 0
             saveProgress()
         }
 

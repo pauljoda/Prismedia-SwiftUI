@@ -15,6 +15,16 @@ final class DocumentReaderProgressMapperTests: XCTestCase {
 
     private let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
 
+    func testEPUBBookProgressIsDerivedFromChapterPosition() {
+        let progression = DocumentReaderProgressMapper.epubBookProgression(
+            chapterIndex: 2,
+            chapterCount: 4,
+            chapterProgression: 0.5
+        )
+
+        XCTAssertEqual(progression, 0.625)
+    }
+
     func testEPUBRestoresByLocationBeforeStaleNumericIndex() {
         let progress = EntityProgressCapability(
             currentEntityID: bookID,

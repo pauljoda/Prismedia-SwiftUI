@@ -31,6 +31,9 @@
         private var searchLocators: [String: Locator] = [:]
         private var searchGeneration = 0
         private var progression = 0.0
+        private var activeResourceKey: String?
+        private var pendingChapterRestoreResourceKey: String?
+        private var explicitNavigationResourceKey: String?
         private var scrollFocusResourceKey: String?
         private var toggleNavigation = EPUBToggleBookmarkNavigation()
         private var isToggleNavigationInFlight = false
@@ -109,6 +112,7 @@
             let tableOfContents = tableOfContentsLinks.map(tableOfContentsItem)
             host.install(controller)
             if let currentLocation = controller.currentLocation {
+                activeResourceKey = resourceKey(currentLocation.href)
                 updateLocation(currentLocation)
             }
             return tableOfContents
@@ -123,6 +127,13 @@
 
         func openTableOfContentsItem(_ item: EPUBTableOfContentsItem) async {
             guard let publication, let location = item.location else { return }
+            if let savedLocation = locatorStore.load(
+                bookID: book.id,
+                chapterLocation: location
+            ), let locator = await resolvedLocator(savedLocation) {
+                _ = await navigateExplicitly(to: locator)
+                return
+            }
             let links = (try? await publication.tableOfContents().get()) ?? []
             guard let link = findLink(location, in: links) else { return }
             _ = await navigator?.go(to: link, options: .animated)
@@ -138,7 +149,7 @@
             let locator = chapterLocator.copy(locations: {
                 $0.progression = target.progression
             })
-            return await navigator?.go(to: locator, options: .animated) ?? false
+            return await navigateExplicitly(to: locator)
         }
 
         func search(_ query: String) async -> [EPUBSearchResult] {
@@ -177,7 +188,7 @@
 
         func openSearchResult(_ result: EPUBSearchResult) async {
             guard let locator = searchLocators[result.id] else { return }
-            _ = await navigator?.go(to: locator, options: .animated)
+            _ = await navigateExplicitly(to: locator)
         }
 
         func currentBookmark(createdAt: Date = Date()) -> EPUBBookmark? {
@@ -208,7 +219,7 @@
 
             let previousNavigation = toggleNavigation
             toggleNavigation.reset()
-            let didNavigate = await navigator?.go(to: locator, options: .animated) ?? false
+            let didNavigate = await navigateExplicitly(to: locator)
             if !didNavigate {
                 toggleNavigation = previousNavigation
                 return false
@@ -238,7 +249,7 @@
                 return false
             }
 
-            let didNavigate = await navigator?.go(to: locator, options: .animated) ?? false
+            let didNavigate = await navigateExplicitly(to: locator)
             if !didNavigate {
                 toggleNavigation = previousNavigation
                 return false
@@ -303,32 +314,14 @@
                     $0.progression = min(max(0, initialProgression), 1)
                 })
             }
-            guard command == .resume, let progress = progressCapability else { return nil }
-            if let location = locatorStore.load(bookID: book.id) ?? readiumMigrationLocation,
+            guard command == .resume else { return nil }
+            if let location = locatorStore.load(bookID: book.id),
                 let locator = try? Locator(jsonString: location),
                 let normalized = await publication.locate(locator)
             {
-                locatorStore.save(location, bookID: book.id)
                 return normalized
             }
-            let total = max(1, progress.total)
-            let progression = min(max(Double(progress.index) / Double(total), 0), 1)
-            updateProgression(progression)
-            return await publication.locate(progression: progression)
-        }
-
-        private var progressCapability: EntityProgressCapability? {
-            book.capabilities.lazy.compactMap { capability in
-                guard case .progress(let progress) = capability else { return nil }
-                return progress
-            }.first
-        }
-
-        private var readiumMigrationLocation: String? {
-            guard let location = progressCapability?.location,
-                location.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{")
-            else { return nil }
-            return location
+            return nil
         }
 
         private func readiumPreferences(useDarkSystemTheme: Bool) -> EPUBPreferences {
@@ -491,6 +484,16 @@
             return await publication.locate(locator)
         }
 
+        private func navigateExplicitly(to locator: Locator) async -> Bool {
+            let destinationResourceKey = resourceKey(locator.href)
+            explicitNavigationResourceKey = destinationResourceKey
+            let didNavigate = await navigator?.go(to: locator, options: .animated) ?? false
+            if explicitNavigationResourceKey == destinationResourceKey {
+                explicitNavigationResourceKey = nil
+            }
+            return didNavigate
+        }
+
         private var shouldPersistReadingLocation: Bool {
             !isToggleNavigationInFlight && toggleNavigation.shouldRecordProgress
         }
@@ -547,6 +550,57 @@
             }
         }
 
+        private func recordLocationChange(_ locator: Locator) {
+            let chapterLocation = resourceKey(locator.href)
+            activeResourceKey = chapterLocation
+            updateLocation(locator)
+            guard shouldPersistReadingLocation else { return }
+            if let locationDescription = try? locator.jsonString() {
+                locatorStore.save(
+                    locationDescription,
+                    bookID: book.id,
+                    chapterLocation: chapterLocation
+                )
+            }
+            saveProgress(closing: false)
+        }
+
+        private func restoreChapterPositionIfAvailable(
+            afterOpening locator: Locator
+        ) -> Bool {
+            let destinationResourceKey = resourceKey(locator.href)
+            guard
+                let activeResourceKey,
+                activeResourceKey != destinationResourceKey,
+                let savedLocation = locatorStore.load(
+                    bookID: book.id,
+                    chapterLocation: destinationResourceKey
+                )
+            else { return false }
+
+            pendingChapterRestoreResourceKey = destinationResourceKey
+            Task {
+                guard
+                    let restoredLocator = await resolvedLocator(savedLocation),
+                    pendingChapterRestoreResourceKey == destinationResourceKey
+                else {
+                    pendingChapterRestoreResourceKey = nil
+                    recordLocationChange(locator)
+                    return
+                }
+                let didRestore = await navigator?.go(
+                    to: restoredLocator,
+                    options: .init()
+                ) ?? false
+                guard !didRestore,
+                    pendingChapterRestoreResourceKey == destinationResourceKey
+                else { return }
+                pendingChapterRestoreResourceKey = nil
+                recordLocationChange(locator)
+            }
+            return true
+        }
+
         private func applyScrollFocus() async {
             guard let navigator else { return }
             _ = await navigator.evaluateJavaScript(
@@ -574,19 +628,32 @@
         }
 
         func navigator(_ navigator: Navigator, locationDidChange locator: Locator) {
-            updateLocation(locator)
-            guard shouldPersistReadingLocation else { return }
-            if let locationDescription = try? locator.jsonString() {
-                locatorStore.save(locationDescription, bookID: book.id)
+            let destinationResourceKey = resourceKey(locator.href)
+            if explicitNavigationResourceKey == destinationResourceKey {
+                explicitNavigationResourceKey = nil
+                pendingChapterRestoreResourceKey = nil
+                recordLocationChange(locator)
+                return
             }
-            saveProgress(closing: false)
+            if pendingChapterRestoreResourceKey == destinationResourceKey {
+                pendingChapterRestoreResourceKey = nil
+                recordLocationChange(locator)
+                return
+            }
+            guard !restoreChapterPositionIfAvailable(afterOpening: locator) else { return }
+            recordLocationChange(locator)
         }
 
         func navigator(
             _ navigator: any ViewportObservingNavigator,
             viewportDidChange viewport: NavigatorViewport?
         ) {
+            guard pendingChapterRestoreResourceKey == nil else { return }
             guard let locator = self.navigator?.currentLocation else { return }
+            let destinationResourceKey = resourceKey(locator.href)
+            guard destinationResourceKey == activeResourceKey
+                || destinationResourceKey == explicitNavigationResourceKey
+            else { return }
             updateLocation(locator, viewport: viewport)
         }
 

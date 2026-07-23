@@ -1,6 +1,17 @@
 import Foundation
 
 public struct DocumentReaderProgressMapper: Sendable {
+    public static func epubBookProgression(
+        chapterIndex: Int,
+        chapterCount: Int,
+        chapterProgression: Double
+    ) -> Double {
+        let boundedCount = max(1, chapterCount)
+        let boundedIndex = max(0, min(chapterIndex, boundedCount - 1))
+        let boundedChapterProgression = min(max(chapterProgression, 0), 1)
+        return (Double(boundedIndex) + boundedChapterProgression) / Double(boundedCount)
+    }
+
     public static func epubRequest(
         bookID: UUID,
         progression: Double,
