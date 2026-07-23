@@ -510,6 +510,41 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.queue.orderedTracks.first?.id, tracks[1].id)
     }
 
+    func testQueuingMusicAfterRepeatOnePersistsRepeatAll() {
+        let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
+        let store = MusicPlaybackStateStoreSpy(
+            preferences: MusicPlaybackPreferences(repeatMode: .one, isShuffled: false)
+        )
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: MusicPlaybackServiceStub(),
+            stateStore: store
+        )
+
+        controller.play(tracks: tracks)
+
+        XCTAssertEqual(controller.queue.repeatMode, .all)
+        XCTAssertEqual(store.savedPreferences.last?.repeatMode, .all)
+    }
+
+    func testSkippingFromRepeatOnePersistsRepeatAll() {
+        let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
+        let store = MusicPlaybackStateStoreSpy()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: MusicPlaybackServiceStub(),
+            stateStore: store
+        )
+        controller.play(tracks: tracks, startingAt: tracks[1].id)
+        controller.setRepeatMode(.one)
+
+        controller.skipToNext()
+
+        XCTAssertEqual(controller.currentTrack?.id, tracks[0].id)
+        XCTAssertEqual(controller.queue.repeatMode, .all)
+        XCTAssertEqual(store.savedPreferences.last?.repeatMode, .all)
+    }
+
     func testPlayAllTurnsOffShuffleAndMakesOrderedPlaybackTheGlobalPreference() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2), makeTrack(idSuffix: 3)]
         let store = MusicPlaybackStateStoreSpy(

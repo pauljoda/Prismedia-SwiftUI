@@ -225,6 +225,7 @@ struct EntityAcquisitionPanel: View {
                 if !presentation.showsExpandedContent || snapshot == nil {
                     childActivityContent(service: service)
                 }
+                EntityAcquisitionBlocklistSection(entityID: entityID, service: service)
             #endif
         }
         .padding(PrismediaSpacing.extraLarge)

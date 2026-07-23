@@ -117,6 +117,9 @@ private actor EntityAcquisitionServiceStub: EntityAcquisitionServicing {
         return acquisition
     }
 
+    func acquisitionBlocklist(entityID: UUID?) async throws -> [RequestActivityBlocklistEntry] { [] }
+    func clearAcquisitionBlocklist(entityID: UUID?, createdAfter: Date?) async throws -> Int { 0 }
+
     func startMonitor(entityID _: UUID) async throws {}
     func pauseMonitor(id _: UUID) async throws {}
     func resumeMonitor(id _: UUID) async throws {}

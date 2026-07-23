@@ -89,7 +89,7 @@ public struct MusicQueue: Equatable, Sendable {
 
     public var canGoPrevious: Bool {
         guard currentTrack != nil else { return false }
-        return !history.isEmpty || position > 0 || repeatMode == .all
+        return !history.isEmpty || position > 0 || repeatMode != .off
     }
 
     public mutating func setRepeatMode(_ mode: MusicRepeatMode) {
@@ -112,6 +112,10 @@ public struct MusicQueue: Equatable, Sendable {
             return currentTrack
         }
 
+        if reason == .user {
+            promoteRepeatOneToAll()
+        }
+
         if position < order.count - 1 {
             appendCurrentTrackToHistory()
             position += 1
@@ -127,6 +131,7 @@ public struct MusicQueue: Equatable, Sendable {
     @discardableResult
     public mutating func movePrevious() -> MusicTrack? {
         guard currentTrack != nil else { return nil }
+        promoteRepeatOneToAll()
 
         if let previous = history.popLast(),
             let previousTrackIndex = tracks.firstIndex(where: { $0.id == previous.track.id })
@@ -196,6 +201,7 @@ public struct MusicQueue: Equatable, Sendable {
         var existingIDs = Set(tracks.map(\.id))
         let uniqueTracks = newTracks.filter { $0.isPlayable && existingIDs.insert($0.id).inserted }
         guard !uniqueTracks.isEmpty else { return }
+        promoteRepeatOneToAll()
 
         let firstNewIndex = tracks.count
         tracks += uniqueTracks
@@ -218,6 +224,7 @@ public struct MusicQueue: Equatable, Sendable {
             })
         else { return nil }
 
+        promoteRepeatOneToAll()
         appendCurrentTrackToHistory()
         position = destination
         return currentTrack
@@ -283,5 +290,10 @@ public struct MusicQueue: Equatable, Sendable {
             history.removeFirst(history.count - Self.historyLimit)
         }
         nextHistorySequence += 1
+    }
+
+    private mutating func promoteRepeatOneToAll() {
+        guard repeatMode == .one else { return }
+        repeatMode = .all
     }
 }

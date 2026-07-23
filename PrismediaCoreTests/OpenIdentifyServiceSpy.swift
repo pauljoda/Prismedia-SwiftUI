@@ -79,6 +79,8 @@ import Foundation
         { throw CancellationError() }
         func libraryRoots() async throws -> [AdministrativeLibraryRoot] { throw CancellationError() }
         func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] { throw CancellationError() }
+        func acquisitionBlocklist(entityID: UUID?) async throws -> [RequestActivityBlocklistEntry] { [] }
+        func clearAcquisitionBlocklist(entityID: UUID?, createdAfter: Date?) async throws -> Int { 0 }
         func jobs() async throws -> AdministrativeJobListResponse { throw CancellationError() }
         func createJob(type: String) async throws -> AdministrativeJobRun { throw CancellationError() }
         func cancelJob(id: UUID) async throws -> Int { throw CancellationError() }

@@ -85,6 +85,7 @@ struct AdministrativeSettingsView: View {
                     cacheStatus: cacheStatus,
                     plugins: plugins,
                     hidesNsfw: hidesNsfw,
+                    blocklistService: service,
                     onSave: save,
                     onClearCache: clearCache,
                     onCreateBackup: createBackup

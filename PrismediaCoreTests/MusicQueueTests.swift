@@ -30,7 +30,36 @@ final class MusicQueueTests: XCTestCase {
         queue.setRepeatMode(.one)
 
         XCTAssertEqual(queue.advance(reason: .playbackEnded)?.id, tracks[0].id)
+        XCTAssertEqual(queue.repeatMode, .one)
         XCTAssertEqual(queue.advance(reason: .user)?.id, tracks[1].id)
+        XCTAssertEqual(queue.repeatMode, .all)
+    }
+
+    func testNextAndPreviousLeaveRepeatOneAndWrapAsRepeatAll() {
+        let tracks = makeTracks(count: 2)
+        var queue = MusicQueue(tracks: tracks, startingAt: tracks[1].id)
+        queue.setRepeatMode(.one)
+
+        XCTAssertEqual(queue.advance(reason: .user)?.id, tracks[0].id)
+        XCTAssertEqual(queue.repeatMode, .all)
+
+        queue.setRepeatMode(.one)
+        XCTAssertEqual(queue.movePrevious()?.id, tracks[1].id)
+        XCTAssertEqual(queue.repeatMode, .all)
+    }
+
+    func testAddingOrSelectingQueuedMusicLeavesRepeatOne() {
+        let tracks = makeTracks(count: 3)
+        var queue = MusicQueue(tracks: Array(tracks.prefix(2)))
+        queue.setRepeatMode(.one)
+
+        queue.appendUpcomingTracks([tracks[2]])
+
+        XCTAssertEqual(queue.repeatMode, .all)
+
+        queue.setRepeatMode(.one)
+        XCTAssertEqual(queue.moveToUpcomingTrack(id: tracks[2].id)?.id, tracks[2].id)
+        XCTAssertEqual(queue.repeatMode, .all)
     }
 
     func testRepeatAllWrapsAtBothEnds() {

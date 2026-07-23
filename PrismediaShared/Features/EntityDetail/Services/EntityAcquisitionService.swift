@@ -51,6 +51,14 @@ struct EntityAcquisitionService {
         try await port.loadStates(entityIDs: entityIDs)
     }
 
+    func acquisitionBlocklist(entityID: UUID) async throws -> [RequestActivityBlocklistEntry] {
+        try await port.acquisitionBlocklist(entityID: entityID)
+    }
+
+    func clearAcquisitionBlocklist(entityID: UUID) async throws -> Int {
+        try await port.clearAcquisitionBlocklist(entityID: entityID, createdAfter: nil)
+    }
+
     private func execute(
         _ command: EntityAcquisitionCommand
     ) async throws -> EntityAcquisitionMutationOutcome {

@@ -15,6 +15,19 @@ struct PrismediaEntityAcquisitionService: EntityAcquisitionServicing {
         try await client.fetchRequestActivityAcquisition(forEntity: entityID)
     }
 
+    func acquisitionBlocklist(entityID: UUID?) async throws -> [RequestActivityBlocklistEntry] {
+        let entries = try await client.listRequestActivityBlocklist()
+        guard let entityID else { return entries }
+        return entries.filter { $0.entityID == entityID }
+    }
+
+    func clearAcquisitionBlocklist(entityID: UUID?, createdAfter: Date?) async throws -> Int {
+        try await client.clearAcquisitionBlocklist(
+            entityID: entityID,
+            createdAfter: createdAfter
+        ).removed
+    }
+
     func startMonitor(entityID: UUID) async throws {
         try await client.startEntityMonitor(entityID: entityID)
     }

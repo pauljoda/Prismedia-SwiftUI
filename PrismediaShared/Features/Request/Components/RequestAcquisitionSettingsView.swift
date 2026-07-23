@@ -16,6 +16,7 @@ import SwiftUI
                         AdministrativeSettingsDetailView(
                             section: section,
                             cacheStatus: nil,
+                            blocklistService: service,
                             onSave: save,
                             onClearCache: { nil },
                             onCreateBackup: { false }

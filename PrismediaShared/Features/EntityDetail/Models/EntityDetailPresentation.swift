@@ -258,7 +258,8 @@ struct EntityDetailPresentation {
     }
 
     private var supportsAcquisition: Bool {
-        detail.hasSourceMedia || flagCapability?.isWanted != nil
+        detail.kind != .collection
+            && (detail.hasSourceMedia || flagCapability?.isWanted != nil)
     }
 
     private var hasMetadataCapability: Bool {

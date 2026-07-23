@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol EntityAcquisitionServicing: Sendable {
+public protocol EntityAcquisitionServicing: AcquisitionBlocklistServicing, Sendable {
     func loadState(entityID: UUID) async throws -> EntityMonitorState
     func loadStates(entityIDs: [UUID]) async throws -> [EntityMonitorState]
     func latestAcquisition(entityID: UUID) async throws -> RequestActivityAcquisitionDetail?

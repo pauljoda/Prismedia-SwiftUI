@@ -60,6 +60,29 @@ final class RequestActivityAPIClientTests: XCTestCase {
         XCTAssertEqual(queryItem("hideNsfw", in: loader.requests[1]), "false")
     }
 
+    func testBulkBlocklistClearUsesOptionalEntityAndTimeScope() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"removed":3}"#),
+            .json(#"{"removed":7}"#),
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+        let cutoff = ISO8601DateFormatter().date(from: "2026-07-22T12:00:00Z")!
+
+        let scoped = try await client.clearAcquisitionBlocklist(
+            entityID: entityID,
+            createdAfter: cutoff
+        )
+        let all = try await client.clearAcquisitionBlocklist()
+
+        XCTAssertEqual(scoped.removed, 3)
+        XCTAssertEqual(all.removed, 7)
+        XCTAssertTrue(loader.requests.allSatisfy { $0.httpMethod == "DELETE" })
+        XCTAssertTrue(loader.requests.allSatisfy { $0.url?.path == "/api/acquisitions/blocklist" })
+        XCTAssertEqual(queryItem("entityId", in: loader.requests[0]), entityID.uuidString.lowercased())
+        XCTAssertEqual(queryItem("createdAfter", in: loader.requests[0]), "2026-07-22T12:00:00Z")
+        XCTAssertNil(loader.requests[1].url?.query)
+    }
+
     func testActivityRowsDefensivelyDecodeEvolvingOptionalAndNumericFields() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json(
@@ -181,6 +204,9 @@ final class RequestActivityAPIClientTests: XCTestCase {
         XCTAssertEqual(files.files.first?.sizeBytes, 1_024)
         XCTAssertEqual(history.first?.event.rawValue, "grabbed")
         XCTAssertEqual(blocklist.first?.reason.rawValue, "failed")
+        XCTAssertEqual(blocklist.first?.entityID, entityID)
+        XCTAssertEqual(blocklist.first?.entityKind, .book)
+        XCTAssertEqual(blocklist.first?.entityTitle, "Example")
         XCTAssertEqual(
             loader.requests[5].url?.path, "/api/acquisitions/blocklist/\(blocklistID.uuidString.lowercased())")
         XCTAssertEqual(loader.requests[5].httpMethod, "DELETE")
@@ -321,7 +347,7 @@ final class RequestActivityAPIClientTests: XCTestCase {
 
     private var blocklistJSON: String {
         """
-        {"id":"\(blocklistID.uuidString)","reason":"failed","title":null,"indexerName":null,"infoHash":null,"acquisitionId":null,"message":null,"createdAt":"2026-07-12T12:00:00Z"}
+        {"id":"\(blocklistID.uuidString)","reason":"failed","title":null,"indexerName":null,"infoHash":null,"acquisitionId":null,"entityId":"\(entityID.uuidString)","entityKind":"book","entityTitle":"Example","message":null,"createdAt":"2026-07-12T12:00:00Z"}
         """
     }
 

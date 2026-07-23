@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol AdministrationServicing: Sendable {
+public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable {
     func fileRoots() async throws -> [AdministrativeFileRoot]
     func fileChildren(rootID: UUID, path: String) async throws -> AdministrativeFileChildrenResponse
     func rescan(rootID: UUID, path: String?) async throws -> AdministrativeFileOperationResponse

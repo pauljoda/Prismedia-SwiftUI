@@ -6,6 +6,7 @@ struct AdministrativeSettingsDetailView: View {
     @State private var isPerformingAction = false
     let plugins: [AdministrativePlugin]
     let hidesNsfw: Bool
+    let blocklistService: (any AcquisitionBlocklistServicing)?
     let onSave: (AdministrativeSetting, AdministrativeJSONValue) async -> AdministrativeSettingsSection?
     let onClearCache: () async -> AdministrativeTranscodeCacheStatus?
     let onCreateBackup: () async -> Bool
@@ -15,6 +16,7 @@ struct AdministrativeSettingsDetailView: View {
         cacheStatus: AdministrativeTranscodeCacheStatus?,
         plugins: [AdministrativePlugin] = [],
         hidesNsfw: Bool = true,
+        blocklistService: (any AcquisitionBlocklistServicing)? = nil,
         onSave: @escaping (AdministrativeSetting, AdministrativeJSONValue) async -> AdministrativeSettingsSection?,
         onClearCache: @escaping () async -> AdministrativeTranscodeCacheStatus?,
         onCreateBackup: @escaping () async -> Bool
@@ -23,6 +25,7 @@ struct AdministrativeSettingsDetailView: View {
         _cacheStatus = State(initialValue: cacheStatus)
         self.plugins = plugins
         self.hidesNsfw = hidesNsfw
+        self.blocklistService = blocklistService
         self.onSave = onSave
         self.onClearCache = onClearCache
         self.onCreateBackup = onCreateBackup
@@ -65,6 +68,10 @@ struct AdministrativeSettingsDetailView: View {
                 ) {
                     await performCacheClear()
                 }
+            }
+
+            if section.id == "acquisition", let blocklistService {
+                AcquisitionBlocklistSettingsSection(service: blocklistService)
             }
 
             if section.includesDatabaseBackupActions {

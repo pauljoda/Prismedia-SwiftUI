@@ -120,6 +120,10 @@ public final class MusicPlayerController {
             engine.setPlaybackRate(playbackRate)
         }
         audiobookCompleted = false
+        if preferences.repeatMode == .one {
+            preferences.repeatMode = .all
+            persistPreferences()
+        }
         queue.setRepeatMode(preferences.repeatMode)
         let shouldShuffle = shuffleEnabled(for: queueMode, context: context)
         if queueMode == .shuffled, shouldShuffle {
@@ -142,9 +146,13 @@ public final class MusicPlayerController {
         guard queueID == activeQueueID else { return false }
         let previousCount = queue.tracks.count
         let couldGoNext = queue.canGoNext
+        let previousRepeatMode = queue.repeatMode
         queue.appendUpcomingTracks(tracks)
         guard queue.tracks.count != previousCount else { return true }
-        if queue.canGoNext != couldGoNext { publishNowPlayingState() }
+        syncRepeatPreferenceFromQueue()
+        if queue.canGoNext != couldGoNext || queue.repeatMode != previousRepeatMode {
+            publishNowPlayingState()
+        }
         return true
     }
 
@@ -227,6 +235,7 @@ public final class MusicPlayerController {
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
         guard queue.advance(reason: .user) != nil else { return }
+        syncRepeatPreferenceFromQueue()
         reportQuickSkipIfNeeded(track: skippedTrack, positionSeconds: skippedPosition)
         elapsedTime = 0
         startCurrentTrack()
@@ -236,6 +245,7 @@ public final class MusicPlayerController {
     public func skipToPrevious() {
         reportAudiobookProgress(completed: false)
         guard queue.movePrevious() != nil else { return }
+        syncRepeatPreferenceFromQueue()
         elapsedTime = 0
         startCurrentTrack()
         persistState()
@@ -246,6 +256,7 @@ public final class MusicPlayerController {
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
         guard queue.moveToUpcomingTrack(id: trackID) != nil else { return }
+        syncRepeatPreferenceFromQueue()
         reportQuickSkipIfNeeded(track: skippedTrack, positionSeconds: skippedPosition)
         elapsedTime = 0
         startCurrentTrack()
@@ -276,6 +287,12 @@ public final class MusicPlayerController {
         var nextQueue = queue
         nextQueue.cycleRepeatMode()
         setRepeatMode(nextQueue.repeatMode)
+    }
+
+    private func syncRepeatPreferenceFromQueue() {
+        guard preferences.repeatMode != queue.repeatMode else { return }
+        preferences.repeatMode = queue.repeatMode
+        persistPreferences()
     }
 
     public func setShuffleEnabled(_ enabled: Bool) {
