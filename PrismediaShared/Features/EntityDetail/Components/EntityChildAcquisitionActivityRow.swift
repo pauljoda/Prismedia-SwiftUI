@@ -5,7 +5,7 @@ struct EntityChildAcquisitionActivityRow: View {
 
     var body: some View {
         NavigationLink(value: EntityLink(thumbnail: item.entity)) {
-            HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+            HStack(alignment: .center, spacing: PrismediaSpacing.medium) {
                 artwork
                 VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                     Text(item.entity.title)
@@ -28,7 +28,6 @@ struct EntityChildAcquisitionActivityRow: View {
                 Image(systemName: "chevron.forward")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PrismediaColor.textMuted)
-                    .padding(.top, PrismediaSpacing.extraSmall)
                     .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -645,6 +645,9 @@
     "Checks daily for new content." : {
 
     },
+    "Child Activity" : {
+
+    },
     "Choose a different server" : {
 
     },
@@ -796,6 +799,9 @@
 
     },
     "Couldn’t Play Video" : {
+
+    },
+    "Couldn’t Refresh Child Activity" : {
 
     },
     "Couldn’t Search Prismedia" : {
@@ -1342,6 +1348,9 @@
     "Loading acquisition…" : {
 
     },
+    "Loading child activity…" : {
+
+    },
     "Loading collection audio…" : {
 
     },
@@ -1648,6 +1657,9 @@
     "No Candidates Found" : {
 
     },
+    "No child acquisition activity right now." : {
+
+    },
     "No child items can be monitored yet." : {
 
     },
@@ -1856,6 +1868,9 @@
     "Opens the table of contents" : {
 
     },
+    "Opens this child’s details" : {
+
+    },
     "Opens this image’s metadata and management details" : {
 
     },
@@ -1996,6 +2011,9 @@
 
     },
     "Preparing media…" : {
+
+    },
+    "Preparing metadata" : {
 
     },
     "Preparing playback options…" : {

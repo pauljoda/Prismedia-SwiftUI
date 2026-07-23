@@ -124,29 +124,46 @@ public struct RemotePosterImage: View {
     }
 
     private var placeholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: fallbackColors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        GeometryReader { geometry in
+            ZStack {
+                LinearGradient(
+                    colors: fallbackColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
 
-            LinearGradient(
-                colors: [
-                    PrismediaColor.onMedia.opacity(0.11),
-                    .clear,
-                    PrismediaColor.background.opacity(PrismediaOpacity.statusFill),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+                LinearGradient(
+                    colors: [
+                        PrismediaColor.onMedia.opacity(0.11),
+                        .clear,
+                        PrismediaColor.background.opacity(PrismediaOpacity.statusFill),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
 
-            Image(systemName: systemImage)
-                .font(.largeTitle)
-                .foregroundStyle(PrismediaColor.onMedia.opacity(0.7))
-                .symbolRenderingMode(.hierarchical)
+                Image(systemName: systemImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(
+                        width: fallbackSymbolWidth(in: geometry.size),
+                        height: fallbackSymbolHeight(in: geometry.size)
+                    )
+                    .foregroundStyle(PrismediaColor.onMedia.opacity(0.7))
+                    .symbolRenderingMode(.hierarchical)
+                    .accessibilityHidden(true)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .clipShape(.rect(cornerRadius: imageCornerRadius, style: .continuous))
+    }
+
+    private func fallbackSymbolWidth(in size: CGSize) -> CGFloat {
+        min(48, max(1, size.width * 0.62))
+    }
+
+    private func fallbackSymbolHeight(in size: CGSize) -> CGFloat {
+        min(48, max(1, size.height * 0.62))
     }
 
     private var fallbackColors: [Color] {
@@ -177,6 +194,32 @@ public struct RemotePosterImage: View {
     #Preview("Remote Artwork Placeholder") {
         PreviewShell {
             VStack(spacing: PrismediaSpacing.extraLarge) {
+                HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+                    RemotePosterImage(
+                        path: nil,
+                        fallbackSeed: "Compact Video",
+                        systemImage: "film"
+                    )
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .frame(width: 52)
+
+                    RemotePosterImage(
+                        path: nil,
+                        fallbackSeed: "Compact Person",
+                        systemImage: "person.crop.rectangle"
+                    )
+                    .aspectRatio(4.0 / 5.0, contentMode: .fit)
+                    .frame(width: 52)
+
+                    RemotePosterImage(
+                        path: nil,
+                        fallbackSeed: "Compact Studio",
+                        systemImage: "building.2"
+                    )
+                    .aspectRatio(21.0 / 9.0, contentMode: .fit)
+                    .frame(width: 52)
+                }
+
                 RemotePosterImage(path: nil)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     .prismediaCard()
