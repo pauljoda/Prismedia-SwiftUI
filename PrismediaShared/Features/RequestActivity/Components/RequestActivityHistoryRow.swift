@@ -50,9 +50,10 @@ import SwiftUI
             Text(entry.title)
                 .font(.headline)
                 .foregroundStyle(PrismediaColor.textPrimary)
-            Text(RequestActivityFormatting.relative(entry.createdAt, referenceDate: referenceDate))
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(PrismediaColor.textMuted)
+            RequestActivityHistoryTimestamp(
+                date: entry.createdAt,
+                referenceDate: referenceDate
+            )
         }
 
         private var metadata: [String] {

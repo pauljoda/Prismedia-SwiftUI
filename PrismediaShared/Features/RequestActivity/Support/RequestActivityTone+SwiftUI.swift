@@ -7,9 +7,9 @@ extension RequestActivityTone {
         case .searching: PrismediaColor.accent
         case .queued: PrismediaColor.textSecondary
         case .cleanup: PrismediaColor.textSecondary
-        case .attention: .orange
-        case .failed: .red
-        case .done: .green
+        case .attention: PrismediaColor.warning
+        case .failed: PrismediaColor.destructive
+        case .done: PrismediaColor.success
         case .muted: PrismediaColor.textMuted
         }
     }

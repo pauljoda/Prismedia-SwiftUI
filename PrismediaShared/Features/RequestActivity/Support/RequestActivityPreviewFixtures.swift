@@ -61,6 +61,122 @@ import Foundation
             """
         )
 
+        static let historyEntries: [RequestActivityHistoryEntry] = [
+            RequestActivityHistoryEntry(
+                id: UUID(uuidString: "70000000-0000-0000-0000-000000000001")!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: "removed"),
+                title: "Dune",
+                message: "The acquisition was removed. Existing library content and its durable history were kept.",
+                createdAt: Date(timeIntervalSince1970: 1_783_883_100)
+            ),
+            RequestActivityHistoryEntry(
+                id: UUID(uuidString: "70000000-0000-0000-0000-000000000002")!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: "upgraded"),
+                title: "Dune",
+                releaseTitle: "Dune.1965.50th.Anniversary.Retail.EPUB",
+                qualityCode: "Retail/EPUB",
+                formatScore: 250,
+                message: "Upgraded Web/PDF → Retail/EPUB",
+                createdAt: Date(timeIntervalSince1970: 1_783_882_500)
+            ),
+            RequestActivityHistoryEntry(
+                id: UUID(uuidString: "70000000-0000-0000-0000-000000000003")!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: "imported"),
+                title: "Dune",
+                releaseTitle: "Dune.1965.Retail.EPUB",
+                qualityCode: "Retail/EPUB",
+                formatScore: 200,
+                message: "Imported 1 file into the Books library.",
+                createdAt: Date(timeIntervalSince1970: 1_783_881_900)
+            ),
+            RequestActivityHistoryEntry(
+                id: UUID(uuidString: "70000000-0000-0000-0000-000000000004")!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: "blocklisted"),
+                title: "Dune",
+                releaseTitle: "Dune.1965.Scan.PDF",
+                indexerName: "Prowlarr",
+                formatScore: -100,
+                message: "Blocklisted because the payload contained no importable book files.",
+                createdAt: Date(timeIntervalSince1970: 1_783_881_300)
+            ),
+            RequestActivityHistoryEntry(
+                id: UUID(uuidString: "70000000-0000-0000-0000-000000000005")!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: "download-failed"),
+                title: "Dune",
+                releaseTitle: "Dune.1965.EPUB",
+                indexerName: "Prowlarr",
+                downloadClientName: "qBittorrent",
+                message: "The download client removed the release before it completed.",
+                createdAt: Date(timeIntervalSince1970: 1_783_880_700)
+            ),
+            RequestActivityHistoryEntry(
+                id: UUID(uuidString: "70000000-0000-0000-0000-000000000006")!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: "import-failed"),
+                title: "Dune",
+                releaseTitle: "Dune.1965.Archive.Collection.With.A.Very.Long.Technical.Release.Name.CBZ",
+                indexerName: "Books & More",
+                downloadClientName: "SABnzbd",
+                qualityCode: "Archive/CBZ",
+                formatScore: 0,
+                message: "The downloaded archive contained several equally plausible books. Review the retained files before choosing whether to import this release.",
+                createdAt: Date(timeIntervalSince1970: 1_783_880_100)
+            ),
+            RequestActivityHistoryEntry(
+                id: UUID(uuidString: "70000000-0000-0000-0000-000000000007")!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: "grabbed"),
+                title: "Dune",
+                releaseTitle: "Dune.1965.Retail.EPUB",
+                indexerName: "Prowlarr",
+                downloadClientName: "qBittorrent",
+                qualityCode: "Retail",
+                formatScore: 125,
+                createdAt: Date(timeIntervalSince1970: 1_783_879_500)
+            ),
+        ]
+
+        static let historyLimitEntries: [RequestActivityHistoryEntry] = (0..<50).map { index in
+            RequestActivityHistoryEntry(
+                id: UUID(
+                    uuidString: String(
+                        format: "71000000-0000-0000-0000-%012d",
+                        index + 1
+                    )
+                )!,
+                acquisitionID: acquisitionID,
+                entityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                kind: .book,
+                event: RequestActivityHistoryEvent(rawValue: index.isMultiple(of: 2) ? "grabbed" : "imported"),
+                title: "Dune",
+                releaseTitle: "Dune.Release.\(index + 1).EPUB",
+                indexerName: "Preview Indexer",
+                downloadClientName: "Preview Client",
+                qualityCode: "EPUB",
+                formatScore: index,
+                createdAt: referenceDate.addingTimeInterval(Double(-(index + 1) * 3_600))
+            )
+        }
+
         static let candidate: RequestActivityReleaseCandidate = decode(
             """
             {

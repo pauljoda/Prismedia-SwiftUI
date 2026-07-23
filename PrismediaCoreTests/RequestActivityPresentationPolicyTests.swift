@@ -4,6 +4,33 @@ import XCTest
 @testable import PrismediaCore
 
 final class RequestActivityPresentationPolicyTests: XCTestCase {
+    func testHistoryPolicyKeepsCanonicalEventSemanticsAcrossSurfaces() {
+        let events: [(String, String, String, RequestActivityTone)] = [
+            ("grabbed", "Grabbed", "arrow.down.circle", .downloading),
+            ("imported", "Imported", "checkmark.circle", .done),
+            ("import-failed", "Import failed", "exclamationmark.triangle", .failed),
+            ("download-failed", "Download failed", "xmark.circle", .failed),
+            ("blocklisted", "Blocklisted", "hand.raised", .attention),
+            ("upgraded", "Upgraded", "arrow.up.circle", .done),
+            ("removed", "Removed", "trash", .failed),
+        ]
+
+        for (rawValue, label, systemImage, tone) in events {
+            let event = RequestActivityHistoryEvent(rawValue: rawValue)
+            XCTAssertEqual(RequestActivityHistoryPolicy.label(for: event), label)
+            XCTAssertEqual(RequestActivityHistoryPolicy.systemImage(for: event), systemImage)
+            XCTAssertEqual(RequestActivityHistoryPolicy.tone(for: event), tone)
+        }
+    }
+
+    func testUnknownHistoryEventRemainsReadableAndVisuallyNeutral() {
+        let event = RequestActivityHistoryEvent(rawValue: "future-event")
+
+        XCTAssertEqual(RequestActivityHistoryPolicy.label(for: event), "Future Event")
+        XCTAssertEqual(RequestActivityHistoryPolicy.systemImage(for: event), "questionmark.circle")
+        XCTAssertEqual(RequestActivityHistoryPolicy.tone(for: event), .muted)
+    }
+
     func testUnknownAcquisitionStatusPollsAndLocksActions() {
         let status = AcquisitionStatus(rawValue: "future-state")
 

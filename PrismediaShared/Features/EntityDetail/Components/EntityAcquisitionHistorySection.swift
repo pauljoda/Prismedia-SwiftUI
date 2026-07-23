@@ -2,104 +2,178 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     /// Collapsible durable activity log and entity-scoped blocklist recovery surface.
-    /// The owning panel supplies history while the nested recovery control loads its count.
+    /// The owning panel supplies history state while the nested recovery control loads its count.
     struct EntityAcquisitionHistorySection: View {
         let entries: [RequestActivityHistoryEntry]
+        let loadState: EntityAcquisitionHistoryLoadState
         let entityID: UUID
         let service: EntityAcquisitionService
-        var referenceDate: Date = .now
-        @State private var isExpanded = false
+        let referenceDate: Date
+        let onRetry: @MainActor () async -> Void
+        @State private var isExpanded: Bool
+
+        init(
+            entries: [RequestActivityHistoryEntry],
+            loadState: EntityAcquisitionHistoryLoadState,
+            entityID: UUID,
+            service: EntityAcquisitionService,
+            referenceDate: Date = .now,
+            isInitiallyExpanded: Bool = false,
+            onRetry: @escaping @MainActor () async -> Void
+        ) {
+            self.entries = entries
+            self.loadState = loadState
+            self.entityID = entityID
+            self.service = service
+            self.referenceDate = referenceDate
+            self.onRetry = onRetry
+            _isExpanded = State(initialValue: isInitiallyExpanded)
+        }
 
         var body: some View {
             DisclosureGroup(isExpanded: $isExpanded) {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                    ForEach(entries) { entry in
-                        historyRow(entry)
-                    }
-                    if !entries.isEmpty {
-                        Divider()
-                    }
+                    historyContent
+                    Divider()
                     EntityAcquisitionBlocklistSection(
                         entityID: entityID,
                         service: service
                     )
                 }
                 .padding(.top, PrismediaSpacing.small)
+                .frame(maxWidth: .infinity, alignment: .leading)
             } label: {
-                HStack(spacing: PrismediaSpacing.small) {
-                    Label("History", systemImage: "clock.arrow.circlepath")
-                        .font(.headline)
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                    Text(String(entries.count))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(PrismediaColor.textMuted)
-                }
-                .accessibilityAddTraits(.isHeader)
-            }
-            .accessibilityIdentifier("entity-detail.acquisition.history")
-        }
-
-        private func historyRow(_ entry: RequestActivityHistoryEntry) -> some View {
-            HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-                Image(systemName: RequestActivityHistoryPolicy.systemImage(for: entry.event))
-                    .foregroundStyle(RequestActivityHistoryPolicy.tone(for: entry.event).foregroundStyle)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.small) {
-                        Text(RequestActivityHistoryPolicy.label(for: entry.event))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(
-                                RequestActivityHistoryPolicy.tone(for: entry.event).foregroundStyle
-                            )
-                        Spacer(minLength: PrismediaSpacing.small)
-                        Text(
-                            RequestActivityFormatting.relative(
-                                entry.createdAt,
-                                referenceDate: referenceDate
-                            )
-                        )
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(PrismediaColor.textMuted)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: PrismediaSpacing.small) {
+                        sectionTitle
+                        loadSummary
                     }
-                    if !metadata(entry).isEmpty {
-                        Text(metadata(entry).joined(separator: " · "))
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                    if let message = entry.message {
-                        Text(message)
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.textMuted)
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                        sectionTitle
+                        loadSummary
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .accessibilityAddTraits(.isHeader)
             }
-            .accessibilityElement(children: .combine)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("entity-detail.acquisition.history")
         }
 
-        private func metadata(_ entry: RequestActivityHistoryEntry) -> [String] {
-            var values: [String] = []
-            if let releaseTitle = entry.releaseTitle { values.append(releaseTitle) }
-            if let qualityCode = entry.qualityCode { values.append(qualityCode) }
-            if let indexerName = entry.indexerName { values.append("via \(indexerName)") }
-            if let clientName = entry.downloadClientName { values.append("to \(clientName)") }
-            return values
+        private var sectionTitle: some View {
+            Label("History", systemImage: "clock.arrow.circlepath")
+                .font(.headline)
+                .foregroundStyle(PrismediaColor.textPrimary)
+        }
+
+        @ViewBuilder
+        private var loadSummary: some View {
+            switch loadState {
+            case .loading:
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
+            case .loaded:
+                if EntityAcquisitionHistoryPolicy.reachedEntryLimit(entries.count) {
+                    Text("Latest \(EntityAcquisitionHistoryPolicy.entryLimit)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(PrismediaColor.textMuted)
+                } else {
+                    Text(entries.count, format: .number)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(PrismediaColor.textMuted)
+                }
+            case .failed:
+                EmptyView()
+            }
+        }
+
+        @ViewBuilder
+        private var historyContent: some View {
+            switch loadState {
+            case .loading:
+                PrismediaLoadingView("Loading history…")
+                    .frame(minHeight: 120)
+            case let .failed(message):
+                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                    Label("Unable to Load History", systemImage: "exclamationmark.triangle")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PrismediaColor.warning)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                    PrismediaButton(
+                        "Try Again",
+                        systemImage: "arrow.clockwise"
+                    ) {
+                        Task { await onRetry() }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            case .loaded:
+                if entries.isEmpty {
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                        Label("No Acquisition Activity", systemImage: "clock")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(PrismediaColor.textSecondary)
+                        Text("Grabs, imports, failures, upgrades, and removals will appear here.")
+                            .font(.caption)
+                            .foregroundStyle(PrismediaColor.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                        ForEach(entries) { entry in
+                            EntityAcquisitionHistoryRow(
+                                entry: entry,
+                                referenceDate: referenceDate
+                            )
+                            if entry.id != entries.last?.id {
+                                Divider()
+                            }
+                        }
+
+                        if EntityAcquisitionHistoryPolicy.reachedEntryLimit(entries.count) {
+                            Text("Showing the latest \(EntityAcquisitionHistoryPolicy.entryLimit) acquisition events.")
+                                .font(.caption)
+                                .foregroundStyle(PrismediaColor.textMuted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+            }
         }
     }
 
     #if DEBUG
-        #Preview("Entity Acquisition History") {
-            EntityAcquisitionHistorySection(
-                entries: [RequestActivityPreviewFixtures.historyEntry],
-                entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
-                service: EntityAcquisitionService(
-                    port: PreviewEntityAcquisitionService(
-                        snapshot: EntityAcquisitionPanelPreviewFixtures.downloadingState
-                    )
-                ),
-                referenceDate: RequestActivityPreviewFixtures.referenceDate
-            )
-            .padding()
+        #Preview("Acquisition Review · History · Section Component") {
+            ScrollView {
+                EntityAcquisitionHistorySection(
+                    entries: RequestActivityPreviewFixtures.historyEntries,
+                    loadState: .loaded,
+                    entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+                    service: EntityAcquisitionService(
+                        port: PreviewEntityAcquisitionService(
+                            snapshot: EntityAcquisitionPanelPreviewFixtures.downloadingState
+                        )
+                    ),
+                    referenceDate: RequestActivityPreviewFixtures.referenceDate,
+                    isInitiallyExpanded: true,
+                    onRetry: {}
+                )
+                .padding(PrismediaSpacing.extraLarge)
+                .prismediaCard()
+                .padding()
+            }
+            .background(PrismediaBackdrop())
+            .environment(\.artworkPrimaryAccent, PrismediaColor.spectrumCyan)
+            .environment(\.artworkSecondaryText, PrismediaColor.textSecondary)
+            .environment(\.prismediaPageIsActive, false)
+            .preferredColorScheme(.dark)
         }
     #endif
 #endif

@@ -12,6 +12,7 @@ struct EntityAcquisitionPanel: View {
     @State private var confirmsUnmonitor = false
     @State private var confirmsDeleteFiles = false
     @State private var historyEntries: [RequestActivityHistoryEntry] = []
+    @State private var historyLoadState: EntityAcquisitionHistoryLoadState
     @State private var pendingMonitorValue: Bool?
     @State private var confirmedMonitorValue: Bool?
     @State private var activeCommand: EntityAcquisitionCommand?
@@ -61,6 +62,9 @@ struct EntityAcquisitionPanel: View {
         self.requestActivityService = requestActivityService
         self.onMutated = onMutated
         self.onEntityPruned = onEntityPruned
+        _historyLoadState = State(
+            initialValue: requestActivityService == nil ? .loaded : .loading
+        )
     }
 
     #if DEBUG
@@ -87,6 +91,8 @@ struct EntityAcquisitionPanel: View {
             savedMutationCommand: EntityAcquisitionCommand? = nil,
             confirmsUnmonitor: Bool = false,
             confirmsDeleteFiles: Bool = false,
+            historyEntries: [RequestActivityHistoryEntry] = [],
+            historyLoadState: EntityAcquisitionHistoryLoadState = .loaded,
             onMutated: @escaping @MainActor () async -> Void = {},
             onEntityPruned: @escaping @MainActor () -> Void = {}
         ) {
@@ -120,6 +126,8 @@ struct EntityAcquisitionPanel: View {
             _savedMutationCommand = State(initialValue: savedMutationCommand)
             _confirmsUnmonitor = State(initialValue: confirmsUnmonitor)
             _confirmsDeleteFiles = State(initialValue: confirmsDeleteFiles)
+            _historyEntries = State(initialValue: historyEntries)
+            _historyLoadState = State(initialValue: historyLoadState)
             disablesLiveLoadingForPreview = true
         }
     #endif
@@ -491,8 +499,12 @@ struct EntityAcquisitionPanel: View {
             Divider()
             EntityAcquisitionHistorySection(
                 entries: historyEntries,
+                loadState: historyLoadState,
                 entityID: entityID,
-                service: service
+                service: service,
+                onRetry: {
+                    await loadHistory(reportsLoading: true)
+                }
             )
         #else
             fallbackContent(snapshot)
@@ -867,7 +879,7 @@ struct EntityAcquisitionPanel: View {
         let outcome = await service.load(entityID: entityID)
         state.finishLoad(outcome)
         if case .content = outcome { confirmedMonitorValue = nil }
-        await loadHistory()
+        await loadHistory(reportsLoading: true)
     }
 
     private func backgroundLoad(using service: EntityAcquisitionService) async {
@@ -894,17 +906,29 @@ struct EntityAcquisitionPanel: View {
         await loadHistory()
     }
 
-    /// Secondary surface: a history-load failure must never break the acquisition
-    /// view, so it silently keeps whatever is already shown.
-    private func loadHistory() async {
+    /// Secondary surface: an initial failure is exposed only inside the History
+    /// disclosure. Refresh failures preserve loaded rows and remain silent.
+    private func loadHistory(reportsLoading: Bool = false) async {
         #if os(iOS) || os(macOS)
             guard let requestActivityService else { return }
-            let nextEntries =
-                (try? await requestActivityService.listRequestActivityHistory(
-                    limit: 50,
+            let hadLoadedHistory = historyLoadState.hasLoaded
+            if reportsLoading, !hadLoadedHistory, historyEntries.isEmpty {
+                historyLoadState = .loading
+            }
+            do {
+                let nextEntries = try await requestActivityService.listRequestActivityHistory(
+                    limit: EntityAcquisitionHistoryPolicy.entryLimit,
                     entityID: entityID
-                )) ?? historyEntries
-            if historyEntries != nextEntries { historyEntries = nextEntries }
+                )
+                if historyEntries != nextEntries { historyEntries = nextEntries }
+                if historyLoadState != .loaded { historyLoadState = .loaded }
+            } catch is CancellationError {
+                return
+            } catch {
+                if !hadLoadedHistory, historyEntries.isEmpty {
+                    historyLoadState = .failed(error.localizedDescription)
+                }
+            }
         #endif
     }
 

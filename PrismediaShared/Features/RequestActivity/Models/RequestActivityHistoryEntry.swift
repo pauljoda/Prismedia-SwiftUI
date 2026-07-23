@@ -15,6 +15,36 @@ public struct RequestActivityHistoryEntry: Decodable, Equatable, Identifiable, S
     public let message: String?
     public let createdAt: Date
 
+    init(
+        id: UUID,
+        acquisitionID: UUID?,
+        entityID: UUID?,
+        kind: EntityKind,
+        event: RequestActivityHistoryEvent,
+        title: String,
+        releaseTitle: String? = nil,
+        indexerName: String? = nil,
+        downloadClientName: String? = nil,
+        qualityCode: String? = nil,
+        formatScore: Int? = nil,
+        message: String? = nil,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.acquisitionID = acquisitionID
+        self.entityID = entityID
+        self.kind = kind
+        self.event = event
+        self.title = title
+        self.releaseTitle = releaseTitle
+        self.indexerName = indexerName
+        self.downloadClientName = downloadClientName
+        self.qualityCode = qualityCode
+        self.formatScore = formatScore
+        self.message = message
+        self.createdAt = createdAt
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id
         case acquisitionID = "acquisitionId"
