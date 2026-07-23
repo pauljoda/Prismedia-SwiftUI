@@ -14,42 +14,42 @@ struct EntityAcquisitionBlocklistSection: View {
     }
 
     var body: some View {
-        Group {
-            if entryCount.map({ $0 > 0 }) == true || message != nil {
-                Divider()
-                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                    Label("Blocked Releases", systemImage: "nosign")
-                        .font(.headline)
-
-                    if let entryCount, entryCount > 0 {
-                        Text(
-                            entryCount == 1
-                                ? "1 release is blocked for this item."
-                                : "(entryCount) releases are blocked for this item."
-                        )
-                        .font(.subheadline)
+        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+            HStack {
+                Label("Blocklist", systemImage: "nosign")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if let entryCount {
+                    Text(entryCount, format: .number)
+                        .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
-
-                        Button(role: .destructive) {
-                            confirmsClear = true
-                        } label: {
-                            HStack {
-                                Label("Allow Blocked Releases Again", systemImage: "arrow.uturn.backward")
-                                Spacer()
-                                if isClearing { ProgressView() }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(.rect)
-                        }
-                        .disabled(isClearing)
-                    }
-
-                    if let message {
-                        Text(message)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+                } else {
+                    ProgressView()
+                        .controlSize(.small)
                 }
+            }
+
+            Text(blocklistDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Button(role: .destructive) {
+                confirmsClear = true
+            } label: {
+                HStack {
+                    Label("Clear Blocklist for This Item", systemImage: "arrow.uturn.backward")
+                    Spacer()
+                    if isClearing { ProgressView() }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(.rect)
+            }
+            .disabled(isClearing || entryCount == 0)
+
+            if let message {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .task(id: entityID) { await loadCount() }
@@ -71,7 +71,8 @@ struct EntityAcquisitionBlocklistSection: View {
         do {
             entryCount = try await service.acquisitionBlocklist(entityID: entityID).count
         } catch {
-            // A blocklist read must not make the rest of the acquisition panel fail.
+            entryCount = nil
+            message = "The current count couldn’t be loaded. You can still clear this item’s blocklist."
         }
     }
 
@@ -81,10 +82,20 @@ struct EntityAcquisitionBlocklistSection: View {
         do {
             let removed = try await service.clearAcquisitionBlocklist(entityID: entityID)
             entryCount = 0
-            message = removed == 1 ? "Allowed 1 release again." : "Allowed (removed) releases again."
+            message = removed == 1 ? "Cleared 1 blocked release." : "Cleared \(removed) blocked releases."
         } catch {
             message = error.localizedDescription
         }
+    }
+
+    private var blocklistDescription: String {
+        guard let entryCount else {
+            return "Clear failed or stale release blocks associated with this item."
+        }
+        if entryCount == 1 {
+            return "1 release is blocked for this item."
+        }
+        return "\(entryCount) releases are blocked for this item."
     }
 }
 

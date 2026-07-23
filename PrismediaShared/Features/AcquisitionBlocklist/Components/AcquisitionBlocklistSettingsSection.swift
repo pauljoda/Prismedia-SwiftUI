@@ -53,7 +53,7 @@ struct AcquisitionBlocklistSettingsSection: View {
         }
         .task { await loadCount() }
         .confirmationDialog(
-            "Clear blocklist entries from (clearRange.title.lowercased())?",
+            "Clear blocklist entries from \(clearRange.title.lowercased())?",
             isPresented: $confirmsClear,
             titleVisibility: .visible
         ) {
@@ -82,7 +82,7 @@ struct AcquisitionBlocklistSettingsSection: View {
                 entityID: nil,
                 createdAfter: clearRange.createdAfter()
             )
-            message = removed == 1 ? "Cleared 1 blocked release." : "Cleared (removed) blocked releases."
+            message = removed == 1 ? "Cleared 1 blocked release." : "Cleared \(removed) blocked releases."
             await loadCount()
         } catch {
             message = error.localizedDescription

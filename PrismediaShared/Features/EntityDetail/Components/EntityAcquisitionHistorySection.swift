@@ -1,11 +1,12 @@
 import SwiftUI
 
 #if os(iOS) || os(macOS)
-    /// Collapsible durable activity log for an entity's acquisitions: event badge,
-    /// release/quality/indexer context, and a relative timestamp — mirroring the web's
-    /// per-entity History section. Presentational; the owning panel loads the entries.
+    /// Collapsible durable activity log and entity-scoped blocklist recovery surface.
+    /// The owning panel supplies history while the nested recovery control loads its count.
     struct EntityAcquisitionHistorySection: View {
         let entries: [RequestActivityHistoryEntry]
+        let entityID: UUID
+        let service: EntityAcquisitionService
         var referenceDate: Date = .now
         @State private var isExpanded = false
 
@@ -15,6 +16,13 @@ import SwiftUI
                     ForEach(entries) { entry in
                         historyRow(entry)
                     }
+                    if !entries.isEmpty {
+                        Divider()
+                    }
+                    EntityAcquisitionBlocklistSection(
+                        entityID: entityID,
+                        service: service
+                    )
                 }
                 .padding(.top, PrismediaSpacing.small)
             } label: {
@@ -83,6 +91,12 @@ import SwiftUI
         #Preview("Entity Acquisition History") {
             EntityAcquisitionHistorySection(
                 entries: [RequestActivityPreviewFixtures.historyEntry],
+                entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+                service: EntityAcquisitionService(
+                    port: PreviewEntityAcquisitionService(
+                        snapshot: EntityAcquisitionPanelPreviewFixtures.downloadingState
+                    )
+                ),
                 referenceDate: RequestActivityPreviewFixtures.referenceDate
             )
             .padding()

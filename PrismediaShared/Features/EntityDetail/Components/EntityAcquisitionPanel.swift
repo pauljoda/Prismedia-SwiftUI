@@ -225,7 +225,6 @@ struct EntityAcquisitionPanel: View {
                 if !presentation.showsExpandedContent || snapshot == nil {
                     childActivityContent(service: service)
                 }
-                EntityAcquisitionBlocklistSection(entityID: entityID, service: service)
             #endif
         }
         .padding(PrismediaSpacing.extraLarge)
@@ -386,10 +385,12 @@ struct EntityAcquisitionPanel: View {
 
             childActivityContent(service: service)
 
-            if !historyEntries.isEmpty {
-                Divider()
-                EntityAcquisitionHistorySection(entries: historyEntries)
-            }
+            Divider()
+            EntityAcquisitionHistorySection(
+                entries: historyEntries,
+                entityID: entityID,
+                service: service
+            )
         #else
             fallbackContent(snapshot)
         #endif
