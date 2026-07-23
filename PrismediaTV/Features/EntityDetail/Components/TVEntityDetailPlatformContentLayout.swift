@@ -24,6 +24,6 @@
             browseContent: { Text("Browse first").font(.largeTitle) },
             secondaryContent: { Text("Progress and metadata") }
         )
-        .padding(72)
+        .padding(PrismediaLayout.televisionContentInset)
     }
 #endif

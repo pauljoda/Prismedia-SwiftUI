@@ -68,8 +68,6 @@ import SwiftUI
             case .loading:
                 ProgressView("Preparing video…")
                     .font(.headline)
-                    .tint(PrismediaColor.onMedia)
-                    .foregroundStyle(PrismediaColor.onMedia)
                     .padding(.horizontal, PrismediaSpacing.extraLarge)
                     .frame(minHeight: 52)
                     .glassEffect(.regular, in: .capsule)
@@ -78,8 +76,10 @@ import SwiftUI
                 VStack(spacing: PrismediaSpacing.medium) {
                     Label("Video Unavailable", systemImage: "exclamationmark.triangle.fill")
                         .font(.headline)
+                        .foregroundStyle(PrismediaColor.onMedia)
                     Text(message)
                         .font(.callout)
+                        .foregroundStyle(PrismediaColor.onMedia)
                         .multilineTextAlignment(.center)
                         .lineLimit(3)
                     playButton(title: "Try Again", systemImage: "arrow.clockwise") {
@@ -87,7 +87,6 @@ import SwiftUI
                     }
                     .accessibilityIdentifier("video-detail.retry")
                 }
-                .foregroundStyle(PrismediaColor.onMedia)
                 .padding(PrismediaSpacing.extraLarge)
                 .frame(maxWidth: 420)
             case .ready:
@@ -99,22 +98,20 @@ import SwiftUI
 
         @ViewBuilder
         private var playbackActions: some View {
-            GlassEffectContainer(spacing: PrismediaSpacing.medium) {
+            PrismediaGlassButtonGroup(spacing: PrismediaSpacing.medium) {
                 if resumeSeconds > 1 {
-                    HStack(spacing: PrismediaSpacing.medium) {
-                        playButton(
-                            title: "Resume \(playbackTimestamp(resumeSeconds))",
-                            systemImage: "play.fill"
-                        ) {
-                            onPlay(nil)
-                        }
-                        .accessibilityIdentifier("video-detail.resume")
-
-                        playButton(title: "Start Over", systemImage: "arrow.counterclockwise") {
-                            onPlay(0)
-                        }
-                        .accessibilityIdentifier("video-detail.play-from-beginning")
+                    playButton(
+                        title: "Resume \(playbackTimestamp(resumeSeconds))",
+                        systemImage: "play.fill"
+                    ) {
+                        onPlay(nil)
                     }
+                    .accessibilityIdentifier("video-detail.resume")
+
+                    playButton(title: "Start Over", systemImage: "arrow.counterclockwise") {
+                        onPlay(0)
+                    }
+                    .accessibilityIdentifier("video-detail.play-from-beginning")
                 } else {
                     playButton(title: "Play", systemImage: "play.fill") {
                         onPlay(nil)

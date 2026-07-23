@@ -93,28 +93,26 @@ import SwiftUI
         }
 
         private var transportControls: some View {
-            GlassEffectContainer(spacing: showsExpandedChrome ? 34 : 22) {
-                HStack(spacing: showsExpandedChrome ? 34 : 22) {
-                    transportButton(systemImage: "gobackward.10", size: showsExpandedChrome ? 44 : 36) {
-                        controller.skip(by: -10)
-                    }
-                    transportButton(
-                        systemImage: controller.isPlaying || controller.isWaiting ? "pause.fill" : "play.fill",
-                        size: showsExpandedChrome ? 62 : 50,
-                        prominent: true,
-                        action: controller.togglePlayback
-                    )
-                    .accessibilityLabel(
-                        controller.isPlaying || controller.isWaiting ? "Pause" : "Play"
-                    )
-                    .accessibilityIdentifier(
-                        controller.isPlaying || controller.isWaiting
-                            ? "video-detail.pause"
-                            : "video-detail.play"
-                    )
-                    transportButton(systemImage: "goforward.10", size: showsExpandedChrome ? 44 : 36) {
-                        controller.skip(by: 10)
-                    }
+            PrismediaGlassButtonGroup(spacing: showsExpandedChrome ? 34 : 22) {
+                transportButton(systemImage: "gobackward.10", size: showsExpandedChrome ? 44 : 36) {
+                    controller.skip(by: -10)
+                }
+                transportButton(
+                    systemImage: controller.isPlaying || controller.isWaiting ? "pause.fill" : "play.fill",
+                    size: showsExpandedChrome ? 62 : 50,
+                    prominent: true,
+                    action: controller.togglePlayback
+                )
+                .accessibilityLabel(
+                    controller.isPlaying || controller.isWaiting ? "Pause" : "Play"
+                )
+                .accessibilityIdentifier(
+                    controller.isPlaying || controller.isWaiting
+                        ? "video-detail.pause"
+                        : "video-detail.play"
+                )
+                transportButton(systemImage: "goforward.10", size: showsExpandedChrome ? 44 : 36) {
+                    controller.skip(by: 10)
                 }
             }
         }
@@ -197,7 +195,6 @@ import SwiftUI
                     )
                 }
                 .font(.caption2.monospacedDigit().weight(.semibold))
-                .foregroundStyle(.white.opacity(0.84))
             }
         }
 

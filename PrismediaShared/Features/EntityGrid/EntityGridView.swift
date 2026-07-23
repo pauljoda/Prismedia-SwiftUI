@@ -239,7 +239,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                                 filterButton: { filterButton },
                                 displayMenu: { displayMenu }
                             )
-                                .padding(.horizontal, horizontalContentPadding)
+                            .padding(.horizontal, horizontalContentPadding)
                         #endif
 
                         if let errorMessage = snapshot.errorMessage {
@@ -568,24 +568,16 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
 
     @ViewBuilder
     private var selectionToggleButton: some View {
-        let button = Button {
+        EntityGridSelectionToggle(
+            isActive: selection.isActive,
+            isDisabled: actionInFlight != nil
+        ) {
             if selection.isActive {
                 exitSelection()
             } else {
                 selection.enter()
             }
-        } label: {
-            Image(systemName: selection.isActive ? "checkmark" : "checkmark.circle")
         }
-        .disabled(actionInFlight != nil)
-        .accessibilityLabel(selection.isActive ? "Done Selecting" : "Select Items")
-        .accessibilityIdentifier("entity.grid.selection.toggle")
-
-        #if os(macOS)
-            button.keyboardShortcut("s", modifiers: [.command, .shift])
-        #else
-            button
-        #endif
     }
 
     private var trailingToolbarPlacement: ToolbarItemPlacement {
@@ -597,157 +589,39 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     }
 
     private var sortMenu: some View {
-        Menu {
-            ForEach(controlCatalog.sortOptions) { option in
-                Button {
-                    selectSort(option)
-                } label: {
-                    if snapshot.controls.sort == option {
-                        Label(option.label, systemImage: "checkmark")
-                    } else {
-                        Text(option.label)
-                    }
-                }
-            }
-
-            Divider()
-
-            if snapshot.controls.sort == .random {
-                Button {
-                    Task { await reshuffle() }
-                } label: {
-                    Label("Reshuffle", systemImage: "shuffle")
-                }
-            } else {
-                Button {
-                    reverseSortDirection()
-                } label: {
-                    Label(
-                        snapshot.controls.sortDescending ? "Descending" : "Ascending",
-                        systemImage: snapshot.controls.sortDescending ? "arrow.down" : "arrow.up"
-                    )
-                }
-            }
-        } label: {
-            Image(systemName: "arrow.up.arrow.down")
-        }
-        .accessibilityLabel("Sort")
-        .accessibilityIdentifier("entity.grid.sort")
+        EntityGridSortMenu(
+            catalog: controlCatalog,
+            controls: snapshot.controls,
+            onSelect: selectSort,
+            onReshuffle: requestReshuffle,
+            onReverseDirection: reverseSortDirection
+        )
     }
 
     private var filterButton: some View {
-        Button {
+        EntityGridFilterButton(
+            activeFilterCount: snapshot.controls.filters.activeCount
+        ) {
             filtersPresented = true
-        } label: {
-            Image(
-                systemName: snapshot.controls.filters.activeCount > 0
-                    ? "line.3.horizontal.decrease.circle.fill"
-                    : "line.3.horizontal.decrease.circle"
-            )
-            .overlay(alignment: .topTrailing) {
-                if snapshot.controls.filters.activeCount > 0 {
-                    Text(String(snapshot.controls.filters.activeCount))
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(PrismediaColor.onAccent)
-                        .padding(PrismediaSpacing.extraSmall)
-                        .background(PrismediaColor.accent, in: Circle())
-                        .offset(x: 7, y: -7)
-                }
-            }
         }
-        .accessibilityLabel("Filters")
-        .accessibilityValue("\(snapshot.controls.filters.activeCount) active")
-        .accessibilityIdentifier("entity.grid.filter")
     }
 
     private var displayMenu: some View {
-        Menu {
-            if configuration.availableDisplayModes.count > 1 {
-                Section("Layout") {
-                    ForEach(configuration.availableDisplayModes) { option in
-                        Button {
-                            selectDisplayMode(option)
-                        } label: {
-                            Label(
-                                option.label,
-                                systemImage: displayMode == option ? "checkmark" : option.systemImage
-                            )
-                        }
-                    }
-                }
-            }
-
-            if displayMode != .list {
-                Section("Item Size") {
-                    ForEach(EntityGridDensity.allCases) { option in
-                        Button {
-                            selectDensity(option)
-                        } label: {
-                            if density == option {
-                                Label(option.label, systemImage: "checkmark")
-                            } else {
-                                Text(option.label)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Section("Page Size") {
-                ForEach(Self.pageSizeOptions, id: \.self) { option in
-                    Button {
-                        selectPageSize(option)
-                    } label: {
-                        if pageSize == option {
-                            Label("\(option) items", systemImage: "checkmark")
-                        } else {
-                            Text("\(option) items")
-                        }
-                    }
-                }
-            }
-
-            #if !os(tvOS)
-                Section("Presets") {
-                    ForEach(presets) { preset in
-                        Button(preset.name) {
-                            Task { await applyPreset(preset) }
-                        }
-                    }
-
-                    Button {
-                        presetName = ""
-                        savePresetPresented = true
-                    } label: {
-                        Label("Save Current as Preset", systemImage: "plus")
-                    }
-
-                    if !presets.isEmpty {
-                        Menu("Delete Preset", systemImage: "trash") {
-                            ForEach(presets) { preset in
-                                Button(preset.name, role: .destructive) {
-                                    deletePreset(preset)
-                                }
-                            }
-                        }
-                    }
-                }
-            #endif
-
-            Divider()
-
-            Button {
-                Task { await resetPreferences() }
-            } label: {
-                Label("Reset Grid Settings", systemImage: "arrow.counterclockwise")
-            }
-            .disabled(preferencesAreDefault)
-        } label: {
-            Image(systemName: displayMode.systemImage)
-        }
-        .accessibilityLabel("Display options")
-        .accessibilityValue("\(displayMode.label), \(density.label) size")
-        .accessibilityIdentifier("entity.grid.display")
+        EntityGridDisplayMenu(
+            availableDisplayModes: configuration.availableDisplayModes,
+            displayMode: displayMode,
+            density: density,
+            pageSize: pageSize,
+            presets: presets,
+            preferencesAreDefault: preferencesAreDefault,
+            onSelectDisplayMode: selectDisplayMode,
+            onSelectDensity: selectDensity,
+            onSelectPageSize: selectPageSize,
+            onApplyPreset: requestApplyPreset,
+            onRequestSavePreset: presentSavePreset,
+            onDeletePreset: deletePreset,
+            onResetPreferences: requestResetPreferences
+        )
     }
 
     private func selectSort(_ sort: EntityGridSort) {
@@ -784,6 +658,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         Task { await loadFirstPage(preservingContent: false) }
     }
 
+    private func requestApplyPreset(_ preset: EntityGridPreset) {
+        Task { await applyPreset(preset) }
+    }
+
     private func applyPreset(_ preset: EntityGridPreset) async {
         let preferences = preset.preferences
         snapshot.setControls(preferences.controls(baselineQuery: configuration.query))
@@ -792,6 +670,11 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         pageSize = preferences.pageSize ?? configuration.pageSize
         savePreferences()
         await loadFirstPage(preservingContent: false)
+    }
+
+    private func presentSavePreset() {
+        presetName = ""
+        savePresetPresented = true
     }
 
     private func savePreset() {
@@ -863,6 +746,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         await loadFirstPage(preservingContent: false)
     }
 
+    private func requestResetPreferences() {
+        Task { await resetPreferences() }
+    }
+
     private func savePreferences() {
         preferencesStore.save(currentPreferences, for: configuration.preferencesID)
     }
@@ -889,6 +776,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         guard snapshot.reshuffle() else { return }
         savePreferences()
         await loadFirstPage(preservingContent: false)
+    }
+
+    private func requestReshuffle() {
+        Task { await reshuffle() }
     }
 
     private func loadFirstPage(preservingContent: Bool) async {
@@ -967,7 +858,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 .font(.callout)
                 .foregroundStyle(PrismediaColor.destructive)
 
-            Spacer(minLength: 8)
+            Spacer(minLength: PrismediaSpacing.small)
 
             PrismediaButton("Try Again") {
                 Task { await refresh() }
@@ -1014,7 +905,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         let details = mutationFailures.prefix(4)
             .map { "\($0.title): \($0.message)" }
             .joined(separator: "\n")
-        let summary = selection.isActive
+        let summary =
+            selection.isActive
             ? "remain selected so you can retry"
             : "could not be updated"
         return "\(count) item\(count == 1 ? "" : "s") \(summary).\n\(details)"
@@ -1137,11 +1029,11 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     }
 
     #if os(iOS) || os(macOS)
-    private func presentCollectionSheet(with references: [CollectionEntityReference]) {
-        guard !references.isEmpty else { return }
-        collectionSheetReferences = references
-        collectionSheetPresented = true
-    }
+        private func presentCollectionSheet(with references: [CollectionEntityReference]) {
+            guard !references.isEmpty else { return }
+            collectionSheetReferences = references
+            collectionSheetPresented = true
+        }
     #endif
 
     private var collectionMenuOptions: [EntityThumbnail] {
@@ -1225,10 +1117,11 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             _ item: EntityThumbnail,
             to collection: EntityThumbnail
         ) async {
-            let result = await actionService?.addToCollection(
-                collection.id,
-                items: [item]
-            ) ?? unavailableResult([item])
+            let result =
+                await actionService?.addToCollection(
+                    collection.id,
+                    items: [item]
+                ) ?? unavailableResult([item])
             receiveMutationResult(result)
         }
     #endif
@@ -1247,7 +1140,6 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         )
     }
 
-    private static var pageSizeOptions: [Int] { [24, 48, 96] }
 }
 
 /// The shared, presentational entity grid used by both library pages and

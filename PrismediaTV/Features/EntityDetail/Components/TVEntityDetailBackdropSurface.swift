@@ -78,7 +78,7 @@ import SwiftUI
             ) {
                 Text("A Storm Blows In")
                     .font(.largeTitle.bold())
-                    .padding(72)
+                    .padding(PrismediaLayout.televisionContentInset)
             }
         }
         .frame(width: 1_920, height: 1_080)

@@ -37,7 +37,7 @@ import SwiftUI
                     }
                 }
             }
-            .padding(.horizontal, 72)
+            .padding(.horizontal, PrismediaLayout.televisionContentInset)
             .frame(minHeight: 250, alignment: .bottomLeading)
             .transaction { $0.disablesAnimations = true }
         }

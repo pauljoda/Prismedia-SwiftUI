@@ -121,10 +121,8 @@ import SwiftUI
         @ViewBuilder
         private var actions: some View {
             if !RequestActivityStatusPolicy.isTransitionLocked(item.status) {
-                GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                    HStack(spacing: PrismediaSpacing.small) { actionButtons }
-                }
-                .prismediaCompactActionControlSize()
+                PrismediaGlassButtonGroup { actionButtons }
+                    .prismediaCompactActionControlSize()
             }
         }
 

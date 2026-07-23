@@ -23,7 +23,6 @@
             } label: {
                 Image(systemName: systemImage)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(PrismediaColor.onMedia)
                     .frame(width: 22, height: 22)
                     .padding(10)
             }

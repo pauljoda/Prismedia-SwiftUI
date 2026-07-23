@@ -29,7 +29,7 @@ import SwiftUI
                         .accessibilityIdentifier("tv.seasons-detail.season.\(season.id.uuidString)")
                     }
                 }
-                .padding(.horizontal, 72)
+                .padding(.horizontal, PrismediaLayout.televisionContentInset)
                 .padding(.vertical, PrismediaSpacing.medium)
             }
             .prismediaFocusSection()

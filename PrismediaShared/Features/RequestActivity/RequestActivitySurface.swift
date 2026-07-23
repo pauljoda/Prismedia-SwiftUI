@@ -104,96 +104,53 @@ import SwiftUI
         }
 
         private var downloadList: some View {
-            let items = visibleDownloads
-            return List(selection: $selectedIDs) {
-                errorSection
-                downloadFilterSection
-                ForEach(items) { item in
-                    RequestActivityDownloadRow(
-                        item: item,
-                        isActing: isActing,
-                        imageURL: item.posterURL.flatMap(resolveAssetURL),
-                        onPrimaryAction: performPrimaryAction,
-                        onManage: { selectedAcquisition = $0 },
-                        onOpenEntity: openDownloadEntity,
-                        onRemove: { pendingRemovalIDs = [$0.id] }
-                    )
-                    .tag(item.id)
-                    .selectionDisabled(RequestActivityStatusPolicy.isTransitionLocked(item.status))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button("Remove", systemImage: "trash", role: .destructive) {
-                            pendingRemovalIDs = [item.id]
-                        }
-                        .disabled(RequestActivityStatusPolicy.isTransitionLocked(item.status) || isActing)
-                    }
-                }
-            }
+            RequestActivityDownloadList(
+                selectedIDs: $selectedIDs,
+                selectedStatus: $selectedStatus,
+                selectedKind: $selectedDownloadKind,
+                sort: $sort,
+                items: visibleDownloads,
+                availableKinds: downloadKinds,
+                sourceIsEmpty: downloads.isEmpty,
+                errorMessage: errorMessage,
+                isActing: isActing,
+                resolveAssetURL: resolveAssetURL,
+                onPrimaryAction: performPrimaryAction,
+                onManage: { selectedAcquisition = $0 },
+                onOpenEntity: openDownloadEntity,
+                onRemove: { pendingRemovalIDs = [$0.id] }
+            )
         }
 
         private func wantedList(_ list: RequestActivityWantedList) -> some View {
-            let items = visibleWantedItems
             let totalPages = max(1, Int(ceil(Double(wantedPage?.total ?? 0) / 50)))
-            return List(selection: $selectedIDs) {
-                errorSection
-                wantedFilterSection
-                ForEach(items) { item in
-                    RequestActivityWantedRow(
-                        item: item,
-                        list: list,
-                        isActing: isActing,
-                        imageURL: item.posterURL.flatMap(resolveAssetURL),
-                        referenceDate: referenceDate,
-                        onSearchNow: { target in Task { await searchWanted([target]) } },
-                        onOpenEntity: openWantedEntity,
-                        onUnmonitor: { target in Task { await unmonitor([target]) } }
-                    )
-                    .tag(item.id)
-                    .selectionDisabled(
-                        RequestActivityWantedPolicy.isTransitionLocked(
-                            monitorStatus: item.monitorStatus,
-                            acquisitionStatus: item.acquisitionStatus
-                        )
-                    )
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button("Unmonitor", systemImage: "bell.slash", role: .destructive) {
-                            Task { await unmonitor([item]) }
-                        }
-                        .disabled(isActing)
-                    }
-                }
-                if totalPages > 1 {
-                    RequestActivityPager(
-                        page: page,
-                        totalPages: totalPages,
-                        isLoading: isLoading,
-                        onPrevious: { page = max(1, page - 1) },
-                        onNext: { page = min(totalPages, page + 1) }
-                    )
-                }
-            }
+            return RequestActivityWantedListView(
+                selectedIDs: $selectedIDs,
+                selectedKind: $selectedWantedKind,
+                page: $page,
+                items: visibleWantedItems,
+                list: list,
+                totalPages: totalPages,
+                sourceIsEmpty: wantedPage?.items.isEmpty ?? true,
+                errorMessage: errorMessage,
+                isLoading: isLoading,
+                isActing: isActing,
+                referenceDate: referenceDate,
+                resolveAssetURL: resolveAssetURL,
+                onSearchNow: requestSearchWanted,
+                onOpenEntity: openWantedEntity,
+                onUnmonitor: requestUnmonitor
+            )
         }
 
         private var historyList: some View {
-            List {
-                errorSection
-                ForEach(visibleHistory) { entry in
-                    RequestActivityHistoryRow(
-                        entry: entry,
-                        referenceDate: referenceDate,
-                        onOpenEntity: openHistoryEntity
-                    )
-                }
-            }
-        }
-
-        @ViewBuilder
-        private var errorSection: some View {
-            if let errorMessage, !currentSourceIsEmpty {
-                Section {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(PrismediaColor.destructive)
-                }
-            }
+            RequestActivityHistoryList(
+                entries: visibleHistory,
+                sourceIsEmpty: history.isEmpty,
+                errorMessage: errorMessage,
+                referenceDate: referenceDate,
+                onOpenEntity: openHistoryEntity
+            )
         }
 
         @ViewBuilder
@@ -241,72 +198,21 @@ import SwiftUI
             #endif
         }
 
-        private var downloadFilterSection: some View {
-            Section("Filters") {
-                Picker("Status", selection: $selectedStatus) {
-                    ForEach(RequestActivityStatusFilter.allCases) { filter in
-                        Text(filter.title).tag(filter)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Picker("Kind", selection: $selectedDownloadKind) {
-                    Text("All Kinds").tag(nil as EntityKind?)
-                    ForEach(downloadKinds) { kind in
-                        Text(kind.displayLabel).tag(kind as EntityKind?)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Picker("Sort", selection: $sort) {
-                    ForEach(RequestActivitySort.allCases) { option in
-                        Text(option.title).tag(option)
-                    }
-                }
-                .pickerStyle(.menu)
-            }
-            .accessibilityIdentifier("request-activity.filters")
-        }
-
-        private var wantedFilterSection: some View {
-            Section("Filters") {
-                Picker("Kind", selection: $selectedWantedKind) {
-                    Text("All Kinds").tag(nil as EntityKind?)
-                    ForEach(RequestActivityKindCatalog.wanted) { kind in
-                        Text(kind.displayLabel).tag(kind as EntityKind?)
-                    }
-                }
-                .pickerStyle(.menu)
-            }
-            .accessibilityIdentifier("request-activity.filters")
-        }
-
         private var selectionMenu: some View {
-            Menu {
-                if section == .downloads {
-                    Button("Remove Selected", systemImage: "trash", role: .destructive) {
-                        pendingRemovalIDs = selectedIDs
-                    }
-                } else {
-                    Button("Search Selected", systemImage: "arrow.clockwise") {
-                        let targets = wantedPage?.items.filter { selectedIDs.contains($0.id) } ?? []
-                        Task { await searchWanted(targets) }
-                    }
-                    Button("Unmonitor Selected", systemImage: "bell.slash", role: .destructive) {
-                        let targets = wantedPage?.items.filter { selectedIDs.contains($0.id) } ?? []
-                        Task { await unmonitor(targets) }
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-            }
-            .accessibilityLabel("Selected Item Actions")
-            .accessibilityValue("\(selectedIDs.count) selected")
+            RequestActivitySelectionMenu(
+                section: section,
+                selectedCount: selectedIDs.count,
+                onRemove: { pendingRemovalIDs = selectedIDs },
+                onSearch: requestSearchSelected,
+                onUnmonitor: requestUnmonitorSelected
+            )
         }
 
         #if os(iOS)
             private var selectionToggleButton: some View {
-                Button {
+                RequestActivitySelectionToggle(
+                    isEditing: editMode?.wrappedValue.isEditing == true
+                ) {
                     withAnimation {
                         if editMode?.wrappedValue.isEditing == true {
                             editMode?.wrappedValue = .inactive
@@ -315,12 +221,27 @@ import SwiftUI
                             editMode?.wrappedValue = .active
                         }
                     }
-                } label: {
-                    Image(systemName: editMode?.wrappedValue.isEditing == true ? "checkmark" : "checkmark.circle")
                 }
-                .accessibilityLabel(editMode?.wrappedValue.isEditing == true ? "Done Selecting" : "Select Items")
             }
         #endif
+
+        private func requestSearchSelected() {
+            let targets = wantedPage?.items.filter { selectedIDs.contains($0.id) } ?? []
+            Task { await searchWanted(targets) }
+        }
+
+        private func requestUnmonitorSelected() {
+            let targets = wantedPage?.items.filter { selectedIDs.contains($0.id) } ?? []
+            Task { await unmonitor(targets) }
+        }
+
+        private func requestSearchWanted(_ item: RequestActivityWantedItem) {
+            Task { await searchWanted([item]) }
+        }
+
+        private func requestUnmonitor(_ item: RequestActivityWantedItem) {
+            Task { await unmonitor([item]) }
+        }
 
         private var trailingToolbarPlacement: ToolbarItemPlacement {
             #if os(iOS)

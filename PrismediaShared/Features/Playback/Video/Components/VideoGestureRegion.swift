@@ -15,10 +15,12 @@
                 if controller.shuttleSide == side {
                     Label("2×", systemImage: side == .left ? "backward.fill" : "forward.fill")
                         .font(.headline.bold())
-                        .foregroundStyle(PrismediaColor.onMedia)
                         .padding(.horizontal, PrismediaSpacing.large)
                         .frame(height: 38)
-                        .glassEffect(.regular.tint(.black.opacity(0.28)), in: .capsule)
+                        .glassEffect(
+                            .regular.tint(PrismediaColor.mediaOverlayGlassTint),
+                            in: .capsule
+                        )
                         .allowsHitTesting(false)
                 }
             }

@@ -33,6 +33,7 @@ public enum PrismediaColor {
     public static let warning = spectrumOrange
     public static let success = spectrumGreen
     public static let info = spectrumCyan
+    public static let mediaOverlayGlassTint = Color.black.opacity(0.58)
     public static let onAccent = Color.black
     public static let onMedia = Color.white
 

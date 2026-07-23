@@ -78,7 +78,7 @@ import SwiftUI
                                 )
                             }
                         }
-                        .padding(.horizontal, 72)
+                        .padding(.horizontal, PrismediaLayout.televisionContentInset)
                         .padding(.vertical, PrismediaSpacing.medium)
                     }
                     .onChange(of: episodes.map(\.id), initial: true) { _, episodeIDs in

@@ -34,7 +34,7 @@
         ) { item in
             Text("\(item.label): \(item.value)")
         }
-        .padding(72)
+        .padding(PrismediaLayout.televisionContentInset)
         .frame(width: 1_920)
     }
 #endif

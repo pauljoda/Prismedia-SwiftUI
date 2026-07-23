@@ -58,7 +58,7 @@
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 72)
+            .padding(.horizontal, PrismediaLayout.televisionContentInset)
             .padding(.vertical, PrismediaSpacing.extraLarge)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .contain)

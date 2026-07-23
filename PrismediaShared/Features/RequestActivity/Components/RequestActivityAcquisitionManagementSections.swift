@@ -376,80 +376,38 @@ import SwiftUI
 
         private func embeddedStatusHeader(_ detail: RequestActivityAcquisitionDetail) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                embeddedStatusSummary(detail)
+                RequestActivityAcquisitionStatusSummary(
+                    status: detail.summary.status,
+                    message: detail.summary.statusMessage,
+                    updatedAt: detail.summary.updatedAt
+                )
                 if hasLifecycleActions(detail) {
-                    GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                        VStack(spacing: PrismediaSpacing.small) {
-                            lifecycleActions(detail)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .prismediaCompactActionControlSize()
+                    RequestActivityAcquisitionLifecycleActions(
+                        actions: allLifecycleActions(for: detail),
+                        primaryAction: primaryLifecycleAction(for: detail),
+                        activeAction: activeLifecycleAction,
+                        primaryTint: artworkPrimaryAccent,
+                        isDisabled: isInteractionDisabled,
+                        onPerform: requestLifecycleAction
+                    )
                 }
             }
-        }
-
-        private func embeddedStatusSummary(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                Label(
-                    RequestActivityAcquisitionLifecyclePolicy.label(for: detail.summary.status),
-                    systemImage: RequestActivityStatusPolicy.systemImage(for: detail.summary.status)
-                )
-                .font(.headline)
-                .foregroundStyle(
-                    RequestActivityStatusPolicy.tone(for: detail.summary.status).foregroundStyle
-                )
-
-                if let description = RequestActivityAcquisitionLifecyclePolicy.description(
-                    for: detail.summary.status,
-                    message: detail.summary.statusMessage
-                ) {
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
-                Text("Updated \(detail.summary.updatedAt, style: .relative)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(PrismediaColor.textMuted)
-            }
-            .accessibilityElement(children: .combine)
         }
 
         private var hasLifecycleMessage: Bool {
             actionErrorMessage != nil || refreshState.message != nil
         }
 
-        @ViewBuilder
         private var lifecycleMessages: some View {
-            if let actionErrorMessage {
-                if failedLifecycleAction != nil {
-                    RequestActivityLifecycleMessage(
-                        title: "Acquisition Action Failed",
-                        message: actionErrorMessage,
-                        retryTitle: "Retry",
-                        onRetry: retryFailedLifecycleAction,
-                        onDismiss: dismissActionError
-                    )
-                } else {
-                    RequestActivityLifecycleMessage(
-                        title: "Acquisition Action Failed",
-                        message: actionErrorMessage,
-                        onDismiss: dismissActionError
-                    )
-                }
-            }
-
-            if let refreshMessage = refreshState.message {
-                RequestActivityLifecycleMessage(
-                    title: "Live Updates Delayed",
-                    message: refreshMessage,
-                    isWarning: true,
-                    retryTitle: "Retry Now",
-                    onRetry: { Task { await load(showSpinner: false) } },
-                    onDismiss: { refreshState.dismiss() }
-                )
-            }
+            RequestActivityAcquisitionMessages(
+                actionErrorMessage: actionErrorMessage,
+                canRetryAction: failedLifecycleAction != nil,
+                refreshMessage: refreshState.message,
+                onRetryAction: retryFailedLifecycleAction,
+                onDismissAction: dismissActionError,
+                onRetryRefresh: requestRefresh,
+                onDismissRefresh: dismissRefreshMessage
+            )
         }
 
         private func hasLifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> Bool {
@@ -483,38 +441,6 @@ import SwiftUI
                 for: detail.summary.status,
                 hasResumableImport: detail.summary.hasResumableImport
             )
-        }
-
-        @ViewBuilder
-        private func lifecycleActions(_ detail: RequestActivityAcquisitionDetail) -> some View {
-            ForEach(allLifecycleActions(for: detail), id: \.self) { action in
-                lifecycleButton(action, primaryAction: primaryLifecycleAction(for: detail))
-            }
-        }
-
-        private func lifecycleButton(
-            _ action: RequestActivityAcquisitionAction,
-            primaryAction: RequestActivityAcquisitionAction?
-        ) -> some View {
-            PrismediaButton(
-                action.title,
-                systemImage: action.systemImage,
-                variant: action == primaryAction
-                    ? .prominent
-                    : action == .cancel || action == .startOver ? .destructive : .standard,
-                form: .fill,
-                primaryTint: action == primaryAction ? artworkPrimaryAccent : nil,
-                isLoading: activeLifecycleAction == action,
-                loadingTitle: action.progressTitle
-            ) {
-                if action == .startOver {
-                    confirmsStartOver = true
-                } else {
-                    Task { await performLifecycleAction(action) }
-                }
-            }
-            .disabled(isInteractionDisabled)
-            .frame(maxWidth: .infinity)
         }
 
         @ViewBuilder
@@ -896,6 +822,22 @@ import SwiftUI
         private func dismissActionError() {
             actionErrorMessage = nil
             failedLifecycleAction = nil
+        }
+
+        private func requestLifecycleAction(_ action: RequestActivityAcquisitionAction) {
+            if action == .startOver {
+                confirmsStartOver = true
+            } else {
+                Task { await performLifecycleAction(action) }
+            }
+        }
+
+        private func requestRefresh() {
+            Task { await load(showSpinner: false) }
+        }
+
+        private func dismissRefreshMessage() {
+            refreshState.dismiss()
         }
     }
 

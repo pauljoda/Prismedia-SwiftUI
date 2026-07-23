@@ -58,27 +58,29 @@
                     .clipShape(.capsule)
 
                     if let originProgress, isSeeking,
-                       abs(originProgress - currentProgress) > 0.001
+                        abs(originProgress - currentProgress) > 0.001
                     {
                         Capsule()
                             .fill(.white.opacity(0.92))
                             .frame(width: originMarkerWidth, height: 32)
-                            .offset(x: markerOffset(
-                                progress: originProgress,
-                                markerWidth: originMarkerWidth,
-                                trackWidth: width
-                            ))
+                            .offset(
+                                x: markerOffset(
+                                    progress: originProgress,
+                                    markerWidth: originMarkerWidth,
+                                    trackWidth: width
+                                ))
                     }
 
                     Circle()
                         .fill(.white)
                         .frame(width: playheadSize, height: playheadSize)
                         .shadow(color: .black.opacity(0.45), radius: 5, y: 2)
-                        .offset(x: markerOffset(
-                            progress: currentProgress,
-                            markerWidth: playheadSize,
-                            trackWidth: width
-                        ))
+                        .offset(
+                            x: markerOffset(
+                                progress: currentProgress,
+                                markerWidth: playheadSize,
+                                trackWidth: width
+                            ))
                 }
                 .frame(width: width, height: geometry.size.height, alignment: .leading)
                 .overlay(alignment: .topLeading) {
@@ -107,7 +109,6 @@
 
                 Text(VideoPlaybackPresentation.clockTime(currentTime))
                     .font(.caption.monospacedDigit().weight(.bold))
-                    .foregroundStyle(PrismediaColor.onMedia)
                     .padding(.horizontal, PrismediaSpacing.small)
                     .padding(.vertical, PrismediaSpacing.extraSmall)
                     .glassEffect(.regular, in: .capsule)

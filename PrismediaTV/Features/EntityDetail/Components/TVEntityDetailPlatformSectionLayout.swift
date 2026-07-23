@@ -28,6 +28,6 @@
             picker: { Text("Sections") },
             panel: { Text("Metadata") }
         )
-        .padding(72)
+        .padding(PrismediaLayout.televisionContentInset)
     }
 #endif

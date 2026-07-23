@@ -3,7 +3,6 @@ import SwiftUI
 /// Prismedia's permanent Browse destination. Its system search field replaces
 /// the landing content with navigation and library matches when text is entered.
 struct SearchHubView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @Binding private var searchText: String
@@ -50,16 +49,38 @@ struct SearchHubView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: PrismediaSpacing.section) {
                     if isSearchActive {
-                        searchResults
+                        SearchHubSearchControls(
+                            filters: $filters,
+                            usesRegularLayout: usesRegularLayout
+                        ) {
+                            filtersPresented = true
+                        }
+
+                        SearchHubResultsView(
+                            expandedKinds: $expandedKinds,
+                            snapshot: snapshot,
+                            query: normalizedSearchText,
+                            navigationMatches: availableNavigationMatches,
+                            usesRegularLayout: usesRegularLayout,
+                            topResultID: topSearchResult?.id,
+                            onSelectNavigation: selectNavigationTarget,
+                            onRetrySearch: retrySearch,
+                            onRetryPagination: retryPagination,
+                            onLoadNextPage: loadNextPage
+                        )
                     } else {
-                        browseLanding
+                        SearchHubBrowseGrid(
+                            modes: modes,
+                            recentItems: snapshot.recentItems,
+                            onSelectMode: onSelectMode
+                        )
                     }
                 }
                 .padding(.horizontal, PrismediaSpacing.extraLarge)
                 .padding(.top, PrismediaSpacing.small)
                 .padding(.bottom, PrismediaSpacing.section)
                 .containerRelativeFrame(.horizontal, alignment: .center) { length, _ in
-                    min(length, 1_120)
+                    min(length, SearchHubLayout.maximumContentWidth)
                 }
             }
             .prismediaScreenBackground()
@@ -146,305 +167,10 @@ struct SearchHubView: View {
         horizontalSizeClass != .compact
     }
 
-    // MARK: - Browse landing
-
-    private var browseLanding: some View {
-        LazyVGrid(columns: browseColumns, spacing: PrismediaSpacing.medium) {
-            ForEach(SearchHubCatalog.cards(for: modes)) { card in
-                modeCard(card)
-            }
-        }
-    }
-
-    private var browseColumns: [GridItem] {
-        if dynamicTypeSize.isAccessibilitySize {
-            return [GridItem(.flexible(), spacing: PrismediaSpacing.medium)]
-        }
-
-        if horizontalSizeClass == .compact {
-            return [
-                GridItem(.flexible(), spacing: PrismediaSpacing.medium),
-                GridItem(.flexible(), spacing: PrismediaSpacing.medium),
-            ]
-        }
-
-        return [GridItem(.adaptive(minimum: 164, maximum: 280), spacing: PrismediaSpacing.medium)]
-    }
-
-    private func modeCard(_ card: SearchHubModeCard) -> some View {
-        let artwork = representativeArtwork(for: card)
-
-        return Button {
-            onSelectMode(card.mode)
-        } label: {
-            Color.clear
-                .frame(maxWidth: .infinity)
-                .frame(height: dynamicTypeSize.isAccessibilitySize ? 180 : 124)
-                .background {
-                    RemotePosterImage(
-                        path: artwork?.bestCoverPath,
-                        fallbackSeed: artwork?.title ?? card.title,
-                        systemImage: card.systemImage
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-                }
-                .overlay {
-                    LinearGradient(
-                        colors: [
-                            .clear,
-                            PrismediaColor.background.opacity(PrismediaOpacity.statusFill),
-                            PrismediaColor.background.opacity(0.88),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-                .overlay(alignment: .bottomLeading) {
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                        Text(card.title)
-                            .font(.title3.bold())
-                            .foregroundStyle(PrismediaColor.onMedia)
-
-                        Text(card.subtitle)
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.onMedia.opacity(0.82))
-                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
-                    }
-                    .multilineTextAlignment(.leading)
-                    .padding(PrismediaSpacing.large)
-                }
-                .clipShape(
-                    PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.card)
-                )
-                .contentShape(
-                    PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.card)
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(card.title). \(card.subtitle)")
-        .accessibilityHint("Opens the \(card.title) section")
-        .accessibilityIdentifier("shell.search.mode.\(card.id)")
-    }
-
-    private func representativeArtwork(for card: SearchHubModeCard) -> EntityThumbnail? {
-        snapshot.recentItems.first { card.preferredArtworkKinds.contains($0.kind) }
-    }
-
-    // MARK: - Search results
-
-    @ViewBuilder
-    private var searchResults: some View {
-        let navigationMatches = availableNavigationMatches
-
-        searchControls
-
-        if !navigationMatches.isEmpty {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                sectionTitle("Navigate")
-
-                VStack(spacing: 0) {
-                    ForEach(Array(navigationMatches.enumerated()), id: \.element.destination.id) { index, target in
-                        navigationRow(target)
-
-                        if index < navigationMatches.count - 1 {
-                            Divider()
-                                .padding(.leading, 44)
-                        }
-                    }
-                }
-            }
-        }
-
-        switch snapshot.searchState {
-        case .idle, .loading:
-            libraryResults(showProgress: true)
-
-        case .content:
-            libraryResults(showProgress: false)
-
-        case .empty:
-            ContentUnavailableView {
-                Label("No Results", systemImage: "magnifyingglass")
-            } description: {
-                Text("No library items match “\(normalizedSearchText)”.")
-            }
-            .frame(maxWidth: .infinity, minHeight: 260)
-
-        case .failed:
-            ContentUnavailableView {
-                Label("Couldn’t Search Prismedia", systemImage: "wifi.exclamationmark")
-            } description: {
-                Text("Check your connection and try again.")
-            } actions: {
-                PrismediaButton("Try Again", variant: .prominent) {
-                    Task { await retryActiveContent() }
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 280)
-        }
-    }
-
-    private var searchControls: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            HStack {
-                Text("Search In")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                Button {
-                    filtersPresented = true
-                } label: {
-                    Label(
-                        filters.isDefault
-                            ? "Filters"
-                            : "Filters (\(filters.activeFilterCount))",
-                        systemImage: filters.isDefault
-                            ? "line.3.horizontal.decrease"
-                            : "line.3.horizontal.decrease.circle.fill"
-                    )
-                }
-                .accessibilityHint("Shows rating, date, and entity-kind filters")
-                .accessibilityIdentifier("shell.search.filter-sheet")
-            }
-
-            SearchHubKindSelector(filters: $filters, usesRegularLayout: usesRegularLayout)
-
-            if !filters.isDefault {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    Label(filterSummary, systemImage: "line.3.horizontal.decrease.circle.fill")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-
-                    Spacer(minLength: PrismediaSpacing.small)
-
-                    Button("Reset") {
-                        filters.reset()
-                    }
-                    .accessibilityHint("Clears every Search filter")
-                }
-            }
-        }
-    }
-
-    private var filterSummary: String {
-        var parts: [String] = []
-        if filters.selectedKinds != SearchHubKindCatalog.allKinds {
-            parts.append("\(filters.selectedKinds.count) kinds")
-        }
-        if let minimumRating = filters.minimumRating {
-            parts.append("\(minimumRating)+ stars")
-        }
-        if let dateFrom = filters.dateFrom {
-            parts.append("from \(dateFrom.formatted(date: .abbreviated, time: .omitted))")
-        }
-        if let dateTo = filters.dateTo {
-            parts.append("through \(dateTo.formatted(date: .abbreviated, time: .omitted))")
-        }
-        return parts.joined(separator: " · ")
-    }
-
     private var availableNavigationMatches: [SearchHubNavigationTarget] {
         let allowedModeIDs = Set(modes.map(\.id))
         return SearchHubCatalog.navigationMatches(for: normalizedSearchText)
             .filter { allowedModeIDs.contains($0.mode.id) }
-    }
-
-    private func libraryResults(showProgress: Bool) -> some View {
-        let sections = SearchHubCatalog.groupedResults(
-            snapshot.searchResults,
-            query: normalizedSearchText
-        )
-
-        return VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
-            if showProgress {
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel("Updating results")
-            }
-
-            ForEach(sections) { section in
-                SearchHubResultGroup(
-                    section: section,
-                    isExpanded: expandedKinds.contains(section.kind),
-                    usesRegularLayout: usesRegularLayout,
-                    topResultID: topSearchResult?.id
-                ) {
-                    if expandedKinds.contains(section.kind) {
-                        expandedKinds.remove(section.kind)
-                    } else {
-                        expandedKinds.insert(section.kind)
-                    }
-                }
-            }
-
-            searchPaginationFooter
-        }
-    }
-
-    @ViewBuilder
-    private var searchPaginationFooter: some View {
-        if snapshot.isLoadingNextSearchPage {
-            ProgressView("Loading more results…")
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, PrismediaSpacing.large)
-        } else if let message = snapshot.searchPaginationErrorMessage {
-            VStack(spacing: PrismediaSpacing.medium) {
-                Text(message)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
-                PrismediaButton("Try Again") {
-                    Task { await loadNextSearchPage() }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PrismediaSpacing.medium)
-        } else if snapshot.hasMoreSearchResults {
-            ProgressView()
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, PrismediaSpacing.large)
-                .onAppear {
-                    Task { await loadNextSearchPage() }
-                }
-                .accessibilityLabel("Loading more results")
-        }
-    }
-
-    private func navigationRow(_ target: SearchHubNavigationTarget) -> some View {
-        Button {
-            onSelectDestination(target.mode, target.destination)
-        } label: {
-            HStack(spacing: PrismediaSpacing.medium) {
-                Image(systemName: target.destination.systemImage)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(PrismediaColor.accent)
-                    .frame(width: 32, height: 32)
-
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-                    Text(target.destination.title)
-                        .foregroundStyle(.primary)
-                    Text(target.mode.title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.forward")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
-            }
-            .frame(minHeight: 52)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("shell.search.navigation.\(target.destination.id)")
     }
 
     private var topSearchResult: EntityThumbnail? {
@@ -462,11 +188,20 @@ struct SearchHubView: View {
         navigationPath.append(EntityLink(thumbnail: topSearchResult))
     }
 
-    private func sectionTitle(_ title: String) -> some View {
-        Text(title)
-            .font(.title2.bold())
-            .foregroundStyle(.primary)
-            .accessibilityAddTraits(.isHeader)
+    private func selectNavigationTarget(_ target: SearchHubNavigationTarget) {
+        onSelectDestination(target.mode, target.destination)
+    }
+
+    private func retrySearch() {
+        Task { await retryActiveContent() }
+    }
+
+    private func retryPagination() {
+        Task { await loadNextSearchPage() }
+    }
+
+    private func loadNextPage() {
+        Task { await loadNextSearchPage() }
     }
 
     private func retryActiveContent() async {

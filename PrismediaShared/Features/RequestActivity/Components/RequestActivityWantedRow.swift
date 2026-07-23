@@ -115,10 +115,8 @@ import SwiftUI
                 monitorStatus: item.monitorStatus,
                 acquisitionStatus: item.acquisitionStatus
             ) {
-                GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                    HStack(spacing: PrismediaSpacing.small) { actionButtons }
-                }
-                .prismediaCompactActionControlSize()
+                PrismediaGlassButtonGroup { actionButtons }
+                    .prismediaCompactActionControlSize()
             }
         }
 

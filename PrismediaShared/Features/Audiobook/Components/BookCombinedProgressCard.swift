@@ -100,39 +100,37 @@ struct BookCombinedProgressCard: View {
     }
 
     private var actions: some View {
-        GlassEffectContainer(spacing: PrismediaSpacing.medium) {
-            VStack(spacing: PrismediaSpacing.medium) {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    PrismediaButton(
-                        "Continue Reading",
-                        systemImage: "book.fill",
-                        form: .fillIcon,
-                        action: onContinueReading
-                    )
-                    .accessibilityIdentifier("combined-book-progress.continue-reading")
-
-                    PrismediaButton(
-                        "Continue Listening",
-                        systemImage: "headphones",
-                        form: .fillIcon,
-                        action: onContinueListening
-                    )
-                    .accessibilityIdentifier("combined-book-progress.continue-listening")
-                }
+        PrismediaGlassButtonStack(spacing: PrismediaSpacing.medium) {
+            HStack(spacing: PrismediaSpacing.medium) {
+                PrismediaButton(
+                    "Continue Reading",
+                    systemImage: "book.fill",
+                    form: .fillIcon,
+                    action: onContinueReading
+                )
+                .accessibilityIdentifier("combined-book-progress.continue-reading")
 
                 PrismediaButton(
-                    "Continue Combined",
-                    systemImage: "book.pages",
-                    variant: .prominent,
-                    form: .fill,
-                    primaryTint: artworkPrimaryAccent,
-                    action: onContinueCombined
+                    "Continue Listening",
+                    systemImage: "headphones",
+                    form: .fillIcon,
+                    action: onContinueListening
                 )
-                .accessibilityHint(
-                    "Opens the reader and starts the audiobook near the furthest saved position"
-                )
-                .accessibilityIdentifier("combined-book-progress.continue-combined")
+                .accessibilityIdentifier("combined-book-progress.continue-listening")
             }
+
+            PrismediaButton(
+                "Continue Combined",
+                systemImage: "book.pages",
+                variant: .prominent,
+                form: .fill,
+                primaryTint: artworkPrimaryAccent,
+                action: onContinueCombined
+            )
+            .accessibilityHint(
+                "Opens the reader and starts the audiobook near the furthest saved position"
+            )
+            .accessibilityIdentifier("combined-book-progress.continue-combined")
         }
         .frame(maxWidth: .infinity)
     }

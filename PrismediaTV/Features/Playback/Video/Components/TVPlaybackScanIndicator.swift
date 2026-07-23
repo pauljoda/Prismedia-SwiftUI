@@ -13,7 +13,6 @@
                 Image(systemName: side == .left ? "backward.fill" : "forward.fill")
             }
             .font(.title3.bold())
-            .foregroundStyle(PrismediaColor.onMedia)
             .padding(.horizontal, PrismediaSpacing.large)
             .frame(height: 52)
             .glassEffect(.regular, in: .capsule)

@@ -5,49 +5,32 @@
         @Environment(MusicPlayerController.self) private var controller
 
         let presentation: MusicNowPlayingPresentation
-        let selectedTint: Color
         let onToggleQueue: () -> Void
 
         var body: some View {
-            GlassEffectContainer(spacing: PrismediaSpacing.medium) {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    MusicRoutePicker()
-                        .glassEffect(.regular.interactive(), in: .circle)
-                        .accessibilityLabel("Choose Audio Output")
+            PrismediaGlassButtonGroup(spacing: PrismediaSpacing.medium) {
+                MusicRoutePicker()
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .accessibilityLabel("Choose Audio Output")
 
-                    HStack(spacing: PrismediaSpacing.large) {
-                        shuffleButton
-                        repeatButton
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    queueButton
+                HStack(spacing: PrismediaSpacing.large) {
+                    shuffleButton
+                    repeatButton
                 }
+                .frame(maxWidth: .infinity)
+
+                queueButton
             }
         }
 
-        @ViewBuilder
         private var shuffleButton: some View {
-            if controller.queue.isShuffled {
-                shuffleControl
-                    .buttonStyle(.glassProminent)
-                    .tint(selectedTint)
-            } else {
-                shuffleControl
-                    .buttonStyle(.glass)
-            }
+            shuffleControl
+                .buttonStyle(.glass)
         }
 
-        @ViewBuilder
         private var repeatButton: some View {
-            if controller.queue.repeatMode == .off {
-                repeatControl
-                    .buttonStyle(.glass)
-            } else {
-                repeatControl
-                    .buttonStyle(.glassProminent)
-                    .tint(selectedTint)
-            }
+            repeatControl
+                .buttonStyle(.glass)
         }
 
         private var shuffleControl: some View {
@@ -56,9 +39,13 @@
                     controller.setShuffleEnabled(!controller.queue.isShuffled)
                 }
             } label: {
-                Image(systemName: "shuffle")
-                    .padding(PrismediaSpacing.small)
-                    .frame(maxWidth: .infinity)
+                Image(
+                    systemName: controller.queue.isShuffled
+                        ? "shuffle.circle.fill"
+                        : "shuffle"
+                )
+                .padding(PrismediaSpacing.small)
+                .frame(maxWidth: .infinity)
             }
             .buttonBorderShape(.capsule)
             .disabled(controller.context?.isAudiobook == true)
@@ -90,7 +77,6 @@
                 )
                 .padding(PrismediaSpacing.small)
             }
-            .foregroundStyle(presentation == .queue ? selectedTint : .primary)
             .buttonBorderShape(.circle)
             .buttonStyle(.glass)
             .accessibilityLabel(presentation == .queue ? "Show Now Playing" : "Show Queue")
@@ -105,7 +91,11 @@
         }
 
         private var repeatSystemImage: String {
-            controller.queue.repeatMode == .one ? "repeat.1" : "repeat"
+            switch controller.queue.repeatMode {
+            case .off: "repeat"
+            case .all: "repeat.circle.fill"
+            case .one: "repeat.1.circle.fill"
+            }
         }
 
         private var repeatLabel: String {
@@ -130,7 +120,6 @@
             @Previewable @State var controller = MusicPreviewData.controller()
             MusicNowPlayingControlBar(
                 presentation: .player,
-                selectedTint: PrismediaColor.accent,
                 onToggleQueue: {}
             )
             .environment(controller)

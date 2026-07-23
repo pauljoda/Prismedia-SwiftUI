@@ -231,45 +231,43 @@
         }
 
         private var playbackOptionButtons: some View {
-            GlassEffectContainer(spacing: PrismediaSpacing.large) {
-                HStack(spacing: PrismediaSpacing.large) {
-                    TVPlaybackOptionMenuButton(
-                        controller: controller,
-                        menu: .audio,
-                        focusTarget: .audio,
-                        systemImage: "waveform",
-                        focusedControl: $focusedControl,
-                        onMove: {
-                            handlePlaybackOptionsMove(from: .audio, direction: $0)
-                        },
-                        onInteraction: revealControls
-                    )
-                    .equatable()
-                    TVPlaybackOptionMenuButton(
-                        controller: controller,
-                        menu: .subtitles,
-                        focusTarget: .subtitles,
-                        systemImage: "captions.bubble",
-                        focusedControl: $focusedControl,
-                        onMove: {
-                            handlePlaybackOptionsMove(from: .subtitles, direction: $0)
-                        },
-                        onInteraction: revealControls
-                    )
-                    .equatable()
-                    TVPlaybackOptionMenuButton(
-                        controller: controller,
-                        menu: .speed,
-                        focusTarget: .speed,
-                        systemImage: "speedometer",
-                        focusedControl: $focusedControl,
-                        onMove: {
-                            handlePlaybackOptionsMove(from: .speed, direction: $0)
-                        },
-                        onInteraction: revealControls
-                    )
-                    .equatable()
-                }
+            PrismediaGlassButtonGroup(spacing: PrismediaSpacing.large) {
+                TVPlaybackOptionMenuButton(
+                    controller: controller,
+                    menu: .audio,
+                    focusTarget: .audio,
+                    systemImage: "waveform",
+                    focusedControl: $focusedControl,
+                    onMove: {
+                        handlePlaybackOptionsMove(from: .audio, direction: $0)
+                    },
+                    onInteraction: revealControls
+                )
+                .equatable()
+                TVPlaybackOptionMenuButton(
+                    controller: controller,
+                    menu: .subtitles,
+                    focusTarget: .subtitles,
+                    systemImage: "captions.bubble",
+                    focusedControl: $focusedControl,
+                    onMove: {
+                        handlePlaybackOptionsMove(from: .subtitles, direction: $0)
+                    },
+                    onInteraction: revealControls
+                )
+                .equatable()
+                TVPlaybackOptionMenuButton(
+                    controller: controller,
+                    menu: .speed,
+                    focusTarget: .speed,
+                    systemImage: "speedometer",
+                    focusedControl: $focusedControl,
+                    onMove: {
+                        handlePlaybackOptionsMove(from: .speed, direction: $0)
+                    },
+                    onInteraction: revealControls
+                )
+                .equatable()
             }
             .prismediaFocusSection()
         }

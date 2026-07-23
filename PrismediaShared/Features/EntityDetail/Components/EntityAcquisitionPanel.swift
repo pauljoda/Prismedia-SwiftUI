@@ -6,7 +6,6 @@ import SwiftUI
 
 struct EntityAcquisitionPanel: View {
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
-    @Environment(\.artworkSecondaryText) private var artworkSecondaryText
     @Environment(\.prismediaPageIsActive) private var pageIsActive
     @Environment(\.scenePhase) private var scenePhase
     @State private var state = EntityAcquisitionPanelState()
@@ -467,55 +466,18 @@ struct EntityAcquisitionPanel: View {
         _ monitorState: EntityMonitorState,
         service: EntityAcquisitionService
     ) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-            Divider()
-            if let monitor = monitorState.monitor {
-                LabeledContent("Monitoring Scope", value: scopeLabel(monitor.preset))
-                    .foregroundStyle(PrismediaColor.textPrimary)
+        EntityAcquisitionGroupingActions(
+            monitoringScope: monitorState.monitor.map { scopeLabel($0.preset) },
+            canSearchMissingChildren: monitorState.canSearchMissingChildren,
+            missingChildCount: missingChildCount(for: monitorState),
+            isChecking: activeCommand == .syncContainer(entityID),
+            isSearching: activeCommand == .searchMissingChildren(entityID),
+            isDisabled: state.isMutating || isManualAcquisitionBusy,
+            onCheck: { requestPerform(.syncContainer(entityID), using: service) },
+            onSearchMissing: {
+                requestPerform(.searchMissingChildren(entityID), using: service)
             }
-
-            GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                VStack(spacing: PrismediaSpacing.small) {
-                    groupingButtons(monitorState, service: service)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .frame(maxWidth: .infinity)
-            .prismediaCompactActionControlSize()
-            .disabled(state.isMutating || isManualAcquisitionBusy)
-        }
-    }
-
-    @ViewBuilder
-    private func groupingButtons(
-        _ monitorState: EntityMonitorState,
-        service: EntityAcquisitionService
-    ) -> some View {
-        PrismediaButton(
-            "Check for New Content Now",
-            systemImage: "arrow.clockwise",
-            form: .fill,
-            isLoading: activeCommand == .syncContainer(entityID),
-            loadingTitle: "Checking…"
-        ) {
-            Task { await perform(.syncContainer(entityID), using: service) }
-        }
-        .frame(maxWidth: .infinity)
-
-        if monitorState.canSearchMissingChildren {
-            PrismediaButton(
-                missingChildCount(for: monitorState) > 0
-                    ? "Search \(missingChildCount(for: monitorState)) Missing"
-                    : "Search for Missing Content",
-                systemImage: "magnifyingglass",
-                form: .fill,
-                isLoading: activeCommand == .searchMissingChildren(entityID),
-                loadingTitle: "Searching…"
-            ) {
-                Task { await perform(.searchMissingChildren(entityID), using: service) }
-            }
-            .frame(maxWidth: .infinity)
-        }
+        )
     }
 
     private func monitoringChildren(
@@ -651,47 +613,25 @@ struct EntityAcquisitionPanel: View {
         _ snapshot: EntityAcquisitionPanelSnapshot,
         service: EntityAcquisitionService
     ) -> some View {
-        GlassEffectContainer(spacing: PrismediaSpacing.small) {
-            VStack(spacing: PrismediaSpacing.small) {
-                actionButtons(snapshot, service: service)
+        let searchAgainAcquisitionID = snapshot.state.latestAcquisition?.id
+        return EntityAcquisitionActions(
+            showsSearchForRelease: showsSearchForRelease(snapshot),
+            showsSearchAgain: !embedsManagement(snapshot)
+                && searchAgainAcquisitionID != nil,
+            isSearchingForRelease: activeCommand == .searchForRelease(entityID),
+            isSearchingAgain: searchAgainAcquisitionID.map {
+                activeCommand == .searchAgain($0)
+            } ?? false,
+            primaryTint: artworkPrimaryAccent,
+            isDisabled: state.isMutating || activeCommand != nil || isManualAcquisitionBusy,
+            onSearchForRelease: {
+                requestPerform(.searchForRelease(entityID), using: service)
+            },
+            onSearchAgain: {
+                guard let searchAgainAcquisitionID else { return }
+                requestPerform(.searchAgain(searchAgainAcquisitionID), using: service)
             }
-            .frame(maxWidth: .infinity)
-        }
-        .frame(maxWidth: .infinity)
-        .prismediaCompactActionControlSize()
-        .disabled(state.isMutating || activeCommand != nil || isManualAcquisitionBusy)
-    }
-
-    @ViewBuilder
-    private func actionButtons(
-        _ snapshot: EntityAcquisitionPanelSnapshot,
-        service: EntityAcquisitionService
-    ) -> some View {
-        if showsSearchForRelease(snapshot) {
-            PrismediaButton(
-                "Search for release",
-                systemImage: "magnifyingglass",
-                variant: .prominent,
-                form: .fill,
-                primaryTint: artworkPrimaryAccent,
-                isLoading: activeCommand == .searchForRelease(entityID),
-                loadingTitle: "Searching…"
-            ) {
-                Task { await perform(.searchForRelease(entityID), using: service) }
-            }
-        }
-
-        if !embedsManagement(snapshot), let acquisition = snapshot.state.latestAcquisition {
-            PrismediaButton(
-                "Search Again",
-                systemImage: "arrow.clockwise",
-                form: .fill,
-                isLoading: activeCommand == .searchAgain(acquisition.id),
-                loadingTitle: "Searching…"
-            ) {
-                Task { await perform(.searchAgain(acquisition.id), using: service) }
-            }
-        }
+        )
     }
 
     private func updateMonitor(
@@ -769,30 +709,7 @@ struct EntityAcquisitionPanel: View {
     }
 
     private func acquisitionContent(_ acquisition: EntityAcquisitionSummary) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            Text("Latest Acquisition")
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-            LabeledContent("Status", value: acquisition.status.displayName)
-
-            if let progress = acquisition.progress {
-                ProgressView(value: min(max(progress, 0), 1)) {
-                    Text("Download progress")
-                } currentValueLabel: {
-                    Text(progress, format: .percent.precision(.fractionLength(0)))
-                        .monospacedDigit()
-                }
-                .accessibilityValue(
-                    Text(progress, format: .percent.precision(.fractionLength(0)))
-                )
-            }
-
-            if let message = acquisition.statusMessage, !message.isEmpty {
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundStyle(artworkSecondaryText)
-            }
-        }
+        EntityAcquisitionSummaryView(acquisition: acquisition)
     }
 
     // MARK: - Loading and mutation
@@ -885,6 +802,13 @@ struct EntityAcquisitionPanel: View {
         await performCommand(command, pendingMonitorValue: nil, using: service)
     }
 
+    private func requestPerform(
+        _ command: EntityAcquisitionCommand,
+        using service: EntityAcquisitionService
+    ) {
+        Task { await perform(command, using: service) }
+    }
+
     private func performCommand(
         _ command: EntityAcquisitionCommand,
         pendingMonitorValue nextMonitorValue: Bool?,
@@ -967,12 +891,6 @@ struct EntityAcquisitionPanel: View {
         default:
             return "Couldn’t Update Monitoring"
         }
-    }
-}
-
-extension AcquisitionStatus {
-    fileprivate var displayName: String {
-        rawValue.replacingOccurrences(of: "-", with: " ").capitalized
     }
 }
 

@@ -7,22 +7,25 @@ struct EntityThumbnailBadgeRow: View {
         GlassEffectContainer(spacing: PrismediaSpacing.small) {
             HStack(spacing: PrismediaSpacing.small) {
                 ForEach(badges, id: \.kind) { badge in
-                    ThumbnailBadge(
+                    PrismediaGlassStatusChip(
+                        badge.label,
                         systemImage: badge.systemImage,
-                        label: badge.label,
-                        glassTint: tint(for: badge.tone),
-                        iconAfterLabel: badge.kind == .rating
+                        tint: tint(for: badge.tone),
+                        size: .thumbnail,
+                        iconAfterTitle: badge.kind == .rating
                     )
                 }
             }
         }
     }
 
-    private func tint(for tone: EntityThumbnailBadgeTone) -> Color {
+    private func tint(for tone: EntityThumbnailBadgeTone) -> Color? {
         switch tone {
-        case .accent, .downloading, .attention: PrismediaColor.accent
+        case .accent: PrismediaColor.mediaOverlayGlassTint
+        case .downloading: PrismediaColor.spectrumBlue
+        case .attention: PrismediaColor.warning
         case .searching, .cleanup: PrismediaColor.warning
-        case .queued, .muted: PrismediaColor.textSecondary
+        case .queued, .muted: PrismediaColor.mediaOverlayGlassTint
         case .failed, .danger: PrismediaColor.destructive
         case .success: PrismediaColor.success
         }
@@ -38,5 +41,35 @@ struct EntityThumbnailBadgeRow: View {
         )
         .padding(PrismediaSpacing.large)
         .background(PrismediaBackdrop())
+    }
+
+    #Preview("Thumbnail Wanted Badge · Bright and Dark Artwork") {
+        HStack(spacing: PrismediaSpacing.large) {
+            EntityThumbnailBadgeRow(
+                badges: [
+                    .init(
+                        kind: .wanted,
+                        label: "Wanted",
+                        systemImage: "bookmark.fill",
+                        tone: .muted
+                    )
+                ]
+            )
+            .padding(PrismediaSpacing.extraLarge)
+            .background(Color.white)
+
+            EntityThumbnailBadgeRow(
+                badges: [
+                    .init(
+                        kind: .wanted,
+                        label: "Wanted",
+                        systemImage: "bookmark.fill",
+                        tone: .muted
+                    )
+                ]
+            )
+            .padding(PrismediaSpacing.extraLarge)
+            .background(Color.black)
+        }
     }
 #endif

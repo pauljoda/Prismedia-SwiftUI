@@ -54,7 +54,7 @@ public struct SignInView: View {
                     form: { form },
                     changeServer: { changeServerButton },
                     errorContent: errorMessageView,
-                    passwordHelp: { passwordHelpLink }
+                    passwordHelp: { SignInPasswordHelpLink() }
                 )
             #else
                 compactPlatformBody
@@ -81,9 +81,14 @@ public struct SignInView: View {
 
                     ScrollView {
                         authenticationContent(compact: compact)
-                            .frame(maxWidth: 420)
+                            .frame(maxWidth: SignInLayout.maximumFormWidth)
                             .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
-                            .padding(.vertical, compact ? 20 : 32)
+                            .padding(
+                                .vertical,
+                                compact
+                                    ? PrismediaSpacing.extraLarge
+                                    : PrismediaSpacing.section
+                            )
                             .frame(maxWidth: .infinity)
                             .frame(
                                 minHeight: geometry.size.height,
@@ -110,141 +115,44 @@ public struct SignInView: View {
     }
 
     private func authenticationContent(compact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: compact ? 20 : 28) {
-            header(compact: compact)
-            form
+        VStack(
+            alignment: .leading,
+            spacing: compact
+                ? PrismediaSpacing.extraLarge
+                : PrismediaSpacing.extraExtraLarge + PrismediaSpacing.extraSmall
+        ) {
+            SignInHeader(
+                title: title,
+                subtitle: subtitle,
+                serverName: state.serverDisplayName,
+                isCompact: compact
+            )
+            SignInForm(
+                state: $state,
+                showsPassword: $showsPassword,
+                focusedField: $focusedField,
+                onAdvance: advance,
+                onPasswordSubmit: submitPassword
+            )
 
             if let errorMessage = state.errorMessage {
                 errorMessageView(errorMessage)
             }
 
             if isLoginStep {
-                passwordHelpLink
+                SignInPasswordHelpLink()
             }
         }
     }
 
-    private func header(compact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-            PrismediaBrandView(
-                markSize: compact
-                    ? PrismediaLayout.compactBrandMark
-                    : PrismediaLayout.brandMark
-            )
-            .frame(maxWidth: .infinity)
-
-            Text(title)
-                .font(compact ? .title.bold() : .largeTitle.bold())
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(subtitle)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let serverName = state.serverDisplayName {
-                Label(serverName, systemImage: "server.rack")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-        }
-    }
-
-    @ViewBuilder
     private var form: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-            switch state.step {
-            case .server:
-                serverField
-            case .login:
-                usernameField
-                passwordField(isNewPassword: false)
-            case .firstRunSetup:
-                usernameField
-                passwordField(isNewPassword: true)
-                displayNameField
-            }
-        }
-    }
-
-    private var serverField: some View {
-        fieldGroup(title: "Server address") {
-            TextField("prismedia.example.com", text: $state.serverURLText)
-                .prismediaTextInputStyle()
-                .controlSize(.large)
-                .prismediaPlainTextInput()
-                .autocorrectionDisabled()
-                .accessibilityLabel("Server URL")
-                .accessibilityIdentifier("auth.server.field")
-                .focused($focusedField, equals: .server)
-                .submitLabel(.go)
-                #if os(iOS) || os(tvOS)
-                    .keyboardType(.URL)
-                    .textContentType(.URL)
-                #endif
-                .onSubmit(advance)
-        }
-    }
-
-    private var usernameField: some View {
-        fieldGroup(title: "Username") {
-            TextField("Username", text: $state.username)
-                .prismediaTextInputStyle()
-                .controlSize(.large)
-                .prismediaPlainTextInput()
-                .autocorrectionDisabled()
-                .accessibilityLabel("Username")
-                .accessibilityIdentifier("auth.username.field")
-                .focused($focusedField, equals: .username)
-                .submitLabel(.next)
-                #if os(iOS) || os(tvOS)
-                    .textContentType(.username)
-                #endif
-                .onSubmit { focusedField = .password }
-        }
-    }
-
-    private func passwordField(isNewPassword: Bool) -> some View {
-        fieldGroup(
-            title: "Password",
-            hint: isNewPassword ? "Use at least 8 characters." : nil
-        ) {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Group {
-                    if showsPassword {
-                        TextField("Password", text: $state.password)
-                    } else {
-                        SecureField("Password", text: $state.password)
-                    }
-                }
-                .prismediaTextInputStyle()
-                .controlSize(.large)
-                .prismediaCredentialTextInput()
-                .accessibilityLabel("Password")
-                .accessibilityIdentifier("auth.password.field")
-                .focused($focusedField, equals: .password)
-                .submitLabel(isLoginStep ? .go : .next)
-                #if os(iOS) || os(tvOS)
-                    .textContentType(isNewPassword ? .newPassword : .password)
-                #endif
-                .onSubmit(submitPassword)
-
-                #if os(tvOS)
-                    Toggle(isOn: $showsPassword) {
-                        Label(
-                            showsPassword ? "Hide Password" : "Show Password",
-                            systemImage: showsPassword ? "eye.slash" : "eye"
-                        )
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                    .toggleStyle(.switch)
-                    .accessibilityIdentifier("auth.password.visibility")
-                #endif
-            }
-        }
+        SignInForm(
+            state: $state,
+            showsPassword: $showsPassword,
+            focusedField: $focusedField,
+            onAdvance: advance,
+            onPasswordSubmit: submitPassword
+        )
     }
 
     private func submitPassword() {
@@ -258,79 +166,23 @@ public struct SignInView: View {
         focusedField = .displayName
     }
 
-    private var displayNameField: some View {
-        fieldGroup(title: "Display name", hint: "Optional") {
-            TextField("How your name appears", text: $state.displayName)
-                .prismediaTextInputStyle()
-                .controlSize(.large)
-                .accessibilityLabel("Display name")
-                .accessibilityIdentifier("auth.display-name.field")
-                .focused($focusedField, equals: .displayName)
-                .submitLabel(.go)
-                #if os(iOS) || os(tvOS)
-                    .textContentType(.name)
-                #endif
-                .onSubmit(advance)
-        }
-    }
-
-    private func fieldGroup<Content: View>(
-        title: String,
-        hint: String? = nil,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            Text(title)
-                .font(fieldLabelFont)
-                .foregroundStyle(.primary)
-
-            content()
-
-            if let hint {
-                Text(hint)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var fieldLabelFont: Font {
-        #if os(tvOS)
-            .headline.weight(.semibold)
-        #else
-            .subheadline.weight(.medium)
-        #endif
-    }
-
     private func errorMessageView(_ message: String) -> some View {
-        Label(message, systemImage: "exclamationmark.circle.fill")
-            .font(.subheadline)
-            .foregroundStyle(PrismediaColor.destructive)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("auth.error")
+        SignInErrorMessage(message: message)
             .accessibilityFocused($errorIsFocused)
     }
 
     private var bottomAction: some View {
-        primaryActionButton
-            .frame(maxWidth: 420)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
-            .padding(.top, PrismediaSpacing.medium)
-            .padding(.bottom, PrismediaSpacing.small)
-    }
-
-    private var primaryActionButton: some View {
-        PrismediaButton(
-            state.primaryActionTitle,
-            variant: .prominent,
-            form: .fill,
-            isLoading: state.isBusy,
+        SignInPrimaryActionButton(
+            title: state.primaryActionTitle,
+            isBusy: state.isBusy,
+            canSubmit: state.canSubmit,
             action: advance
         )
-        .disabled(!state.canSubmit)
-        .accessibilityIdentifier("auth.primary")
+        .frame(maxWidth: SignInLayout.maximumFormWidth)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+        .padding(.top, PrismediaSpacing.medium)
+        .padding(.bottom, PrismediaSpacing.small)
     }
 
     private var primaryActionSystemImage: String {
@@ -338,22 +190,6 @@ public struct SignInView: View {
         case .server: "arrow.right"
         case .login: "person.crop.circle.badge.checkmark"
         case .firstRunSetup: "person.crop.circle.badge.plus"
-        }
-    }
-
-    private var passwordHelpLink: some View {
-        Link(
-            destination: URL(
-                string: "https://pauljoda.github.io/Prismedia/docs/deployment/authentication#password-recovery")!
-        ) {
-            Label("Need help signing in?", systemImage: "questionmark.circle")
-                .font(.subheadline)
-                .foregroundStyle(PrismediaColor.textSecondary)
-                .frame(
-                    maxWidth: .infinity,
-                    minHeight: PrismediaLayout.minimumHitTarget,
-                    alignment: .leading
-                )
         }
     }
 
@@ -408,7 +244,7 @@ public struct SignInView: View {
     private func usesCompactLayout(availableHeight: CGFloat) -> Bool {
         verticalSizeClass == .compact
             || dynamicTypeSize.isAccessibilitySize
-            || availableHeight < 560
+            || availableHeight < SignInLayout.compactHeightThreshold
     }
 
     private func advance() {

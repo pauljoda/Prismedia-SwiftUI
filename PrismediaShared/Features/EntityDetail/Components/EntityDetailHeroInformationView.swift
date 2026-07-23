@@ -37,9 +37,9 @@ struct EntityDetailHeroInformationView: View {
 
     private var horizontalPadding: CGFloat {
         #if os(tvOS)
-            72
+            PrismediaLayout.televisionContentInset
         #else
-            20
+            PrismediaSpacing.extraLarge
         #endif
     }
 }

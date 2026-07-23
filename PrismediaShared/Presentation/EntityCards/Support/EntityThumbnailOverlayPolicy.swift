@@ -69,7 +69,7 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
     private static func acquisitionDisplay(
         _ status: AcquisitionStatus?
     ) -> (label: String, systemImage: String, tone: EntityThumbnailBadgeTone) {
-        guard let status else { return ("Wanted", "bookmark.fill", .accent) }
+        guard let status else { return ("Wanted", "bookmark.fill", .muted) }
 
         switch status.rawValue {
         case "searching", "pending": return ("Searching", "magnifyingglass", .searching)

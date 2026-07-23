@@ -14,7 +14,7 @@ import SwiftUI
                 header
                 if failed {
                     PrismediaButton("Try Again", action: onReload)
-                        .padding(.horizontal, 72)
+                        .padding(.horizontal, PrismediaLayout.televisionContentInset)
                 } else {
                     itemRail
                 }
@@ -33,7 +33,7 @@ import SwiftUI
                         .accessibilityIdentifier("tv.home.shelf.\(shelf.id).see-all")
                 }
             }
-            .padding(.horizontal, 72)
+            .padding(.horizontal, PrismediaLayout.televisionContentInset)
         }
 
         private var itemRail: some View {
@@ -47,7 +47,7 @@ import SwiftUI
                         )
                     }
                 }
-                .padding(.horizontal, 72)
+                .padding(.horizontal, PrismediaLayout.televisionContentInset)
                 .padding(.vertical, PrismediaSpacing.medium)
             }
             .frame(height: 420)

@@ -44,7 +44,6 @@ import SwiftUI
                         .buttonStyle(.glass)
                         .controlSize(.small)
                         .font(.headline.weight(.semibold))
-                        .foregroundStyle(PrismediaColor.onMedia)
                         .accessibilityHint("Shows the full episode description")
                 }
             }

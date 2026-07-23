@@ -39,4 +39,5 @@ public enum PrismediaLayout {
     public static let brandMark: CGFloat = 104
     public static let compactBrandMark: CGFloat = 72
     public static let televisionBrandMark: CGFloat = 148
+    public static let televisionContentInset: CGFloat = 72
 }

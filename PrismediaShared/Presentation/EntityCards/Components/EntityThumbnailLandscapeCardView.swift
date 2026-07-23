@@ -179,11 +179,11 @@ struct EntityThumbnailLandscapeCardView: View {
     }
 
     private var contextChip: some View {
-        ThumbnailBadge(
+        PrismediaGlassStatusChip(
+            contextBadge.label,
             systemImage: contextBadge.systemImage,
-            label: contextBadge.label,
-            glassTint: PrismediaColor.background,
-            iconAfterLabel: false
+            tint: PrismediaColor.background,
+            size: .thumbnail
         )
     }
 

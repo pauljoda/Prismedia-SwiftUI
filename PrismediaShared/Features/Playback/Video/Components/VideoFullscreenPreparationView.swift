@@ -79,7 +79,7 @@ struct VideoFullscreenPreparationView: View {
                 }
                 Spacer()
             }
-            .padding(20)
+            .padding(PrismediaSpacing.extraLarge)
         }
         .task(id: resumeCountdownIsActive) {
             guard resumeCountdownIsActive else { return }

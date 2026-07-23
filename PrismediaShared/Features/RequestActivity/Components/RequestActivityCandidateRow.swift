@@ -132,20 +132,18 @@ import SwiftUI
         @ViewBuilder
         private var actions: some View {
             if hasActions {
-                GlassEffectContainer(spacing: PrismediaSpacing.small) {
-                    if layout == .card {
-                        VStack(spacing: PrismediaSpacing.small) {
-                            actionButtons(form: .fill)
-                        }
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        HStack(spacing: PrismediaSpacing.small) {
-                            actionButtons(form: .automatic)
-                        }
+                if layout == .card {
+                    PrismediaGlassButtonStack(spacing: PrismediaSpacing.small) {
+                        actionButtons(form: .fill)
                     }
+                    .frame(maxWidth: .infinity)
+                    .prismediaCompactActionControlSize()
+                } else {
+                    PrismediaGlassButtonGroup(spacing: PrismediaSpacing.small) {
+                        actionButtons(form: .automatic)
+                    }
+                    .prismediaCompactActionControlSize()
                 }
-                .frame(maxWidth: layout == .card ? .infinity : nil)
-                .prismediaCompactActionControlSize()
             }
         }
 

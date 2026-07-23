@@ -83,7 +83,6 @@ import SwiftUI
                 NavigationLink(value: EntityLink(thumbnail: item)) {
                     Label(heroAction(for: item), systemImage: "play.fill")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(PrismediaColor.onMedia)
                 }
                 .buttonStyle(.glass)
                 .controlSize(.large)

@@ -1,31 +1,31 @@
 #if os(iOS)
-import SwiftUI
+    import SwiftUI
 
-struct EntityDetailPlatformActionsView: View {
-    let presentation: EntityDetailPresentation
-    let palette: ArtworkPalette?
-    let horizontalPadding: CGFloat
-    let isActionSupported: (EntityDetailAction) -> Bool
-    let isActionEnabled: (EntityDetailAction) -> Bool
-    let actionHint: (EntityDetailAction) -> String
-    let onAction: (EntityDetailAction) -> Void
+    struct EntityDetailPlatformActionsView: View {
+        let presentation: EntityDetailPresentation
+        let palette: ArtworkPalette?
+        let horizontalPadding: CGFloat
+        let isActionSupported: (EntityDetailAction) -> Bool
+        let isActionEnabled: (EntityDetailAction) -> Bool
+        let actionHint: (EntityDetailAction) -> String
+        let onAction: (EntityDetailAction) -> Void
 
-    var body: some View {
-        EmptyView()
+        var body: some View {
+            EmptyView()
+        }
     }
-}
 
-#if DEBUG
-    #Preview("iOS Entity Detail Actions") {
-        EntityDetailPlatformActionsView(
-            presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
-            palette: nil,
-            horizontalPadding: 20,
-            isActionSupported: { _ in true },
-            isActionEnabled: { _ in true },
-            actionHint: { _ in "Updates this entity" },
-            onAction: { _ in }
-        )
-    }
-#endif
+    #if DEBUG
+        #Preview("iOS Entity Detail Actions") {
+            EntityDetailPlatformActionsView(
+                presentation: EntityDetailPresentation(detail: EntityDetailPreviewFixture.detail),
+                palette: nil,
+                horizontalPadding: PrismediaSpacing.extraLarge,
+                isActionSupported: { _ in true },
+                isActionEnabled: { _ in true },
+                actionHint: { _ in "Updates this entity" },
+                onAction: { _ in }
+            )
+        }
+    #endif
 #endif
