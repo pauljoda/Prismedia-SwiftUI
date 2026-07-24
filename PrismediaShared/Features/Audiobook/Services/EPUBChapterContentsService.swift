@@ -8,6 +8,10 @@ struct EPUBChapterContentsService: Sendable {
     }
 
     func load(book: EntityDetail, storedLocation: String? = nil) async throws -> EPUBChapterContents {
+        guard BookChapterContentsLoadPolicy.canLoad(book) else {
+            return EPUBChapterContents(chapters: [], currentChapterID: nil)
+        }
+
         let data = try await reader.loadSourceData(id: book.id)
         let title = book.title
         let destination = cacheDirectory(bookID: book.id)
@@ -98,15 +102,25 @@ struct EPUBChapterContentsService: Sendable {
         }
     }
 
-    private func currentChapterID(
+    func currentChapterID(
         progressLocation: String?,
         chapters: [ReadableBookChapter]
     ) -> String? {
         guard let href = href(from: progressLocation) else { return nil }
-        let resource = normalizedResource(href)
+        let locations = chapters.compactMap { chapter -> String? in
+            guard case .epub(let location) = chapter.target else { return nil }
+            return location
+        }
+        guard
+            let matchedLocation = EPUBResourceLocationMatcher().bestMatch(
+                for: href,
+                candidates: locations
+            )
+        else { return nil }
+
         return chapters.last { chapter in
             guard case .epub(let location) = chapter.target else { return false }
-            return normalizedResource(location) == resource
+            return location == matchedLocation
         }?.id
     }
 

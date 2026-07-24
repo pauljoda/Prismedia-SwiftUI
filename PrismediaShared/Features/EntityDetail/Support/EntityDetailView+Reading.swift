@@ -191,8 +191,7 @@ extension EntityDetailView {
 
     func loadBookChapters(for detail: EntityDetail) async {
         #if os(iOS) || os(macOS)
-            guard detail.kind == .book,
-                detail.bookFormat == .epub,
+            guard BookChapterContentsLoadPolicy.canLoad(detail),
                 let reader = dependencies.readerService
             else {
                 readableBookChapters = []

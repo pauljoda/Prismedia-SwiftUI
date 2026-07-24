@@ -3,7 +3,7 @@ import Foundation
 
 extension EntityDetailView {
     func refreshBookChapterMappings(for detail: EntityDetail) {
-        guard detail.kind == .book, detail.bookFormat == .epub else {
+        guard BookChapterContentsLoadPolicy.canLoad(detail) else {
             mappedBookChapters = []
             return
         }

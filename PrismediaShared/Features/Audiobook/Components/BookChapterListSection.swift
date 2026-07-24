@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BookChapterListSection: View {
     @Environment(\.artworkSecondaryText) private var artworkSecondaryText
+    @State private var isExpanded = true
 
     let chapters: [BookChapterMapping]
     let isLoading: Bool
@@ -17,12 +18,41 @@ struct BookChapterListSection: View {
     @ViewBuilder
     var body: some View {
         if isLoading || errorMessage != nil || !chapters.isEmpty {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                header
-                content
+            LazyVStack(alignment: .leading, spacing: 0) {
+                #if os(tvOS)
+                    Button {
+                        isExpanded.toggle()
+                    } label: {
+                        HStack(spacing: PrismediaSpacing.medium) {
+                            header
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.down")
+                                .rotationEffect(.degrees(isExpanded ? 0 : -90))
+                                .foregroundStyle(artworkSecondaryText)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+
+                    if isExpanded {
+                        content
+                            .padding(.top, PrismediaSpacing.large)
+                    }
+                #else
+                    DisclosureGroup(isExpanded: $isExpanded) {
+                        content
+                            .padding(.top, PrismediaSpacing.large)
+                    } label: {
+                        header
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
+                    }
+                #endif
             }
             .padding(.horizontal, horizontalPadding)
             .accessibilityIdentifier("entity-detail.book-chapters")
+            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
         }
     }
 
