@@ -46,6 +46,33 @@ import Foundation
             applyHint: nil
         )
 
+        static let weightedTermListSetting = AdministrativeSetting(
+            key: "subtitles.preferredLanguages",
+            groupKey: "subtitles",
+            label: "Preferred subtitle terms",
+            description: "Matching terms add their weights.",
+            type: "weightedTermList",
+            value: .weightedTermList([
+                SubtitlePreferenceTerm(term: "English", weight: 100),
+                SubtitlePreferenceTerm(term: "Eng", weight: 80),
+            ]),
+            defaultValue: .weightedTermList([
+                SubtitlePreferenceTerm(term: "English", weight: 100)
+            ]),
+            isDefault: false,
+            order: 0,
+            constraints: AdministrativeSettingConstraints(
+                minimum: 1,
+                maximum: 100,
+                step: 1,
+                minItems: 0,
+                maxItems: 32
+            ),
+            options: [],
+            inputKind: nil,
+            applyHint: nil
+        )
+
         static let autoIdentifyKindSetting = AdministrativeSetting(
             key: "autoIdentify.entityKinds",
             groupKey: "autoIdentify",

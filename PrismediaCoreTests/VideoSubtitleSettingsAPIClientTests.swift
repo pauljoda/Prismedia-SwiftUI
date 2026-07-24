@@ -19,6 +19,13 @@ final class VideoSubtitleSettingsAPIClientTests: XCTestCase {
 
         XCTAssertEqual(settings.appearance.style, .outline)
         XCTAssertEqual(settings.appearance.fontScale, 1.25)
+        XCTAssertEqual(
+            settings.preferredTerms,
+            [
+                SubtitlePreferenceTerm(term: "en", weight: 100),
+                SubtitlePreferenceTerm(term: "eng", weight: 99),
+            ]
+        )
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/api/settings/values")
         let keys = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?

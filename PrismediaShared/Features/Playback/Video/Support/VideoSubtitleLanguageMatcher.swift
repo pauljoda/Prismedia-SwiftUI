@@ -3,7 +3,7 @@ import Foundation
 enum VideoSubtitleLanguageMatcher {
     static func preferredTrack(
         in tracks: [EntitySubtitle],
-        languages: [String]
+        terms: [SubtitlePreferenceTerm]
     ) -> EntitySubtitle? {
         let identifier = preferredIdentifier(
             in: tracks.map {
@@ -13,38 +13,42 @@ enum VideoSubtitleLanguageMatcher {
                     label: $0.label
                 )
             },
-            languages: languages
+            terms: terms
         )
         return tracks.first { $0.id == identifier }
     }
 
     static func preferredIdentifier(
         in candidates: [VideoSubtitleSelectionCandidate],
-        languages: [String]
+        terms: [SubtitlePreferenceTerm]
     ) -> String? {
-        let preferences = languages.map(normalize).filter { !$0.isEmpty }
+        let preferences = terms.compactMap { preference -> SubtitlePreferenceTerm? in
+            let term = normalize(preference.term)
+            guard !term.isEmpty, preference.weight > 0 else { return nil }
+            return SubtitlePreferenceTerm(term: term, weight: preference.weight)
+        }
         guard !preferences.isEmpty else { return candidates.first?.id }
 
-        for preference in preferences {
-            if let exact = candidates.first(where: { tokens(for: $0).contains(preference) }) {
-                return exact.id
-            }
-            if let prefix = candidates.first(where: { candidate in
-                tokens(for: candidate).contains { token in
-                    token.hasPrefix(preference) || preference.hasPrefix(token)
+        var best: (id: String, score: Int)?
+        for candidate in candidates {
+            let candidateTokens = tokens(for: candidate)
+            let score = preferences.reduce(into: 0) { total, preference in
+                if candidateTokens.contains(where: { matches(preference.term, token: $0) }) {
+                    total += preference.weight
                 }
-            }) {
-                return prefix.id
             }
-            if let equivalent = candidates.first(where: { candidate in
-                tokens(for: candidate).contains {
-                    equivalentCodes[$0] == preference || equivalentCodes[preference] == $0
-                }
-            }) {
-                return equivalent.id
+            if score > 0, best == nil || score > best!.score {
+                best = (candidate.id, score)
             }
         }
-        return nil
+        return best?.id
+    }
+
+    private static func matches(_ term: String, token: String) -> Bool {
+        token.hasPrefix(term)
+            || term.hasPrefix(token)
+            || equivalentCodes[token] == term
+            || equivalentCodes[term] == token
     }
 
     private static func tokens(for candidate: VideoSubtitleSelectionCandidate) -> Set<String> {

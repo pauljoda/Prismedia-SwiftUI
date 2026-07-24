@@ -104,6 +104,11 @@ struct AdministrativeSettingControl: View {
                 options: stringListOptions,
                 onSave: onSave
             )
+        case .weightedTermList:
+            AdministrativeWeightedTermListControl(
+                setting: setting,
+                onSave: onSave
+            )
         case .unsupported:
             LabeledContent(setting.label, value: setting.value.displayValue)
                 .foregroundStyle(.secondary)
@@ -192,6 +197,7 @@ struct AdministrativeSettingControl: View {
         switch value {
         case .string(let value): value
         case .stringList: ""
+        case .weightedTermList: ""
         default: ""
         }
     }

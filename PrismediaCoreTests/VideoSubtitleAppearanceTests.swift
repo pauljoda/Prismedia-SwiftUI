@@ -16,9 +16,9 @@ final class VideoSubtitleAppearanceTests: XCTestCase {
         XCTAssertEqual(appearance.opacity, 0.2)
     }
 
-    func testSettingsDecodeTheSixWebSubtitleKeys() throws {
+    func testSettingsDecodeWeightedSubtitlePreferenceTerms() throws {
         let data = Data(
-            #"{"values":{"subtitles.autoEnable":true,"subtitles.preferredLanguages":["ja","jpn"],"subtitles.style":"classic","subtitles.fontScale":1.4,"subtitles.positionPercent":92,"subtitles.opacity":0.75}}"#
+            #"{"values":{"subtitles.autoEnable":true,"subtitles.preferredLanguages":[{"term":"Forced","weight":80},{"term":"English","weight":55},{"term":"Eng","weight":35}],"subtitles.style":"classic","subtitles.fontScale":1.4,"subtitles.positionPercent":92,"subtitles.opacity":0.75}}"#
                 .utf8
         )
 
@@ -26,7 +26,14 @@ final class VideoSubtitleAppearanceTests: XCTestCase {
         let settings = VideoSubtitleSettings(values: response.values)
 
         XCTAssertTrue(settings.autoEnable)
-        XCTAssertEqual(settings.preferredLanguages, ["ja", "jpn"])
+        XCTAssertEqual(
+            settings.preferredTerms,
+            [
+                SubtitlePreferenceTerm(term: "Forced", weight: 80),
+                SubtitlePreferenceTerm(term: "English", weight: 55),
+                SubtitlePreferenceTerm(term: "Eng", weight: 35),
+            ]
+        )
         XCTAssertEqual(settings.appearance.style, .classic)
         XCTAssertEqual(settings.appearance.fontScale, 1.4)
         XCTAssertEqual(settings.appearance.positionPercent, 92)
@@ -42,11 +49,11 @@ final class VideoSubtitleAppearanceTests: XCTestCase {
         XCTAssertEqual(settings, .default)
     }
 
-    func testPreferredTrackMatchesLanguageCodesLabelsAndISOAliases() {
+    func testPreferredTrackAddsEveryCaseInsensitiveMatchingTerm() {
         let english = EntitySubtitle(
             id: "english",
-            language: "English",
-            label: "English (SDH)",
+            language: "eng",
+            label: "English",
             format: "vtt",
             source: "sidecar",
             storagePath: "/tmp/english.vtt",
@@ -54,25 +61,39 @@ final class VideoSubtitleAppearanceTests: XCTestCase {
             sourcePath: nil,
             isDefault: false
         )
-        let japanese = EntitySubtitle(
-            id: "japanese",
-            language: "jpn",
-            label: "Japanese",
+        let englishForced = EntitySubtitle(
+            id: "english-forced",
+            language: "ENG",
+            label: "English Forced",
             format: "vtt",
             source: "sidecar",
-            storagePath: "/tmp/japanese.vtt",
+            storagePath: "/tmp/english-forced.vtt",
+            sourceFormat: "vtt",
+            sourcePath: nil,
+            isDefault: false
+        )
+        let japaneseForced = EntitySubtitle(
+            id: "japanese-forced",
+            language: "jpn",
+            label: "Japanese Forced",
+            format: "vtt",
+            source: "sidecar",
+            storagePath: "/tmp/japanese-forced.vtt",
             sourceFormat: "vtt",
             sourcePath: nil,
             isDefault: false
         )
 
         XCTAssertEqual(
-            VideoSubtitleLanguageMatcher.preferredTrack(in: [english, japanese], languages: ["ja"])?.id,
-            "japanese"
-        )
-        XCTAssertEqual(
-            VideoSubtitleLanguageMatcher.preferredTrack(in: [english, japanese], languages: ["eng"])?.id,
-            "english"
+            VideoSubtitleLanguageMatcher.preferredTrack(
+                in: [english, englishForced, japaneseForced],
+                terms: [
+                    SubtitlePreferenceTerm(term: "forced", weight: 80),
+                    SubtitlePreferenceTerm(term: "English", weight: 55),
+                    SubtitlePreferenceTerm(term: "Eng", weight: 35),
+                ]
+            )?.id,
+            "english-forced"
         )
     }
 }

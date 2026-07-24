@@ -5,6 +5,7 @@ public enum VideoSubtitleSettingValue: Decodable, Equatable, Sendable {
     case number(Double)
     case string(String)
     case stringList([String])
+    case weightedTermList([SubtitlePreferenceTerm])
     case unsupported
 
     public init(from decoder: Decoder) throws {
@@ -15,6 +16,8 @@ public enum VideoSubtitleSettingValue: Decodable, Equatable, Sendable {
             self = .number(value)
         } else if let value = try? container.decode(String.self) {
             self = .string(value)
+        } else if let value = try? container.decode([SubtitlePreferenceTerm].self) {
+            self = .weightedTermList(value)
         } else if let value = try? container.decode([String].self) {
             self = .stringList(value)
         } else {

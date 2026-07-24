@@ -859,7 +859,7 @@ public final class VideoPlaybackController {
         guard settings.autoEnable,
             let track = VideoSubtitleLanguageMatcher.preferredTrack(
                 in: sidecarSubtitles,
-                languages: settings.preferredLanguages
+                terms: settings.preferredTerms
             )
         else { return }
         await selectSubtitle(
@@ -911,7 +911,7 @@ public final class VideoPlaybackController {
         guard
             let identifier = VideoSubtitleLanguageMatcher.preferredIdentifier(
                 in: candidates,
-                languages: subtitleSettings.preferredLanguages
+                terms: subtitleSettings.preferredTerms
             ), let option = subtitleOptionsByID[identifier]
         else { return }
         item.select(option, in: group)

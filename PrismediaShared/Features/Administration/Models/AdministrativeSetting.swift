@@ -24,6 +24,7 @@ public struct AdministrativeSetting: Decodable, Identifiable, Hashable, Sendable
         case "select": .select
         case "string": .text
         case "stringList": .stringList
+        case "weightedTermList": .weightedTermList
         default: .unsupported
         }
     }

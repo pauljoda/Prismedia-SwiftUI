@@ -46,7 +46,9 @@ final class VideoPlaybackMediaSelectionTests: XCTestCase {
             videoID: videoID,
             settings: .init(
                 autoEnable: true,
-                preferredLanguages: ["en"],
+                preferredTerms: [
+                    SubtitlePreferenceTerm(term: "en", weight: 100),
+                ],
                 appearance: .default
             ),
             mediaContents: "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nWelcome to <i>Jujutsu</i> High."
@@ -208,7 +210,7 @@ final class VideoPlaybackMediaSelectionTests: XCTestCase {
         XCTAssertEqual(
             VideoSubtitleLanguageMatcher.preferredIdentifier(
                 in: candidates,
-                languages: ["eng"]
+                terms: [SubtitlePreferenceTerm(term: "eng", weight: 100)]
             ),
             "subtitle-1"
         )

@@ -34,6 +34,24 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
         XCTAssertEqual(setting.value.stringValue, "outline")
     }
 
+    func testDecodesWeightedSubtitleTermsAsAnEditableControl() throws {
+        let data = Data(
+            #"{"key":"subtitles.preferredLanguages","groupKey":"subtitles","label":"Preferred subtitle terms","description":"Matching terms add their weights.","type":"weightedTermList","value":[{"term":"Forced","weight":80},{"term":"English","weight":55}],"defaultValue":[{"term":"English","weight":100}],"isDefault":false,"order":20,"constraints":{"min":1,"max":100,"step":1,"minItems":0,"maxItems":32},"options":[],"inputKind":null,"applyHint":null}"#
+                .utf8
+        )
+
+        let setting = try JSONDecoder().decode(AdministrativeSetting.self, from: data)
+
+        XCTAssertEqual(
+            setting.value.weightedTermListValue,
+            [
+                SubtitlePreferenceTerm(term: "Forced", weight: 80),
+                SubtitlePreferenceTerm(term: "English", weight: 55),
+            ]
+        )
+        XCTAssertEqual(setting.controlKind, .weightedTermList)
+    }
+
     func testAutoIdentifyKindsUseTheFixedNativeSelectionCatalog() throws {
         let setting = try decodeSetting(
             key: "autoIdentify.entityKinds",
