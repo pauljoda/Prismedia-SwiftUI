@@ -12,8 +12,6 @@
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @State private var controlsVisible = true
         @State private var controlsDismissGeneration = 0
-        @State private var hasStartedAutoDismiss = false
-        @State private var awaitsAutoDismissAfterResume = false
         @State private var optionsFocusEnabled = false
         @State private var trickplayFrames: [TrickplayPlaylist.Frame] = []
         @State private var previewTime: Double?
@@ -76,24 +74,23 @@
             .onPlayPauseCommand(perform: handlePlayPauseCommand)
             .onExitCommand(perform: handleExitCommand)
             .onChange(of: controller.isPlaying) { wasPlaying, isPlaying in
-                if wasPlaying, !isPlaying {
+                if isPlaying {
+                    resetControlsDismissTimer()
+                } else if wasPlaying {
                     revealControlsAfterPause()
                 }
-                handlePlaybackStateChange(isPlaying: isPlaying)
+            }
+            .onChange(of: ObjectIdentifier(controller), initial: true) {
+                resetPlaybackChrome()
             }
             .onAppear {
                 moveFocus(to: .timeline)
-                handlePlaybackStateChange(isPlaying: controller.isPlaying)
             }
             .onDisappear {
                 cancelSeekPreview()
             }
-            .task(id: controlsDismissGeneration) {
-                guard canAutoDismissControls else { return }
-                try? await Task.sleep(for: controlsAutoDismissDelay)
-                guard !Task.isCancelled, canAutoDismissControls else { return }
-                optionsFocusEnabled = false
-                controlsVisible = false
+            .task(id: ObjectIdentifier(controller)) {
+                await runControlsAutoDismissLoop()
             }
             .task(id: scanRunGeneration) {
                 await runScanPreview()
@@ -241,7 +238,7 @@
                     onMove: {
                         handlePlaybackOptionsMove(from: .audio, direction: $0)
                     },
-                    onInteraction: revealControls
+                    onInteraction: handlePlaybackOptionSelection
                 )
                 .equatable()
                 TVPlaybackOptionMenuButton(
@@ -253,7 +250,7 @@
                     onMove: {
                         handlePlaybackOptionsMove(from: .subtitles, direction: $0)
                     },
-                    onInteraction: revealControls
+                    onInteraction: handlePlaybackOptionSelection
                 )
                 .equatable()
                 TVPlaybackOptionMenuButton(
@@ -265,7 +262,7 @@
                     onMove: {
                         handlePlaybackOptionsMove(from: .speed, direction: $0)
                     },
-                    onInteraction: revealControls
+                    onInteraction: handlePlaybackOptionSelection
                 )
                 .equatable()
             }
@@ -300,8 +297,7 @@
         private var canAutoDismissControls: Bool {
             VideoPlayerChromePolicy.shouldAutoHide(
                 isPlaying: controller.isPlaying,
-                optionsPresented: optionsFocusEnabled,
-                isSeeking: isSeeking
+                optionsPresented: optionsFocusEnabled
             )
         }
 
@@ -331,12 +327,41 @@
             controlsDismissGeneration += 1
         }
 
-        private func handlePlaybackStateChange(isPlaying: Bool) {
-            guard isPlaying else { return }
-            let shouldArmTimer = !hasStartedAutoDismiss || awaitsAutoDismissAfterResume
-            hasStartedAutoDismiss = true
-            awaitsAutoDismissAfterResume = false
-            if shouldArmTimer { resetControlsDismissTimer() }
+        private func runControlsAutoDismissLoop() async {
+            let clock = ContinuousClock()
+            var observedGeneration = controlsDismissGeneration
+            var countdownStart: ContinuousClock.Instant?
+
+            while !Task.isCancelled {
+                let shouldCountDown = controlsVisible && canAutoDismissControls
+                if observedGeneration != controlsDismissGeneration {
+                    observedGeneration = controlsDismissGeneration
+                    countdownStart = shouldCountDown ? clock.now : nil
+                } else if !shouldCountDown {
+                    countdownStart = nil
+                } else if let countdownStart {
+                    if clock.now - countdownStart >= controlsAutoDismissDelay {
+                        optionsFocusEnabled = false
+                        controlsVisible = false
+                    }
+                } else {
+                    countdownStart = clock.now
+                }
+
+                do {
+                    try await Task.sleep(for: .milliseconds(100))
+                } catch {
+                    return
+                }
+            }
+        }
+
+        private func resetPlaybackChrome() {
+            cancelSeekPreview()
+            optionsFocusEnabled = false
+            controlsVisible = true
+            resetControlsDismissTimer()
+            moveFocus(to: .timeline)
         }
 
         private func revealControlsAfterPause() {
@@ -354,6 +379,12 @@
                 await Task.yield()
                 moveFocus(to: .audio)
             }
+        }
+
+        private func handlePlaybackOptionSelection() {
+            optionsFocusEnabled = false
+            revealControls()
+            moveFocus(to: .timeline)
         }
 
         private func handlePlaybackOptionsMove(
@@ -404,7 +435,7 @@
             } else if controller.isPlaying || controller.isWaiting {
                 controller.pause()
             } else if isScrubbing {
-                commitScrub()
+                commitScrub(resumePlayback: true)
             } else {
                 beginScrub()
             }
@@ -420,9 +451,6 @@
             if isScrubbing {
                 commitScrub(resumePlayback: true)
                 return
-            }
-            if !controller.isPlaying, !controller.isWaiting {
-                awaitsAutoDismissAfterResume = true
             }
             controller.togglePlayback()
         }
@@ -484,7 +512,6 @@
             clearSeekPreview()
             controller.seek(to: target) { finished in
                 guard finished, resumePlayback else { return }
-                awaitsAutoDismissAfterResume = true
                 controller.play()
             }
         }
@@ -504,7 +531,6 @@
             clearSeekPreview()
             controller.seek(to: target) { finished in
                 guard finished, resumePlayback else { return }
-                awaitsAutoDismissAfterResume = true
                 controller.play()
             }
         }

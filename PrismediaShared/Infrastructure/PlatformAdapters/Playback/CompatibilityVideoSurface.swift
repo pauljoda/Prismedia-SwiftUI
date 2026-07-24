@@ -20,7 +20,7 @@
             }
 
             func updateUIView(_ view: UIView, context: Context) {
-                context.coordinator.update(request, drawable: view)
+                context.coordinator.update(request, controller: controller, drawable: view)
             }
 
             static func dismantleUIView(_ view: UIView, coordinator: VLCPlaybackAdapter) {
@@ -47,7 +47,7 @@
             }
 
             func updateNSView(_ view: NSView, context: Context) {
-                context.coordinator.update(request, drawable: view)
+                context.coordinator.update(request, controller: controller, drawable: view)
             }
 
             static func dismantleNSView(_ view: NSView, coordinator: VLCPlaybackAdapter) {

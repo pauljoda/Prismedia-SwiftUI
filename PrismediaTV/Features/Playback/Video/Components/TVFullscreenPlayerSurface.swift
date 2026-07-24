@@ -31,6 +31,7 @@
                 trickplayFrameLoader: trickplayFrameLoader,
                 onRequestDismiss: onRequestDismiss
             )
+            .id(ObjectIdentifier(controller))
         }
     }
 

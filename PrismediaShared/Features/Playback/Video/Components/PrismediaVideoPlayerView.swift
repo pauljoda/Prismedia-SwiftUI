@@ -40,9 +40,13 @@ import SwiftUI
             }
             .contentShape(Rectangle())
             .simultaneousGesture(fullscreenDismissGesture)
-            .task(id: controller.isPlaying) { await scheduleAutoHide() }
+            .task(id: autoHideTaskIdentity) { await scheduleAutoHide() }
             .animation(.easeOut(duration: 0.18), value: controlsVisible)
             .accessibilityIdentifier("video-player.surface")
+        }
+
+        private var autoHideTaskIdentity: String {
+            "\(ObjectIdentifier(controller))-\(controller.isPlaying)"
         }
 
         private var gestureLayer: some View {

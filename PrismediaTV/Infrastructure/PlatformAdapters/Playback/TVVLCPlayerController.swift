@@ -21,7 +21,11 @@
             _ viewController: UIViewController,
             context: Context
         ) {
-            context.coordinator.update(request, drawable: viewController.view)
+            context.coordinator.update(
+                request,
+                controller: controller,
+                drawable: viewController.view
+            )
         }
 
         static func dismantleUIViewController(

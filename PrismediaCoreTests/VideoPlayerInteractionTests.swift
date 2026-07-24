@@ -8,29 +8,19 @@ final class VideoPlayerInteractionTests: XCTestCase {
         XCTAssertTrue(
             VideoPlayerChromePolicy.shouldAutoHide(
                 isPlaying: true,
-                optionsPresented: false,
-                isSeeking: false
+                optionsPresented: false
             )
         )
         XCTAssertFalse(
             VideoPlayerChromePolicy.shouldAutoHide(
                 isPlaying: false,
-                optionsPresented: false,
-                isSeeking: false
+                optionsPresented: false
             )
         )
         XCTAssertFalse(
             VideoPlayerChromePolicy.shouldAutoHide(
                 isPlaying: true,
-                optionsPresented: true,
-                isSeeking: false
-            )
-        )
-        XCTAssertFalse(
-            VideoPlayerChromePolicy.shouldAutoHide(
-                isPlaying: true,
-                optionsPresented: false,
-                isSeeking: true
+                optionsPresented: true
             )
         )
     }

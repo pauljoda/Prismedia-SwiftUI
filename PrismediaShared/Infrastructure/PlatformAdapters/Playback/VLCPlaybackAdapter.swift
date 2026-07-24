@@ -13,7 +13,7 @@
         private weak var controller: VideoPlaybackController?
         private var mediaPlayer: VLCMediaPlayer?
         private var request: VideoCompatibilityPlaybackRequest?
-        private var pausesAfterOpening = false
+        private var openingState = VideoCompatibilityPlaybackOpeningState()
         private var stateFilter = VideoCompatibilityPlaybackStateFilter()
 
         init(controller: VideoPlaybackController) {
@@ -47,11 +47,26 @@
 
             controller?.attachCompatibilityPlayback(commands(for: player))
             controller?.videoSurfaceDidAttach(isReadyForDisplay: false)
-            pausesAfterOpening = controller?.hasRequestedPlayback == false
+            openingState.prepare(
+                hasRequestedPlayback: controller?.hasRequestedPlayback == true
+            )
             player.play()
         }
 
-        func update(_ request: VideoCompatibilityPlaybackRequest, drawable: AnyObject) {
+        func update(
+            _ request: VideoCompatibilityPlaybackRequest,
+            controller: VideoPlaybackController,
+            drawable: AnyObject
+        ) {
+            if self.controller !== controller {
+                let previousController = self.controller
+                tearDownPlayer()
+                previousController?.detachCompatibilityPlayback()
+                previousController?.videoSurfaceDidDetach()
+                self.controller = controller
+                install(request, drawable: drawable)
+                return
+            }
             guard self.request != request else { return }
             install(request, drawable: drawable)
         }
@@ -71,8 +86,7 @@
                 player.rate = request?.playbackRate ?? 1
                 applyInitialAudioSelection(to: player)
                 controller?.videoSurfaceReadinessChanged(true)
-                if pausesAfterOpening {
-                    pausesAfterOpening = false
+                if openingState.shouldPauseAfterOpening() {
                     player.pause()
                     publishState(isPlaying: false, isWaiting: false)
                     return
@@ -103,7 +117,8 @@
 
         private func commands(for player: VLCMediaPlayer) -> VideoCompatibilityPlaybackCommands {
             VideoCompatibilityPlaybackCommands(
-                play: { [weak player] rate in
+                play: { [weak self, weak player] rate in
+                    self?.openingState.requestPlayback()
                     player?.rate = rate
                     player?.play()
                 },
@@ -168,7 +183,7 @@
             mediaPlayer?.stop()
             mediaPlayer?.drawable = nil
             mediaPlayer = nil
-            pausesAfterOpening = false
+            openingState = VideoCompatibilityPlaybackOpeningState()
             stateFilter = VideoCompatibilityPlaybackStateFilter()
         }
     }

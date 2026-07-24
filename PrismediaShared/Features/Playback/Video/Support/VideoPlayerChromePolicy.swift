@@ -3,9 +3,8 @@ enum VideoPlayerChromePolicy {
 
     static func shouldAutoHide(
         isPlaying: Bool,
-        optionsPresented: Bool,
-        isSeeking: Bool = false
+        optionsPresented: Bool
     ) -> Bool {
-        isPlaying && !optionsPresented && !isSeeking
+        isPlaying && !optionsPresented
     }
 }

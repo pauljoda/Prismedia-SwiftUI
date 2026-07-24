@@ -25,6 +25,14 @@ import SwiftUI
         }
 
         func updateUIView(_ view: PlayerLayerView, context: Context) {
+            if let previousController = view.playbackController,
+                previousController !== controller
+            {
+                previousController.videoSurfaceDidDetach()
+                #if os(iOS)
+                    previousController.detachPictureInPicture(from: view.playerLayer)
+                #endif
+            }
             view.playerLayer.player = controller.player
             view.playbackController = controller
             view.onReadyForDisplayChange = { [weak controller] isReady in
