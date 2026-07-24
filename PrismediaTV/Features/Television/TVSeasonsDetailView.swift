@@ -5,6 +5,7 @@ import SwiftUI
         @State private var snapshot = TVSeasonsSnapshot()
         @State private var seasonCache: [UUID: EntityDetail] = [:]
         @State private var episodeCache: [UUID: EntityDetail] = [:]
+        @State private var artworkPalette: ArtworkPalette?
         @State private var seasonRequestID = UUID()
         @State private var episodeLoadTask: Task<Void, Never>?
         @State private var hasLoaded = false
@@ -77,11 +78,22 @@ import SwiftUI
             .background {
                 TVSeasonsHeroBackground(
                     series: displayedSeries,
-                    selectedEpisode: snapshot.selectedEpisode
+                    selectedEpisode: snapshot.selectedEpisode,
+                    paletteArtworkPath: paletteArtworkPath,
+                    palette: $artworkPalette
                 )
                 .ignoresSafeArea()
             }
             .background(.black)
+            .environment(\.artworkPalette, artworkPalette)
+            .environment(
+                \.artworkPrimaryAccent,
+                artworkPalette?.primary.color ?? PrismediaColor.accent
+            )
+            .environment(
+                \.artworkSecondaryText,
+                artworkPalette?.secondary.color ?? PrismediaColor.textSecondary
+            )
             .task { await loadIfNeeded() }
             .onDisappear { episodeLoadTask?.cancel() }
             .accessibilityIdentifier("tv.seasons-detail")
@@ -89,6 +101,28 @@ import SwiftUI
 
         private var displayedSeries: EntityDetail {
             snapshot.seriesDetail ?? useCase.rootDetail
+        }
+
+        private var paletteArtworkPath: String? {
+            let series =
+                snapshot.seriesDetail
+                ?? (useCase.rootDetail.kind == .videoSeries ? useCase.rootDetail : nil)
+            return TVSeasonsPresentation.paletteArtworkPath(
+                series: series,
+                season: selectedSeasonDetail,
+                selectedSeasonID: snapshot.selectedSeasonID,
+                episode: snapshot.selectedEpisode
+            )
+        }
+
+        private var selectedSeasonDetail: EntityDetail? {
+            guard let selectedSeasonID = snapshot.selectedSeasonID else { return nil }
+            if useCase.rootDetail.kind == .videoSeason,
+                useCase.rootDetail.id == selectedSeasonID
+            {
+                return useCase.rootDetail
+            }
+            return seasonCache[selectedSeasonID]
         }
 
         private var adjacentSeasons: (previous: EntityThumbnail?, next: EntityThumbnail?) {

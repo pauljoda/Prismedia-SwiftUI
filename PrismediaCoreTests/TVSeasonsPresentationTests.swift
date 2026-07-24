@@ -107,6 +107,119 @@ final class TVSeasonsPresentationTests: XCTestCase {
         XCTAssertTrue(TVSeasonsPresentation.episodes(in: movie).isEmpty)
     }
 
+    func testPaletteArtworkPrefersTheSelectedSeasonThumbnailOverSeriesArtwork() throws {
+        let selectedSeason = thumbnail(
+            id: "11111111-1111-1111-1111-111111111111",
+            kind: .videoSeason,
+            order: 1,
+            coverPath: "/season-thumbnail.jpg"
+        )
+        let series = detail(
+            kind: .videoSeries,
+            children: [
+                EntityGroup(
+                    kind: .videoSeason,
+                    label: "Seasons",
+                    entities: [selectedSeason],
+                    code: nil
+                )
+            ],
+            imagePath: "/series-poster.jpg"
+        )
+
+        XCTAssertEqual(
+            TVSeasonsPresentation.paletteArtworkPath(
+                series: series,
+                season: nil,
+                selectedSeasonID: selectedSeason.id
+            ),
+            "/season-thumbnail.jpg"
+        )
+    }
+
+    func testPaletteArtworkPrefersLoadedSeasonArtworkOverItsThumbnail() throws {
+        let selectedSeason = thumbnail(
+            id: "11111111-1111-1111-1111-111111111111",
+            kind: .videoSeason,
+            order: 1,
+            coverPath: "/season-thumbnail.jpg"
+        )
+        let series = detail(
+            kind: .videoSeries,
+            children: [
+                EntityGroup(
+                    kind: .videoSeason,
+                    label: "Seasons",
+                    entities: [selectedSeason],
+                    code: nil
+                )
+            ],
+            imagePath: "/series-poster.jpg"
+        )
+        let season = detail(
+            id: selectedSeason.id,
+            kind: .videoSeason,
+            children: [],
+            imagePath: "/season-poster.jpg"
+        )
+
+        XCTAssertEqual(
+            TVSeasonsPresentation.paletteArtworkPath(
+                series: series,
+                season: season,
+                selectedSeasonID: selectedSeason.id
+            ),
+            "/season-poster.jpg"
+        )
+    }
+
+    func testPaletteArtworkFallsBackToSeriesArtwork() throws {
+        let selectedSeason = thumbnail(
+            id: "11111111-1111-1111-1111-111111111111",
+            kind: .videoSeason,
+            order: 1
+        )
+        let series = detail(
+            kind: .videoSeries,
+            children: [
+                EntityGroup(
+                    kind: .videoSeason,
+                    label: "Seasons",
+                    entities: [selectedSeason],
+                    code: nil
+                )
+            ],
+            imagePath: "/series-poster.jpg"
+        )
+
+        XCTAssertEqual(
+            TVSeasonsPresentation.paletteArtworkPath(
+                series: series,
+                season: nil,
+                selectedSeasonID: selectedSeason.id
+            ),
+            "/series-poster.jpg"
+        )
+    }
+
+    func testPaletteArtworkFallsBackToTheEpisodeThumbnailWithoutParentArtwork() {
+        let episode = thumbnail(
+            kind: .video,
+            order: 1,
+            coverPath: "/episode-thumbnail.jpg"
+        )
+
+        XCTAssertEqual(
+            TVSeasonsPresentation.paletteArtworkPath(
+                series: nil,
+                season: nil,
+                selectedSeasonID: nil,
+                episode: episode
+            ),
+            "/episode-thumbnail.jpg"
+        )
+    }
+
     func testEpisodeSelectionCoordinatesCachingAndFullscreenPresentation() {
         let episodeID = UUID()
         let cases:
@@ -257,20 +370,35 @@ final class TVSeasonsPresentationTests: XCTestCase {
     }
 
     private func detail(
+        id: UUID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
         kind: EntityKind,
         children: [EntityGroup],
-        description: String? = nil
+        description: String? = nil,
+        imagePath: String? = nil
     ) -> EntityDetail {
-        EntityDetail(
-            id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+        var capabilities =
+            description.map {
+                [EntityCapability.description(EntityDescriptionCapability(value: $0))]
+            } ?? []
+        if let imagePath {
+            let images = try! PrismediaJSON.decoder().decode(
+                EntityImagesCapability.self,
+                from: Data(
+                    """
+                    {"supportedKinds":["poster"],"items":[{"kind":"poster","path":"\(imagePath)"}]}
+                    """.utf8
+                )
+            )
+            capabilities.append(.images(images))
+        }
+        return EntityDetail(
+            id: id,
             kind: kind,
             title: "Reference",
             parentEntityID: nil,
             sortOrder: nil,
             hasSourceMedia: true,
-            capabilities: description.map {
-                [.description(EntityDescriptionCapability(value: $0))]
-            } ?? [],
+            capabilities: capabilities,
             childrenByKind: children,
             relationships: []
         )
@@ -283,7 +411,8 @@ final class TVSeasonsPresentationTests: XCTestCase {
         order: Int? = nil,
         summary: String? = nil,
         progress: Double? = nil,
-        resumeSeconds: Double? = nil
+        resumeSeconds: Double? = nil,
+        coverPath: String? = nil
     ) -> EntityThumbnail {
         let parentID =
             kind == .video
@@ -299,6 +428,7 @@ final class TVSeasonsPresentationTests: XCTestCase {
             parentEntityID: parentID,
             parentKind: parentKind,
             sortOrder: order,
+            coverThumb2xURL: coverPath,
             hasSourceMedia: true,
             progress: progress,
             resumeSeconds: resumeSeconds

@@ -14,6 +14,30 @@ enum TVSeasonsPresentation {
         return orderedChildren(of: .video, in: season)
     }
 
+    static func paletteArtworkPath(
+        series: EntityDetail?,
+        season: EntityDetail?,
+        selectedSeasonID: UUID?,
+        episode: EntityThumbnail? = nil
+    ) -> String? {
+        let loadedSeasonPath = season.flatMap { detail -> String? in
+            guard detail.kind == .videoSeason,
+                detail.id == selectedSeasonID
+            else { return nil }
+            return artworkPath(in: detail)
+        }
+        let seasonThumbnailPath = series.flatMap { detail in
+            seasons(in: detail)
+                .first { $0.id == selectedSeasonID }?
+                .bestCoverPath
+        }
+        let seriesPath = series.flatMap(artworkPath)
+        return loadedSeasonPath
+            ?? seasonThumbnailPath
+            ?? seriesPath
+            ?? episode?.bestCoverPath
+    }
+
     static func selectedSeasonID(
         preferredID: UUID?,
         seasons: [EntityThumbnail]
@@ -74,5 +98,24 @@ enum TVSeasonsPresentation {
             let rhsOrder = rhs.element.sortOrder ?? Int.max
             return lhsOrder == rhsOrder ? lhs.offset < rhs.offset : lhsOrder < rhsOrder
         }.map(\.element)
+    }
+
+    private static func artworkPath(in detail: EntityDetail) -> String? {
+        let images: EntityImagesCapability? = detail.capability()
+        let preferredKinds = ["poster", "thumbnail", "cover", "backdrop"]
+        let itemPath = images?.items
+            .first { preferredKinds.contains($0.kind) && nonempty($0.path) != nil }
+            .flatMap { nonempty($0.path) }
+        return itemPath
+            ?? nonempty(images?.coverURL)
+            ?? nonempty(images?.thumbnail2xURL)
+            ?? nonempty(images?.thumbnailURL)
+    }
+
+    private static func nonempty(_ path: String?) -> String? {
+        guard let path = path?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !path.isEmpty
+        else { return nil }
+        return path
     }
 }
