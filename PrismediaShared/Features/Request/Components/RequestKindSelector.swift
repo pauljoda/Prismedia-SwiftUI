@@ -16,7 +16,7 @@ import SwiftUI
                             .tag(Optional(kind))
                     }
                 } label: {
-                    Label("Entity Type", systemImage: selection?.systemImage ?? "square.grid.2x2")
+                    Text("Entity Type")
                 }
                 .pickerStyle(.menu)
                 .disabled(isDisabled)
