@@ -56,7 +56,7 @@ import SwiftUI
                     currentValues: currentValues,
                     excludedFields: separatelyReviewedFields
                 )
-                if let selection, !proposal.images.isEmpty {
+                if let selection, !reviewableImages.isEmpty {
                     MetadataArtworkPicker(proposal: proposal, selection: selection)
                 }
                 if let selection, !looseTags.isEmpty {
@@ -101,6 +101,10 @@ import SwiftUI
             MetadataReviewPolicy.relationships(of: proposal)
         }
 
+        private var reviewableImages: [AdministrativeImageCandidate] {
+            MetadataReviewPolicy.reviewableImages(in: proposal)
+        }
+
         private var looseTags: [String] {
             let relationshipTitles = relationships.compactMap { relationship -> String? in
                 guard relationship.targetKind.caseInsensitiveCompare("tag") == .orderedSame else {
@@ -118,7 +122,7 @@ import SwiftUI
         private var separatelyReviewedFields: Set<MetadataReviewField> {
             guard selection != nil else { return [] }
             var fields = Set<MetadataReviewField>()
-            if !proposal.images.isEmpty { fields.insert(.images) }
+            if !reviewableImages.isEmpty { fields.insert(.images) }
             if !proposal.patch.tags.isEmpty { fields.insert(.tags) }
             if relationships.contains(where: { $0.targetKind.caseInsensitiveCompare("person") == .orderedSame }) {
                 fields.insert(.credits)

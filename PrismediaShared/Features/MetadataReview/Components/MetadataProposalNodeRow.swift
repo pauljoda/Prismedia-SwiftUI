@@ -11,6 +11,17 @@ import SwiftUI
 
         var body: some View {
             HStack(spacing: PrismediaSpacing.small) {
+                if isSelectable, onActivate != nil {
+                    Button {
+                        onSetSelected?(!isSelected)
+                    } label: {
+                        selectionSymbol
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isSelected ? artworkPrimaryAccent : PrismediaColor.textMuted)
+                    .accessibilityLabel(isSelected ? "Exclude proposal" : "Include proposal")
+                }
+
                 if let onActivate {
                     Button {
                         onActivate(proposal)
@@ -24,27 +35,26 @@ import SwiftUI
                     Button {
                         onSetSelected?(!isSelected)
                     } label: {
-                        nodeLabel(trailingSymbol: isSelected ? "checkmark.circle.fill" : "circle")
+                        HStack(spacing: PrismediaSpacing.small) {
+                            selectionSymbol
+                                .foregroundStyle(
+                                    isSelected ? artworkPrimaryAccent : PrismediaColor.textMuted
+                                )
+                            nodeLabel(trailingSymbol: nil)
+                        }
                     }
                     .buttonStyle(.plain)
                     .contentShape(.rect)
                 } else {
                     nodeLabel(trailingSymbol: nil)
                 }
-
-                if isSelectable, onActivate != nil {
-                    Button {
-                        onSetSelected?(!isSelected)
-                    } label: {
-                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(isSelected ? artworkPrimaryAccent : PrismediaColor.textMuted)
-                    .accessibilityLabel(isSelected ? "Exclude proposal" : "Include proposal")
-                }
             }
             .accessibilityAddTraits(isSelected ? .isSelected : [])
+        }
+
+        private var selectionSymbol: some View {
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .frame(width: 44, height: 44)
         }
 
         private func nodeLabel(trailingSymbol: String?) -> some View {
@@ -94,7 +104,7 @@ import SwiftUI
         }
 
         private var artworkURL: String? {
-            proposal.images.first?.url
+            MetadataReviewPolicy.reviewableImages(in: proposal).first?.url
         }
     }
 
@@ -106,7 +116,7 @@ import SwiftUI
                     isSelectable: true,
                     isSelected: true,
                     onSetSelected: { _ in },
-                    onActivate: nil
+                    onActivate: { _ in }
                 )
                 .padding()
             }

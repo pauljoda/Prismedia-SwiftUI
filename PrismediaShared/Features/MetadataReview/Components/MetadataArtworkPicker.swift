@@ -31,11 +31,15 @@ import SwiftUI
         }
 
         private var imageKinds: [String] {
-            Array(Set(proposal.images.map(\.kind))).sorted()
+            Array(Set(reviewableImages.map(\.kind))).sorted()
         }
 
         private func images(for kind: String) -> [AdministrativeImageCandidate] {
-            proposal.images.filter { $0.kind == kind }
+            reviewableImages.filter { $0.kind == kind }
+        }
+
+        private var reviewableImages: [AdministrativeImageCandidate] {
+            MetadataReviewPolicy.reviewableImages(in: proposal)
         }
 
         private func selectedURL(for kind: String) -> String? {

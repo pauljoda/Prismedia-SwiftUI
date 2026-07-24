@@ -107,6 +107,14 @@ public enum MetadataReviewPolicy {
         return nil
     }
 
+    public static func reviewableImages(
+        in proposal: AdministrativeEntityMetadataProposal
+    ) -> [AdministrativeImageCandidate] {
+        proposal.images.filter {
+            $0.kind.caseInsensitiveCompare("logo") != .orderedSame
+        }
+    }
+
     public static func fieldValue(
         _ field: MetadataReviewField,
         in proposal: AdministrativeEntityMetadataProposal
@@ -139,7 +147,8 @@ public enum MetadataReviewPolicy {
         case .classification:
             return patch.classification ?? ""
         case .images:
-            return proposal.images.isEmpty ? "" : "\(proposal.images.count) available"
+            let images = reviewableImages(in: proposal)
+            return images.isEmpty ? "" : "\(images.count) available"
         }
     }
 
@@ -202,7 +211,7 @@ public enum MetadataReviewPolicy {
             matchReason: proposal.matchReason,
             patch: appliedPatch,
             images: selectedFields.contains(.images)
-                ? proposal.images.filter { image in
+                ? reviewableImages(in: proposal).filter { image in
                     guard let selectedImages else { return true }
                     return selectedImages[image.kind] == image.url
                 }
@@ -291,11 +300,8 @@ public enum MetadataReviewPolicy {
     private static func defaultImages(
         for proposal: AdministrativeEntityMetadataProposal
     ) -> [String: String] {
-        proposal.images.reduce(into: [:]) { selected, image in
+        reviewableImages(in: proposal).reduce(into: [:]) { selected, image in
             guard selected[image.kind] == nil else { return }
-            guard image.kind.lowercased() != "logo" || proposal.targetKind.lowercased() == "studio" else {
-                return
-            }
             selected[image.kind] = image.url
         }
     }

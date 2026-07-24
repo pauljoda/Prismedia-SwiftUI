@@ -76,6 +76,48 @@ final class MetadataReviewPolicyTests: XCTestCase {
         XCTAssertEqual(selection.selectedCreditsByProposal["root"]?.count, 1)
     }
 
+    func testReviewableArtworkExcludesLogoForEveryEntityKind() {
+        let studio = proposal(
+            id: "studio",
+            kind: "studio",
+            title: "Studio",
+            images: [
+                AdministrativeImageCandidate(
+                    kind: "logo",
+                    url: "https://example.test/logo.png",
+                    source: "tmdb",
+                    rank: nil,
+                    language: nil,
+                    width: nil,
+                    height: nil
+                ),
+                AdministrativeImageCandidate(
+                    kind: "poster",
+                    url: "https://example.test/poster.jpg",
+                    source: "tmdb",
+                    rank: nil,
+                    language: nil,
+                    width: nil,
+                    height: nil
+                ),
+            ]
+        )
+
+        let selection = MetadataReviewPolicy.seededSelection(for: studio)
+        let applied = MetadataReviewPolicy.proposalForApply(studio, selection: selection)
+
+        XCTAssertEqual(
+            MetadataReviewPolicy.reviewableImages(in: studio).map(\.kind),
+            ["poster"]
+        )
+        XCTAssertEqual(MetadataReviewPolicy.fieldValue(.images, in: studio), "1 available")
+        XCTAssertEqual(
+            selection.selectedImagesByProposal["studio"],
+            ["poster": "https://example.test/poster.jpg"]
+        )
+        XCTAssertEqual(applied.images.map(\.kind), ["poster"])
+    }
+
     func testMergingStreamedDefaultsSelectsNewChildrenWithoutOverwritingExistingChoices() {
         let root = proposal(
             id: "root",

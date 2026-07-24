@@ -107,10 +107,11 @@ import SwiftUI
 
         private var proposalArtworkPath: String? {
             guard let proposal = item.proposal else { return nil }
+            let images = MetadataReviewPolicy.reviewableImages(in: proposal)
             let preferredKinds = ["poster", "cover", "thumbnail", "still", "backdrop"]
             return preferredKinds.lazy.compactMap { kind in
-                proposal.images.first { $0.kind.caseInsensitiveCompare(kind) == .orderedSame }?.url
-            }.first ?? proposal.images.first?.url
+                images.first { $0.kind.caseInsensitiveCompare(kind) == .orderedSame }?.url
+            }.first ?? images.first?.url
         }
     }
 

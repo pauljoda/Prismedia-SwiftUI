@@ -24,9 +24,7 @@ import SwiftUI
         var body: some View {
             DisclosureGroup(isExpanded: $isExpanded) {
                 Group {
-                    if let thumbnail {
-                        EntityThumbnailCardView(item: thumbnail, layout: .list)
-                    } else if isLoading {
+                    if thumbnail == nil, isLoading {
                         HStack(spacing: PrismediaSpacing.small) {
                             ProgressView()
                             Text("Loading item preview…")
@@ -34,7 +32,7 @@ import SwiftUI
                         .frame(maxWidth: .infinity, minHeight: 88)
                         .foregroundStyle(PrismediaColor.textSecondary)
                     } else {
-                        EntityThumbnailCardView(item: fallbackThumbnail, layout: .list)
+                        targetPreview
                     }
                 }
                 .padding(.top, PrismediaSpacing.medium)
@@ -69,6 +67,47 @@ import SwiftUI
             .frame(maxWidth: .infinity, alignment: .leading)
             .prismediaPanel()
             .accessibilityIdentifier("identify.target-context")
+        }
+
+        private var targetPreview: some View {
+            let item = thumbnail ?? fallbackThumbnail
+
+            return HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+                RemotePosterImage(
+                    path: item.bestCoverPath,
+                    fallbackSeed: item.title,
+                    systemImage: item.kind.thumbnailFallbackSystemImage,
+                    contentMode: .fit,
+                    maxPixelSize: 256
+                )
+                .frame(width: 64, height: 84)
+                .background(PrismediaColor.background.opacity(PrismediaOpacity.statusFill))
+                .clipShape(.rect(cornerRadius: PrismediaRadius.badge))
+
+                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                    Text(item.title)
+                        .font(.headline)
+                        .foregroundStyle(PrismediaColor.textPrimary)
+                        .lineLimit(3)
+
+                    Text(item.kind.displayLabel)
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+
+                    if let summary = item.summary, !summary.isEmpty {
+                        Text(summary)
+                            .font(.caption)
+                            .foregroundStyle(PrismediaColor.textMuted)
+                            .lineLimit(3)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(PrismediaSpacing.medium)
+            .background(PrismediaColor.groupedContentBackground)
+            .clipShape(.rect(cornerRadius: PrismediaRadius.badge))
+            .contentShape(.rect)
+            .accessibilityElement(children: .combine)
         }
 
         private var fallbackThumbnail: EntityThumbnail {

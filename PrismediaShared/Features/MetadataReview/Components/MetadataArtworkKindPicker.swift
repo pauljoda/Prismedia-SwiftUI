@@ -65,7 +65,9 @@ import SwiftUI
             PreviewShell {
                 MetadataArtworkKindPicker(
                     kind: "poster",
-                    images: MetadataReviewPreviewFixtures.proposal.images,
+                    images: MetadataReviewPolicy.reviewableImages(
+                        in: MetadataReviewPreviewFixtures.proposal
+                    ).filter { $0.kind == "poster" },
                     selectedURL: $selectedURL
                 )
                 .padding()
