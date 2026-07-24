@@ -726,6 +726,12 @@
     "Close" : {
 
     },
+    "Close %@" : {
+
+    },
+    "Close Identify" : {
+
+    },
     "Close reader" : {
 
     },
@@ -733,6 +739,9 @@
 
     },
     "Collapses the description" : {
+
+    },
+    "Collection" : {
 
     },
     "Columns" : {
@@ -2064,6 +2073,9 @@
     "Preparing download…" : {
 
     },
+    "Preparing identify search…" : {
+
+    },
     "Preparing media…" : {
 
     },
@@ -2410,7 +2422,16 @@
     "Return from Toggle bookmark" : {
 
     },
+    "Return to Search and choose a metadata match." : {
+
+    },
     "Return to Sign In" : {
+
+    },
+    "Returns to the preserved identify search" : {
+
+    },
+    "Returns to the preserved search results" : {
 
     },
     "Review" : {

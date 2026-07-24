@@ -28,6 +28,7 @@
         private var navigator: EPUBNavigatorViewController?
         private var readingOrder: [Link] = []
         private var chapterTitlesByResource: [String: String] = [:]
+        private var chapterLocationsByResource: [String: String] = [:]
         private var searchLocators: [String: Locator] = [:]
         private var searchGeneration = 0
         private var progression = 0.0
@@ -127,10 +128,10 @@
 
         func openTableOfContentsItem(_ item: EPUBTableOfContentsItem) async {
             guard let publication, let location = item.location else { return }
-            if let savedLocation = locatorStore.load(
-                bookID: book.id,
-                chapterLocation: location
-            ), let locator = await resolvedLocator(savedLocation) {
+            captureCurrentChapterPosition()
+            if let savedLocation = savedChapterLocation(for: location),
+                let locator = await resolvedLocator(savedLocation)
+            {
                 _ = await navigateExplicitly(to: locator)
                 return
             }
@@ -270,10 +271,12 @@
         }
 
         func goBackward() async {
+            captureCurrentChapterPosition()
             _ = await navigator?.goBackward(options: .animated)
         }
 
         func goForward() async {
+            captureCurrentChapterPosition()
             _ = await navigator?.goForward(options: .animated)
         }
 
@@ -471,6 +474,10 @@
             String(href.string.split(separator: "#", maxSplits: 1).first ?? "")
         }
 
+        private func resourceKey(_ href: String) -> String {
+            String(href.split(separator: "#", maxSplits: 1).first ?? "")
+        }
+
         private func normalizedTitle(_ title: String?) -> String? {
             let title = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return title.isEmpty ? nil : title
@@ -485,6 +492,7 @@
         }
 
         private func navigateExplicitly(to locator: Locator) async -> Bool {
+            captureCurrentChapterPosition()
             let destinationResourceKey = resourceKey(locator.href)
             explicitNavigationResourceKey = destinationResourceKey
             let didNavigate = await navigator?.go(to: locator, options: .animated) ?? false
@@ -555,14 +563,39 @@
             activeResourceKey = chapterLocation
             updateLocation(locator)
             guard shouldPersistReadingLocation else { return }
-            if let locationDescription = try? locator.jsonString() {
-                locatorStore.save(
-                    locationDescription,
+            rememberChapterPosition(locator)
+            saveProgress(closing: false)
+        }
+
+        private func captureCurrentChapterPosition() {
+            guard
+                shouldPersistReadingLocation,
+                let locator = navigator?.currentLocation
+            else { return }
+            activeResourceKey = resourceKey(locator.href)
+            rememberChapterPosition(locator)
+            updateLocation(locator)
+            saveProgress(closing: false)
+        }
+
+        private func rememberChapterPosition(_ locator: Locator) {
+            guard let locationDescription = try? locator.jsonString() else { return }
+            let chapterLocation = resourceKey(locator.href)
+            chapterLocationsByResource[chapterLocation] = locationDescription
+            locatorStore.save(
+                locationDescription,
+                bookID: book.id,
+                chapterLocation: chapterLocation
+            )
+        }
+
+        private func savedChapterLocation(for chapterLocation: String) -> String? {
+            let chapterLocation = resourceKey(chapterLocation)
+            return chapterLocationsByResource[chapterLocation]
+                ?? locatorStore.load(
                     bookID: book.id,
                     chapterLocation: chapterLocation
                 )
-            }
-            saveProgress(closing: false)
         }
 
         private func restoreChapterPositionIfAvailable(
@@ -572,9 +605,8 @@
             guard
                 let activeResourceKey,
                 activeResourceKey != destinationResourceKey,
-                let savedLocation = locatorStore.load(
-                    bookID: book.id,
-                    chapterLocation: destinationResourceKey
+                let savedLocation = savedChapterLocation(
+                    for: destinationResourceKey
                 )
             else { return false }
 
