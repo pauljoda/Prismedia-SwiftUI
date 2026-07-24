@@ -77,6 +77,7 @@ struct PrismediaButton: View {
                 configuredButton
                     .buttonStyle(.glassProminent)
                     .tint(primaryTint)
+                    .foregroundStyle(PrismediaColor.onAccent)
             } else {
                 standardGlassButton
             }
@@ -191,7 +192,7 @@ struct PrismediaButton: View {
                     systemImage: "arrow.right",
                     variant: .prominent,
                     form: .fill,
-                    primaryTint: PrismediaColor.spectrumCyan
+                    primaryTint: PrismediaColor.accent
                 ) {}
 
                 PrismediaButton(

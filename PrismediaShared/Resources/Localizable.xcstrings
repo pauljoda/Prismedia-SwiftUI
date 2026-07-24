@@ -676,6 +676,9 @@
     "Choose a different server" : {
 
     },
+    "Choose a Media Type" : {
+
+    },
     "Choose an Item" : {
 
     },
@@ -686,6 +689,12 @@
 
     },
     "Choose local content to use for this item. Prismedia will validate it, upload it securely, then continue through the normal import lifecycle." : {
+
+    },
+    "Choose Type" : {
+
+    },
+    "Choose what you want to request. Available providers and search fields update for that type." : {
 
     },
     "Classification" : {
@@ -784,9 +793,6 @@
     "Content" : {
 
     },
-    "Content Kind" : {
-
-    },
     "Contents" : {
 
     },
@@ -824,6 +830,9 @@
 
     },
     "Couldn’t Load Monitoring" : {
+
+    },
+    "Couldn’t Load Providers" : {
 
     },
     "Couldn’t Load Reading Progress" : {
@@ -1088,6 +1097,9 @@
 
     },
     "Entity Kinds" : {
+
+    },
+    "Entity Type" : {
 
     },
     "EPUB reader" : {
@@ -1514,6 +1526,9 @@
     "Loading release candidates…" : {
 
     },
+    "Loading request providers…" : {
+
+    },
     "Loading roots…" : {
 
     },
@@ -1935,6 +1950,9 @@
     "Opening reader…" : {
 
     },
+    "Opening review" : {
+
+    },
     "Opening video" : {
 
     },
@@ -2228,9 +2246,6 @@
     "Provider ID" : {
 
     },
-    "Provider Warnings" : {
-
-    },
     "Publisher formatting can override spacing and paragraph controls. Turn it off for full control." : {
 
     },
@@ -2397,6 +2412,9 @@
 
     },
     "Request" : {
+
+    },
+    "Request Details" : {
 
     },
     "Request Options" : {
@@ -2618,6 +2636,9 @@
     "Search In" : {
 
     },
+    "Search Messages" : {
+
+    },
     "Search PDF" : {
 
     },
@@ -2685,6 +2706,9 @@
 
     },
     "Select a Library Root" : {
+
+    },
+    "Select a type above to see its available providers and search fields." : {
 
     },
     "Select All" : {
@@ -3153,6 +3177,9 @@
 
     },
     "Updated %@" : {
+
+    },
+    "Updates the available search providers and fields" : {
 
     },
     "Updates the selected episode" : {
