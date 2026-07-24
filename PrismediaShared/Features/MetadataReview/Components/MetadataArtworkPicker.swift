@@ -4,50 +4,29 @@ import SwiftUI
     struct MetadataArtworkPicker: View {
         let proposal: AdministrativeEntityMetadataProposal
         @Binding var selection: MetadataReviewSelection
+        @State private var isExpanded = true
 
         var body: some View {
-            DisclosureGroup {
+            DisclosureGroup(isExpanded: $isExpanded) {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                     ForEach(imageKinds, id: \.self) { kind in
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                            HStack {
-                                Text(kind.capitalized)
-                                    .font(.subheadline.weight(.semibold))
-                                Spacer(minLength: PrismediaSpacing.small)
-                                Text(selectionSummary(for: kind))
-                                    .font(.caption)
-                                    .foregroundStyle(PrismediaColor.textSecondary)
-                            }
-
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(
-                                        .adaptive(minimum: minimumTileWidth(for: kind)),
-                                        spacing: PrismediaSpacing.medium,
-                                        alignment: .top
-                                    )
-                                ],
-                                alignment: .leading,
-                                spacing: PrismediaSpacing.medium
-                            ) {
-                                ForEach(images(for: kind), id: \.url) { image in
-                                    let isSelected = selectedURL(for: kind) == image.url
-                                    MetadataArtworkOptionButton(
-                                        image: image,
-                                        isSelected: isSelected,
-                                        onSelect: {
-                                            setSelectedURL(isSelected ? nil : image.url, for: kind)
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                        MetadataArtworkKindPicker(
+                            kind: kind,
+                            images: images(for: kind),
+                            selectedURL: selectedURLBinding(for: kind)
+                        )
                     }
                 }
-                .padding(.top, PrismediaSpacing.small)
+                .padding(.top, PrismediaSpacing.medium)
             } label: {
-                Label("Artwork", systemImage: "photo.stack")
-                    .font(.headline)
+                HStack {
+                    Label("Artwork", systemImage: "photo.stack")
+                        .font(.headline)
+                    Spacer()
+                    Text(selectionSummary)
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                }
             }
         }
 
@@ -63,25 +42,20 @@ import SwiftUI
             selection.selectedImagesByProposal[proposal.proposalID]?[kind]
         }
 
-        private func selectionSummary(for kind: String) -> String {
-            let count = images(for: kind).count
-            return selectedURL(for: kind) == nil
-                ? "\(count) available"
-                : "1 of \(count) selected"
+        private var selectionSummary: String {
+            let selectedCount = imageKinds.count { selectedURL(for: $0) != nil }
+            return "\(selectedCount) of \(imageKinds.count) kinds selected"
         }
 
-        private func minimumTileWidth(for kind: String) -> CGFloat {
-            switch kind.lowercased() {
-            case "backdrop", "thumbnail", "still": 180
-            case "logo": 140
-            default: 112
-            }
-        }
-
-        private func setSelectedURL(_ url: String?, for kind: String) {
-            var selected = selection.selectedImagesByProposal[proposal.proposalID] ?? [:]
-            selected[kind] = url
-            selection.selectedImagesByProposal[proposal.proposalID] = selected
+        private func selectedURLBinding(for kind: String) -> Binding<String?> {
+            Binding(
+                get: { selectedURL(for: kind) },
+                set: { url in
+                    var selected = selection.selectedImagesByProposal[proposal.proposalID] ?? [:]
+                    selected[kind] = url
+                    selection.selectedImagesByProposal[proposal.proposalID] = selected
+                }
+            )
         }
     }
 

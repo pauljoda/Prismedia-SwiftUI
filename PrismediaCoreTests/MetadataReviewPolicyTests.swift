@@ -76,6 +76,90 @@ final class MetadataReviewPolicyTests: XCTestCase {
         XCTAssertEqual(selection.selectedCreditsByProposal["root"]?.count, 1)
     }
 
+    func testMergingStreamedDefaultsSelectsNewChildrenWithoutOverwritingExistingChoices() {
+        let root = proposal(
+            id: "root",
+            kind: "video-series",
+            title: "Series",
+            description: "Existing description"
+        )
+        var selection = MetadataReviewPolicy.seededSelection(for: root)
+        selection.selectedFieldsByProposal["root"]?.remove(.description)
+        selection.excludedProposalIDs.insert("preserved-exclusion")
+
+        let streamedChild = proposal(
+            id: "episode-1",
+            kind: "video",
+            title: "Episode 1",
+            description: "Newly streamed child metadata",
+            tags: ["Drama"]
+        )
+        let refreshedRoot = proposal(
+            id: "root",
+            kind: "video-series",
+            title: "Series",
+            description: "Existing description",
+            children: [streamedChild]
+        )
+
+        let merged = MetadataReviewPolicy.mergingSeededDefaults(
+            from: root,
+            to: refreshedRoot,
+            into: selection
+        )
+
+        XCTAssertFalse(merged.selectedFieldsByProposal["root"]?.contains(.description) == true)
+        XCTAssertTrue(merged.selectedFieldsByProposal["episode-1"]?.contains(.title) == true)
+        XCTAssertTrue(merged.selectedFieldsByProposal["episode-1"]?.contains(.description) == true)
+        XCTAssertEqual(merged.selectedTagsByProposal["episode-1"], ["Drama"])
+        XCTAssertTrue(merged.excludedProposalIDs.contains("preserved-exclusion"))
+    }
+
+    func testMergingStreamedDefaultsSelectsNewRootValuesWithoutReselectingPriorChoices() {
+        let root = proposal(
+            id: "root",
+            kind: "book",
+            title: "Series",
+            description: "Existing description"
+        )
+        var selection = MetadataReviewPolicy.seededSelection(for: root)
+        selection.selectedFieldsByProposal["root"]?.remove(.description)
+
+        let refreshedRoot = proposal(
+            id: "root",
+            kind: "book",
+            title: "Series",
+            description: "Existing description",
+            tags: ["Fantasy"],
+            images: [
+                AdministrativeImageCandidate(
+                    kind: "cover",
+                    url: "https://example.test/cover.jpg",
+                    source: "openlibrary",
+                    rank: nil,
+                    language: nil,
+                    width: nil,
+                    height: nil
+                )
+            ]
+        )
+
+        let merged = MetadataReviewPolicy.mergingSeededDefaults(
+            from: root,
+            to: refreshedRoot,
+            into: selection
+        )
+
+        XCTAssertFalse(merged.selectedFieldsByProposal["root"]?.contains(.description) == true)
+        XCTAssertTrue(merged.selectedFieldsByProposal["root"]?.contains(.tags) == true)
+        XCTAssertTrue(merged.selectedFieldsByProposal["root"]?.contains(.images) == true)
+        XCTAssertEqual(merged.selectedTagsByProposal["root"], ["Fantasy"])
+        XCTAssertEqual(
+            merged.selectedImagesByProposal["root"],
+            ["cover": "https://example.test/cover.jpg"]
+        )
+    }
+
     func testProposalForApplyRemovesDeselectedFieldsItemsArtworkAndNodes() {
         let excludedPerson = proposal(id: "person-2", kind: "person", title: "Jeremy Renner")
         let includedPerson = proposal(id: "person-1", kind: "person", title: "Amy Adams")
@@ -119,6 +203,28 @@ final class MetadataReviewPolicyTests: XCTestCase {
         XCTAssertEqual(applied.images.map(\.url), ["https://example.test/two.jpg"])
         XCTAssertEqual(applied.children.map(\.proposalID), ["season-1"])
         XCTAssertEqual(applied.relationships.map(\.proposalID), ["person-1"])
+    }
+
+    func testDeselectingTagRelationshipUpdatesBothEntityAndTagSelections() {
+        let tag = proposal(id: "tag-drama", kind: "tag", title: "Drama")
+        let root = proposal(
+            id: "root",
+            kind: "movie",
+            title: "Arrival",
+            tags: ["Drama"],
+            relationships: [tag]
+        )
+        var selection = MetadataReviewPolicy.seededSelection(for: root)
+
+        MetadataReviewPolicy.setProposal(
+            "tag-drama",
+            selected: false,
+            within: root,
+            selection: &selection
+        )
+
+        XCTAssertTrue(selection.excludedProposalIDs.contains("tag-drama"))
+        XCTAssertFalse(selection.selectedTagsByProposal["root"]?.contains("Drama") == true)
     }
 
     private func proposal(

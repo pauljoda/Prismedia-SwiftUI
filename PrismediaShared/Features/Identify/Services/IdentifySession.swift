@@ -6,12 +6,15 @@ import Observation
     final class IdentifySession {
         private(set) var queue: [AdministrativeIdentifyQueueItem] = []
         private(set) var providers: [AdministrativePlugin] = []
+        private(set) var defaultProviderIDs: [String: String] = [:]
         private(set) var isLoading = false
         private(set) var isSearching = false
         private(set) var isSeeking = false
         private(set) var isApplying = false
         private(set) var applyProgress: AdministrativeIdentifyApplyProgress?
         private(set) var bulkProgress: IdentifyBulkProgress?
+        private(set) var entityDetailsByID: [UUID: EntityDetail] = [:]
+        private(set) var entityDetailLoadingIDs = Set<UUID>()
         var selectedItemID: UUID?
         var selectedQueueIDs = Set<UUID>()
         var selectedKind: EntityKind?
@@ -38,7 +41,9 @@ import Observation
             sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
             now: @escaping @Sendable () -> Date = Date.init,
             initialQueue: [AdministrativeIdentifyQueueItem] = [],
-            initialProviders: [AdministrativePlugin] = []
+            initialProviders: [AdministrativePlugin] = [],
+            initialDefaultProviderIDs: [String: String] = [:],
+            initialEntityDetail: EntityDetail? = nil
         ) {
             self.service = service
             self.browser = browser
@@ -48,6 +53,10 @@ import Observation
             self.now = now
             queue = initialQueue
             providers = initialProviders
+            defaultProviderIDs = initialDefaultProviderIDs
+            if let initialEntityDetail {
+                entityDetailsByID[initialEntityDetail.id] = initialEntityDetail
+            }
             selectedItemID = initialQueue.first?.entityID
             reviewSelection = initialQueue.first?.proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
         }
@@ -73,14 +82,39 @@ import Observation
             queue.first { $0.entityID == selectedItemID }
         }
 
+        var selectedEntityDetail: EntityDetail? {
+            guard let selectedItemID else { return nil }
+            return entityDetailsByID[selectedItemID]
+        }
+
+        var selectedEntityThumbnail: EntityThumbnail? {
+            selectedEntityDetail?.identifyThumbnail
+        }
+
+        var isLoadingSelectedEntityDetail: Bool {
+            guard let selectedItemID else { return false }
+            return entityDetailLoadingIDs.contains(selectedItemID)
+        }
+
         var reviewableIDs: [UUID] {
             queue.filter { IdentifyQueueState(rawServerValue: $0.state).isReviewable }.map(\.entityID)
         }
 
         var providersForSelectedItem: [AdministrativePlugin] {
             guard let selectedItem else { return [] }
-            return PluginSearchFieldPolicy.eligibleProviders(
-                providers, entityKind: selectedItem.entityKind.rawValue, hidesNsfw: hidesNsfw)
+            return RequestIdentifyProviderPreferencePolicy.eligibleProviders(
+                providers,
+                entityKind: selectedItem.entityKind.rawValue,
+                defaultProviderIDs: defaultProviderIDs,
+                hidesNsfw: hidesNsfw
+            )
+        }
+
+        func defaultProviderID(for kind: EntityKind) -> String? {
+            RequestIdentifyProviderPreferencePolicy.defaultProviderID(
+                for: kind.rawValue,
+                in: defaultProviderIDs
+            )
         }
 
         var canAcceptQueueSelection: Bool {
@@ -105,11 +139,20 @@ import Observation
             do {
                 async let loadedProviders = service.identifyProviders(kind: nil)
                 async let loadedQueue = service.identifyQueue()
-                let (nextProviders, nextQueue) = try await (loadedProviders, loadedQueue)
+                async let loadedDefaults = loadDefaultProviderIDs()
+                let (nextProviders, nextQueue, nextDefaults) = try await (
+                    loadedProviders,
+                    loadedQueue,
+                    loadedDefaults
+                )
                 if providers != nextProviders { providers = nextProviders }
                 if queue != nextQueue { queue = nextQueue }
+                if let nextDefaults, defaultProviderIDs != nextDefaults {
+                    defaultProviderIDs = nextDefaults
+                }
                 if selectedItemID == nil { select(nextQueue.first?.entityID) } else { select(selectedItemID) }
-                reconcileProvider()
+                reconcileProvider(preferConfiguredDefault: true)
+                await loadSelectedEntityDetail()
                 if errorMessage != nil { errorMessage = nil }
             } catch is CancellationError {
                 return
@@ -132,12 +175,19 @@ import Observation
         func refreshSelectedItem() async {
             guard let selectedItemID else { return }
             do {
+                let previousProposal = selectedItem?.proposal
                 let refreshedItem = try await service.identifyQueueItem(entityID: selectedItemID)
-                let previousProposalID = selectedItem?.proposal?.proposalID
+                let previousProposalID = previousProposal?.proposalID
                 replace(refreshedItem)
                 if previousProposalID != refreshedItem.proposal?.proposalID {
                     reviewSelection = refreshedItem.proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
                     showsSearchForProposal = refreshedItem.proposal == nil
+                } else if let proposal = refreshedItem.proposal {
+                    reviewSelection = MetadataReviewPolicy.mergingSeededDefaults(
+                        from: previousProposal,
+                        to: proposal,
+                        into: reviewSelection
+                    )
                 }
                 reconcileProvider()
             } catch is CancellationError {
@@ -152,9 +202,17 @@ import Observation
 
         func refreshProviders() async {
             do {
-                let nextProviders = try await service.identifyProviders(kind: nil)
+                async let loadedProviders = service.identifyProviders(kind: nil)
+                async let loadedDefaults = loadDefaultProviderIDs()
+                let (nextProviders, nextDefaults) = try await (
+                    loadedProviders,
+                    loadedDefaults
+                )
                 if providers != nextProviders { providers = nextProviders }
-                reconcileProvider()
+                if let nextDefaults, defaultProviderIDs != nextDefaults {
+                    defaultProviderIDs = nextDefaults
+                }
+                reconcileProvider(preferConfiguredDefault: true)
             } catch is CancellationError {
                 return
             } catch {
@@ -174,6 +232,7 @@ import Observation
                 replace(item)
                 select(entityID)
                 reconcileProvider()
+                await loadSelectedEntityDetail()
             } catch { errorMessage = error.localizedDescription }
         }
 
@@ -183,51 +242,39 @@ import Observation
 
             cancelPolling()
             isLoading = true
+            defer { isLoading = false }
             errorMessage = nil
 
             let item: AdministrativeIdentifyQueueItem
-            let shouldStartSearch: Bool
             do {
                 do {
                     item = try await service.identifyQueueItem(entityID: entityID)
-                    let state = IdentifyQueueState(rawServerValue: item.state)
-                    shouldStartSearch = state == .done || state == .deleted
                 } catch PrismediaAPIError.httpStatus(404, _) {
-                    // Persist the queue record before beginning the potentially long
-                    // provider search. The Identify dashboard can then resume it even
-                    // if this presentation goes away.
+                    // Persist the queue record before presenting Search so the Identify
+                    // dashboard can resume it if this presentation goes away.
                     item = try await service.addIdentifyItem(entityID: entityID)
-                    shouldStartSearch = true
                 }
 
                 replace(item)
                 select(entityID)
-                isLoading = false
+                await loadSelectedEntityDetail()
 
-                do {
-                    let nextProviders = try await service.identifyProviders(kind: item.entityKind.rawValue)
-                    if providers != nextProviders {
-                        providers = nextProviders
-                    }
-                    reconcileProvider()
-                } catch is CancellationError {
-                    return
-                } catch {
-                    // Initial providers from the entry availability check remain usable.
-                }
-
-                guard shouldStartSearch else { return }
-                isSearching = true
-                defer { isSearching = false }
-                _ = await searchAndPoll(
-                    entityID: entityID,
-                    provider: nil,
-                    query: nil
+                async let loadedProviders = loadProviders(kind: item.entityKind.rawValue)
+                async let loadedDefaults = loadDefaultProviderIDs()
+                let (nextProviders, nextDefaults) = await (
+                    loadedProviders,
+                    loadedDefaults
                 )
+                if let nextProviders, providers != nextProviders {
+                    providers = nextProviders
+                }
+                if let nextDefaults, defaultProviderIDs != nextDefaults {
+                    defaultProviderIDs = nextDefaults
+                }
+                reconcileProvider(preferConfiguredDefault: true)
             } catch is CancellationError {
-                isLoading = false
+                return
             } catch {
-                isLoading = false
                 errorMessage = error.localizedDescription
             }
         }
@@ -420,13 +467,45 @@ import Observation
             }
         }
 
-        func reviewAll() { select(reviewableIDs.first) }
-        func selectNext() { select(IdentifyNextFlow.next(after: selectedItemID, in: reviewableIDs)) }
-        func selectPrevious() { select(IdentifyNextFlow.previous(before: selectedItemID, in: reviewableIDs)) }
+        func reviewAll() {
+            select(reviewableIDs.first)
+            loadSelectedEntityDetailInBackground()
+        }
+
+        func selectNext() {
+            select(IdentifyNextFlow.next(after: selectedItemID, in: reviewableIDs))
+            loadSelectedEntityDetailInBackground()
+        }
+
+        func selectPrevious() {
+            select(IdentifyNextFlow.previous(before: selectedItemID, in: reviewableIDs))
+            loadSelectedEntityDetailInBackground()
+        }
+
         func returnToSearch() { showsSearchForProposal = true }
 
         func cancelPolling() {
             pollingToken = UUID()
+        }
+
+        func loadSelectedEntityDetail() async {
+            guard let item = selectedItem,
+                entityDetailsByID[item.entityID] == nil,
+                entityDetailLoadingIDs.insert(item.entityID).inserted
+            else { return }
+            defer { entityDetailLoadingIDs.remove(item.entityID) }
+
+            do {
+                entityDetailsByID[item.entityID] = try await browser.detail(
+                    entityID: item.entityID,
+                    kind: item.entityKind
+                )
+            } catch is CancellationError {
+                return
+            } catch {
+                // Queue content remains usable when the optional visual context
+                // cannot be loaded.
+            }
         }
 
         private func beginSearch(entityID: UUID, provider: String?, query: AdministrativeIdentifyQuery?) async {
@@ -521,7 +600,8 @@ import Observation
 
         private func receiveQueueRefresh(_ nextQueue: [AdministrativeIdentifyQueueItem]) {
             guard queue != nextQueue else { return }
-            let previousProposalID = selectedItem?.proposal?.proposalID
+            let previousProposal = selectedItem?.proposal
+            let previousProposalID = previousProposal?.proposalID
             queue = nextQueue
 
             let validSelection = selectedQueueIDs.intersection(Set(nextQueue.map(\.entityID)))
@@ -537,27 +617,45 @@ import Observation
             if previousProposalID != refreshedItem.proposal?.proposalID {
                 select(selectedItemID)
             } else {
+                if let proposal = refreshedItem.proposal {
+                    reviewSelection = MetadataReviewPolicy.mergingSeededDefaults(
+                        from: previousProposal,
+                        to: proposal,
+                        into: reviewSelection
+                    )
+                }
                 reconcileProvider()
             }
         }
 
         private func reconcileProvider() {
+            reconcileProvider(preferConfiguredDefault: false)
+        }
+
+        private func reconcileProvider(preferConfiguredDefault: Bool) {
             guard let item = selectedItem else { return }
-            let eligible = PluginSearchFieldPolicy.eligibleProviders(
-                providers, entityKind: item.entityKind.rawValue, hidesNsfw: hidesNsfw)
-            if !eligible.contains(where: { $0.id == selectedProviderID }) {
+            let eligible = RequestIdentifyProviderPreferencePolicy.eligibleProviders(
+                providers,
+                entityKind: item.entityKind.rawValue,
+                defaultProviderIDs: defaultProviderIDs,
+                hidesNsfw: hidesNsfw
+            )
+            if preferConfiguredDefault
+                || !eligible.contains(where: {
+                    $0.id.caseInsensitiveCompare(selectedProviderID) == .orderedSame
+                })
+            {
                 selectedProviderID = eligible.first?.id ?? ""
             }
         }
 
         private func reconcileBrowseProvider(for kind: EntityKind) {
-            let eligible = providers.filter { provider in
-                provider.installed && provider.enabled && provider.missingAuthKeys.isEmpty
-                    && (!hidesNsfw || !provider.isNsfw)
-                    && provider.supports.contains {
-                        $0.entityKind == kind.rawValue && IdentifyProviderPolicy.supportsIdentify($0)
-                    }
-            }
+            let eligible = RequestIdentifyProviderPreferencePolicy.eligibleProviders(
+                providers,
+                entityKind: kind.rawValue,
+                defaultProviderIDs: defaultProviderIDs,
+                hidesNsfw: hidesNsfw
+            )
             if !eligible.contains(where: { $0.id == selectedProviderID }) {
                 selectedProviderID = eligible.first?.id ?? ""
             }
@@ -568,7 +666,30 @@ import Observation
             let proposal = queue.first { $0.entityID == entityID }?.proposal
             reviewSelection = proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
             showsSearchForProposal = false
-            reconcileProvider()
+            reconcileProvider(preferConfiguredDefault: true)
+        }
+
+        private func loadSelectedEntityDetailInBackground() {
+            Task { await loadSelectedEntityDetail() }
+        }
+
+        private func loadDefaultProviderIDs() async -> [String: String]? {
+            do {
+                let response = try await service.settingValues(
+                    keys: [RequestIdentifyProviderPreferencePolicy.settingKey]
+                )
+                return RequestIdentifyProviderPreferencePolicy.defaults(from: response)
+            } catch {
+                return nil
+            }
+        }
+
+        private func loadProviders(kind: String?) async -> [AdministrativePlugin]? {
+            do {
+                return try await service.identifyProviders(kind: kind)
+            } catch {
+                return nil
+            }
         }
     }
 #endif

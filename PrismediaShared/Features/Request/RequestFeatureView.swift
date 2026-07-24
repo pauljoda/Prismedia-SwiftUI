@@ -9,6 +9,7 @@ import SwiftUI
         @Binding private var kind: RequestKindDefinition
         @State private var reviewRoute: RequestReviewRoute?
         @State private var providers: [AdministrativePlugin] = []
+        @State private var defaultProviderIDs: [String: String] = [:]
         @State private var selectedProviderID = ""
         @State private var fieldValues: [String: String] = [:]
         @State private var results: [AdministrativeRequestSearchResult] = []
@@ -60,6 +61,7 @@ import SwiftUI
                 entityKind: kind.pluginEntityKind,
                 hidesNsfw: hidesNsfw,
                 providers: providers,
+                preferredProviderID: preferredProviderID,
                 selectedProviderID: $selectedProviderID,
                 values: $fieldValues,
                 candidates: candidates,
@@ -131,6 +133,8 @@ import SwiftUI
             }
             do {
                 providers = try await service.providers()
+                defaultProviderIDs = (try? await service.defaultProviderIDs()) ?? [:]
+                reconcileProviderSelection(preferConfiguredDefault: true)
                 reconcileSearchPhase()
             } catch {
                 errorMessage = error.localizedDescription
@@ -213,6 +217,7 @@ import SwiftUI
 
         private func resetForKindChange() {
             selectedProviderID = ""
+            reconcileProviderSelection(preferConfiguredDefault: true)
             fieldValues = [:]
             invalidateSearch()
         }
@@ -253,11 +258,35 @@ import SwiftUI
         }
 
         private var hasReadyProvider: Bool {
-            !PluginSearchFieldPolicy.eligibleProviders(
+            !eligibleProviders.isEmpty
+        }
+
+        private var eligibleProviders: [AdministrativePlugin] {
+            RequestIdentifyProviderPreferencePolicy.eligibleProviders(
                 providers,
                 entityKind: kind.pluginEntityKind,
+                defaultProviderIDs: defaultProviderIDs,
                 hidesNsfw: hidesNsfw
-            ).isEmpty
+            )
+        }
+
+        private var preferredProviderID: String? {
+            RequestIdentifyProviderPreferencePolicy.defaultProviderID(
+                for: kind.pluginEntityKind,
+                in: defaultProviderIDs
+            )
+        }
+
+        private func reconcileProviderSelection(
+            preferConfiguredDefault: Bool = false
+        ) {
+            guard
+                preferConfiguredDefault
+                    || !eligibleProviders.contains(where: { $0.id == selectedProviderID })
+            else {
+                return
+            }
+            selectedProviderID = eligibleProviders.first?.id ?? ""
         }
     }
 

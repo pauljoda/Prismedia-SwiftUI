@@ -8,9 +8,28 @@ import SwiftUI
         let selectableIDs: Set<String>
         let onSetSelected: ((String, Bool) -> Void)?
         let onActivate: ((AdministrativeEntityMetadataProposal) -> Void)?
+        @State private var isExpanded: Bool
+
+        init(
+            title: String,
+            nodes: [AdministrativeEntityMetadataProposal],
+            selectedIDs: Set<String>,
+            selectableIDs: Set<String>,
+            startsExpanded: Bool = true,
+            onSetSelected: ((String, Bool) -> Void)?,
+            onActivate: ((AdministrativeEntityMetadataProposal) -> Void)?
+        ) {
+            self.title = title
+            self.nodes = nodes
+            self.selectedIDs = selectedIDs
+            self.selectableIDs = selectableIDs
+            self.onSetSelected = onSetSelected
+            self.onActivate = onActivate
+            _isExpanded = State(initialValue: startsExpanded)
+        }
 
         var body: some View {
-            DisclosureGroup {
+            DisclosureGroup(isExpanded: $isExpanded) {
                 LazyVStack(spacing: 0) {
                     ForEach(nodes, id: \.proposalID) { node in
                         MetadataProposalNodeRow(
@@ -34,18 +53,6 @@ import SwiftUI
                     Text(selectionSummary)
                         .font(.caption)
                         .foregroundStyle(PrismediaColor.textSecondary)
-                    if let onSetSelected, !selectableIDs.isEmpty {
-                        Button("All") {
-                            for id in selectableIDs { onSetSelected(id, true) }
-                        }
-                        .font(.caption)
-                        .buttonStyle(.borderless)
-                        Button("None") {
-                            for id in selectableIDs { onSetSelected(id, false) }
-                        }
-                        .font(.caption)
-                        .buttonStyle(.borderless)
-                    }
                 }
             }
         }

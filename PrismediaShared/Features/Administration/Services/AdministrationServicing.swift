@@ -58,6 +58,7 @@ public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable
     func clearFailures(type: String?) async throws -> Int
     func rebuildPreviews() async throws -> AdministrativeBulkJobResponse
     func settings() async throws -> AdministrativeSettingsCatalog
+    func settingValues(keys: [String]) async throws -> AdministrativeSettingsValuesResponse
     func updateSetting(key: String, value: AdministrativeJSONValue) async throws -> AdministrativeSetting
     func transcodeCacheStatus() async throws -> AdministrativeTranscodeCacheStatus
     func clearTranscodeCache() async throws -> AdministrativeTranscodeCacheStatus

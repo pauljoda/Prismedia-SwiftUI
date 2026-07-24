@@ -44,14 +44,8 @@ import SwiftUI
                 }
                 await observeQueuedWork()
             }
-            .onChange(
-                of: session.selectedItem?.proposal?.proposalID,
-                initial: true
-            ) { _, proposalID in
-                guard proposalID != nil,
-                    !session.showsSearchForProposal,
-                    path.last != .identifyReview
-                else { return }
+            .onChange(of: shouldPresentReview, initial: true) { _, shouldPresent in
+                guard shouldPresent, path.last != .identifyReview else { return }
                 path.append(.identifyReview)
             }
             .onChange(of: session.showsSearchForProposal) {
@@ -162,6 +156,17 @@ import SwiftUI
             case .unknown(let value):
                 return .unknown(value)
             }
+        }
+
+        private var shouldPresentReview: Bool {
+            guard let item = session.selectedItem else { return false }
+            return IdentifyReviewRoutingPolicy.shouldPresentReview(
+                queueState: IdentifyQueueState(rawServerValue: item.state),
+                hasProposal: item.proposal != nil,
+                explicitlyShowsSearch: session.showsSearchForProposal,
+                isSearching: session.isSearching,
+                isSeeking: session.isSeeking
+            )
         }
 
         @MainActor

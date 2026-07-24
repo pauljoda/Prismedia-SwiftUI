@@ -4,7 +4,8 @@ public enum PluginSearchFieldPolicy {
     public static func eligibleProviders(
         _ providers: [AdministrativePlugin],
         entityKind: String,
-        hidesNsfw: Bool
+        hidesNsfw: Bool,
+        preferredProviderID: String? = nil
     ) -> [AdministrativePlugin] {
         providers
             .filter { provider in
@@ -14,7 +15,14 @@ public enum PluginSearchFieldPolicy {
                     && (!hidesNsfw || !provider.isNsfw)
                     && support(in: provider, entityKind: entityKind) != nil
             }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            .sorted { left, right in
+                let leftIsPreferred = providerIDsEqual(left.id, preferredProviderID)
+                let rightIsPreferred = providerIDsEqual(right.id, preferredProviderID)
+                if leftIsPreferred != rightIsPreferred {
+                    return leftIsPreferred
+                }
+                return left.name.localizedStandardCompare(right.name) == .orderedAscending
+            }
     }
 
     public static func support(
@@ -85,5 +93,10 @@ public enum PluginSearchFieldPolicy {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func providerIDsEqual(_ lhs: String, _ rhs: String?) -> Bool {
+        guard let rhs else { return false }
+        return lhs.caseInsensitiveCompare(rhs) == .orderedSame
     }
 }

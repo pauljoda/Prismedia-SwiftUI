@@ -10,6 +10,8 @@ import SwiftUI
         let selectedProposalIDs: Set<String>
         let selectableProposalIDs: Set<String>
         let childrenTitle: String
+        let displayedChildren: [AdministrativeEntityMetadataProposal]?
+        let existingTagTitles: Set<String>
         let onSetProposalSelected: ((String, Bool) -> Void)?
         let onActivateProposal: ((AdministrativeEntityMetadataProposal) -> Void)?
 
@@ -22,6 +24,8 @@ import SwiftUI
             selectedProposalIDs: Set<String> = [],
             selectableProposalIDs: Set<String> = [],
             childrenTitle: String = "Items",
+            displayedChildren: [AdministrativeEntityMetadataProposal]? = nil,
+            existingTagTitles: Set<String> = [],
             onSetProposalSelected: ((String, Bool) -> Void)? = nil,
             onActivateProposal: ((AdministrativeEntityMetadataProposal) -> Void)? = nil
         ) {
@@ -33,6 +37,8 @@ import SwiftUI
             self.selectedProposalIDs = selectedProposalIDs
             self.selectableProposalIDs = selectableProposalIDs
             self.childrenTitle = childrenTitle
+            self.displayedChildren = displayedChildren
+            self.existingTagTitles = existingTagTitles
             self.onSetProposalSelected = onSetProposalSelected
             self.onActivateProposal = onActivateProposal
         }
@@ -47,10 +53,19 @@ import SwiftUI
                 MetadataProposalFieldsView(
                     proposal: proposal,
                     selection: selection,
-                    currentValues: currentValues
+                    currentValues: currentValues,
+                    excludedFields: separatelyReviewedFields
                 )
                 if let selection, !proposal.images.isEmpty {
                     MetadataArtworkPicker(proposal: proposal, selection: selection)
+                }
+                if let selection, !looseTags.isEmpty {
+                    MetadataProposalTagsView(
+                        proposalID: proposal.proposalID,
+                        tags: looseTags,
+                        existingTagTitles: existingTagTitles,
+                        selection: selection
+                    )
                 }
                 if !children.isEmpty {
                     MetadataProposalNodesView(
@@ -66,9 +81,9 @@ import SwiftUI
                     MetadataProposalNodesView(
                         title: "Related Metadata",
                         nodes: relationships,
-                        selectedIDs: [],
-                        selectableIDs: [],
-                        onSetSelected: nil,
+                        selectedIDs: selectedProposalIDs,
+                        selectableIDs: selectableProposalIDs,
+                        onSetSelected: onSetProposalSelected,
                         onActivate: onActivateProposal
                     )
                 }
@@ -79,11 +94,39 @@ import SwiftUI
         }
 
         private var children: [AdministrativeEntityMetadataProposal] {
-            MetadataReviewPolicy.structuralChildren(of: proposal)
+            displayedChildren ?? MetadataReviewPolicy.structuralChildren(of: proposal)
         }
 
         private var relationships: [AdministrativeEntityMetadataProposal] {
             MetadataReviewPolicy.relationships(of: proposal)
+        }
+
+        private var looseTags: [String] {
+            let relationshipTitles = relationships.compactMap { relationship -> String? in
+                guard relationship.targetKind.caseInsensitiveCompare("tag") == .orderedSame else {
+                    return nil
+                }
+                return relationship.patch.title
+            }
+            return Array(Set(proposal.patch.tags)).filter { tag in
+                !relationshipTitles.contains {
+                    $0.caseInsensitiveCompare(tag) == .orderedSame
+                }
+            }.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        }
+
+        private var separatelyReviewedFields: Set<MetadataReviewField> {
+            guard selection != nil else { return [] }
+            var fields = Set<MetadataReviewField>()
+            if !proposal.images.isEmpty { fields.insert(.images) }
+            if !proposal.patch.tags.isEmpty { fields.insert(.tags) }
+            if relationships.contains(where: { $0.targetKind.caseInsensitiveCompare("person") == .orderedSame }) {
+                fields.insert(.credits)
+            }
+            if relationships.contains(where: { $0.targetKind.caseInsensitiveCompare("studio") == .orderedSame }) {
+                fields.insert(.studio)
+            }
+            return fields
         }
     }
 

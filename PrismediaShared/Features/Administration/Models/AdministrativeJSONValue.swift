@@ -3,6 +3,7 @@ import Foundation
 public enum AdministrativeJSONValue: Codable, Hashable, Sendable {
     case string(String)
     case stringList([String])
+    case stringMap([String: String])
     case weightedTermList([SubtitlePreferenceTerm])
     case bool(Bool)
     case number(Double)
@@ -13,6 +14,8 @@ public enum AdministrativeJSONValue: Codable, Hashable, Sendable {
         let container = try decoder.singleValueContainer()
         if container.decodeNil() {
             self = .null
+        } else if let value = try? container.decode([String: String].self) {
+            self = .stringMap(value)
         } else if let value = try? container.decode([SubtitlePreferenceTerm].self) {
             self = .weightedTermList(value)
         } else if let value = try? container.decode([String].self) {
@@ -33,6 +36,7 @@ public enum AdministrativeJSONValue: Codable, Hashable, Sendable {
         switch self {
         case .string(let value): try container.encode(value)
         case .stringList(let value): try container.encode(value)
+        case .stringMap(let value): try container.encode(value)
         case .weightedTermList(let value): try container.encode(value)
         case .bool(let value): try container.encode(value)
         case .number(let value):
@@ -48,6 +52,7 @@ public enum AdministrativeJSONValue: Codable, Hashable, Sendable {
         switch self {
         case .string(let value): value
         case .stringList(let value): value.joined(separator: ", ")
+        case .stringMap(let value): "\(value.count) default\(value.count == 1 ? "" : "s")"
         case .weightedTermList(let value): "\(value.count) term\(value.count == 1 ? "" : "s")"
         case .bool(let value): value ? "On" : "Off"
         case .number(let value): value.formatted()
@@ -59,7 +64,7 @@ public enum AdministrativeJSONValue: Codable, Hashable, Sendable {
     public var isEditableScalar: Bool {
         switch self {
         case .string, .stringList, .weightedTermList, .bool, .number: true
-        case .null, .unsupported: false
+        case .stringMap, .null, .unsupported: false
         }
     }
 
@@ -80,6 +85,11 @@ public enum AdministrativeJSONValue: Codable, Hashable, Sendable {
 
     public var stringListValue: [String]? {
         guard case .stringList(let value) = self else { return nil }
+        return value
+    }
+
+    public var stringMapValue: [String: String]? {
+        guard case .stringMap(let value) = self else { return nil }
         return value
     }
 

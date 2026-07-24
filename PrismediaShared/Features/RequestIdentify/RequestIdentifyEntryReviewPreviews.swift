@@ -125,6 +125,37 @@
         )
     }
 
+    #Preview("Request & Identify Review · Entry · Target Thumbnail") {
+        PreviewShell {
+            IdentifyTargetContextBar(
+                item: IdentifyPreviewFixtures.cascadeItem,
+                thumbnail: IdentifyPreviewFixtures.cascadeDetail.identifyThumbnail,
+                startsExpanded: true
+            )
+            .padding()
+        }
+    }
+
+    #Preview("Request & Identify Review · Entry · Child Cascade") {
+        let session = IdentifySession(
+            service: AdministrativePreviewService(),
+            browser: IdentifyPreviewEntityBrowser(),
+            initialQueue: [IdentifyPreviewFixtures.cascadeItem],
+            initialProviders: [IdentifyPreviewFixtures.provider],
+            initialEntityDetail: IdentifyPreviewFixtures.cascadeDetail
+        )
+        PreviewShell {
+            NavigationStack {
+                IdentifyProposalReviewPage(
+                    session: session,
+                    item: IdentifyPreviewFixtures.cascadeItem,
+                    proposal: IdentifyPreviewFixtures.cascadeProposal,
+                    isRoot: true
+                )
+            }
+        }
+    }
+
     #Preview("Request & Identify Review · Entry · Committing") {
         RequestIdentifyFlowSheet(
             mode: .identify,

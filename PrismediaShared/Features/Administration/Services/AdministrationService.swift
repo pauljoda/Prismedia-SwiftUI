@@ -169,6 +169,9 @@ public struct AdministrationService: AdministrationServicing {
     public func settings() async throws -> AdministrativeSettingsCatalog {
         try await client.loadAdministrativeSettings()
     }
+    public func settingValues(keys: [String]) async throws -> AdministrativeSettingsValuesResponse {
+        try await client.loadAdministrativeSettingValues(keys: keys)
+    }
     public func updateSetting(key: String, value: AdministrativeJSONValue) async throws -> AdministrativeSetting {
         try await client.updateAdministrativeSetting(key: key, value: value)
     }

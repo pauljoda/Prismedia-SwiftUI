@@ -203,6 +203,9 @@ import Foundation
                 )
             ])
         }
+        func settingValues(keys: [String]) async throws -> AdministrativeSettingsValuesResponse {
+            AdministrativeSettingsValuesResponse(values: [:])
+        }
         func updateSetting(key: String, value: AdministrativeJSONValue) async throws -> AdministrativeSetting {
             Self.setting
         }

@@ -18,10 +18,73 @@ public enum MetadataReviewPolicy {
         return selection
     }
 
+    public static func mergingSeededDefaults(
+        from previousProposal: AdministrativeEntityMetadataProposal?,
+        to proposal: AdministrativeEntityMetadataProposal,
+        into selection: MetadataReviewSelection
+    ) -> MetadataReviewSelection {
+        let previousDefaults =
+            previousProposal.map(seededSelection(for:))
+            ?? MetadataReviewSelection()
+        let defaults = seededSelection(for: proposal)
+        var merged = selection
+
+        mergeNewDefaults(
+            previous: previousDefaults.selectedFieldsByProposal,
+            current: defaults.selectedFieldsByProposal,
+            selection: &merged.selectedFieldsByProposal
+        )
+        mergeNewDefaults(
+            previous: previousDefaults.selectedTagsByProposal,
+            current: defaults.selectedTagsByProposal,
+            selection: &merged.selectedTagsByProposal
+        )
+        mergeNewDefaults(
+            previous: previousDefaults.selectedCreditsByProposal,
+            current: defaults.selectedCreditsByProposal,
+            selection: &merged.selectedCreditsByProposal
+        )
+
+        for (proposalID, images) in defaults.selectedImagesByProposal {
+            let previousImages = previousDefaults.selectedImagesByProposal[proposalID] ?? [:]
+            var selectedImages = merged.selectedImagesByProposal[proposalID] ?? [:]
+            for (kind, imageURL) in images {
+                if let previousURL = previousImages[kind] {
+                    if selectedImages[kind] == previousURL {
+                        selectedImages[kind] = imageURL
+                    }
+                } else if selectedImages[kind] == nil {
+                    selectedImages[kind] = imageURL
+                }
+            }
+            merged.selectedImagesByProposal[proposalID] = selectedImages
+        }
+
+        return merged
+    }
+
     public static func structuralChildren(
         of proposal: AdministrativeEntityMetadataProposal
     ) -> [AdministrativeEntityMetadataProposal] {
         unique(proposal.children.filter { !isRelationshipKind($0.targetKind) })
+    }
+
+    public static func structuralDescendants(
+        of proposal: AdministrativeEntityMetadataProposal
+    ) -> [AdministrativeEntityMetadataProposal] {
+        var descendants: [AdministrativeEntityMetadataProposal] = []
+        var seen = Set<String>()
+
+        func appendChildren(of parent: AdministrativeEntityMetadataProposal) {
+            for child in structuralChildren(of: parent)
+            where seen.insert(child.proposalID).inserted {
+                descendants.append(child)
+                appendChildren(of: child)
+            }
+        }
+
+        appendChildren(of: proposal)
+        return descendants
     }
 
     public static func relationships(
@@ -169,6 +232,54 @@ public enum MetadataReviewPolicy {
         selection.selectedImagesByProposal[proposal.proposalID] ?? [:]
     }
 
+    public static func setProposal(
+        _ proposalID: String,
+        selected: Bool,
+        within parent: AdministrativeEntityMetadataProposal,
+        selection: inout MetadataReviewSelection
+    ) {
+        if selected {
+            selection.excludedProposalIDs.remove(proposalID)
+        } else {
+            selection.excludedProposalIDs.insert(proposalID)
+        }
+
+        guard let proposal = proposal(withID: proposalID, in: parent),
+            let title = proposal.patch.title?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !title.isEmpty
+        else { return }
+
+        switch proposal.targetKind.lowercased() {
+        case "tag":
+            update(
+                title,
+                selected: selected,
+                values: &selection.selectedTagsByProposal[parent.proposalID]
+            )
+        case "person":
+            let matchingKeys = parent.patch.credits.enumerated().compactMap { index, credit in
+                credit.name.caseInsensitiveCompare(title) == .orderedSame
+                    ? creditKey(credit, index: index)
+                    : nil
+            }
+            for key in matchingKeys {
+                update(
+                    key,
+                    selected: selected,
+                    values: &selection.selectedCreditsByProposal[parent.proposalID]
+                )
+            }
+        case "studio":
+            update(
+                .studio,
+                selected: selected,
+                values: &selection.selectedFieldsByProposal[parent.proposalID]
+            )
+        default:
+            break
+        }
+    }
+
     public static func creditKey(
         _ credit: AdministrativeCreditPatch,
         index: Int
@@ -236,5 +347,32 @@ public enum MetadataReviewPolicy {
 
     private static func entries<T>(_ values: [String: T]) -> String {
         values.keys.sorted().map { "\($0): \(values[$0]!)" }.joined(separator: ", ")
+    }
+
+    private static func update<Value: Hashable>(
+        _ value: Value,
+        selected: Bool,
+        values: inout Set<Value>?
+    ) {
+        var updated = values ?? []
+        if selected {
+            updated.insert(value)
+        } else {
+            updated.remove(value)
+        }
+        values = updated
+    }
+
+    private static func mergeNewDefaults<Value: Hashable>(
+        previous: [String: Set<Value>],
+        current: [String: Set<Value>],
+        selection: inout [String: Set<Value>]
+    ) {
+        for (proposalID, currentDefaults) in current {
+            let previousDefaults = previous[proposalID] ?? []
+            var selectedValues = selection[proposalID] ?? []
+            selectedValues.formUnion(currentDefaults.subtracting(previousDefaults))
+            selection[proposalID] = selectedValues
+        }
     }
 }

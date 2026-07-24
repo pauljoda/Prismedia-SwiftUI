@@ -334,6 +334,16 @@ extension PrismediaAPIClient {
         try await send(AdministrativeSettingsCatalog.self, path: "/api/settings/")
     }
 
+    public func loadAdministrativeSettingValues(
+        keys: [String]
+    ) async throws -> AdministrativeSettingsValuesResponse {
+        try await send(
+            AdministrativeSettingsValuesResponse.self,
+            path: "/api/settings/values",
+            queryItems: keys.map { URLQueryItem(name: "keys", value: $0) }
+        )
+    }
+
     public func updateAdministrativeSetting(key: String, value: AdministrativeJSONValue) async throws
         -> AdministrativeSetting
     {

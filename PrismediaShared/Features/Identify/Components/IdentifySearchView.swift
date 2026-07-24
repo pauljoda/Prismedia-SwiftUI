@@ -13,6 +13,7 @@ import SwiftUI
                 hidesNsfw: session.hidesNsfw,
                 seedTitle: item.title,
                 providers: session.providers,
+                preferredProviderID: session.defaultProviderID(for: item.entityKind),
                 selectedProviderID: $session.selectedProviderID,
                 values: $session.searchValues,
                 candidates: item.candidates,
@@ -40,9 +41,16 @@ import SwiftUI
                 isSeeking: session.isSeeking
             )
             .safeAreaInset(edge: .top, spacing: 0) {
-                IdentifyTargetContextBar(item: item)
-                    .padding(.horizontal)
-                    .padding(.bottom, PrismediaSpacing.small)
+                IdentifyTargetContextBar(
+                    item: item,
+                    thumbnail: session.selectedEntityThumbnail,
+                    isLoading: session.isLoadingSelectedEntityDetail
+                )
+                .padding(.horizontal)
+                .padding(.bottom, PrismediaSpacing.small)
+            }
+            .task(id: item.entityID) {
+                await session.loadSelectedEntityDetail()
             }
         }
     }

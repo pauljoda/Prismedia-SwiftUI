@@ -14,5 +14,12 @@ import Foundation
                 search: search
             )
         }
+
+        public func detail(
+            entityID: UUID,
+            kind: EntityKind
+        ) async throws -> EntityDetail {
+            try await client.fetchEntity(id: entityID, kind: kind)
+        }
     }
 #endif

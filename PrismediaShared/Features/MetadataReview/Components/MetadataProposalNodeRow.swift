@@ -11,18 +11,6 @@ import SwiftUI
 
         var body: some View {
             HStack(spacing: PrismediaSpacing.small) {
-                if isSelectable, onActivate != nil {
-                    Button {
-                        onSetSelected?(!isSelected)
-                    } label: {
-                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(isSelected ? artworkPrimaryAccent : PrismediaColor.textMuted)
-                    .accessibilityLabel(isSelected ? "Exclude proposal" : "Include proposal")
-                }
-
                 if let onActivate {
                     Button {
                         onActivate(proposal)
@@ -43,6 +31,18 @@ import SwiftUI
                 } else {
                     nodeLabel(trailingSymbol: nil)
                 }
+
+                if isSelectable, onActivate != nil {
+                    Button {
+                        onSetSelected?(!isSelected)
+                    } label: {
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isSelected ? artworkPrimaryAccent : PrismediaColor.textMuted)
+                    .accessibilityLabel(isSelected ? "Exclude proposal" : "Include proposal")
+                }
             }
             .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
@@ -61,9 +61,21 @@ import SwiftUI
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                         Text(proposal.patch.title ?? "Untitled")
                             .foregroundStyle(PrismediaColor.textPrimary)
-                        Text(proposal.targetKind)
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.textSecondary)
+                        HStack(spacing: PrismediaSpacing.small) {
+                            Text(proposal.targetKind)
+                            Text(proposal.targetEntityID == nil ? "New" : "Match")
+                                .padding(.horizontal, PrismediaSpacing.small)
+                                .padding(.vertical, 2)
+                                .background(PrismediaColor.controlFill)
+                                .clipShape(.capsule)
+                                .foregroundStyle(
+                                    proposal.targetEntityID == nil
+                                        ? artworkPrimaryAccent
+                                        : PrismediaColor.textSecondary
+                                )
+                        }
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
                     }
 
                     Spacer()

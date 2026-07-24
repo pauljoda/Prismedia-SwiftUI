@@ -52,6 +52,21 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
         XCTAssertEqual(setting.controlKind, .weightedTermList)
     }
 
+    func testDecodesStringMapProviderDefaults() throws {
+        let data = Data(
+            #"{"key":"identify.defaultProviders","groupKey":"identify","label":"Default metadata providers","description":"Provider defaults by kind.","type":"stringMap","value":{"movie":"tmdb","book":"openlibrary"},"defaultValue":{},"isDefault":false,"order":10,"constraints":null,"options":[],"inputKind":null,"applyHint":null}"#
+                .utf8
+        )
+
+        let setting = try JSONDecoder().decode(AdministrativeSetting.self, from: data)
+
+        XCTAssertEqual(
+            setting.value.stringMapValue,
+            ["movie": "tmdb", "book": "openlibrary"]
+        )
+        XCTAssertEqual(setting.controlKind, .unsupported)
+    }
+
     func testAutoIdentifyKindsUseTheFixedNativeSelectionCatalog() throws {
         let setting = try decodeSetting(
             key: "autoIdentify.entityKinds",

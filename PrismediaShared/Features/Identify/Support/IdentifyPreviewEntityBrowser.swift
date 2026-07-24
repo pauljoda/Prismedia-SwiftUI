@@ -21,5 +21,46 @@ import Foundation
                 return item.title.localizedCaseInsensitiveContains(search)
             }
         }
+
+        func detail(
+            entityID: UUID,
+            kind: EntityKind
+        ) async throws -> EntityDetail {
+            EntityDetail(
+                id: entityID,
+                kind: kind,
+                title: "Unmatched Example",
+                parentEntityID: nil,
+                sortOrder: nil,
+                hasSourceMedia: true,
+                capabilities: [],
+                childrenByKind: [
+                    EntityGroup(
+                        kind: .video,
+                        label: "Episodes",
+                        entities: [
+                            EntityThumbnail(
+                                id: UUID(uuidString: "a1000000-0000-0000-0000-000000000011")!,
+                                kind: .video,
+                                title: "Episode 1",
+                                parentEntityID: entityID,
+                                parentKind: kind,
+                                hasSourceMedia: true
+                            ),
+                            EntityThumbnail(
+                                id: UUID(uuidString: "a1000000-0000-0000-0000-000000000012")!,
+                                kind: .video,
+                                title: "Episode 2",
+                                parentEntityID: entityID,
+                                parentKind: kind,
+                                hasSourceMedia: true
+                            ),
+                        ],
+                        code: nil
+                    )
+                ],
+                relationships: []
+            )
+        }
     }
 #endif

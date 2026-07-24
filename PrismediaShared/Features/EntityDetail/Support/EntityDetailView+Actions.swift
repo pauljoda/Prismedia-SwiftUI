@@ -165,7 +165,8 @@ extension EntityDetailView {
                     browser: identify.browser,
                     hidesNsfw: identify.hidesNsfw,
                     initialQueue: identifyAvailability.initialQueue,
-                    initialProviders: identifyAvailability.initialProviders
+                    initialProviders: identifyAvailability.initialProviders,
+                    initialEntityDetail: detail
                 )
                 identifyPresentation = IdentifyEntryPresentation(
                     entityID: detail.id,

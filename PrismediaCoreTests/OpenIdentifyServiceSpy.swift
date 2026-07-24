@@ -9,11 +9,23 @@ import Foundation
         private var addCalls = 0
         private var searchCalls = 0
         private var queue: [AdministrativeIdentifyQueueItem]
+        private var getItems: [AdministrativeIdentifyQueueItem]?
+        private let providers: [AdministrativePlugin]
+        private let settingValues: [String: AdministrativeJSONValue]
         private var events: [String] = []
 
-        init(item: AdministrativeIdentifyQueueItem, queue: [AdministrativeIdentifyQueueItem] = []) {
+        init(
+            item: AdministrativeIdentifyQueueItem,
+            queue: [AdministrativeIdentifyQueueItem] = [],
+            getItems: [AdministrativeIdentifyQueueItem]? = nil,
+            providers: [AdministrativePlugin] = [],
+            settingValues: [String: AdministrativeJSONValue] = [:]
+        ) {
             self.item = item
             self.queue = queue
+            self.getItems = getItems
+            self.providers = providers
+            self.settingValues = settingValues
         }
 
         func callCounts() -> (get: Int, add: Int, search: Int) { (getCalls, addCalls, searchCalls) }
@@ -21,6 +33,10 @@ import Foundation
         func identifyQueueItem(entityID: UUID) async throws -> AdministrativeIdentifyQueueItem {
             getCalls += 1
             events.append("get")
+            if let next = getItems?.first {
+                getItems?.removeFirst()
+                return next
+            }
             throw PrismediaAPIError.httpStatus(404, nil)
         }
         func addIdentifyItem(entityID: UUID) async throws -> AdministrativeIdentifyQueueItem {
@@ -44,7 +60,7 @@ import Foundation
             throw CancellationError()
         }
         func identifyQueue() async throws -> [AdministrativeIdentifyQueueItem] { queue }
-        func identifyProviders(kind: String?) async throws -> [AdministrativePlugin] { [] }
+        func identifyProviders(kind: String?) async throws -> [AdministrativePlugin] { providers }
         func resolveIdentifyCandidate(entityID: UUID, provider: String, candidate: AdministrativeEntitySearchCandidate)
             async throws -> AdministrativeIdentifyQueueItem
         { throw CancellationError() }
@@ -93,6 +109,11 @@ import Foundation
         func clearFailures(type: String?) async throws -> Int { throw CancellationError() }
         func rebuildPreviews() async throws -> AdministrativeBulkJobResponse { throw CancellationError() }
         func settings() async throws -> AdministrativeSettingsCatalog { throw CancellationError() }
+        func settingValues(keys: [String]) async throws -> AdministrativeSettingsValuesResponse {
+            AdministrativeSettingsValuesResponse(
+                values: settingValues.filter { keys.contains($0.key) }
+            )
+        }
         func updateSetting(key: String, value: AdministrativeJSONValue) async throws -> AdministrativeSetting {
             throw CancellationError()
         }

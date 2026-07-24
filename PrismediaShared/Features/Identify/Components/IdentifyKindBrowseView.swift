@@ -81,9 +81,10 @@ import SwiftUI
         }
 
         private var eligibleProviders: [AdministrativePlugin] {
-            PluginSearchFieldPolicy.eligibleProviders(
+            RequestIdentifyProviderPreferencePolicy.eligibleProviders(
                 session.providers,
                 entityKind: kind.rawValue,
+                defaultProviderIDs: session.defaultProviderIDs,
                 hidesNsfw: session.hidesNsfw
             )
         }
@@ -110,7 +111,8 @@ import SwiftUI
             if context.query.organized == false {
                 return "Showing items that still need metadata. Select items, then choose Identify."
             }
-            return "Select any library items that should be identified with \(selectedProvider?.name ?? "the chosen provider")."
+            return
+                "Select any library items that should be identified with \(selectedProvider?.name ?? "the chosen provider")."
         }
     }
 

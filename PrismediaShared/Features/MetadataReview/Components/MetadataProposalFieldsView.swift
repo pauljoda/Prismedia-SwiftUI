@@ -6,7 +6,20 @@ import SwiftUI
         let proposal: AdministrativeEntityMetadataProposal
         let selection: Binding<MetadataReviewSelection>?
         let currentValues: [MetadataReviewField: String]
+        let excludedFields: Set<MetadataReviewField>
         @State private var isExpanded = true
+
+        init(
+            proposal: AdministrativeEntityMetadataProposal,
+            selection: Binding<MetadataReviewSelection>?,
+            currentValues: [MetadataReviewField: String],
+            excludedFields: Set<MetadataReviewField> = []
+        ) {
+            self.proposal = proposal
+            self.selection = selection
+            self.currentValues = currentValues
+            self.excludedFields = excludedFields
+        }
 
         var body: some View {
             DisclosureGroup(isExpanded: $isExpanded) {
@@ -31,7 +44,8 @@ import SwiftUI
 
         private var visibleFields: [MetadataReviewField] {
             MetadataReviewField.allCases.filter {
-                !MetadataReviewPolicy.fieldValue($0, in: proposal).isEmpty
+                !excludedFields.contains($0)
+                    && !MetadataReviewPolicy.fieldValue($0, in: proposal).isEmpty
             }
         }
 

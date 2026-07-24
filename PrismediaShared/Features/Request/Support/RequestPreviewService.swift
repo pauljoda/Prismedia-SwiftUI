@@ -18,6 +18,10 @@ import Foundation
             }
         }
 
+        func defaultProviderIDs() async throws -> [String: String] {
+            [:]
+        }
+
         func search(
             kind: String,
             pluginID: String,

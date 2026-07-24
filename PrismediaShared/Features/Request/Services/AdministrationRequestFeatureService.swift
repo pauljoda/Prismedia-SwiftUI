@@ -11,6 +11,13 @@ public struct AdministrationRequestFeatureService: RequestFeatureServicing {
         try await administration.plugins()
     }
 
+    public func defaultProviderIDs() async throws -> [String: String] {
+        let response = try await administration.settingValues(
+            keys: [RequestIdentifyProviderPreferencePolicy.settingKey]
+        )
+        return RequestIdentifyProviderPreferencePolicy.defaults(from: response)
+    }
+
     public func search(
         kind: String,
         pluginID: String,

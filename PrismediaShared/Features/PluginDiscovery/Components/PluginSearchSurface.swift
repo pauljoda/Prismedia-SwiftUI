@@ -11,6 +11,7 @@ import SwiftUI
         private let hidesNsfw: Bool
         private let seedTitle: String
         private let providers: [AdministrativePlugin]
+        private let preferredProviderID: String?
         @Binding private var selectedProviderID: String
         @Binding private var values: [String: String]
         private let candidates: [AdministrativeEntitySearchCandidate]
@@ -43,6 +44,7 @@ import SwiftUI
             hidesNsfw: Bool,
             seedTitle: String = "",
             providers: [AdministrativePlugin],
+            preferredProviderID: String? = nil,
             selectedProviderID: Binding<String>,
             values: Binding<[String: String]>,
             candidates: [AdministrativeEntitySearchCandidate] = [],
@@ -74,6 +76,7 @@ import SwiftUI
             self.hidesNsfw = hidesNsfw
             self.seedTitle = seedTitle
             self.providers = providers
+            self.preferredProviderID = preferredProviderID
             _selectedProviderID = selectedProviderID
             _values = values
             self.candidates = candidates
@@ -321,7 +324,8 @@ import SwiftUI
             PluginSearchFieldPolicy.eligibleProviders(
                 providers,
                 entityKind: entityKind,
-                hidesNsfw: hidesNsfw
+                hidesNsfw: hidesNsfw,
+                preferredProviderID: preferredProviderID
             )
         }
 
