@@ -97,6 +97,7 @@ import SwiftUI
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Search", systemImage: "chevron.left") {
+                                session.returnToSearch()
                                 path.removeLast()
                             }
                             .disabled(phase.locksDismissal)
@@ -133,7 +134,7 @@ import SwiftUI
             guard let item = session.selectedItem else {
                 return session.errorMessage == nil ? .initialDependencyLoading : .reviewError
             }
-            if session.isSearching || session.isSeeking {
+            if session.isSearchBusy {
                 return .searching
             }
             if session.errorMessage != nil {
@@ -164,7 +165,10 @@ import SwiftUI
                 queueState: IdentifyQueueState(rawServerValue: item.state),
                 hasProposal: item.proposal != nil,
                 explicitlyShowsSearch: session.showsSearchForProposal,
-                isSearching: session.isSearching,
+                isSearching: session.isSearching
+                    || session.isLoadingMore
+                    || session.isRescanning
+                    || session.isResolving,
                 isSeeking: session.isSeeking
             )
         }
@@ -199,7 +203,7 @@ import SwiftUI
                 guard state == .queued || state == .searching || state == .applying else {
                     return
                 }
-                guard !session.isSearching, !session.isApplying else { continue }
+                guard !session.isSearchBusy, !session.isApplying else { continue }
                 await session.refreshSelectedItem()
             }
         }

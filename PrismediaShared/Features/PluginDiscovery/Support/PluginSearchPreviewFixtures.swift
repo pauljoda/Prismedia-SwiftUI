@@ -55,6 +55,50 @@ import Foundation
             availableVersion: nil
         )
 
+        static let schemaProvider = AdministrativePlugin(
+            id: "schema",
+            name: "Schema Provider",
+            version: "1.0.0",
+            installed: true,
+            enabled: true,
+            isNsfw: false,
+            supports: [
+                AdministrativePluginSupport(
+                    entityKind: "movie",
+                    actions: ["search", "lookup-id"],
+                    search: AdministrativePluginSearchDefinition(fields: [
+                        AdministrativePluginSearchField(
+                            key: "query",
+                            label: "Title",
+                            type: "text",
+                            required: true,
+                            placeholder: "Arrival",
+                            help: "Required title field."
+                        ),
+                        AdministrativePluginSearchField(
+                            key: "year",
+                            label: "Year",
+                            type: "year",
+                            required: false,
+                            placeholder: "2016",
+                            help: "Optional four-digit year."
+                        ),
+                        AdministrativePluginSearchField(
+                            key: "edition",
+                            label: "Edition",
+                            type: "number",
+                            required: false,
+                            placeholder: "1",
+                            help: "Optional numeric edition."
+                        ),
+                    ])
+                )
+            ],
+            missingAuthKeys: [],
+            updateAvailable: false,
+            availableVersion: nil
+        )
+
         static let candidates = [
             AdministrativeEntitySearchCandidate(
                 externalIDs: ["tmdb": "329865"],

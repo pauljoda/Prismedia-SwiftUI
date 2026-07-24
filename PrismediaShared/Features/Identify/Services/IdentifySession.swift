@@ -9,7 +9,10 @@ import Observation
         private(set) var defaultProviderIDs: [String: String] = [:]
         private(set) var isLoading = false
         private(set) var isSearching = false
+        private(set) var isLoadingMore = false
+        private(set) var isRescanning = false
         private(set) var isSeeking = false
+        private(set) var isResolving = false
         private(set) var isApplying = false
         private(set) var applyProgress: AdministrativeIdentifyApplyProgress?
         private(set) var bulkProgress: IdentifyBulkProgress?
@@ -20,6 +23,8 @@ import Observation
         var selectedKind: EntityKind?
         var selectedProviderID = ""
         var searchValues: [String: String] = [:]
+        private(set) var searchLimit = 25
+        private(set) var activeCandidateID: PluginSearchCandidateIdentity?
         var reviewSelection = MetadataReviewSelection()
         var showsSearchForProposal = false
         var errorMessage: String?
@@ -32,6 +37,12 @@ import Observation
         private let now: @Sendable () -> Date
         private var pollingToken = UUID()
         private var openingEntryIDs = Set<UUID>()
+        private var searchValuesByEntityAndProvider: [String: [String: String]] = [:]
+        private var retainedCandidatesBySearchContext: [String: [AdministrativeEntitySearchCandidate]] = [:]
+        private var retryOperation: IdentifySearchRetryOperation?
+
+        private static let searchPageSize = PluginSearchPagingPolicy.pageSize
+        private static let searchMaxLimit = PluginSearchPagingPolicy.maximumLimit
 
         init(
             service: any AdministrationServicing,
@@ -59,6 +70,7 @@ import Observation
             }
             selectedItemID = initialQueue.first?.entityID
             reviewSelection = initialQueue.first?.proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
+            reconcileProvider(preferConfiguredDefault: true)
         }
 
         var kindSummaries: [IdentifyKindSummary] {
@@ -102,12 +114,24 @@ import Observation
 
         var providersForSelectedItem: [AdministrativePlugin] {
             guard let selectedItem else { return [] }
-            return RequestIdentifyProviderPreferencePolicy.eligibleProviders(
+            return RequestIdentifyProviderPreferencePolicy.identifyProviders(
                 providers,
                 entityKind: selectedItem.entityKind.rawValue,
                 defaultProviderIDs: defaultProviderIDs,
                 hidesNsfw: hidesNsfw
             )
+        }
+
+        var isSearchBusy: Bool {
+            isSearching || isLoadingMore || isRescanning || isSeeking || isResolving
+        }
+
+        var canLoadMoreSearchCandidates: Bool {
+            guard let item = selectedItem else { return false }
+            let candidates = searchCandidates(for: item)
+            return !candidates.isEmpty
+                && candidates.count >= searchLimit
+                && searchLimit < Self.searchMaxLimit
         }
 
         func defaultProviderID(for kind: EntityKind) -> String? {
@@ -212,7 +236,7 @@ import Observation
                 if let nextDefaults, defaultProviderIDs != nextDefaults {
                     defaultProviderIDs = nextDefaults
                 }
-                reconcileProvider(preferConfiguredDefault: true)
+                reconcileProvider(preferConfiguredDefault: false)
             } catch is CancellationError {
                 return
             } catch {
@@ -246,6 +270,7 @@ import Observation
             errorMessage = nil
 
             let item: AdministrativeIdentifyQueueItem
+            var createdQueueItem = false
             do {
                 do {
                     item = try await service.identifyQueueItem(entityID: entityID)
@@ -253,6 +278,7 @@ import Observation
                     // Persist the queue record before presenting Search so the Identify
                     // dashboard can resume it if this presentation goes away.
                     item = try await service.addIdentifyItem(entityID: entityID)
+                    createdQueueItem = true
                 }
 
                 replace(item)
@@ -272,6 +298,16 @@ import Observation
                     defaultProviderIDs = nextDefaults
                 }
                 reconcileProvider(preferConfiguredDefault: true)
+
+                if createdQueueItem,
+                    let requested = try? await service.searchIdentifyItem(
+                        entityID: entityID,
+                        provider: nil,
+                        query: nil
+                    )
+                {
+                    receive(requested)
+                }
             } catch is CancellationError {
                 return
             } catch {
@@ -280,33 +316,80 @@ import Observation
         }
 
         func search(fields: [String: String]) async {
+            searchLimit = Self.searchPageSize
+            await performSearch(fields: fields, limit: searchLimit, loadingMore: false)
+        }
+
+        func loadMoreSearchCandidates() async {
+            guard canLoadMoreSearchCandidates else { return }
+            guard let nextLimit = PluginSearchPagingPolicy.nextLimit(after: searchLimit) else { return }
+            searchLimit = nextLimit
+            await performSearch(fields: searchValues, limit: searchLimit, loadingMore: true)
+        }
+
+        private func performSearch(
+            fields: [String: String],
+            limit: Int,
+            loadingMore: Bool
+        ) async {
             guard let item = selectedItem, !selectedProviderID.isEmpty else { return }
-            guard let provider = providersForSelectedItem.first(where: { $0.id == selectedProviderID }) else { return }
+            guard
+                let provider = providersForSelectedItem.first(where: {
+                    $0.id.caseInsensitiveCompare(selectedProviderID) == .orderedSame
+                })
+            else { return }
             let definitions =
-                PluginSearchFieldPolicy.support(
+                PluginSearchFieldPolicy.searchSupport(
                     in: provider, entityKind: item.entityKind.rawValue)?.search?.fields ?? []
             let query = AdministrativeIdentifyQuery(
                 title: PluginSearchFieldPolicy.compatibilityTitle(
                     fields: definitions, values: fields, fallback: item.title),
-                requireChoice: true, fields: fields, limit: 25)
-            await beginSearch(entityID: item.entityID, provider: selectedProviderID, query: query)
+                requireChoice: true, fields: fields, limit: limit)
+            rememberCurrentSearchValues()
+            retainCandidates(for: item)
+            retryOperation = .search(fields: fields, limit: limit)
+
+            if loadingMore {
+                isLoadingMore = true
+                errorMessage = nil
+                defer { isLoadingMore = false }
+                _ = await searchAndPoll(
+                    entityID: item.entityID,
+                    provider: provider.id,
+                    query: query
+                )
+            } else {
+                await beginSearch(entityID: item.entityID, provider: provider.id, query: query)
+            }
         }
 
         func rescan() async {
             guard let item = selectedItem, !selectedProviderID.isEmpty else { return }
-            await beginSearch(entityID: item.entityID, provider: selectedProviderID, query: nil)
+            retainCandidates(for: item)
+            retryOperation = .rescan
+            isRescanning = true
+            errorMessage = nil
+            defer { isRescanning = false }
+            _ = await searchAndPoll(entityID: item.entityID, provider: selectedProviderID, query: nil)
         }
 
         func seek() async {
             guard let item = selectedItem else { return }
+            retainCandidates(for: item)
+            retryOperation = .seek
             isSeeking = true
             errorMessage = nil
             defer { isSeeking = false }
             let order = IdentifyProviderOrder.ids(
-                selected: selectedProviderID, providers: providers, kind: item.entityKind, hidesNsfw: hidesNsfw)
+                selected: selectedProviderID,
+                providers: providers,
+                kind: item.entityKind,
+                hidesNsfw: hidesNsfw,
+                defaultProviderIDs: defaultProviderIDs
+            )
             for providerID in order {
                 guard !Task.isCancelled else { return }
-                selectedProviderID = providerID
+                selectProvider(providerID)
                 let result = await searchAndPoll(entityID: item.entityID, provider: providerID, query: nil)
                 if result?.proposal != nil || !(result?.candidates.isEmpty ?? true) { return }
             }
@@ -315,15 +398,47 @@ import Observation
 
         func resolve(_ candidate: AdministrativeEntitySearchCandidate) async {
             guard let item = selectedItem, !selectedProviderID.isEmpty else { return }
-            isSearching = true
+            retainCandidates(for: item)
+            retryOperation = .resolve(candidate)
+            activeCandidateID = candidate.pluginSearchIdentity
+            isResolving = true
             errorMessage = nil
-            defer { isSearching = false }
+            defer { isResolving = false }
             do {
                 let updated = try await service.resolveIdentifyCandidate(
                     entityID: item.entityID, provider: selectedProviderID, candidate: candidate)
                 receive(updated)
                 showsSearchForProposal = false
-            } catch { errorMessage = error.localizedDescription }
+            } catch {
+                activeCandidateID = nil
+                errorMessage = error.localizedDescription
+            }
+        }
+
+        func retryLastSearchOperation() async {
+            guard let retryOperation else {
+                await rescan()
+                return
+            }
+            switch retryOperation {
+            case .search(let fields, let limit):
+                searchLimit = limit
+                let hasRetainedCandidates =
+                    selectedItem.map {
+                        !searchCandidates(for: $0).isEmpty
+                    } ?? false
+                await performSearch(
+                    fields: fields,
+                    limit: limit,
+                    loadingMore: limit > Self.searchPageSize && hasRetainedCandidates
+                )
+            case .rescan:
+                await rescan()
+            case .seek:
+                await seek()
+            case .resolve(let candidate):
+                await resolve(candidate)
+            }
         }
 
         func apply(advance: Bool) async -> Bool {
@@ -429,9 +544,10 @@ import Observation
             providerID: String
         ) async -> EntityGridMutationResult {
             guard !items.isEmpty,
-                PluginSearchFieldPolicy.eligibleProviders(
+                RequestIdentifyProviderPreferencePolicy.identifyProviders(
                     providers,
                     entityKind: kind.rawValue,
+                    defaultProviderIDs: defaultProviderIDs,
                     hidesNsfw: hidesNsfw
                 ).contains(where: { $0.id == providerID })
             else {
@@ -482,10 +598,65 @@ import Observation
             loadSelectedEntityDetailInBackground()
         }
 
-        func returnToSearch() { showsSearchForProposal = true }
+        func returnToSearch() {
+            activeCandidateID = nil
+            showsSearchForProposal = true
+        }
 
         func cancelPolling() {
             pollingToken = UUID()
+        }
+
+        func selectProvider(_ providerID: String) {
+            rememberCurrentSearchValues()
+            let candidates: [AdministrativePlugin]
+            if let item = selectedItem {
+                candidates = RequestIdentifyProviderPreferencePolicy.identifyProviders(
+                    providers,
+                    entityKind: item.entityKind.rawValue,
+                    defaultProviderIDs: defaultProviderIDs,
+                    hidesNsfw: hidesNsfw
+                )
+            } else {
+                candidates = providers
+            }
+            let canonicalID =
+                candidates.first {
+                    $0.id.caseInsensitiveCompare(providerID) == .orderedSame
+                }?.id ?? ""
+            guard canonicalID != selectedProviderID else { return }
+            selectedProviderID = canonicalID
+            searchLimit = Self.searchPageSize
+            retryOperation = nil
+            restoreSearchValues()
+            activeCandidateID = nil
+            errorMessage = nil
+        }
+
+        func searchCandidates(
+            for item: AdministrativeIdentifyQueueItem
+        ) -> [AdministrativeEntitySearchCandidate] {
+            let itemMatchesSelectedProvider =
+                item.provider?.caseInsensitiveCompare(selectedProviderID) == .orderedSame
+            if itemMatchesSelectedProvider, !item.candidates.isEmpty {
+                return item.candidates
+            }
+
+            let retainedCandidates =
+                retainedCandidatesBySearchContext[
+                    searchValuesKey(entityID: item.entityID, providerID: selectedProviderID)
+                ] ?? []
+            let state = IdentifyQueueState(rawServerValue: item.state)
+            if !itemMatchesSelectedProvider
+                || isSearchBusy
+                || errorMessage != nil
+                || state == .queued
+                || state == .searching
+                || state == .error
+            {
+                return retainedCandidates
+            }
+            return []
         }
 
         func loadSelectedEntityDetail() async {
@@ -586,6 +757,14 @@ import Observation
 
         private func receive(_ item: AdministrativeIdentifyQueueItem) {
             replace(item)
+            if let providerID = item.provider, !providerID.isEmpty {
+                let key = searchValuesKey(entityID: item.entityID, providerID: providerID)
+                if !item.candidates.isEmpty {
+                    retainedCandidatesBySearchContext[key] = item.candidates
+                } else if IdentifyQueueState(rawServerValue: item.state) == .choice {
+                    retainedCandidatesBySearchContext.removeValue(forKey: key)
+                }
+            }
             reviewSelection = item.proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
             if item.proposal != nil { showsSearchForProposal = false }
         }
@@ -634,39 +813,112 @@ import Observation
 
         private func reconcileProvider(preferConfiguredDefault: Bool) {
             guard let item = selectedItem else { return }
-            let eligible = RequestIdentifyProviderPreferencePolicy.eligibleProviders(
+            let eligible = RequestIdentifyProviderPreferencePolicy.identifyProviders(
                 providers,
                 entityKind: item.entityKind.rawValue,
                 defaultProviderIDs: defaultProviderIDs,
                 hidesNsfw: hidesNsfw
             )
-            if preferConfiguredDefault
-                || !eligible.contains(where: {
-                    $0.id.caseInsensitiveCompare(selectedProviderID) == .orderedSame
-                })
-            {
-                selectedProviderID = eligible.first?.id ?? ""
+            let nextProviderID: String
+            if preferConfiguredDefault {
+                nextProviderID = RequestIdentifyProviderPreferencePolicy.resolvedProviderID(
+                    in: eligible,
+                    restoredProviderID: item.provider,
+                    currentProviderID: nil
+                )
+            } else {
+                nextProviderID = RequestIdentifyProviderPreferencePolicy.resolvedProviderID(
+                    in: eligible,
+                    restoredProviderID: selectedProviderID,
+                    currentProviderID: item.provider
+                )
             }
+            if selectedProviderID != nextProviderID {
+                rememberCurrentSearchValues()
+                selectedProviderID = nextProviderID
+            }
+            restoreSearchValues()
         }
 
         private func reconcileBrowseProvider(for kind: EntityKind) {
-            let eligible = RequestIdentifyProviderPreferencePolicy.eligibleProviders(
+            let eligible = RequestIdentifyProviderPreferencePolicy.identifyProviders(
                 providers,
                 entityKind: kind.rawValue,
                 defaultProviderIDs: defaultProviderIDs,
                 hidesNsfw: hidesNsfw
             )
-            if !eligible.contains(where: { $0.id == selectedProviderID }) {
-                selectedProviderID = eligible.first?.id ?? ""
-            }
+            selectedProviderID = RequestIdentifyProviderPreferencePolicy.resolvedProviderID(
+                in: eligible,
+                restoredProviderID: selectedProviderID,
+                currentProviderID: nil
+            )
         }
 
         private func select(_ entityID: UUID?) {
+            rememberCurrentSearchValues()
             selectedItemID = entityID
             let proposal = queue.first { $0.entityID == entityID }?.proposal
             reviewSelection = proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
             showsSearchForProposal = false
+            searchLimit = queue.first { $0.entityID == entityID }?.query?.limit ?? Self.searchPageSize
+            activeCandidateID = nil
+            retryOperation = nil
             reconcileProvider(preferConfiguredDefault: true)
+        }
+
+        private func rememberCurrentSearchValues() {
+            guard let item = selectedItem, !selectedProviderID.isEmpty else { return }
+            searchValuesByEntityAndProvider[
+                searchValuesKey(entityID: item.entityID, providerID: selectedProviderID)
+            ] = searchValues
+        }
+
+        private func restoreSearchValues() {
+            guard let item = selectedItem,
+                let provider = providersForSelectedItem.first(where: {
+                    $0.id.caseInsensitiveCompare(selectedProviderID) == .orderedSame
+                })
+            else {
+                searchValues = [:]
+                return
+            }
+
+            let key = searchValuesKey(entityID: item.entityID, providerID: provider.id)
+            let restoredQueryValues: [String: String]
+            if item.provider?.caseInsensitiveCompare(provider.id) == .orderedSame {
+                restoredQueryValues = item.query?.fields ?? [:]
+            } else {
+                restoredQueryValues = [:]
+            }
+            let existing = searchValuesByEntityAndProvider[key] ?? restoredQueryValues
+            let fields =
+                PluginSearchFieldPolicy.searchSupport(
+                    in: provider,
+                    entityKind: item.entityKind.rawValue
+                )?.search?.fields ?? []
+            searchValues = PluginSearchFieldPolicy.seedValues(
+                for: fields,
+                existing: existing,
+                title: item.title
+            )
+            searchValuesByEntityAndProvider[key] = searchValues
+        }
+
+        private func searchValuesKey(
+            entityID: UUID,
+            providerID: String
+        ) -> String {
+            "\(entityID.uuidString.lowercased())|\(providerID.lowercased())"
+        }
+
+        private func retainCandidates(
+            for item: AdministrativeIdentifyQueueItem
+        ) {
+            let visibleCandidates = searchCandidates(for: item)
+            guard !visibleCandidates.isEmpty, !selectedProviderID.isEmpty else { return }
+            retainedCandidatesBySearchContext[
+                searchValuesKey(entityID: item.entityID, providerID: selectedProviderID)
+            ] = visibleCandidates
         }
 
         private func loadSelectedEntityDetailInBackground() {

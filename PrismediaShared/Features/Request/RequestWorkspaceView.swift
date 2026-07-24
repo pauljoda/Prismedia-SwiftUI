@@ -3,7 +3,7 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct RequestWorkspaceView: View {
         @State private var section = RequestWorkspaceSection.discover
-        @State private var kind = RequestKindDefinition.movie
+        @State private var kind: RequestKindDefinition?
         @State private var showsAcquisitionSettings = false
 
         let administrationService: any AdministrationServicing
@@ -51,11 +51,6 @@ import SwiftUI
                                 .pickerStyle(.segmented)
                         }
                     #endif
-                    if section == .discover {
-                        ToolbarItem(placement: leadingToolbarPlacement) {
-                            kindPicker
-                        }
-                    }
                     ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
                     ToolbarItem(placement: trailingToolbarPlacement) {
                         Button {
@@ -81,24 +76,6 @@ import SwiftUI
                 }
             }
             .accessibilityIdentifier("request.section")
-        }
-
-        private var kindPicker: some View {
-            Picker("Content Kind", selection: $kind) {
-                ForEach(RequestKindDefinition.allCases) { kind in
-                    Text(kind.label).tag(kind)
-                }
-            }
-            .pickerStyle(.menu)
-            .accessibilityIdentifier("request.kind")
-        }
-
-        private var leadingToolbarPlacement: ToolbarItemPlacement {
-            #if os(iOS)
-                .topBarLeading
-            #else
-                .automatic
-            #endif
         }
 
         private func openEntity(_ entityID: UUID, _ kind: EntityKind) {

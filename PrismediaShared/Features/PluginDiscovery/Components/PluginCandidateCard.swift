@@ -3,6 +3,7 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct PluginCandidateCard: View {
         let candidate: AdministrativeEntitySearchCandidate
+        let entityKind: String
         let isBestMatch: Bool
         let isActive: Bool
         let isDisabled: Bool
@@ -14,7 +15,7 @@ import SwiftUI
             HStack(spacing: PrismediaSpacing.small) {
                 Button(action: onActivate) {
                     HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-                        EntityThumbnailArtworkFrame(aspectRatio: 2.0 / 3.0) {
+                        EntityThumbnailArtworkFrame(aspectRatio: artworkAspectRatio) {
                             RemotePosterImage(
                                 path: ProviderImagePreviewPolicy.previewURL(for: candidate.posterURL),
                                 fallbackSeed: candidate.title,
@@ -76,8 +77,8 @@ import SwiftUI
                         Spacer(minLength: 8)
 
                         if isActive {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(PrismediaColor.accent)
+                            ProgressView()
+                                .controlSize(.small)
                                 .accessibilityHidden(true)
                         } else {
                             Image(systemName: "chevron.right")
@@ -93,6 +94,7 @@ import SwiftUI
                 .disabled(isDisabled)
                 .accessibilityLabel(accessibilityLabel)
                 .accessibilityHint("Select this candidate for review.")
+                .accessibilityValue(isActive ? "Opening review" : "")
                 .accessibilityAddTraits(isActive ? .isSelected : [])
 
                 if let onPreview, candidate.posterURL != nil {
@@ -116,6 +118,17 @@ import SwiftUI
             return parts.joined(separator: ", ")
         }
 
+        private var artworkAspectRatio: CGFloat {
+            switch entityKind.lowercased() {
+            case "studio":
+                16.0 / 9.0
+            case "person", "book-author", "music-artist":
+                4.0 / 5.0
+            default:
+                2.0 / 3.0
+            }
+        }
+
         private func confidenceLabel(_ confidence: Decimal) -> String {
             let value = NSDecimalNumber(decimal: confidence).doubleValue
             return value.formatted(.percent.precision(.fractionLength(0)))
@@ -127,6 +140,7 @@ import SwiftUI
             PreviewShell {
                 PluginCandidateCard(
                     candidate: PluginSearchPreviewFixtures.candidates[0],
+                    entityKind: "movie",
                     isBestMatch: true,
                     isActive: true,
                     isDisabled: false,

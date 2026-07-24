@@ -5,6 +5,7 @@ import SwiftUI
         let field: AdministrativePluginSearchField
         @Binding var value: String
         let isDisabled: Bool
+        let validationMessage: String?
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
@@ -15,6 +16,14 @@ import SwiftUI
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let validationMessage {
+                    Label(validationMessage, systemImage: "exclamationmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("plugin-search.field.\(field.key).error")
                 }
             }
             .accessibilityElement(children: .contain)
@@ -52,6 +61,7 @@ import SwiftUI
         }
 
         private var accessibilityHint: String {
+            if let validationMessage { return validationMessage }
             if let help = field.help, !help.isEmpty { return help }
             return field.type == "year" ? "Enter a four-digit year." : ""
         }
@@ -64,7 +74,8 @@ import SwiftUI
                 PluginSearchFieldControl(
                     field: PluginSearchPreviewFixtures.provider.supports[0].search!.fields[0],
                     value: $value,
-                    isDisabled: false
+                    isDisabled: false,
+                    validationMessage: nil
                 )
                 .padding()
             }

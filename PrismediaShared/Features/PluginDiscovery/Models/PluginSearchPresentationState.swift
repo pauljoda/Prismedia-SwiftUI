@@ -16,10 +16,13 @@ import Foundation
             candidateCount: Int,
             errorMessage: String?
         ) -> PluginSearchPresentationState {
+            guard hasProvider else { return .noProvider }
+            if candidateCount > 0 {
+                return .results(count: candidateCount)
+            }
             if let errorMessage, !errorMessage.isEmpty {
                 return .error(message: errorMessage)
             }
-            guard hasProvider else { return .noProvider }
             if isSearching { return .searching }
             guard hasSearched else { return .preSearch }
             return candidateCount == 0 ? .noResults : .results(count: candidateCount)

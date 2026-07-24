@@ -35,6 +35,18 @@ public enum RequestKindDefinition: String, CaseIterable, Identifiable, Hashable,
         }
     }
 
+    public var systemImage: String {
+        switch self {
+        case .book: "book.closed"
+        case .audiobook: "headphones"
+        case .author: "person.text.rectangle"
+        case .movie: "film"
+        case .series: "rectangle.stack"
+        case .artist: "music.mic"
+        case .album: "opticaldisc"
+        }
+    }
+
     public var childNoun: String? {
         switch self {
         case .book: "volume"

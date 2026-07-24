@@ -1,17 +1,15 @@
 import SwiftUI
 
 #if os(iOS) || os(macOS)
-    struct PluginSearchSurface: View {
+    struct PluginSearchSurface<LeadingContent: View>: View {
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         private let title: String
         private let description: String?
         private let providerLabel: String
         private let noProvidersMessage: String
         private let entityKind: String
-        private let hidesNsfw: Bool
         private let seedTitle: String
         private let providers: [AdministrativePlugin]
-        private let preferredProviderID: String?
         @Binding private var selectedProviderID: String
         @Binding private var values: [String: String]
         private let candidates: [AdministrativeEntitySearchCandidate]
@@ -30,10 +28,15 @@ import SwiftUI
         private let onCandidateActivate: (AdministrativeEntitySearchCandidate) -> Void
         private let onCandidatePreview: ((AdministrativeEntitySearchCandidate) -> Void)?
         private let onLoadMore: (() -> Void)?
+        private let isLoadingMore: Bool
+        private let onRetry: (() -> Void)?
         private let onRescan: (() -> Void)?
         private let isRescanning: Bool
         private let onSeek: (() -> Void)?
         private let isSeeking: Bool
+        private let leadingContent: LeadingContent
+
+        @State private var touchedFieldKeys = Set<String>()
 
         init(
             title: String = "Search",
@@ -41,10 +44,8 @@ import SwiftUI
             providerLabel: String = "Provider",
             noProvidersMessage: String = "No enabled provider supports this content kind.",
             entityKind: String,
-            hidesNsfw: Bool,
             seedTitle: String = "",
             providers: [AdministrativePlugin],
-            preferredProviderID: String? = nil,
             selectedProviderID: Binding<String>,
             values: Binding<[String: String]>,
             candidates: [AdministrativeEntitySearchCandidate] = [],
@@ -63,20 +64,21 @@ import SwiftUI
             onCandidateActivate: @escaping (AdministrativeEntitySearchCandidate) -> Void,
             onCandidatePreview: ((AdministrativeEntitySearchCandidate) -> Void)? = nil,
             onLoadMore: (() -> Void)? = nil,
+            isLoadingMore: Bool = false,
+            onRetry: (() -> Void)? = nil,
             onRescan: (() -> Void)? = nil,
             isRescanning: Bool = false,
             onSeek: (() -> Void)? = nil,
-            isSeeking: Bool = false
+            isSeeking: Bool = false,
+            @ViewBuilder leadingContent: () -> LeadingContent
         ) {
             self.title = title
             self.description = description
             self.providerLabel = providerLabel
             self.noProvidersMessage = noProvidersMessage
             self.entityKind = entityKind
-            self.hidesNsfw = hidesNsfw
             self.seedTitle = seedTitle
             self.providers = providers
-            self.preferredProviderID = preferredProviderID
             _selectedProviderID = selectedProviderID
             _values = values
             self.candidates = candidates
@@ -95,20 +97,95 @@ import SwiftUI
             self.onCandidateActivate = onCandidateActivate
             self.onCandidatePreview = onCandidatePreview
             self.onLoadMore = onLoadMore
+            self.isLoadingMore = isLoadingMore
+            self.onRetry = onRetry
             self.onRescan = onRescan
             self.isRescanning = isRescanning
             self.onSeek = onSeek
             self.isSeeking = isSeeking
+            self.leadingContent = leadingContent()
+        }
+
+        init(
+            title: String = "Search",
+            description: String? = nil,
+            providerLabel: String = "Provider",
+            noProvidersMessage: String = "No enabled provider supports this content kind.",
+            entityKind: String,
+            seedTitle: String = "",
+            providers: [AdministrativePlugin],
+            selectedProviderID: Binding<String>,
+            values: Binding<[String: String]>,
+            candidates: [AdministrativeEntitySearchCandidate] = [],
+            hasSearched: Bool = false,
+            isSearching: Bool = false,
+            isDisabled: Bool = false,
+            submitDisabled: Bool = false,
+            errorMessage: String? = nil,
+            searchStatus: String? = nil,
+            notices: [String] = [],
+            activeCandidateID: PluginSearchCandidateIdentity? = nil,
+            candidateDetail: ((AdministrativeEntitySearchCandidate) -> String?)? = nil,
+            onProviderChange: ((String) -> Void)? = nil,
+            onSearch: @escaping ([String: String]) -> Void,
+            onClear: (() -> Void)? = nil,
+            onCandidateActivate: @escaping (AdministrativeEntitySearchCandidate) -> Void,
+            onCandidatePreview: ((AdministrativeEntitySearchCandidate) -> Void)? = nil,
+            onLoadMore: (() -> Void)? = nil,
+            isLoadingMore: Bool = false,
+            onRetry: (() -> Void)? = nil,
+            onRescan: (() -> Void)? = nil,
+            isRescanning: Bool = false,
+            onSeek: (() -> Void)? = nil,
+            isSeeking: Bool = false
+        ) where LeadingContent == EmptyView {
+            self.init(
+                title: title,
+                description: description,
+                providerLabel: providerLabel,
+                noProvidersMessage: noProvidersMessage,
+                entityKind: entityKind,
+                seedTitle: seedTitle,
+                providers: providers,
+                selectedProviderID: selectedProviderID,
+                values: values,
+                candidates: candidates,
+                hasSearched: hasSearched,
+                isSearching: isSearching,
+                isDisabled: isDisabled,
+                submitDisabled: submitDisabled,
+                errorMessage: errorMessage,
+                searchStatus: searchStatus,
+                notices: notices,
+                activeCandidateID: activeCandidateID,
+                candidateDetail: candidateDetail,
+                onProviderChange: onProviderChange,
+                onSearch: onSearch,
+                onClear: onClear,
+                onCandidateActivate: onCandidateActivate,
+                onCandidatePreview: onCandidatePreview,
+                onLoadMore: onLoadMore,
+                isLoadingMore: isLoadingMore,
+                onRetry: onRetry,
+                onRescan: onRescan,
+                isRescanning: isRescanning,
+                onSeek: onSeek,
+                isSeeking: isSeeking,
+                leadingContent: { EmptyView() }
+            )
         }
 
         var body: some View {
             List {
+                leadingContent
                 searchSection
                 noticesSection
-                candidateSection
+                if activeProvider != nil {
+                    candidateSection
+                }
             }
             .prismediaScreenBackground()
-            .onChange(of: eligibleProviders.map(\.id), initial: true) { _, _ in
+            .onChange(of: providers.map(\.id), initial: true) { _, _ in
                 reconcileProviderSelection()
             }
             .onChange(of: searchFields, initial: true) { _, fields in
@@ -123,11 +200,23 @@ import SwiftUI
 
         @ViewBuilder
         private var noticesSection: some View {
-            if !notices.isEmpty {
-                Section("Provider Warnings") {
+            if retainedSearchError != nil || !notices.isEmpty {
+                Section("Search Messages") {
+                    if let retainedSearchError {
+                        inlineMessage(
+                            title: "Couldn’t Update Results",
+                            message: retainedSearchError,
+                            isWarning: false,
+                            retryTitle: onRetry == nil ? nil : "Try Again",
+                            retry: onRetry
+                        )
+                    }
                     ForEach(notices, id: \.self) { notice in
-                        Label(notice, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(PrismediaColor.warning)
+                        inlineMessage(
+                            title: "Provider Warning",
+                            message: notice,
+                            isWarning: true
+                        )
                     }
                 }
                 .accessibilityIdentifier("plugin-search.warnings")
@@ -139,7 +228,7 @@ import SwiftUI
                 if activeProvider != nil {
                     LabeledContent(providerLabel) {
                         Picker(providerLabel, selection: providerSelection) {
-                            ForEach(eligibleProviders) { provider in
+                            ForEach(providers) { provider in
                                 Text(provider.name).tag(provider.id)
                             }
                         }
@@ -152,7 +241,8 @@ import SwiftUI
                         PluginSearchFieldControl(
                             field: field,
                             value: fieldBinding(field.key),
-                            isDisabled: isBusy
+                            isDisabled: isBusy,
+                            validationMessage: displayedValidationMessage(for: field)
                         )
                     }
 
@@ -167,11 +257,19 @@ import SwiftUI
 
                     providerActions
                 } else {
-                    ContentUnavailableView(
-                        "No Search Providers",
-                        systemImage: "puzzlepiece.extension",
-                        description: Text(noProvidersMessage)
-                    )
+                    ContentUnavailableView {
+                        Label("No Search Providers", systemImage: "puzzlepiece.extension")
+                    } description: {
+                        Text(noProvidersMessage)
+                    } actions: {
+                        if let onRetry {
+                            PrismediaButton(
+                                "Try Again",
+                                systemImage: "arrow.clockwise",
+                                action: onRetry
+                            )
+                        }
+                    }
                     .accessibilityIdentifier("plugin-search.no-provider")
                 }
             } header: {
@@ -239,6 +337,7 @@ import SwiftUI
 
                 PrismediaButton("Clear", systemImage: "xmark", form: .fill) {
                     values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
+                    touchedFieldKeys.removeAll()
                     onClear?()
                 }
                 .disabled(isBusy || values.values.allSatisfy(\.isEmpty))
@@ -294,6 +393,7 @@ import SwiftUI
                 ForEach(candidates, id: \.pluginSearchIdentity) { candidate in
                     PluginCandidateCard(
                         candidate: candidate,
+                        entityKind: entityKind,
                         isBestMatch: candidate.pluginSearchIdentity == candidates.first?.pluginSearchIdentity,
                         isActive: candidate.pluginSearchIdentity == activeCandidateID,
                         isDisabled: isBusy,
@@ -305,37 +405,45 @@ import SwiftUI
                     )
                 }
                 if let onLoadMore {
-                    Button("Load More", systemImage: "ellipsis.circle", action: onLoadMore)
-                        .disabled(isBusy)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier("plugin-search.load-more")
+                    PrismediaButton(
+                        "Load More",
+                        systemImage: "ellipsis.circle",
+                        form: .fill,
+                        isLoading: isLoadingMore,
+                        loadingTitle: "Loading More…",
+                        action: onLoadMore
+                    )
+                    .disabled(isBusy)
+                    .accessibilityIdentifier("plugin-search.load-more")
                 }
             case .error(let message):
-                ContentUnavailableView(
-                    "Search Unavailable",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(message)
-                )
+                ContentUnavailableView {
+                    Label("Search Unavailable", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(message)
+                } actions: {
+                    if let onRetry {
+                        PrismediaButton(
+                            "Try Again",
+                            systemImage: "arrow.clockwise",
+                            variant: .prominent,
+                            action: onRetry
+                        )
+                    }
+                }
                 .accessibilityIdentifier("plugin-search.error")
             }
         }
 
-        private var eligibleProviders: [AdministrativePlugin] {
-            PluginSearchFieldPolicy.eligibleProviders(
-                providers,
-                entityKind: entityKind,
-                hidesNsfw: hidesNsfw,
-                preferredProviderID: preferredProviderID
-            )
-        }
-
         private var activeProvider: AdministrativePlugin? {
-            eligibleProviders.first { $0.id == selectedProviderID } ?? eligibleProviders.first
+            providers.first {
+                $0.id.caseInsensitiveCompare(selectedProviderID) == .orderedSame
+            }
         }
 
         private var searchFields: [AdministrativePluginSearchField] {
             activeProvider
-                .flatMap { PluginSearchFieldPolicy.support(in: $0, entityKind: entityKind) }?
+                .flatMap { PluginSearchFieldPolicy.searchSupport(in: $0, entityKind: entityKind) }?
                 .search?.fields ?? []
         }
 
@@ -354,25 +462,20 @@ import SwiftUI
                 && !searchFields.isEmpty
                 && !isBusy
                 && !submitDisabled
-                && PluginSearchFieldPolicy.hasRequiredValues(fields: searchFields, values: values)
+                && PluginSearchFieldPolicy.hasValidValues(fields: searchFields, values: values)
         }
 
         private var isBusy: Bool {
-            isDisabled || isSearching || isRescanning || isSeeking
+            isDisabled || isSearching || isLoadingMore || isRescanning || isSeeking
         }
 
         private var providerSelection: Binding<String> {
             Binding(
-                get: { activeProvider?.id ?? selectedProviderID },
+                get: { selectedProviderID },
                 set: { providerID in
                     guard providerID != selectedProviderID else { return }
                     selectedProviderID = providerID
-                    let fields =
-                        eligibleProviders
-                        .first { $0.id == providerID }
-                        .flatMap { PluginSearchFieldPolicy.support(in: $0, entityKind: entityKind) }?
-                        .search?.fields ?? []
-                    values = PluginSearchFieldPolicy.seedValues(for: fields, existing: [:], title: seedTitle)
+                    touchedFieldKeys.removeAll()
                     onProviderChange?(providerID)
                 }
             )
@@ -381,15 +484,75 @@ import SwiftUI
         private func fieldBinding(_ key: String) -> Binding<String> {
             Binding(
                 get: { values[key, default: ""] },
-                set: { values[key] = $0 }
+                set: {
+                    values[key] = $0
+                    touchedFieldKeys.insert(key)
+                }
             )
         }
 
         private func reconcileProviderSelection() {
-            let nextProviderID = activeProvider?.id ?? ""
+            let nextProviderID =
+                providers.first {
+                    $0.id.caseInsensitiveCompare(selectedProviderID) == .orderedSame
+                }?.id
+                ?? providers.first?.id
+                ?? ""
             guard nextProviderID != selectedProviderID else { return }
             selectedProviderID = nextProviderID
             onProviderChange?(nextProviderID)
+        }
+
+        private var retainedSearchError: String? {
+            guard !candidates.isEmpty, let errorMessage, !errorMessage.isEmpty else {
+                return nil
+            }
+            return errorMessage
+        }
+
+        private func displayedValidationMessage(
+            for field: AdministrativePluginSearchField
+        ) -> String? {
+            let value = values[field.key] ?? ""
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard touchedFieldKeys.contains(field.key) || !trimmed.isEmpty else {
+                return nil
+            }
+            return PluginSearchFieldPolicy.validationMessage(for: field, value: value)
+        }
+
+        private func inlineMessage(
+            title: String,
+            message: String,
+            isWarning: Bool,
+            retryTitle: String? = nil,
+            retry: (() -> Void)? = nil
+        ) -> some View {
+            HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+                Image(systemName: isWarning ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
+                    .foregroundStyle(isWarning ? PrismediaColor.warning : PrismediaColor.destructive)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                    Text(title)
+                        .font(.headline)
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let retryTitle, let retry {
+                        PrismediaButton(
+                            retryTitle,
+                            systemImage: "arrow.clockwise",
+                            action: retry
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, PrismediaSpacing.extraSmall)
+            .accessibilityElement(children: .contain)
         }
     }
 
@@ -402,7 +565,6 @@ import SwiftUI
                     title: "Discover",
                     description: "Choose a source and search",
                     entityKind: "movie",
-                    hidesNsfw: true,
                     providers: [PluginSearchPreviewFixtures.provider, PluginSearchPreviewFixtures.secondProvider],
                     selectedProviderID: $providerID,
                     values: $values,
@@ -424,7 +586,6 @@ import SwiftUI
             PreviewShell {
                 PluginSearchSurface(
                     entityKind: "movie",
-                    hidesNsfw: true,
                     providers: [PluginSearchPreviewFixtures.provider],
                     selectedProviderID: $providerID,
                     values: $values,
@@ -443,7 +604,6 @@ import SwiftUI
             PreviewShell {
                 PluginSearchSurface(
                     entityKind: "movie",
-                    hidesNsfw: true,
                     providers: [PluginSearchPreviewFixtures.provider],
                     selectedProviderID: $providerID,
                     values: $values,
@@ -461,7 +621,6 @@ import SwiftUI
             PreviewShell {
                 PluginSearchSurface(
                     entityKind: "movie",
-                    hidesNsfw: true,
                     providers: [],
                     selectedProviderID: $providerID,
                     values: $values,
@@ -478,7 +637,6 @@ import SwiftUI
             PreviewShell {
                 PluginSearchSurface(
                     entityKind: "movie",
-                    hidesNsfw: true,
                     providers: [PluginSearchPreviewFixtures.provider],
                     selectedProviderID: $providerID,
                     values: $values,
@@ -496,7 +654,6 @@ import SwiftUI
             PreviewShell {
                 PluginSearchSurface(
                     entityKind: "movie",
-                    hidesNsfw: true,
                     providers: [PluginSearchPreviewFixtures.provider],
                     selectedProviderID: $providerID,
                     values: $values,
@@ -516,7 +673,6 @@ import SwiftUI
             PreviewShell {
                 PluginSearchSurface(
                     entityKind: "movie",
-                    hidesNsfw: true,
                     providers: [PluginSearchPreviewFixtures.provider],
                     selectedProviderID: $providerID,
                     values: $values,

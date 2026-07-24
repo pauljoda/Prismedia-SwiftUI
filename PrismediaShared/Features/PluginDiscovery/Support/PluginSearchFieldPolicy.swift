@@ -37,6 +37,17 @@ public enum PluginSearchFieldPolicy {
         }
     }
 
+    public static func searchSupport(
+        in provider: AdministrativePlugin,
+        entityKind: String
+    ) -> AdministrativePluginSupport? {
+        provider.supports.first { support in
+            support.entityKind.caseInsensitiveCompare(entityKind) == .orderedSame
+                && support.actions.contains("search")
+                && !(support.search?.fields.isEmpty ?? true)
+        }
+    }
+
     public static func seedValues(
         for fields: [AdministrativePluginSearchField],
         existing: [String: String],
@@ -75,6 +86,38 @@ public enum PluginSearchFieldPolicy {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .isEmpty
         }
+    }
+
+    public static func hasValidValues(
+        fields: [AdministrativePluginSearchField],
+        values: [String: String]
+    ) -> Bool {
+        fields.allSatisfy { validationMessage(for: $0, value: values[$0.key] ?? "") == nil }
+    }
+
+    public static func validationMessage(
+        for field: AdministrativePluginSearchField,
+        value: String
+    ) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if field.required, trimmed.isEmpty {
+            return "\(field.label) is required."
+        }
+        guard !trimmed.isEmpty else { return nil }
+
+        switch field.type {
+        case "year":
+            guard let year = Int(trimmed), 1_000...9_999 ~= year else {
+                return "Enter a four-digit year from 1000 through 9999."
+            }
+        case "number":
+            guard Decimal(string: trimmed, locale: Locale(identifier: "en_US_POSIX")) != nil else {
+                return "Enter a valid number."
+            }
+        default:
+            break
+        }
+        return nil
     }
 
     public static func compatibilityTitle(

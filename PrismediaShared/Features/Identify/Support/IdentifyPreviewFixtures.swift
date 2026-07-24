@@ -46,6 +46,22 @@ import Foundation
             proposal: nil,
             error: "No matching external identity was found."
         )
+        static let searchItem = queueItem(
+            id: "b1000000-0000-0000-0000-000000000004",
+            entityID: "b2000000-0000-0000-0000-000000000004",
+            title: "Arrival",
+            state: "search",
+            provider: "tmdb",
+            query: AdministrativeIdentifyQuery(
+                title: "Arrival",
+                requireChoice: true,
+                fields: ["title": "Arrival", "year": "2016"],
+                limit: 25
+            ),
+            candidates: PluginSearchPreviewFixtures.candidates,
+            proposal: nil,
+            error: nil
+        )
         static let cascadeProposal = AdministrativeEntityMetadataProposal(
             proposalID: "openlibrary-narnia",
             provider: "Open Library",
@@ -174,6 +190,8 @@ import Foundation
             title: String,
             state: String,
             provider: String?,
+            query: AdministrativeIdentifyQuery? = nil,
+            candidates: [AdministrativeEntitySearchCandidate] = [],
             proposal: AdministrativeEntityMetadataProposal?,
             error: String?,
             cascadeRunning: Bool = false
@@ -186,13 +204,18 @@ import Foundation
                 "isNsfw": false,
                 "state": state,
                 "action": "identify",
-                "candidates": [],
+                "candidates": try! JSONSerialization.jsonObject(
+                    with: JSONEncoder().encode(candidates)
+                ),
                 "cascadeRunning": cascadeRunning,
                 "createdAt": "2026-07-12T12:00:00Z",
                 "updatedAt": "2026-07-12T12:00:00Z",
             ]
             object["provider"] = provider
             object["error"] = error
+            if let query {
+                object["query"] = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(query))
+            }
             if let proposal {
                 object["proposal"] = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(proposal))
             }

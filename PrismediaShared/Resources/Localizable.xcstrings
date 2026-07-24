@@ -229,6 +229,16 @@
         }
       }
     },
+    "%lld of %lld selected" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld selected"
+          }
+        }
+      }
+    },
     "%lld percent" : {
 
     },
@@ -381,6 +391,9 @@
 
     },
     "Add Role" : {
+
+    },
+    "Add Term" : {
 
     },
     "Add to Collection" : {
@@ -657,6 +670,9 @@
     "Child Activity" : {
 
     },
+    "Children" : {
+
+    },
     "Choose a different server" : {
 
     },
@@ -859,6 +875,9 @@
 
     },
     "Create new %@" : {
+
+    },
+    "Create new tag" : {
 
     },
     "Creates a manual server-side backup using the configured backup storage." : {
@@ -1086,6 +1105,9 @@
     "Exclude" : {
 
     },
+    "Exclude child" : {
+
+    },
     "Exclude from library scans?" : {
 
     },
@@ -1252,7 +1274,13 @@
     "Identify Unavailable" : {
 
     },
+    "Identifying children" : {
+
+    },
     "Identifying related metadata" : {
+
+    },
+    "Identifying…" : {
 
     },
     "Identity" : {
@@ -1277,6 +1305,9 @@
 
     },
     "In progress" : {
+
+    },
+    "Include child" : {
 
     },
     "Include proposal" : {
@@ -1447,6 +1478,9 @@
     "Loading identify queue…" : {
 
     },
+    "Loading item preview…" : {
+
+    },
     "Loading jobs…" : {
 
     },
@@ -1541,6 +1575,12 @@
 
     },
     "Mark Unread" : {
+
+    },
+    "Match" : {
+
+    },
+    "Match existing tag" : {
 
     },
     "Matching releases can be selected for download again." : {
@@ -1651,6 +1691,9 @@
     "Never scanned" : {
 
     },
+    "New" : {
+
+    },
     "New Folder" : {
 
     },
@@ -1754,6 +1797,9 @@
 
     },
     "No linked entities." : {
+
+    },
+    "No match found" : {
 
     },
     "No Matching Plugins" : {
@@ -2062,6 +2108,9 @@
 
     },
     "Plugins" : {
+
+    },
+    "Preference Terms" : {
 
     },
     "Prepares the video and begins playback" : {
@@ -2453,6 +2502,9 @@
 
     },
     "Review Unavailable" : {
+
+    },
+    "Reviews this child proposal" : {
 
     },
     "Revoke" : {
@@ -2887,6 +2939,12 @@
     "Table of Contents" : {
 
     },
+    "Tags" : {
+
+    },
+    "Term" : {
+
+    },
     "Text Size" : {
 
     },
@@ -2894,6 +2952,9 @@
 
     },
     "That saved location is no longer available in this edition of the book." : {
+
+    },
+    "The highest total score wins. When scores tie, the first matching track keeps priority." : {
 
     },
     "The provider changed this proposal after you reviewed it. Reload and confirm the selection again." : {
@@ -3213,6 +3274,9 @@
 
     },
     "Webtoon reader, %@" : {
+
+    },
+    "Weight" : {
 
     },
     "Word Spacing" : {

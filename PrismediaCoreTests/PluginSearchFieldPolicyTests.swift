@@ -115,6 +115,59 @@ final class PluginSearchFieldPolicyTests: XCTestCase {
         )
     }
 
+    func testValidationRejectsOutOfRangeYearsAndInvalidNumbers() {
+        let year = field("year", type: "year", required: false)
+        let season = field("season", type: "number", required: false)
+
+        XCTAssertEqual(
+            PluginSearchFieldPolicy.validationMessage(for: year, value: "999"),
+            "Enter a four-digit year from 1000 through 9999."
+        )
+        XCTAssertNil(PluginSearchFieldPolicy.validationMessage(for: year, value: "2016"))
+        XCTAssertEqual(
+            PluginSearchFieldPolicy.validationMessage(for: season, value: "second"),
+            "Enter a valid number."
+        )
+        XCTAssertFalse(
+            PluginSearchFieldPolicy.hasValidValues(
+                fields: [year, season],
+                values: ["year": "2016", "season": "second"]
+            )
+        )
+    }
+
+    func testPagingAdvancesCumulativelyAndStopsAtMaximum() {
+        XCTAssertEqual(PluginSearchPagingPolicy.nextLimit(after: 25), 50)
+        XCTAssertEqual(PluginSearchPagingPolicy.nextLimit(after: 50), 75)
+        XCTAssertEqual(PluginSearchPagingPolicy.nextLimit(after: 75), 100)
+        XCTAssertNil(PluginSearchPagingPolicy.nextLimit(after: 100))
+    }
+
+    #if os(iOS) || os(macOS)
+        func testPresentationRetainsCandidatesDuringRefreshAndFailure() {
+            XCTAssertEqual(
+                PluginSearchPresentationState.resolve(
+                    hasProvider: true,
+                    isSearching: true,
+                    hasSearched: true,
+                    candidateCount: 2,
+                    errorMessage: nil
+                ),
+                .results(count: 2)
+            )
+            XCTAssertEqual(
+                PluginSearchPresentationState.resolve(
+                    hasProvider: true,
+                    isSearching: false,
+                    hasSearched: true,
+                    candidateCount: 2,
+                    errorMessage: "Refresh failed"
+                ),
+                .results(count: 2)
+            )
+        }
+    #endif
+
     private func field(
         _ key: String,
         type: String,

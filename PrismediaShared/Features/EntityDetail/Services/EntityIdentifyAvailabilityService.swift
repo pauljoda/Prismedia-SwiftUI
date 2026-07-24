@@ -43,16 +43,12 @@ import Foundation
             in providers: [AdministrativePlugin],
             kind: EntityKind
         ) -> Bool {
-            providers.contains { provider in
-                provider.installed
-                    && provider.enabled
-                    && provider.missingAuthKeys.isEmpty
-                    && (!hidesNsfw || !provider.isNsfw)
-                    && provider.supports.contains { support in
-                        support.entityKind.caseInsensitiveCompare(kind.rawValue) == .orderedSame
-                            && IdentifyProviderPolicy.supportsIdentify(support)
-                    }
-            }
+            !RequestIdentifyProviderPreferencePolicy.identifyProviders(
+                providers,
+                entityKind: kind.rawValue,
+                defaultProviderIDs: [:],
+                hidesNsfw: hidesNsfw
+            ).isEmpty
         }
     }
 #endif

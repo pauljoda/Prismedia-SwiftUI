@@ -40,7 +40,7 @@ import XCTest
         }
 
         @MainActor
-        func testBeginningEntityEntryPersistsQueueWithoutStartingProviderSearch() async throws {
+        func testBeginningEntityEntryPersistsQueueAndStartsServerProviderSearch() async throws {
             let item = try queueItem(state: "search")
             let service = OpenIdentifyServiceSpy(item: item)
             let session = IdentifySession(
@@ -54,8 +54,8 @@ import XCTest
             let callOrder = await service.callOrder()
             XCTAssertEqual(counts.get, 1)
             XCTAssertEqual(counts.add, 1)
-            XCTAssertEqual(counts.search, 0)
-            XCTAssertEqual(callOrder, ["get", "add"])
+            XCTAssertEqual(counts.search, 1)
+            XCTAssertEqual(callOrder, ["get", "add", "search"])
             XCTAssertEqual(session.selectedItemID, item.entityID)
         }
 
@@ -82,6 +82,99 @@ import XCTest
 
             XCTAssertEqual(session.selectedProviderID, "tmdb")
             XCTAssertEqual(session.providersForSelectedItem.map(\.id), ["tmdb", "alpha"])
+        }
+
+        @MainActor
+        func testBeginningExistingEntryRestoresQueuedProviderAndQueryFieldsBeforeDefault() async throws {
+            let item = try queueItem(
+                state: "search",
+                providerID: "alpha",
+                queryFields: ["title": "Restored title"]
+            )
+            let providers = [
+                provider(id: "alpha", name: "Alpha"),
+                provider(id: "tmdb", name: "Zulu"),
+            ]
+            let service = OpenIdentifyServiceSpy(
+                item: item,
+                getItems: [item],
+                providers: providers,
+                settingValues: [
+                    "identify.defaultProviders": .stringMap(["movie": "tmdb"])
+                ]
+            )
+            let session = IdentifySession(
+                service: service,
+                browser: IdentifyPreviewEntityBrowser()
+            )
+
+            await session.beginEntry(entityID: item.entityID)
+
+            let counts = await service.callCounts()
+            XCTAssertEqual(counts.add, 0)
+            XCTAssertEqual(counts.search, 0)
+            XCTAssertEqual(session.selectedProviderID, "alpha")
+            XCTAssertEqual(session.searchValues["title"], "Restored title")
+        }
+
+        @MainActor
+        func testProviderDraftsAreRetainedWhenSwitchingAwayAndBack() async throws {
+            let item = try queueItem(
+                state: "search",
+                providerID: "alpha",
+                queryFields: ["title": "Arrival"]
+            )
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: item),
+                browser: IdentifyPreviewEntityBrowser(),
+                initialQueue: [item],
+                initialProviders: [
+                    provider(id: "alpha", name: "Alpha"),
+                    provider(id: "tmdb", name: "TMDB"),
+                ]
+            )
+
+            session.searchValues["title"] = "Alpha draft"
+            session.selectProvider("tmdb")
+            session.searchValues["title"] = "TMDB draft"
+            session.selectProvider("alpha")
+
+            XCTAssertEqual(session.searchValues["title"], "Alpha draft")
+        }
+
+        @MainActor
+        func testProviderSwitchHidesCandidatesFromThePreviousProvider() throws {
+            let item = try queueItem(
+                state: "search",
+                providerID: "alpha",
+                candidates: [
+                    AdministrativeEntitySearchCandidate(
+                        externalIDs: ["alpha": "arrival"],
+                        title: "Arrival",
+                        candidateID: "arrival",
+                        source: "alpha"
+                    )
+                ]
+            )
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: item),
+                browser: IdentifyPreviewEntityBrowser(),
+                initialQueue: [item],
+                initialProviders: [
+                    provider(id: "alpha", name: "Alpha"),
+                    provider(id: "tmdb", name: "TMDB"),
+                ]
+            )
+
+            XCTAssertEqual(session.searchCandidates(for: item).map(\.title), ["Arrival"])
+
+            session.selectProvider("tmdb")
+
+            XCTAssertTrue(session.searchCandidates(for: item).isEmpty)
+
+            session.selectProvider("alpha")
+
+            XCTAssertEqual(session.searchCandidates(for: item).map(\.title), ["Arrival"])
         }
 
         @MainActor
@@ -128,6 +221,9 @@ import XCTest
             entityID: UUID = UUID(),
             title: String = "Arrival",
             state: String = "queued",
+            providerID: String? = nil,
+            queryFields: [String: String]? = nil,
+            candidates: [AdministrativeEntitySearchCandidate] = [],
             proposal: AdministrativeEntityMetadataProposal? = nil
         ) throws -> AdministrativeIdentifyQueueItem {
             let id = UUID()
@@ -139,11 +235,26 @@ import XCTest
                 "isNsfw": false,
                 "state": state,
                 "action": "identify",
-                "candidates": [],
+                "candidates": try JSONSerialization.jsonObject(
+                    with: JSONEncoder().encode(candidates)
+                ),
                 "cascadeRunning": false,
                 "createdAt": "2026-07-12T12:00:00Z",
                 "updatedAt": "2026-07-12T12:00:00Z",
             ]
+            object["provider"] = providerID
+            if let queryFields {
+                object["query"] = try JSONSerialization.jsonObject(
+                    with: JSONEncoder().encode(
+                        AdministrativeIdentifyQuery(
+                            title: queryFields["title"],
+                            requireChoice: true,
+                            fields: queryFields,
+                            limit: 25
+                        )
+                    )
+                )
+            }
             if let proposal {
                 object["proposal"] = try JSONSerialization.jsonObject(
                     with: JSONEncoder().encode(proposal)

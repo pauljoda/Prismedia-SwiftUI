@@ -81,7 +81,7 @@ import SwiftUI
         }
 
         private var eligibleProviders: [AdministrativePlugin] {
-            RequestIdentifyProviderPreferencePolicy.eligibleProviders(
+            RequestIdentifyProviderPreferencePolicy.identifyProviders(
                 session.providers,
                 entityKind: kind.rawValue,
                 defaultProviderIDs: session.defaultProviderIDs,
@@ -103,7 +103,7 @@ import SwiftUI
         private var providerSelection: Binding<String> {
             Binding(
                 get: { selectedProvider?.id ?? "" },
-                set: { session.selectedProviderID = $0 }
+                set: { session.selectProvider($0) }
             )
         }
 

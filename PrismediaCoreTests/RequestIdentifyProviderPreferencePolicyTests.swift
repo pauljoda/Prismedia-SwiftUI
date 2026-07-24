@@ -44,10 +44,52 @@ import XCTest
             XCTAssertEqual(hidden.map(\.id), ["alpha", "zulu"])
         }
 
+        func testIdentifyProvidersAcceptSearchOnlyAndMovieVideoFallback() {
+            let searchOnly = provider(
+                id: "search-only",
+                name: "Search Only",
+                entityKind: "movie",
+                actions: ["search"]
+            )
+            let genericVideo = provider(
+                id: "video",
+                name: "Generic Video",
+                entityKind: "video",
+                actions: []
+            )
+
+            let eligible = RequestIdentifyProviderPreferencePolicy.identifyProviders(
+                [searchOnly, genericVideo],
+                entityKind: "movie",
+                defaultProviderIDs: ["movie": "video"],
+                hidesNsfw: false
+            )
+
+            XCTAssertEqual(eligible.map(\.id), ["video", "search-only"])
+        }
+
+        func testResolvedProviderPrefersRestoredQueueProviderBeforeDefault() {
+            let providers = [
+                provider(id: "tmdb", name: "Default"),
+                provider(id: "alpha", name: "Restored"),
+            ]
+
+            XCTAssertEqual(
+                RequestIdentifyProviderPreferencePolicy.resolvedProviderID(
+                    in: providers,
+                    restoredProviderID: "ALPHA",
+                    currentProviderID: nil
+                ),
+                "alpha"
+            )
+        }
+
         private func provider(
             id: String,
             name: String,
-            isNsfw: Bool = false
+            isNsfw: Bool = false,
+            entityKind: String = "movie",
+            actions: [String] = ["search", "lookup-id"]
         ) -> AdministrativePlugin {
             AdministrativePlugin(
                 id: id,
@@ -58,8 +100,8 @@ import XCTest
                 isNsfw: isNsfw,
                 supports: [
                     AdministrativePluginSupport(
-                        entityKind: "movie",
-                        actions: ["search", "lookup-id"],
+                        entityKind: entityKind,
+                        actions: actions,
                         search: AdministrativePluginSearchDefinition(fields: [
                             AdministrativePluginSearchField(
                                 key: "title",
