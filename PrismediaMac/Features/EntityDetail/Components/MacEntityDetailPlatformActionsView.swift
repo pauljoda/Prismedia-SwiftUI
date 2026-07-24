@@ -11,7 +11,9 @@
         let onAction: (EntityDetailAction) -> Void
 
         var body: some View {
-            let supportedActions = presentation.modificationActions.filter(isActionSupported)
+            let supportedActions = presentation.modificationActions.filter {
+                $0.id != .identify && isActionSupported($0)
+            }
             if !supportedActions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: PrismediaSpacing.medium) {

@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct PluginSearchSurface: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         private let title: String
         private let description: String?
         private let providerLabel: String
@@ -223,7 +224,7 @@ import SwiftUI
                     systemImage: "magnifyingglass",
                     variant: .prominent,
                     form: .compactIcon,
-                    primaryTint: PrismediaColor.spectrumCyan,
+                    primaryTint: artworkPrimaryAccent,
                     isLoading: isSearching
                 ) {
                     onSearch(

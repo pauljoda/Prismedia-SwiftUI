@@ -9,6 +9,7 @@ import Foundation
         private var addCalls = 0
         private var searchCalls = 0
         private var queue: [AdministrativeIdentifyQueueItem]
+        private var events: [String] = []
 
         init(item: AdministrativeIdentifyQueueItem, queue: [AdministrativeIdentifyQueueItem] = []) {
             self.item = item
@@ -16,18 +17,22 @@ import Foundation
         }
 
         func callCounts() -> (get: Int, add: Int, search: Int) { (getCalls, addCalls, searchCalls) }
+        func callOrder() -> [String] { events }
         func identifyQueueItem(entityID: UUID) async throws -> AdministrativeIdentifyQueueItem {
             getCalls += 1
+            events.append("get")
             throw PrismediaAPIError.httpStatus(404, nil)
         }
         func addIdentifyItem(entityID: UUID) async throws -> AdministrativeIdentifyQueueItem {
             addCalls += 1
+            events.append("add")
             return item
         }
         func searchIdentifyItem(entityID: UUID, provider: String?, query: AdministrativeIdentifyQuery?) async throws
             -> AdministrativeIdentifyQueueItem
         {
             searchCalls += 1
+            events.append("search")
             return item
         }
 

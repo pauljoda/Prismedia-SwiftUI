@@ -7,6 +7,7 @@ enum PrismediaEntityDetailComposition {
         client: PrismediaAPIClient,
         userID: UUID,
         isAdministrator: Bool,
+        onOpenIdentifyProviders: @escaping @MainActor @Sendable () -> Void,
         onEntityMutated: @escaping @MainActor @Sendable () -> Void
     ) -> EntityDetailDependencies {
         let adapter = PrismediaEntityDetailLoader(client: client)
@@ -50,7 +51,30 @@ enum PrismediaEntityDetailComposition {
             metadataMutator: adapter,
             progressMutator: adapter,
             readerBookmarkStore: readerBookmarkStore,
-            readerLocatorStore: readerLocatorStore
+            readerLocatorStore: readerLocatorStore,
+            identify: identifyDependencies(
+                client: client,
+                isAdministrator: isAdministrator,
+                onOpenProviders: onOpenIdentifyProviders
+            )
         )
+    }
+
+    private static func identifyDependencies(
+        client: PrismediaAPIClient,
+        isAdministrator: Bool,
+        onOpenProviders: @escaping @MainActor @Sendable () -> Void
+    ) -> EntityIdentifyDependencies? {
+        #if os(iOS) || os(macOS)
+            guard isAdministrator else { return nil }
+            return EntityIdentifyDependencies(
+                administration: AdministrationService(client: client),
+                browser: PrismediaIdentifyEntityBrowser(client: client),
+                hidesNsfw: !client.allowsNsfwContent,
+                onOpenProviders: onOpenProviders
+            )
+        #else
+            return nil
+        #endif
     }
 }

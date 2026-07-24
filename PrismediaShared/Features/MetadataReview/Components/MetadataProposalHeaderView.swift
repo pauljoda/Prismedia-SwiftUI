@@ -58,15 +58,9 @@ import SwiftUI
         }
 
         private var artworkPath: String? {
-            let proposalImage = ["poster", "cover", "thumbnail", "backdrop"]
-                .lazy
-                .compactMap { kind in proposal.images.first { $0.kind == kind } }
-                .first
-            guard let proposalImage else { return fallbackArtworkPath }
-            return ProviderImagePreviewPolicy.previewURL(
-                for: proposalImage.url,
-                imageKind: proposalImage.kind,
-                targetKind: proposal.targetKind
+            MetadataReviewArtworkPolicy.primaryArtworkPath(
+                for: proposal,
+                fallback: fallbackArtworkPath
             )
         }
     }

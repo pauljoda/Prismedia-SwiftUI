@@ -2,13 +2,17 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifyProposalReviewPage: View {
+        @Environment(\.artworkPrimaryAccent) private var inheritedPrimaryAccent
         @Environment(\.prismediaPageIsActive) private var pageIsActive
         @Environment(\.scenePhase) private var scenePhase
         @Bindable var session: IdentifySession
         let item: AdministrativeIdentifyQueueItem
         let proposal: AdministrativeEntityMetadataProposal
         let isRoot: Bool
+        var onApplied: @MainActor () async -> Void = {}
+        var onRejected: @MainActor () -> Void = {}
         @State private var childDestination: AdministrativeEntityMetadataProposal?
+        @State private var artworkPalette: ArtworkPalette?
 
         var body: some View {
             ScrollView {
@@ -32,13 +36,24 @@ import SwiftUI
                         onActivateProposal: { childDestination = $0 }
                     )
 
-                    IdentifyReviewActions(session: session, item: currentItem)
+                    IdentifyReviewActions(
+                        session: session,
+                        item: currentItem,
+                        onApplied: onApplied,
+                        onRejected: onRejected
+                    )
                 }
                 .id(currentProposal.proposalID)
                 .padding()
             }
             .prismediaScreenBackground()
             .navigationTitle(isRoot ? currentItem.title : currentProposal.patch.title ?? currentItem.title)
+            .environment(\.artworkPalette, artworkPalette)
+            .environment(\.artworkPrimaryAccent, primaryAccent)
+            .prismediaArtworkPalette(
+                for: MetadataReviewArtworkPolicy.primaryArtworkPath(for: currentProposal),
+                palette: $artworkPalette
+            )
             #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -47,7 +62,9 @@ import SwiftUI
                     session: session,
                     item: currentItem,
                     proposal: child,
-                    isRoot: false
+                    isRoot: false,
+                    onApplied: onApplied,
+                    onRejected: onRejected
                 )
             }
             .task(id: refreshTaskID) {
@@ -64,6 +81,10 @@ import SwiftUI
         private var currentProposal: AdministrativeEntityMetadataProposal {
             guard let root = currentItem.proposal else { return proposal }
             return MetadataReviewPolicy.proposal(withID: proposal.proposalID, in: root) ?? proposal
+        }
+
+        private var primaryAccent: Color {
+            artworkPalette?.primary.color ?? inheritedPrimaryAccent
         }
 
         private var directNodes: [AdministrativeEntityMetadataProposal] {

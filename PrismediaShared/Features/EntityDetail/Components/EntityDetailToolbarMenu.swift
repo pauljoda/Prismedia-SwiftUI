@@ -10,15 +10,32 @@ struct EntityDetailToolbarMenu: View {
 
     var body: some View {
         Menu {
-            Button(action: onAddToCollection) {
-                Label("Add to Collection", systemImage: "folder.badge.plus")
-            }
-            .accessibilityIdentifier("entity-detail.add-to-collection")
+            ControlGroup {
+                ForEach(commonActions) { action in
+                    Button {
+                        onAction(action)
+                    } label: {
+                        Label(
+                            accessibilityLabel(action),
+                            systemImage: actionSystemImage(action)
+                        )
+                    }
+                    .disabled(!isEnabled(action))
+                    .accessibilityHint(accessibilityHint(action))
+                    .accessibilityIdentifier("entity-detail.action.\(action.id.rawValue)")
+                }
 
-            if !actions.isEmpty {
+                Button(action: onAddToCollection) {
+                    Label("Collection", systemImage: "folder.badge.plus")
+                }
+                .accessibilityLabel("Add to Collection")
+                .accessibilityIdentifier("entity-detail.add-to-collection")
+            }
+
+            if !stateActions.isEmpty {
                 Divider()
 
-                ForEach(actions) { action in
+                ForEach(stateActions) { action in
                     Button {
                         onAction(action)
                     } label: {
@@ -39,6 +56,16 @@ struct EntityDetailToolbarMenu: View {
         }
         .accessibilityLabel("More actions")
         .accessibilityIdentifier("entity-detail.more-actions")
+    }
+
+    private var commonActions: [EntityDetailAction] {
+        [.identify, .edit].compactMap { id in
+            actions.first { $0.id == id }
+        }
+    }
+
+    private var stateActions: [EntityDetailAction] {
+        actions.filter { $0.id == .favorite || $0.id == .organized }
     }
 
     private func actionSystemImage(_ action: EntityDetailAction) -> String {

@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct MetadataArtworkOptionButton: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         let image: AdministrativeImageCandidate
         let isSelected: Bool
         let onSelect: () -> Void
@@ -23,7 +24,7 @@ import SwiftUI
                             if isSelected {
                                 Image(systemName: "checkmark.circle.fill")
                                     .symbolRenderingMode(.palette)
-                                    .foregroundStyle(PrismediaColor.onAccent, PrismediaColor.accent)
+                                    .foregroundStyle(PrismediaColor.onAccent, artworkPrimaryAccent)
                                     .font(.title3)
                             }
                         }
@@ -49,12 +50,12 @@ import SwiftUI
                 .clipShape(tileShape)
                 .overlay {
                     tileShape.stroke(
-                        isSelected ? PrismediaColor.accent : PrismediaColor.border,
+                        isSelected ? artworkPrimaryAccent : PrismediaColor.border,
                         lineWidth: isSelected ? 2 : PrismediaLayout.hairline
                     )
                 }
                 .shadow(
-                    color: isSelected ? PrismediaColor.accent.opacity(0.22) : .clear,
+                    color: isSelected ? artworkPrimaryAccent.opacity(0.22) : .clear,
                     radius: PrismediaSpacing.medium
                 )
                 .contentShape(tileShape)

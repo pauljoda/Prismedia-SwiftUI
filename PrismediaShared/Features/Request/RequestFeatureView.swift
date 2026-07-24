@@ -20,6 +20,8 @@ import SwiftUI
         @State private var searchRevision = RequestLoadRevision()
         @State private var searchLimit = RequestFeatureView.searchPageSize
         @State private var submittedFields: [String: String] = [:]
+        @State private var flowPhase = RequestIdentifyFlowPhase.initialDependencyLoading
+        @State private var pendingNavigationIntent: RequestEntityNavigationIntent?
 
         private static let searchPageSize = 25
         private static let searchMaxLimit = 100
@@ -52,7 +54,8 @@ import SwiftUI
             let loadMoreAction: (() -> Void)? = canLoadMore ? { loadMore() } : nil
             PluginSearchSurface(
                 title: "Search",
-                description: "Choose a source, enter the provider fields, then review a \(kind.label.lowercased()) match.",
+                description:
+                    "Choose a source, enter the provider fields, then review a \(kind.label.lowercased()) match.",
                 noProvidersMessage: noProviderMessage,
                 entityKind: kind.pluginEntityKind,
                 hidesNsfw: hidesNsfw,
@@ -83,23 +86,24 @@ import SwiftUI
             }
             .onChange(of: kind) { _, _ in resetForKindChange() }
             .sheet(
-                isPresented: Binding(
-                    get: { reviewRoute != nil },
-                    set: { if !$0 { reviewRoute = nil } }
-                )
-            ) {
-                if let route = reviewRoute {
-                    NavigationStack {
-                        RequestReviewView(
-                            service: service,
-                            route: route,
-                            hidesNsfw: hidesNsfw,
-                            onNavigateToEntity: { intent in
-                                reviewRoute = nil
-                                onNavigateToEntity(intent)
-                            }
-                        )
-                    }
+                item: $reviewRoute,
+                onDismiss: finishReviewDismissal
+            ) { route in
+                RequestIdentifyFlowSheet(
+                    mode: .request,
+                    phase: flowPhase,
+                    showsBackToSearch: true
+                ) {
+                    RequestReviewView(
+                        service: service,
+                        route: route,
+                        hidesNsfw: hidesNsfw,
+                        flowPhase: $flowPhase,
+                        onNavigateToEntity: { intent in
+                            pendingNavigationIntent = intent
+                            reviewRoute = nil
+                        }
+                    )
                 }
             }
             .accessibilityIdentifier("request.feature")
@@ -119,12 +123,18 @@ import SwiftUI
         @MainActor
         private func loadProviders(force: Bool = false) async {
             guard force || providers.isEmpty, !isLoadingProviders else { return }
+            let retainsSearchContent = !providers.isEmpty || hasSearched
             isLoadingProviders = true
             errorMessage = nil
+            if !retainsSearchContent {
+                flowPhase = .initialDependencyLoading
+            }
             do {
                 providers = try await service.providers()
+                reconcileSearchPhase()
             } catch {
                 errorMessage = error.localizedDescription
+                flowPhase = .searchError
             }
             isLoadingProviders = false
         }
@@ -165,6 +175,7 @@ import SwiftUI
             isSearching = true
             errorMessage = nil
             providerWarnings = []
+            flowPhase = .searching
             Task {
                 do {
                     let response = try await service.search(
@@ -179,11 +190,13 @@ import SwiftUI
                     results = response.results
                     providerWarnings = response.providerErrors
                     hasSearched = true
+                    flowPhase = response.results.isEmpty ? .empty : .results
                 } catch {
                     guard searchRevision.isCurrent(revision) else { return }
                     results = []
                     hasSearched = true
                     errorMessage = error.localizedDescription
+                    flowPhase = .searchError
                 }
                 if searchRevision.isCurrent(revision) { isSearching = false }
             }
@@ -193,7 +206,9 @@ import SwiftUI
             guard let result = results.first(where: { $0.externalID == candidate.candidateID }),
                 let route = RequestCandidatePolicy.route(for: result, kind: kind)
             else { return }
+            flowPhase = .selection
             reviewRoute = route
+            flowPhase = .reviewLoading
         }
 
         private func resetForKindChange() {
@@ -211,6 +226,38 @@ import SwiftUI
             hasSearched = false
             isSearching = false
             errorMessage = nil
+            reconcileSearchPhase()
+        }
+
+        private func finishReviewDismissal() {
+            let intent = pendingNavigationIntent
+            pendingNavigationIntent = nil
+            reconcileSearchPhase()
+            if let intent {
+                onNavigateToEntity(intent)
+            }
+        }
+
+        private func reconcileSearchPhase() {
+            if isSearching {
+                flowPhase = .searching
+            } else if errorMessage != nil {
+                flowPhase = .searchError
+            } else if hasSearched {
+                flowPhase = results.isEmpty ? .empty : .results
+            } else if hasReadyProvider {
+                flowPhase = .searchReady
+            } else {
+                flowPhase = .unavailable
+            }
+        }
+
+        private var hasReadyProvider: Bool {
+            !PluginSearchFieldPolicy.eligibleProviders(
+                providers,
+                entityKind: kind.pluginEntityKind,
+                hidesNsfw: hidesNsfw
+            ).isEmpty
         }
     }
 

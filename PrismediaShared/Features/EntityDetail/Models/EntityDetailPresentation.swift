@@ -3,10 +3,19 @@ import SwiftUI
 struct EntityDetailPresentation {
     let detail: EntityDetail
     let canEditMetadata: Bool
+    let identifyActionLabel: String
+    let identifyActionSystemImage: String
 
-    init(detail: EntityDetail, canEditMetadata: Bool = false) {
+    init(
+        detail: EntityDetail,
+        canEditMetadata: Bool = false,
+        identifyActionLabel: String = "Identify",
+        identifyActionSystemImage: String = "doc.viewfinder"
+    ) {
         self.detail = detail
         self.canEditMetadata = canEditMetadata
+        self.identifyActionLabel = identifyActionLabel
+        self.identifyActionSystemImage = identifyActionSystemImage
     }
 
     var sections: [EntityDetailSection] {
@@ -47,7 +56,13 @@ struct EntityDetailPresentation {
         }
         values.append(action(.edit, "Edit", "pencil"))
         if detail.hasSourceMedia, flagCapability?.isWanted != true {
-            values.append(action(.identify, "Identify", "doc.viewfinder"))
+            values.append(
+                action(
+                    .identify,
+                    identifyActionLabel,
+                    identifyActionSystemImage
+                )
+            )
         }
         if let primaryAction { values.append(primaryAction) }
         return values

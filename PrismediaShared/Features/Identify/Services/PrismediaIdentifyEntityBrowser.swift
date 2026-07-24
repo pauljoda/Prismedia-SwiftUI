@@ -4,7 +4,11 @@ import Foundation
     struct PrismediaIdentifyEntityBrowser: IdentifyEntityBrowsing {
         let client: PrismediaAPIClient
 
-        func entities(kind: EntityKind, organized: Bool?, search: String?) async throws -> [EntityThumbnail] {
+        public func entities(
+            kind: EntityKind,
+            organized: Bool?,
+            search: String?
+        ) async throws -> [EntityThumbnail] {
             try await client.listAllEntities(
                 EntityListQuery(kind: kind, sort: "added", organized: organized),
                 search: search

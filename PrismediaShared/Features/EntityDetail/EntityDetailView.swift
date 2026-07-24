@@ -32,6 +32,11 @@ public struct EntityDetailView: View {
     @State var artworkPalette: ArtworkPalette?
     @State var editPresentation: EntityDetailEditPresentation?
     @State var collectionSheetPresented = false
+    #if os(iOS) || os(macOS)
+        @State var identifyAvailability = EntityIdentifyAvailability.checking
+        @State var identifyPresentation: IdentifyEntryPresentation?
+        @State var identifyEntryTask: Task<Void, Never>?
+    #endif
 
     let link: EntityLink
     let dependencies: EntityDetailDependencies
@@ -90,6 +95,32 @@ public struct EntityDetailView: View {
                 editContent: editSheet
             )
         )
+        #if os(iOS) || os(macOS)
+            .sheet(
+                item: $identifyPresentation,
+                onDismiss: {
+                    Task {
+                        guard let detail = currentDetail else { return }
+                        await refreshIdentifyAvailability(for: detail)
+                    }
+                }
+            ) { presentation in
+                EntityIdentifyFlowView(
+                    session: presentation.session,
+                    entityID: presentation.entityID,
+                    automaticallyBegins: false,
+                    onIdentified: {
+                        await loadDetail()
+                        dependencies.onEntityMutated()
+                    }
+                )
+                .environment(\.artworkPalette, artworkPalette)
+                .environment(
+                    \.artworkPrimaryAccent,
+                    artworkPalette?.primary.color ?? PrismediaColor.accent
+                )
+            }
+        #endif
         .task(id: link) {
             videoPlaybackPreparation.reset()
             await loadDetail()
@@ -176,9 +207,27 @@ public struct EntityDetailView: View {
         currentDetail.map {
             EntityDetailPresentation(
                 detail: $0,
-                canEditMetadata: dependencies.metadataMutator != nil
+                canEditMetadata: dependencies.metadataMutator != nil,
+                identifyActionLabel: identifyActionLabel,
+                identifyActionSystemImage: identifyActionSystemImage
             )
         }
+    }
+
+    var identifyActionLabel: String {
+        #if os(iOS) || os(macOS)
+            identifyAvailability.actionLabel
+        #else
+            "Identify"
+        #endif
+    }
+
+    var identifyActionSystemImage: String {
+        #if os(iOS) || os(macOS)
+            identifyAvailability.actionSystemImage
+        #else
+            "doc.viewfinder"
+        #endif
     }
 
     var mutationErrorPresented: Binding<Bool> {

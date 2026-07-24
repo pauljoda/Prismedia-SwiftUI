@@ -128,6 +128,7 @@ import SwiftUI
                 client: client,
                 userID: user.id,
                 isAdministrator: user.isAdmin,
+                onOpenIdentifyProviders: {},
                 onEntityMutated: { environment.entityDidMutate() }
             )
         }

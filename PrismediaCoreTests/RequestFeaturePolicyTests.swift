@@ -97,7 +97,12 @@ final class RequestFeaturePolicyTests: XCTestCase {
         let missingPlugin = try requestResult(pluginID: nil, includesIdentity: true)
         let missingIdentity = try requestResult(pluginID: "tmdb", includesIdentity: false)
 
-        XCTAssertEqual(RequestCandidatePolicy.route(for: valid, kind: .movie)?.externalIdentity.value, "603")
+        let route = RequestCandidatePolicy.route(for: valid, kind: .movie)
+        XCTAssertEqual(route?.externalIdentity.value, "603")
+        XCTAssertEqual(
+            route?.artworkPath,
+            "https://image.tmdb.org/t/p/w342/matrix.jpg"
+        )
         XCTAssertNil(RequestCandidatePolicy.route(for: missingPlugin, kind: .movie))
         XCTAssertNil(RequestCandidatePolicy.route(for: missingIdentity, kind: .movie))
     }
@@ -237,7 +242,7 @@ final class RequestFeaturePolicyTests: XCTestCase {
             ? #"{"namespace":"tmdb","value":"603"}"#
             : "null"
         let json =
-            #"{"serviceId":"99999999-9999-9999-9999-999999999999","source":"plugin","kind":"movie","externalId":"tmdb:603","title":"The Matrix","subtitle":null,"year":1999,"overview":null,"posterUrl":null,"backdropUrl":null,"rating":null,"runtimeMinutes":null,"certification":null,"trackCount":null,"tags":[],"tracked":false,"upstreamId":null,"monitored":null,"requestable":true,"providerName":"TMDB","pluginId":\#(pluginJSON),"externalIdentity":\#(identityJSON)}"#
+            #"{"serviceId":"99999999-9999-9999-9999-999999999999","source":"plugin","kind":"movie","externalId":"tmdb:603","title":"The Matrix","subtitle":null,"year":1999,"overview":null,"posterUrl":"https://image.tmdb.org/t/p/original/matrix.jpg","backdropUrl":null,"rating":null,"runtimeMinutes":null,"certification":null,"trackCount":null,"tags":[],"tracked":false,"upstreamId":null,"monitored":null,"requestable":true,"providerName":"TMDB","pluginId":\#(pluginJSON),"externalIdentity":\#(identityJSON)}"#
         return try PrismediaJSON.decoder().decode(AdministrativeRequestSearchResult.self, from: Data(json.utf8))
     }
 }

@@ -58,6 +58,7 @@ public struct PrismediaShellView: View {
             client: client,
             userID: user.id,
             isAdministrator: user.isAdmin,
+            onOpenIdentifyProviders: openIdentifyProviders,
             onEntityMutated: { environment.entityDidMutate() }
         )
 
@@ -116,6 +117,7 @@ public struct PrismediaShellView: View {
             client: client,
             userID: user.id,
             isAdministrator: user.isAdmin,
+            onOpenIdentifyProviders: openIdentifyProviders,
             onEntityMutated: { environment.entityDidMutate() }
         )
 
@@ -570,6 +572,13 @@ public struct PrismediaShellView: View {
             videoPlaybackSession.inlinePlaybackWillNavigate()
             isAccountPresented = true
         }
+    }
+
+    private func openIdentifyProviders() {
+        guard let destination = ModeCatalog.operate.destination(id: "plugins") else {
+            return
+        }
+        router.select(mode: ModeCatalog.operate, destination: destination)
     }
 
     private var allowsDashboardHeroAutomaticAdvance: Bool {

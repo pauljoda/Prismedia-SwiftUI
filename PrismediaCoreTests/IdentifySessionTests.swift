@@ -39,7 +39,30 @@ import XCTest
             XCTAssertFalse(session.isLoading)
         }
 
-        private func queueItem(title: String = "Arrival") throws -> AdministrativeIdentifyQueueItem {
+        @MainActor
+        func testBeginningEntityEntryPersistsQueueBeforeStartingProviderSearch() async throws {
+            let item = try queueItem(state: "search")
+            let service = OpenIdentifyServiceSpy(item: item)
+            let session = IdentifySession(
+                service: service,
+                browser: IdentifyPreviewEntityBrowser()
+            )
+
+            await session.beginEntry(entityID: item.entityID)
+
+            let counts = await service.callCounts()
+            let callOrder = await service.callOrder()
+            XCTAssertEqual(counts.get, 1)
+            XCTAssertEqual(counts.add, 1)
+            XCTAssertEqual(counts.search, 1)
+            XCTAssertEqual(callOrder, ["get", "add", "search"])
+            XCTAssertEqual(session.selectedItemID, item.entityID)
+        }
+
+        private func queueItem(
+            title: String = "Arrival",
+            state: String = "queued"
+        ) throws -> AdministrativeIdentifyQueueItem {
             let id = UUID()
             let entityID = UUID()
             let data = Data(
@@ -50,7 +73,7 @@ import XCTest
                   "entityKind": "movie",
                   "title": "\(title)",
                   "isNsfw": false,
-                  "state": "queued",
+                  "state": "\(state)",
                   "action": "identify",
                   "candidates": [],
                   "cascadeRunning": false,

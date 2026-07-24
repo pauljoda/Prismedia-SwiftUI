@@ -28,6 +28,7 @@ import Observation
         private let sleep: @Sendable (Duration) async throws -> Void
         private let now: @Sendable () -> Date
         private var pollingToken = UUID()
+        private var openingEntryIDs = Set<UUID>()
 
         init(
             service: any AdministrationServicing,
@@ -176,6 +177,61 @@ import Observation
             } catch { errorMessage = error.localizedDescription }
         }
 
+        func beginEntry(entityID: UUID) async {
+            guard openingEntryIDs.insert(entityID).inserted else { return }
+            defer { openingEntryIDs.remove(entityID) }
+
+            cancelPolling()
+            isLoading = true
+            errorMessage = nil
+
+            let item: AdministrativeIdentifyQueueItem
+            let shouldStartSearch: Bool
+            do {
+                do {
+                    item = try await service.identifyQueueItem(entityID: entityID)
+                    let state = IdentifyQueueState(rawServerValue: item.state)
+                    shouldStartSearch = state == .done || state == .deleted
+                } catch PrismediaAPIError.httpStatus(404, _) {
+                    // Persist the queue record before beginning the potentially long
+                    // provider search. The Identify dashboard can then resume it even
+                    // if this presentation goes away.
+                    item = try await service.addIdentifyItem(entityID: entityID)
+                    shouldStartSearch = true
+                }
+
+                replace(item)
+                select(entityID)
+                isLoading = false
+
+                do {
+                    let nextProviders = try await service.identifyProviders(kind: item.entityKind.rawValue)
+                    if providers != nextProviders {
+                        providers = nextProviders
+                    }
+                    reconcileProvider()
+                } catch is CancellationError {
+                    return
+                } catch {
+                    // Initial providers from the entry availability check remain usable.
+                }
+
+                guard shouldStartSearch else { return }
+                isSearching = true
+                defer { isSearching = false }
+                _ = await searchAndPoll(
+                    entityID: entityID,
+                    provider: nil,
+                    query: nil
+                )
+            } catch is CancellationError {
+                isLoading = false
+            } catch {
+                isLoading = false
+                errorMessage = error.localizedDescription
+            }
+        }
+
         func search(fields: [String: String]) async {
             guard let item = selectedItem, !selectedProviderID.isEmpty else { return }
             guard let provider = providersForSelectedItem.first(where: { $0.id == selectedProviderID }) else { return }
@@ -197,6 +253,7 @@ import Observation
         func seek() async {
             guard let item = selectedItem else { return }
             isSeeking = true
+            errorMessage = nil
             defer { isSeeking = false }
             let order = IdentifyProviderOrder.ids(
                 selected: selectedProviderID, providers: providers, kind: item.entityKind, hidesNsfw: hidesNsfw)
@@ -212,6 +269,7 @@ import Observation
         func resolve(_ candidate: AdministrativeEntitySearchCandidate) async {
             guard let item = selectedItem, !selectedProviderID.isEmpty else { return }
             isSearching = true
+            errorMessage = nil
             defer { isSearching = false }
             do {
                 let updated = try await service.resolveIdentifyCandidate(
@@ -221,9 +279,12 @@ import Observation
             } catch { errorMessage = error.localizedDescription }
         }
 
-        func apply(advance: Bool) async {
-            guard let item = selectedItem, let proposal = item.proposal, !item.cascadeRunning else { return }
+        func apply(advance: Bool) async -> Bool {
+            guard let item = selectedItem, let proposal = item.proposal, !item.cascadeRunning else {
+                return false
+            }
             isApplying = true
+            errorMessage = nil
             applyProgress = nil
             let started = now()
             let progressID = UUID()
@@ -235,19 +296,37 @@ import Observation
                     selectedImages: MetadataReviewPolicy.selectedRootImages(for: proposal, selection: reviewSelection),
                     progressID: progressID)
                 replace(updated)
-                await pollApply(entityID: item.entityID, progressID: progressID, started: started)
+                let succeeded = await pollApply(
+                    entityID: item.entityID,
+                    progressID: progressID,
+                    started: started
+                )
+                guard succeeded else {
+                    isApplying = false
+                    return false
+                }
                 if advance { selectNext() }
-            } catch { errorMessage = error.localizedDescription }
+            } catch {
+                errorMessage = error.localizedDescription
+                isApplying = false
+                return false
+            }
             isApplying = false
+            return true
         }
 
-        func reject(advance: Bool) async {
-            guard let item = selectedItem else { return }
+        func reject(advance: Bool) async -> Bool {
+            guard let item = selectedItem else { return false }
+            errorMessage = nil
             do {
                 try await service.removeIdentifyItem(entityID: item.entityID)
                 queue.removeAll { $0.entityID == item.entityID }
                 if advance { selectNext() } else { selectedItemID = nil }
-            } catch { errorMessage = error.localizedDescription }
+                return true
+            } catch {
+                errorMessage = error.localizedDescription
+                return false
+            }
         }
 
         func acceptSelected() async {
@@ -350,13 +429,14 @@ import Observation
             pollingToken = UUID()
         }
 
-        private func beginSearch(entityID: UUID, provider: String, query: AdministrativeIdentifyQuery?) async {
+        private func beginSearch(entityID: UUID, provider: String?, query: AdministrativeIdentifyQuery?) async {
             isSearching = true
+            errorMessage = nil
             defer { isSearching = false }
             _ = await searchAndPoll(entityID: entityID, provider: provider, query: query)
         }
 
-        private func searchAndPoll(entityID: UUID, provider: String, query: AdministrativeIdentifyQuery?) async
+        private func searchAndPoll(entityID: UUID, provider: String?, query: AdministrativeIdentifyQuery?) async
             -> AdministrativeIdentifyQueueItem?
         {
             let token = UUID()
@@ -386,12 +466,16 @@ import Observation
             }
         }
 
-        private func pollApply(entityID: UUID, progressID: UUID, started: Date) async {
+        private func pollApply(
+            entityID: UUID,
+            progressID: UUID,
+            started: Date
+        ) async -> Bool {
             let token = UUID()
             pollingToken = token
             do {
                 while true {
-                    guard pollingToken == token else { return }
+                    guard pollingToken == token else { return false }
                     let elapsed = now().timeIntervalSince(started)
                     let progress: AdministrativeIdentifyApplyProgress
                     do {
@@ -405,11 +489,20 @@ import Observation
                     if ["done", "error", "failed", "cancelled"].contains(progress.state.lowercased()) {
                         let remaining = max(0, pollingPolicy.minimumApplyVisibilitySeconds - elapsed)
                         if remaining > 0 { try await sleep(.milliseconds(Int64(remaining * 1_000))) }
-                        return
+                        if progress.state.lowercased() == "done" {
+                            return true
+                        }
+                        errorMessage = progress.error ?? "Identification could not be applied."
+                        return false
                     }
                     try await sleep(pollingPolicy.applyInterval(elapsed: elapsed))
                 }
-            } catch is CancellationError {} catch { errorMessage = error.localizedDescription }
+            } catch is CancellationError {
+                return false
+            } catch {
+                errorMessage = error.localizedDescription
+                return false
+            }
         }
 
         private func receive(_ item: AdministrativeIdentifyQueueItem) {

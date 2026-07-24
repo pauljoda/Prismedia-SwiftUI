@@ -26,6 +26,10 @@ extension EntityDetailView {
         guard let request = state.beginLoad() else { return }
         let outcome = await service.load(id: link.entityID, kind: link.kind)
         state.finishLoad(outcome, request: request)
+        #if os(iOS) || os(macOS)
+            guard case .content(let detail) = state.phase else { return }
+            await refreshIdentifyAvailability(for: detail)
+        #endif
     }
 
     func refreshPlaybackState() async {

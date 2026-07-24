@@ -2,8 +2,11 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifyReviewActions: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @Bindable var session: IdentifySession
         let item: AdministrativeIdentifyQueueItem
+        var onApplied: @MainActor () async -> Void = {}
+        var onRejected: @MainActor () -> Void = {}
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
@@ -17,6 +20,13 @@ import SwiftUI
                     ) {
                         Text(progress.currentTitle ?? "Applying metadata")
                     }
+                    .tint(artworkPrimaryAccent)
+                }
+
+                if let errorMessage = session.errorMessage {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .font(.callout)
+                        .foregroundStyle(PrismediaColor.destructive)
                 }
 
                 GlassEffectContainer(spacing: PrismediaSpacing.medium) {
@@ -41,10 +51,18 @@ import SwiftUI
 
                         Menu {
                             Button("Reject") {
-                                Task { await session.reject(advance: false) }
+                                Task {
+                                    if await session.reject(advance: false) {
+                                        onRejected()
+                                    }
+                                }
                             }
                             Button("Reject & Next") {
-                                Task { await session.reject(advance: true) }
+                                Task {
+                                    if await session.reject(advance: true) {
+                                        onRejected()
+                                    }
+                                }
                             }
                         } label: {
                             Label("Reject", systemImage: "xmark")
@@ -56,17 +74,25 @@ import SwiftUI
 
                         Menu {
                             Button("Accept") {
-                                Task { await session.apply(advance: false) }
+                                Task {
+                                    if await session.apply(advance: false) {
+                                        await onApplied()
+                                    }
+                                }
                             }
                             Button("Accept & Next") {
-                                Task { await session.apply(advance: true) }
+                                Task {
+                                    if await session.apply(advance: true) {
+                                        await onApplied()
+                                    }
+                                }
                             }
                         } label: {
                             Label("Accept", systemImage: "checkmark")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.glassProminent)
-                        .tint(PrismediaColor.success)
+                        .tint(artworkPrimaryAccent)
                         .disabled(!canAccept)
                     }
                     .buttonBorderShape(.capsule)

@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct MetadataProposalNodeRow: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         let proposal: AdministrativeEntityMetadataProposal
         let isSelectable: Bool
         let isSelected: Bool
@@ -18,7 +19,7 @@ import SwiftUI
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(isSelected ? Color.accentColor : PrismediaColor.textMuted)
+                    .foregroundStyle(isSelected ? artworkPrimaryAccent : PrismediaColor.textMuted)
                     .accessibilityLabel(isSelected ? "Exclude proposal" : "Include proposal")
                 }
 
@@ -72,7 +73,7 @@ import SwiftUI
                             .font(.caption)
                             .foregroundStyle(
                                 trailingSymbol == "checkmark.circle.fill"
-                                    ? Color.accentColor
+                                    ? artworkPrimaryAccent
                                     : PrismediaColor.textMuted
                             )
                     }

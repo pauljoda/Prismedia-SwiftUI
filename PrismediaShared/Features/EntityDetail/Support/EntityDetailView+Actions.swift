@@ -10,6 +10,15 @@ extension EntityDetailView {
     }
 
     func isEnabled(_ action: EntityDetailAction) -> Bool {
+        if action.id == .identify {
+            #if os(iOS) || os(macOS)
+                return dependencies.identify != nil
+                    && !identifyAvailability.isChecking
+                    && identifyPresentation == nil
+            #else
+                return false
+            #endif
+        }
         if action.id == .audio {
             #if os(iOS) || os(macOS)
                 return currentDetail?.kind == .collection
@@ -45,6 +54,13 @@ extension EntityDetailView {
     }
 
     func isSupported(_ action: EntityDetailAction) -> Bool {
+        if action.id == .identify {
+            #if os(iOS) || os(macOS)
+                return dependencies.identify != nil
+            #else
+                return false
+            #endif
+        }
         if action.id == .audio {
             #if os(iOS) || os(macOS)
                 return currentDetail?.kind == .collection
@@ -132,6 +148,33 @@ extension EntityDetailView {
                 dependencies.entityGridLoader != nil
             else { return }
             editPresentation = EntityDetailEditPresentation(detail: detail)
+        case .identify:
+            #if os(iOS) || os(macOS)
+                guard case .content(let detail) = state.phase,
+                    let identify = dependencies.identify
+                else { return }
+
+                if identifyAvailability.routesToProviders {
+                    identify.onOpenProviders()
+                    return
+                }
+                guard !identifyAvailability.isChecking else { return }
+
+                let session = IdentifySession(
+                    service: identify.administration,
+                    browser: identify.browser,
+                    hidesNsfw: identify.hidesNsfw,
+                    initialQueue: identifyAvailability.initialQueue,
+                    initialProviders: identifyAvailability.initialProviders
+                )
+                identifyPresentation = IdentifyEntryPresentation(
+                    entityID: detail.id,
+                    session: session
+                )
+                identifyEntryTask = Task {
+                    await session.beginEntry(entityID: detail.id)
+                }
+            #endif
         default:
             break
         }
@@ -169,10 +212,50 @@ extension EntityDetailView {
                 ? "Opens the Main and Metadata editor"
                 : "Editing requires taxonomy search to be available"
         }
+        if action.id == .identify {
+            #if os(iOS) || os(macOS)
+                if identifyAvailability.isChecking {
+                    return "Checking the identify queue and compatible plugins"
+                }
+                if identifyAvailability.routesToProviders {
+                    return "Opens Plugins because no compatible Identify plugin is ready"
+                }
+                if case .queued = identifyAvailability {
+                    return "Resumes this item from the durable Identify queue"
+                }
+                return "Adds this item to the Identify queue and opens metadata search"
+            #else
+                return "Identify is unavailable on Apple TV"
+            #endif
+        }
         return isEnabled(action)
             ? "Updates this entity"
             : "This action is not available in the native app yet"
     }
+
+    #if os(iOS) || os(macOS)
+        func refreshIdentifyAvailability(
+            for detail: EntityDetail
+        ) async {
+            guard detail.hasSourceMedia,
+                EntityDetailPresentation(detail: detail).flagCapability?.isWanted != true,
+                let identify = dependencies.identify
+            else {
+                identifyAvailability = .unavailable
+                return
+            }
+
+            let next = await EntityIdentifyAvailabilityService(
+                administration: identify.administration,
+                hidesNsfw: identify.hidesNsfw
+            ).load(
+                entityID: detail.id,
+                kind: detail.kind
+            )
+            guard !Task.isCancelled, currentDetail?.id == detail.id else { return }
+            identifyAvailability = next
+        }
+    #endif
 
     @ViewBuilder
     func editSheet(

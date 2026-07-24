@@ -24,6 +24,7 @@ public struct EntityDetailDependencies: Sendable {
     public let mediaSequenceLoader: (any EntityMediaSequenceLoading)?
     public let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
     public let trickplayFrameLoader: (any TrickplayFrameLoading)?
+    public let identify: EntityIdentifyDependencies?
 
     public init(
         detailLoader: any EntityDetailLoading,
@@ -44,7 +45,8 @@ public struct EntityDetailDependencies: Sendable {
         metadataMutator: (any EntityMetadataMutating)? = nil,
         progressMutator: (any EntityProgressMutating)? = nil,
         readerBookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
-        readerLocatorStore: EPUBLocatorStore = .disabled
+        readerLocatorStore: EPUBLocatorStore = .disabled,
+        identify: EntityIdentifyDependencies? = nil
     ) {
         self.detailLoader = detailLoader
         self.mutator = mutator
@@ -65,5 +67,6 @@ public struct EntityDetailDependencies: Sendable {
         self.mediaSequenceLoader = mediaSequenceLoader
         self.transcriptSourceLoader = transcriptSourceLoader
         self.trickplayFrameLoader = trickplayFrameLoader
+        self.identify = identify
     }
 }

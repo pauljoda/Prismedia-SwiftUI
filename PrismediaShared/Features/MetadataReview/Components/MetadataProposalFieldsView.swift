@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct MetadataProposalFieldsView: View {
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         let proposal: AdministrativeEntityMetadataProposal
         let selection: Binding<MetadataReviewSelection>?
         let currentValues: [MetadataReviewField: String]
@@ -35,34 +36,43 @@ import SwiftUI
         }
 
         private func fieldRow(_ field: MetadataReviewField) -> some View {
-            HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+            Group {
                 if let selection {
-                    Toggle("", isOn: fieldBinding(field, selection: selection))
-                        .labelsHidden()
-                        .accessibilityLabel("Apply \(field.label)")
-                }
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text(field.label)
-                        .font(.subheadline.weight(.medium))
-                    if let current = currentValues[field], !current.isEmpty {
-                        LabeledContent("Current", value: current)
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                        LabeledContent(
-                            "Proposed",
-                            value: MetadataReviewPolicy.fieldValue(field, in: proposal)
-                        )
-                        .font(.callout)
-                    } else {
-                        Text(MetadataReviewPolicy.fieldValue(field, in: proposal))
-                            .font(.callout)
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    Toggle(isOn: fieldBinding(field, selection: selection)) {
+                        fieldDescription(field)
                     }
+                    .toggleStyle(.switch)
+                    .tint(artworkPrimaryAccent)
+                    .padding(.trailing, PrismediaSpacing.small)
+                    .accessibilityLabel("Apply \(field.label)")
+                } else {
+                    fieldDescription(field)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.vertical, PrismediaSpacing.small)
+        }
+
+        private func fieldDescription(_ field: MetadataReviewField) -> some View {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                Text(field.label)
+                    .font(.subheadline.weight(.medium))
+                if let current = currentValues[field], !current.isEmpty {
+                    LabeledContent("Current", value: current)
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                    LabeledContent(
+                        "Proposed",
+                        value: MetadataReviewPolicy.fieldValue(field, in: proposal)
+                    )
+                    .font(.callout)
+                } else {
+                    Text(MetadataReviewPolicy.fieldValue(field, in: proposal))
+                        .font(.callout)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
 
         private func fieldBinding(

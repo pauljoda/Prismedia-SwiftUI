@@ -2,11 +2,11 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct RequestReviewView: View {
-        @Environment(\.dismiss) private var dismiss
-
+        @Environment(\.artworkPrimaryAccent) private var inheritedPrimaryAccent
         let service: any RequestFeatureServicing
         let route: RequestReviewRoute
         let hidesNsfw: Bool
+        @Binding var flowPhase: RequestIdentifyFlowPhase
         let onNavigateToEntity: (RequestEntityNavigationIntent) -> Void
 
         @State private var review: AdministrativeRequestReviewResponse?
@@ -25,6 +25,7 @@ import SwiftUI
         @State private var targetErrorMessage: String?
         @State private var loadRevision = RequestLoadRevision()
         @State private var outcome: RequestCommitResult?
+        @State private var artworkPalette: ArtworkPalette?
 
         var body: some View {
             Group {
@@ -44,14 +45,12 @@ import SwiftUI
                 }
             }
             .navigationTitle("Review Request")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "xmark")
-                    }
-                    .accessibilityLabel("Close")
-                }
-            }
+            .environment(\.artworkPalette, artworkPalette)
+            .environment(\.artworkPrimaryAccent, primaryAccent)
+            .prismediaArtworkPalette(
+                for: reviewArtworkPath,
+                palette: $artworkPalette
+            )
             .task { await loadReview() }
             .alert(
                 outcome?.title ?? "Request",
@@ -134,6 +133,7 @@ import SwiftUI
                     systemImage: "paperplane",
                     variant: .prominent,
                     form: .fill,
+                    primaryTint: primaryAccent,
                     isLoading: isSubmitting,
                     action: commit
                 )
@@ -164,7 +164,8 @@ import SwiftUI
                 PrismediaButton(
                     "Reload Review",
                     systemImage: "arrow.clockwise",
-                    variant: .prominent
+                    variant: .prominent,
+                    primaryTint: primaryAccent
                 ) {
                     Task { await loadReview() }
                 }
@@ -210,11 +211,24 @@ import SwiftUI
             return noun.capitalized + "s"
         }
 
+        private var reviewArtworkPath: String? {
+            guard let review else { return route.artworkPath }
+            return MetadataReviewArtworkPolicy.primaryArtworkPath(
+                for: review.proposal,
+                fallback: route.artworkPath
+            )
+        }
+
+        private var primaryAccent: Color {
+            artworkPalette?.primary.color ?? inheritedPrimaryAccent
+        }
+
         @MainActor
         private func loadReview() async {
             let revision = loadRevision.advance()
             isLoading = true
             isLoadingTargets = true
+            flowPhase = .reviewLoading
             errorMessage = nil
             targetErrorMessage = nil
             requiresReload = false
@@ -243,6 +257,7 @@ import SwiftUI
                 review = nil
                 errorMessage = error.localizedDescription
                 isLoading = false
+                flowPhase = .reviewError
             }
 
             do {
@@ -258,6 +273,9 @@ import SwiftUI
                 targetErrorMessage = "Request options could not be loaded: \(error.localizedDescription)"
             }
             if loadRevision.isCurrent(revision) { isLoadingTargets = false }
+            if loadRevision.isCurrent(revision), review != nil {
+                flowPhase = .reviewReady
+            }
         }
 
         private func toggleProposal(_ proposalID: String, _ selected: Bool) {
@@ -288,6 +306,7 @@ import SwiftUI
                 : selection.rootSelection.sorted()
             guard hasRequestIntent(selection) else { return }
             isSubmitting = true
+            flowPhase = .committing
             errorMessage = nil
             let request = AdministrativeReviewedRequestCommitRequest(
                 kind: review.kind,
@@ -302,16 +321,26 @@ import SwiftUI
             Task {
                 do {
                     let response = try await service.commit(request)
-                    outcome = RequestCommitOutcomePolicy.resolve(response: response, review: review)
+                    let result = RequestCommitOutcomePolicy.resolve(response: response, review: review)
+                    isSubmitting = false
+                    flowPhase = .success
+                    if let intent = result.navigationIntent {
+                        onNavigateToEntity(intent)
+                    } else {
+                        outcome = result
+                    }
                 } catch let PrismediaAPIError.httpStatus(_, problem)
                     where problem?.code == "request_proposal_changed"
                 {
                     requiresReload = true
                     errorMessage = "This proposal changed after you reviewed it."
+                    isSubmitting = false
+                    flowPhase = .commitFailure
                 } catch {
                     errorMessage = error.localizedDescription
+                    isSubmitting = false
+                    flowPhase = .commitFailure
                 }
-                isSubmitting = false
             }
         }
     }
@@ -323,6 +352,7 @@ import SwiftUI
                     service: RequestPreviewService(scenario: .content),
                     route: RequestPreviewFixtures.route,
                     hidesNsfw: true,
+                    flowPhase: .constant(.reviewReady),
                     onNavigateToEntity: { _ in }
                 )
             }

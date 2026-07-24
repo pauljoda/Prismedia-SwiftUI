@@ -11,6 +11,15 @@ public enum RequestCandidatePolicy {
             !identity.namespace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             !identity.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return nil }
-        return RequestReviewRoute(kind: kind, pluginID: pluginID, externalIdentity: identity)
+        return RequestReviewRoute(
+            kind: kind,
+            pluginID: pluginID,
+            externalIdentity: identity,
+            artworkPath: ProviderImagePreviewPolicy.previewURL(
+                for: result.posterURL ?? result.backdropURL,
+                imageKind: result.posterURL == nil ? "backdrop" : "poster",
+                targetKind: result.kind
+            )
+        )
     }
 }
