@@ -28,6 +28,16 @@
         )
     }
 
+    #Preview("Acquisition Review · Monitor · Off · Owned Files · iPhone") {
+        acquisitionMonitorReviewPanel(
+            phase: acquisitionMonitorReviewPhase(
+                EntityAcquisitionPanelPreviewFixtures.wantedState
+            ),
+            hasOwnedContent: true,
+            canDeleteFiles: true
+        )
+    }
+
     #Preview("Acquisition Review · Monitor · Paused") {
         acquisitionMonitorReviewPanel(
             phase: acquisitionMonitorReviewPhase(
@@ -243,6 +253,8 @@
     private func acquisitionMonitorReviewPanel(
         phase: EntityAcquisitionPanelPhase,
         childGroups: [EntityGroup] = [],
+        hasOwnedContent: Bool = false,
+        canDeleteFiles: Bool = false,
         isMutating: Bool = false,
         mutationError: String? = nil,
         refreshError: String? = nil,
@@ -254,6 +266,8 @@
         ScrollView {
             EntityAcquisitionPanel(
                 entityID: EntityAcquisitionPanelPreviewFixtures.entityID,
+                hasOwnedContent: hasOwnedContent,
+                canDeleteFiles: canDeleteFiles,
                 childGroups: childGroups,
                 previewPhase: phase,
                 acquisitionService: PreviewEntityAcquisitionService(

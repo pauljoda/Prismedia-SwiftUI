@@ -114,7 +114,12 @@ struct PrismediaButton: View {
     private var paddedButtonLabel: some View {
         buttonLabel
             .padding(.horizontal, PrismediaSpacing.small)
-            .padding(.vertical, PrismediaSpacing.extraSmall)
+            .padding(
+                .vertical,
+                form == .compactIcon
+                    ? PrismediaSpacing.small
+                    : PrismediaSpacing.extraSmall
+            )
     }
 
     @ViewBuilder

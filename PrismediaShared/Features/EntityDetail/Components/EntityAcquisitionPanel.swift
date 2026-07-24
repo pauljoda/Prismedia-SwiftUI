@@ -245,42 +245,41 @@ struct EntityAcquisitionPanel: View {
         )
 
         return VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-            HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-                EntityMonitorControl(
-                    monitorState: monitorState,
-                    presentation: presentation,
-                    showsMutationProgress: pendingMonitorValue != nil
-                        || confirmedMonitorValue != nil,
-                    primaryAccent: artworkPrimaryAccent,
-                    onChange: { nextValue in
-                        guard let monitorState else { return }
-                        updateMonitor(
-                            to: nextValue,
-                            monitorState: monitorState,
-                            service: service
-                        )
-                    }
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
+            #if os(iOS) || os(macOS)
+                if showsStandaloneDeletionMenu(
+                    snapshot: snapshot,
+                    presentation: presentation
+                ) {
+                    RequestActivityAcquisitionActionMenu(
+                        lifecycleActions: [],
+                        showsDeleteFiles: true,
+                        isLifecycleDisabled: true,
+                        isDeleteFilesDisabled: deleteFilesIsDisabled(
+                            monitorState: monitorState
+                        ),
+                        onPerform: { _ in },
+                        onDeleteFiles: { confirmsDeleteFiles = true }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            #endif
 
-                #if os(iOS) || os(macOS)
-                    if showsStandaloneDeletionMenu(
-                        snapshot: snapshot,
-                        presentation: presentation
-                    ) {
-                        RequestActivityAcquisitionActionMenu(
-                            lifecycleActions: [],
-                            showsDeleteFiles: true,
-                            isLifecycleDisabled: true,
-                            isDeleteFilesDisabled: deleteFilesIsDisabled(
-                                monitorState: monitorState
-                            ),
-                            onPerform: { _ in },
-                            onDeleteFiles: { confirmsDeleteFiles = true }
-                        )
-                    }
-                #endif
-            }
+            EntityMonitorControl(
+                monitorState: monitorState,
+                presentation: presentation,
+                showsMutationProgress: pendingMonitorValue != nil
+                    || confirmedMonitorValue != nil,
+                primaryAccent: artworkPrimaryAccent,
+                onChange: { nextValue in
+                    guard let monitorState else { return }
+                    updateMonitor(
+                        to: nextValue,
+                        monitorState: monitorState,
+                        service: service
+                    )
+                }
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             messageContent(
                 presentation: presentation,
