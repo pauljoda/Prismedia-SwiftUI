@@ -39,6 +39,21 @@ final class EntityDetailServiceTests: XCTestCase {
         XCTAssertTrue(state.phase.isLoading)
     }
 
+    func testCancelledRefreshRestoresThePreviouslyLoadedContent() throws {
+        var state = EntityDetailState()
+        let initialRequest = try XCTUnwrap(state.beginLoad())
+        let initialDetail = try makeDetail(title: "Arrival")
+        state.finishLoad(.content(initialDetail), request: initialRequest)
+        let refreshRequest = try XCTUnwrap(state.beginLoad())
+
+        state.finishLoad(.cancelled, request: refreshRequest)
+
+        guard case .content(let detail) = state.phase else {
+            return XCTFail("Expected cancelled refresh to restore the visible detail.")
+        }
+        XCTAssertEqual(detail.title, "Arrival")
+    }
+
     func testFailedMutationPreservesContentAndPublishesActionableError() async throws {
         let initial = try makeDetail(title: "Arrival", capabilities: #"[{"kind":"rating","value":2}]"#)
         let service = EntityDetailMutationServiceStub(

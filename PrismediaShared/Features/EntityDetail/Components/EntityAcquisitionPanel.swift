@@ -522,13 +522,15 @@ struct EntityAcquisitionPanel: View {
                     service: requestActivityService,
                     style: .embedded,
                     onCancelled: { await load(using: service) },
+                    // Refresh the owning detail first. Refreshing this panel can collapse
+                    // fulfilled acquisition content and cancel the child callback.
                     onImported: {
-                        await load(using: service)
                         await onMutated()
+                        await load(using: service)
                     },
                     onReset: {
-                        await load(using: service)
                         await onMutated()
+                        await load(using: service)
                     },
                     isExternallyDisabled: isManualAcquisitionBusy || state.isMutating,
                     showsDeleteFilesAction: canDeleteFiles,

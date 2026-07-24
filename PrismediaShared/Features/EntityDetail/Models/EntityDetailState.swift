@@ -11,6 +11,7 @@ struct EntityDetailState: Sendable {
     private(set) var mutationErrorMessage: String?
 
     private var generation = 0
+    private var phaseBeforeLoad: EntityDetailPhase?
 
     var detail: EntityDetail? {
         guard case .content(let detail) = phase else { return nil }
@@ -20,6 +21,9 @@ struct EntityDetailState: Sendable {
     mutating func beginLoad() -> EntityDetailRequest? {
         guard !isMutating else { return nil }
         let request = nextRequest()
+        if !phase.isLoading {
+            phaseBeforeLoad = phase
+        }
         phase = .loading
         mutationErrorMessage = nil
         return request
@@ -30,6 +34,7 @@ struct EntityDetailState: Sendable {
         request: EntityDetailRequest
     ) {
         guard isCurrent(request) else { return }
+        defer { phaseBeforeLoad = nil }
 
         switch outcome {
         case .content(let detail):
@@ -37,7 +42,9 @@ struct EntityDetailState: Sendable {
         case .failure(let message):
             phase = .failure(message)
         case .cancelled:
-            break
+            if let phaseBeforeLoad {
+                phase = phaseBeforeLoad
+            }
         }
     }
 
