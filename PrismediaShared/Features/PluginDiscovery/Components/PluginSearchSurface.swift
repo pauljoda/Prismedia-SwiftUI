@@ -185,12 +185,14 @@ import SwiftUI
         @ViewBuilder
         private var providerActions: some View {
             if onRescan != nil || onSeek != nil {
-                HStack(spacing: PrismediaSpacing.medium) {
+                VStack(spacing: PrismediaSpacing.medium) {
                     if let onRescan {
                         PrismediaButton(
                             isRescanning ? "Rescanning" : "Rescan Provider",
                             systemImage: "arrow.clockwise",
+                            form: .fill,
                             isLoading: isRescanning,
+                            loadingTitle: "Rescanning…",
                             action: onRescan
                         )
                         .disabled(isBusy)
@@ -199,7 +201,9 @@ import SwiftUI
                         PrismediaButton(
                             isSeeking ? "Trying Providers" : "Try All Providers",
                             systemImage: "sparkles",
+                            form: .fill,
                             isLoading: isSeeking,
+                            loadingTitle: "Trying Providers…",
                             action: onSeek
                         )
                         .disabled(isBusy)
@@ -210,22 +214,15 @@ import SwiftUI
         }
 
         private var actionRow: some View {
-            HStack(spacing: PrismediaSpacing.medium) {
-                PrismediaButton("Clear", systemImage: "xmark") {
-                    values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
-                    onClear?()
-                }
-                .disabled(isBusy || values.values.allSatisfy(\.isEmpty))
-
-                Spacer(minLength: 0)
-
+            VStack(spacing: PrismediaSpacing.medium) {
                 PrismediaButton(
                     "Search",
                     systemImage: "magnifyingglass",
                     variant: .prominent,
-                    form: .compactIcon,
+                    form: .fill,
                     primaryTint: artworkPrimaryAccent,
-                    isLoading: isSearching
+                    isLoading: isSearching,
+                    loadingTitle: "Searching…"
                 ) {
                     onSearch(
                         PluginSearchFieldPolicy.submittedValues(
@@ -236,6 +233,12 @@ import SwiftUI
                 }
                 .disabled(!canSearch)
                 .accessibilityIdentifier("plugin-search.submit")
+
+                PrismediaButton("Clear", systemImage: "xmark", form: .fill) {
+                    values = Dictionary(uniqueKeysWithValues: searchFields.map { ($0.key, "") })
+                    onClear?()
+                }
+                .disabled(isBusy || values.values.allSatisfy(\.isEmpty))
             }
         }
 

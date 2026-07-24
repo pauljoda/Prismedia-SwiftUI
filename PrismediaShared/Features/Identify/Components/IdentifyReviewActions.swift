@@ -30,26 +30,23 @@ import SwiftUI
                 }
 
                 GlassEffectContainer(spacing: PrismediaSpacing.medium) {
-                    LazyVGrid(
-                        columns: [
-                            GridItem(
-                                .adaptive(minimum: 132),
-                                spacing: PrismediaSpacing.medium
-                            )
-                        ],
-                        spacing: PrismediaSpacing.medium
-                    ) {
-                        Button {
+                    VStack(spacing: PrismediaSpacing.medium) {
+                        PrismediaButton(
+                            "Back to Search",
+                            systemImage: "magnifyingglass",
+                            form: .fill
+                        ) {
                             session.returnToSearch()
-                        } label: {
-                            Label("Back to Search", systemImage: "magnifyingglass")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glass)
                         .foregroundStyle(PrismediaColor.info)
                         .disabled(session.isApplying)
 
-                        Menu {
+                        PrismediaButton(
+                            "Reject",
+                            systemImage: "xmark",
+                            variant: .destructive,
+                            form: .fill
+                        ) {
                             Button("Reject") {
                                 Task {
                                     if await session.reject(advance: false) {
@@ -64,15 +61,16 @@ import SwiftUI
                                     }
                                 }
                             }
-                        } label: {
-                            Label("Reject", systemImage: "xmark")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glass)
-                        .foregroundStyle(PrismediaColor.destructive)
                         .disabled(session.isApplying)
 
-                        Menu {
+                        PrismediaButton(
+                            session.isApplying ? "Applying…" : "Accept",
+                            systemImage: "checkmark",
+                            variant: .prominent,
+                            form: .fill,
+                            primaryTint: artworkPrimaryAccent
+                        ) {
                             Button("Accept") {
                                 Task {
                                     if await session.apply(advance: false) {
@@ -87,15 +85,10 @@ import SwiftUI
                                     }
                                 }
                             }
-                        } label: {
-                            Label("Accept", systemImage: "checkmark")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glassProminent)
-                        .tint(artworkPrimaryAccent)
                         .disabled(!canAccept)
                     }
-                    .buttonBorderShape(.capsule)
+                    .frame(maxWidth: .infinity)
                 }
 
                 if let disabledReason {
