@@ -11,58 +11,56 @@ struct EntityThumbnailLandscapeCardView: View {
     let onPreviewHoldChanged: (Bool) -> Void
 
     var body: some View {
-        artwork
-            .backgroundExtensionEffect(isEnabled: !reduceTransparency)
-            .overlay(alignment: .topTrailing) {
-                EntityThumbnailBadgeRow(badges: overlayPolicy.topTrailing)
-                    .padding(PrismediaSpacing.small)
-            }
-            .overlay(alignment: .bottomTrailing) {
-                EntityThumbnailBadgeRow(badges: overlayPolicy.bottomTrailing)
-                    .padding(PrismediaSpacing.small)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                metadata
-            }
-            .overlay(alignment: .bottom) {
-                if let progress = item.progress, progress > 0 {
-                    progressMeter(progress)
+        EntityThumbnailArtworkExtensionView(
+            item: item,
+            outputAspectRatio: presentation.cardAspectRatio,
+            isEnabled: !reduceTransparency
+        )
+        .overlay {
+            GeometryReader { proxy in
+                let artworkHeight = min(
+                    proxy.size.height,
+                    proxy.size.width / item.thumbnailArtworkPresentation.aspectRatio
+                )
+
+                VStack(spacing: 0) {
+                    EntityThumbnailArtworkView(
+                        item: item,
+                        layout: layout,
+                        preferredWidth: preferredWidth,
+                        showsProgress: false,
+                        onPreviewHoldChanged: onPreviewHoldChanged
+                    )
+                    .frame(width: proxy.size.width, height: artworkHeight)
+
+                    metadata
+                        .frame(
+                            width: proxy.size.width,
+                            height: max(0, proxy.size.height - artworkHeight),
+                            alignment: .topLeading
+                        )
+                        .clipped()
                 }
             }
-            .aspectRatio(presentation.cardAspectRatio, contentMode: .fit)
-            .background(PrismediaColor.groupedContentBackground)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .prismediaCard(cornerRadius: layout == .wall ? 8 : 6)
-            .prismediaArtworkPalette(
-                for: item.bestCoverPath,
-                isEnabled: paletteLoadingEnabled,
-                palette: $artworkPalette
-            )
+        }
+        .overlay(alignment: .bottom) {
+            if let progress = item.progress, progress > 0 {
+                progressMeter(progress)
+            }
+        }
+        .aspectRatio(presentation.cardAspectRatio, contentMode: .fit)
+        .background(PrismediaColor.groupedContentBackground)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .prismediaCard(cornerRadius: layout == .wall ? 8 : 6)
+        .prismediaArtworkPalette(
+            for: item.bestCoverPath,
+            isEnabled: paletteLoadingEnabled,
+            palette: $artworkPalette
+        )
     }
 
     private var presentation: EntityThumbnailCardPresentation {
         EntityThumbnailCardPresentation(item: item, layout: layout)
-    }
-
-    private var overlayPolicy: EntityThumbnailOverlayPolicy {
-        EntityThumbnailOverlayPolicy(item: item)
-    }
-
-    private var artwork: some View {
-        RemotePosterImage(
-            path: item.bestCoverPath,
-            fallbackSeed: item.title,
-            systemImage: item.kind.thumbnailFallbackSystemImage,
-            contentMode: item.thumbnailArtworkPresentation.contentMode,
-            maxPixelSize: 512
-        )
-        .frame(
-            minWidth: 0,
-            maxWidth: .infinity,
-            minHeight: 0,
-            maxHeight: .infinity
-        )
-        .accessibilityIdentifier("entity.thumbnail.media.\(item.id.uuidString)")
     }
 
     private var legibilityGradient: some View {
@@ -93,7 +91,7 @@ struct EntityThumbnailLandscapeCardView: View {
             titleOnlyMetadata
         }
         .padding(.leading, PrismediaSpacing.small)
-        .padding(.trailing, PrismediaSpacing.small)
+        .padding(.trailing, metadataTrailingPadding)
         .padding(.top, PrismediaSpacing.extraSmall)
         .padding(.bottom, metadataBottomPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -102,7 +100,6 @@ struct EntityThumbnailLandscapeCardView: View {
                 legibilityGradient
                 accessibilityScrim
             }
-            .ignoresSafeArea()
         }
         .shadow(color: PrismediaColor.background.opacity(0.7), radius: 2, y: 1)
     }
@@ -152,9 +149,6 @@ struct EntityThumbnailLandscapeCardView: View {
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            if showsContextMenu {
-                contextMenuRowSpacer
-            }
         }
     }
 
@@ -162,20 +156,11 @@ struct EntityThumbnailLandscapeCardView: View {
     private func metadataActionRow(limit: Int) -> some View {
         if !item.meta.isEmpty {
             metadataChipRow(limit: limit)
-        } else if showsContextMenu {
-            contextMenuRowSpacer
         }
-    }
-
-    private var contextMenuRowSpacer: some View {
-        Color.clear
-            .frame(height: PrismediaSpacing.large)
-            .accessibilityHidden(true)
     }
 
     private func metadataChipRow(limit: Int) -> some View {
         MetaChipRow(meta: Array(item.meta.prefix(limit)))
-            .padding(.trailing, metadataActionTrailingPadding)
     }
 
     private var contextChip: some View {
@@ -201,10 +186,11 @@ struct EntityThumbnailLandscapeCardView: View {
         EntityThumbnailInteractionPolicy(item: item, layout: layout).showsContextMenu
     }
 
-    private var metadataActionTrailingPadding: CGFloat {
-        showsContextMenu
-            ? PrismediaLayout.minimumHitTarget + PrismediaSpacing.small
-            : 0
+    private var metadataTrailingPadding: CGFloat {
+        let basePadding = PrismediaSpacing.small
+        return showsContextMenu
+            ? PrismediaLayout.minimumHitTarget + basePadding
+            : basePadding
     }
 
     private var metadataBottomPadding: CGFloat {

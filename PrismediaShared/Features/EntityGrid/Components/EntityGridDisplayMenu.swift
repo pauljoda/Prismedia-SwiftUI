@@ -5,11 +5,13 @@ struct EntityGridDisplayMenu: View {
     let displayMode: EntityGridDisplayMode
     let density: EntityGridDensity
     let pageSize: Int
+    let cardStyle: EntityGridCardStyle
     let presets: [EntityGridPreset]
     let preferencesAreDefault: Bool
     let onSelectDisplayMode: (EntityGridDisplayMode) -> Void
     let onSelectDensity: (EntityGridDensity) -> Void
     let onSelectPageSize: (Int) -> Void
+    let onSelectCardStyle: (EntityGridCardStyle) -> Void
     let onApplyPreset: (EntityGridPreset) -> Void
     let onRequestSavePreset: () -> Void
     let onDeletePreset: (EntityGridPreset) -> Void
@@ -30,6 +32,21 @@ struct EntityGridDisplayMenu: View {
                                     : option.systemImage
                             )
                         }
+                    }
+                }
+            }
+
+            Section("App Settings") {
+                ForEach(EntityGridCardStyle.allCases) { option in
+                    Button {
+                        onSelectCardStyle(option)
+                    } label: {
+                        Label(
+                            option.label,
+                            systemImage: cardStyle == option
+                                ? "checkmark"
+                                : option.systemImage
+                        )
                     }
                 }
             }
@@ -98,7 +115,7 @@ struct EntityGridDisplayMenu: View {
             Image(systemName: displayMode.systemImage)
         }
         .accessibilityLabel("Display options")
-        .accessibilityValue("\(displayMode.label), \(density.label) size")
+        .accessibilityValue("\(displayMode.label), \(density.label) size, \(cardStyle.label)")
         .accessibilityIdentifier("entity.grid.display")
     }
 }
@@ -110,11 +127,13 @@ struct EntityGridDisplayMenu: View {
             displayMode: .grid,
             density: .standard,
             pageSize: 48,
+            cardStyle: .artworkFade,
             presets: [],
             preferencesAreDefault: true,
             onSelectDisplayMode: { _ in },
             onSelectDensity: { _ in },
             onSelectPageSize: { _ in },
+            onSelectCardStyle: { _ in },
             onApplyPreset: { _ in },
             onRequestSavePreset: {},
             onDeletePreset: { _ in },
@@ -130,11 +149,13 @@ struct EntityGridDisplayMenu: View {
             displayMode: .list,
             density: .compact,
             pageSize: 24,
+            cardStyle: .detailsBelow,
             presets: [EntityGridPreviewFactory.compactListPreset],
             preferencesAreDefault: false,
             onSelectDisplayMode: { _ in },
             onSelectDensity: { _ in },
             onSelectPageSize: { _ in },
+            onSelectCardStyle: { _ in },
             onApplyPreset: { _ in },
             onRequestSavePreset: {},
             onDeletePreset: { _ in },

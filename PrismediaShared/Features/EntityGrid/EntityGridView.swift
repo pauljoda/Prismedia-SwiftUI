@@ -10,6 +10,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @State private var displayMode: EntityGridDisplayMode
     @State private var density: EntityGridDensity
     @State private var pageSize: Int
+    @State private var cardStyle: EntityGridCardStyle
     @State private var presets: [EntityGridPreset]
     @State private var presetName = ""
     @State private var savePresetPresented = false
@@ -89,6 +90,9 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         )
         _density = State(initialValue: restoredPreferences?.density ?? .standard)
         _pageSize = State(initialValue: restoredPreferences?.pageSize ?? configuration.pageSize)
+        _cardStyle = State(
+            initialValue: restoredPreferences?.cardStyle ?? configuration.defaultCardStyle
+        )
         _presets = State(initialValue: preferencesStore.loadPresets(for: configuration.preferencesID))
         _selection = State(
             initialValue: EntityGridSelectionState(
@@ -127,7 +131,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 Button("Save") { savePreset() }
                     .disabled(presetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } message: {
-                Text("Save the current sort, filters, layout, density, and page size.")
+                Text("Save the current sort, filters, layout, density, card style, and page size.")
             }
             .confirmationDialog(
                 actionConfirmation?.title ?? "Confirm Action",
@@ -493,6 +497,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 ) {
                     itemContent(item, layout)
                 }
+                .environment(\.entityGridCardStyle, cardStyle)
                 #if os(tvOS)
                     .focused($tvGridFocus, equals: .item(item.id))
                     .prefersDefaultFocus(
@@ -612,11 +617,13 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             displayMode: displayMode,
             density: density,
             pageSize: pageSize,
+            cardStyle: cardStyle,
             presets: presets,
             preferencesAreDefault: preferencesAreDefault,
             onSelectDisplayMode: selectDisplayMode,
             onSelectDensity: selectDensity,
             onSelectPageSize: selectPageSize,
+            onSelectCardStyle: selectCardStyle,
             onApplyPreset: requestApplyPreset,
             onRequestSavePreset: presentSavePreset,
             onDeletePreset: deletePreset,
@@ -658,6 +665,12 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         Task { await loadFirstPage(preservingContent: false) }
     }
 
+    private func selectCardStyle(_ newCardStyle: EntityGridCardStyle) {
+        guard cardStyle != newCardStyle else { return }
+        cardStyle = newCardStyle
+        savePreferences()
+    }
+
     private func requestApplyPreset(_ preset: EntityGridPreset) {
         Task { await applyPreset(preset) }
     }
@@ -668,6 +681,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         displayMode = configuration.resolvedDisplayMode(restoring: preferences.displayMode)
         density = preferences.density
         pageSize = preferences.pageSize ?? configuration.pageSize
+        cardStyle = preferences.cardStyle
         savePreferences()
         await loadFirstPage(preservingContent: false)
     }
@@ -742,6 +756,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         displayMode = configuration.defaultDisplayMode
         density = .standard
         pageSize = configuration.pageSize
+        cardStyle = configuration.defaultCardStyle
         preferencesStore.reset(for: configuration.preferencesID)
         await loadFirstPage(preservingContent: false)
     }
@@ -759,7 +774,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             controls: snapshot.controls,
             displayMode: displayMode,
             density: density,
-            pageSize: pageSize
+            pageSize: pageSize,
+            cardStyle: cardStyle
         )
     }
 
@@ -768,7 +784,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             == EntityGridPreferences(
                 controls: configuration.defaultControls(),
                 displayMode: configuration.defaultDisplayMode,
-                pageSize: configuration.pageSize
+                pageSize: configuration.pageSize,
+                cardStyle: configuration.defaultCardStyle
             )
     }
 
@@ -841,14 +858,38 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
 
     private func prewarmArtwork(after itemID: UUID) {
         guard let client = environment.client else { return }
-        let urls =
-            EntityGridArtworkPrewarming
-            .paths(after: itemID, in: snapshot.items)
-            .compactMap { client.assetURL(for: $0) }
+        let candidates = EntityGridArtworkPrewarming.items(
+            after: itemID,
+            in: snapshot.items
+        )
+        let urls = candidates.compactMap { client.assetURL(for: $0.bestCoverPath) }
         guard !urls.isEmpty else { return }
 
+        let artworkLoader = environment.artworkLoader
+        let cardStyle = cardStyle
+        let displayMode = displayMode
         Task(priority: .utility) {
-            await RemoteArtworkPipeline.shared.prewarm(urls)
+            await artworkLoader.prewarm(urls)
+            guard cardStyle == .artworkFade else { return }
+
+            for candidate in candidates {
+                let layout = displayMode.thumbnailLayout(for: candidate.kind)
+                let presentation = EntityThumbnailCardPresentation(
+                    item: candidate,
+                    layout: layout
+                )
+                guard presentation.usesArtworkExtension,
+                    let artworkURL = client.assetURL(for: candidate.bestCoverPath)
+                else { continue }
+
+                _ = await ArtworkExtensionImagePipeline.shared.image(
+                    for: artworkURL,
+                    artworkLoader: artworkLoader,
+                    sourceAspectRatio: candidate.thumbnailArtworkPresentation.aspectRatio,
+                    outputAspectRatio: presentation.cardAspectRatio,
+                    maxPixelSize: 512
+                )
+            }
         }
     }
 

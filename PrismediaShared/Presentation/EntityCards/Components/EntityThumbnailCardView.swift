@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct EntityThumbnailCardView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.entityGridCardStyle) private var gridCardStyle
     @ScaledMetric(relativeTo: .body) private var titleScale = 1.0
     @State private var containerWidth: CGFloat?
 
@@ -57,7 +58,7 @@ public struct EntityThumbnailCardView: View {
             switch layout {
             case .list:
                 listCard
-            case .feed, .mediaOnly:
+            case .feed:
                 if cardPresentation.showsTitleOverlay {
                     EntityThumbnailPosterCardView(
                         item: item,
@@ -69,8 +70,27 @@ public struct EntityThumbnailCardView: View {
                     media
                         .prismediaCard(cornerRadius: PrismediaRadius.badge)
                 }
+            case .mediaOnly:
+                if gridCardStyle == .detailsBelow {
+                    EntityThumbnailDetailsBelowCardView(
+                        item: item,
+                        layout: layout,
+                        preferredWidth: preferredWidth,
+                        onPreviewHoldChanged: onPreviewHoldChanged
+                    )
+                } else {
+                    media
+                        .prismediaCard(cornerRadius: PrismediaRadius.badge)
+                }
             case .grid, .rail, .wall:
-                if cardPresentation.usesArtworkExtension {
+                if gridCardStyle == .detailsBelow {
+                    EntityThumbnailDetailsBelowCardView(
+                        item: item,
+                        layout: layout,
+                        preferredWidth: preferredWidth,
+                        onPreviewHoldChanged: onPreviewHoldChanged
+                    )
+                } else if cardPresentation.usesArtworkExtension {
                     EntityThumbnailLandscapeCardView(
                         item: item,
                         layout: layout,

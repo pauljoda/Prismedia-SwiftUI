@@ -6,6 +6,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
     public let displayMode: EntityGridDisplayMode
     public let density: EntityGridDensity
     public let pageSize: Int?
+    public let cardStyle: EntityGridCardStyle
 
     private let savedControls: EntityGridControls
 
@@ -31,12 +32,14 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         controls: EntityGridControls,
         displayMode: EntityGridDisplayMode = .grid,
         density: EntityGridDensity = .standard,
-        pageSize: Int? = nil
+        pageSize: Int? = nil,
+        cardStyle: EntityGridCardStyle = .artworkFade
     ) {
         precondition(pageSize == nil || pageSize! > 0, "A persisted page size must be positive.")
         self.displayMode = displayMode
         self.density = density
         self.pageSize = pageSize
+        self.cardStyle = cardStyle
         savedControls = Self.normalized(controls)
     }
 
@@ -45,6 +48,9 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         displayMode = try container.decodeIfPresent(EntityGridDisplayMode.self, forKey: .displayMode) ?? .grid
         density = try container.decodeIfPresent(EntityGridDensity.self, forKey: .density) ?? .standard
         pageSize = try container.decodeIfPresent(Int.self, forKey: .pageSize)
+        cardStyle =
+            try container.decodeIfPresent(EntityGridCardStyle.self, forKey: .cardStyle)
+            ?? .artworkFade
         if let controls = try container.decodeIfPresent(EntityGridControls.self, forKey: .controls) {
             savedControls = Self.normalized(controls)
         } else {
@@ -57,6 +63,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         try container.encode(displayMode, forKey: .displayMode)
         try container.encode(density, forKey: .density)
         try container.encodeIfPresent(pageSize, forKey: .pageSize)
+        try container.encode(cardStyle, forKey: .cardStyle)
         try container.encode(savedControls, forKey: .controls)
     }
 
@@ -106,6 +113,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         case displayMode
         case density
         case pageSize
+        case cardStyle
         case controls
         case sort
         case sortDescending

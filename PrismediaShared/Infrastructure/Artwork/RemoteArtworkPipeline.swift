@@ -128,6 +128,7 @@ public actor RemoteArtworkPipeline: RemoteArtworkLoading {
         inFlight.removeAll()
         imageInFlight.removeAll()
         cache.removeAll()
+        await ArtworkExtensionImagePipeline.shared.clearCache()
     }
 
     private func imageRequestKey(for url: URL, maxPixelSize: Int) -> String {

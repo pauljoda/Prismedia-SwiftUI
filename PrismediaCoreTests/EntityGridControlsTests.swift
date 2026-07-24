@@ -51,7 +51,8 @@ final class EntityGridControlsTests: XCTestCase {
             controls: controls,
             displayMode: .list,
             density: .large,
-            pageSize: 96
+            pageSize: 96,
+            cardStyle: .detailsBelow
         )
         let restored = preferences.controls(baselineQuery: baseline)
         let query = restored.applying(to: baseline)
@@ -67,6 +68,7 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.displayMode, .list)
         XCTAssertEqual(preferences.density, .large)
         XCTAssertEqual(preferences.pageSize, 96)
+        XCTAssertEqual(preferences.cardStyle, .detailsBelow)
         XCTAssertEqual(query.kind, .book)
         XCTAssertEqual(query.bookType, "comic,manga")
     }
@@ -82,6 +84,7 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.displayMode, .grid)
         XCTAssertEqual(preferences.density, .standard)
         XCTAssertNil(preferences.pageSize)
+        XCTAssertEqual(preferences.cardStyle, .artworkFade)
         XCTAssertEqual(preferences.sort, "title")
     }
 
@@ -139,6 +142,7 @@ final class EntityGridControlsTests: XCTestCase {
 
         XCTAssertEqual(savedControls["sort"] as? String, "rating")
         XCTAssertEqual(savedControls["sortDescending"] as? Bool, false)
+        XCTAssertEqual(object["cardStyle"] as? String, "artworkFade")
         XCTAssertNil(object["favoriteOnly"], "Filter fields should not be mirrored at the preference root.")
     }
 
