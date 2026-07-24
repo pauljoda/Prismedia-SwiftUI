@@ -5,6 +5,7 @@
         @Environment(MusicPlayerController.self) private var controller
 
         let presentation: MusicNowPlayingPresentation
+        let selectedTint: Color
         let onToggleQueue: () -> Void
 
         var body: some View {
@@ -23,14 +24,28 @@
             }
         }
 
+        @ViewBuilder
         private var shuffleButton: some View {
-            shuffleControl
-                .buttonStyle(.glass)
+            if controller.queue.isShuffled {
+                shuffleControl
+                    .buttonStyle(.glassProminent)
+                    .tint(selectedTint)
+            } else {
+                shuffleControl
+                    .buttonStyle(.glass)
+            }
         }
 
+        @ViewBuilder
         private var repeatButton: some View {
-            repeatControl
-                .buttonStyle(.glass)
+            if controller.queue.repeatMode == .off {
+                repeatControl
+                    .buttonStyle(.glass)
+            } else {
+                repeatControl
+                    .buttonStyle(.glassProminent)
+                    .tint(selectedTint)
+            }
         }
 
         private var shuffleControl: some View {
@@ -39,13 +54,9 @@
                     controller.setShuffleEnabled(!controller.queue.isShuffled)
                 }
             } label: {
-                Image(
-                    systemName: controller.queue.isShuffled
-                        ? "shuffle.circle.fill"
-                        : "shuffle"
-                )
-                .padding(PrismediaSpacing.small)
-                .frame(maxWidth: .infinity)
+                Image(systemName: "shuffle")
+                    .padding(PrismediaSpacing.small)
+                    .frame(maxWidth: .infinity)
             }
             .buttonBorderShape(.capsule)
             .disabled(controller.context?.isAudiobook == true)
@@ -91,11 +102,7 @@
         }
 
         private var repeatSystemImage: String {
-            switch controller.queue.repeatMode {
-            case .off: "repeat"
-            case .all: "repeat.circle.fill"
-            case .one: "repeat.1.circle.fill"
-            }
+            controller.queue.repeatMode == .one ? "repeat.1" : "repeat"
         }
 
         private var repeatLabel: String {
@@ -120,6 +127,7 @@
             @Previewable @State var controller = MusicPreviewData.controller()
             MusicNowPlayingControlBar(
                 presentation: .player,
+                selectedTint: PrismediaColor.accent,
                 onToggleQueue: {}
             )
             .environment(controller)

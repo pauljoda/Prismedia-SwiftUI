@@ -90,6 +90,7 @@
 
                 MusicNowPlayingControlBar(
                     presentation: presentation,
+                    selectedTint: artworkPalette?.primary.color ?? PrismediaColor.accent,
                     onToggleQueue: toggleQueue
                 )
                 .padding(.top, PrismediaSpacing.small)
