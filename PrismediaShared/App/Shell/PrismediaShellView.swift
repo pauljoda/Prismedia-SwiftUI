@@ -183,45 +183,26 @@ public struct PrismediaShellView: View {
     ) -> some View {
         @Bindable var router = router
 
-        #if os(macOS)
-            return MacSearchHubView(
-                loader: PrismediaSearchHubLoader(client: client),
-                detailDependencies: detailDependencies,
-                searchText: $router.searchText,
-                filters: $router.searchFilters,
-                navigationPath: pathBinding(
-                    for: PrismediaAppRouter.searchPathID,
-                    videoPlaybackSession: videoPlaybackSession
-                ),
-                modes: availableModes,
-                reloadRevision: environment.contentRevision,
-                onSelectDestination: { mode, destination in
-                    videoPlaybackSession.inlinePlaybackWillNavigate()
-                    router.select(mode: mode, destination: destination)
-                }
-            )
-        #else
-            return SearchHubView(
-                loader: PrismediaSearchHubLoader(client: client),
-                detailDependencies: detailDependencies,
-                searchText: $router.searchText,
-                filters: $router.searchFilters,
-                navigationPath: pathBinding(
-                    for: PrismediaAppRouter.searchPathID,
-                    videoPlaybackSession: videoPlaybackSession
-                ),
-                modes: availableModes,
-                reloadRevision: environment.contentRevision,
-                onSelectMode: { mode in
-                    videoPlaybackSession.inlinePlaybackWillNavigate()
-                    router.select(mode: mode)
-                },
-                onSelectDestination: { mode, destination in
-                    videoPlaybackSession.inlinePlaybackWillNavigate()
-                    router.select(mode: mode, destination: destination)
-                }
-            )
-        #endif
+        return SearchHubView(
+            loader: PrismediaSearchHubLoader(client: client),
+            detailDependencies: detailDependencies,
+            searchText: $router.searchText,
+            filters: $router.searchFilters,
+            navigationPath: pathBinding(
+                for: PrismediaAppRouter.searchPathID,
+                videoPlaybackSession: videoPlaybackSession
+            ),
+            modes: availableModes,
+            reloadRevision: environment.contentRevision,
+            onSelectMode: { mode in
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+                router.select(mode: mode)
+            },
+            onSelectDestination: { mode, destination in
+                videoPlaybackSession.inlinePlaybackWillNavigate()
+                router.select(mode: mode, destination: destination)
+            }
+        )
     }
 
     @ViewBuilder

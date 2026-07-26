@@ -37,7 +37,10 @@ final class AppShellNavigationTests: XCTestCase {
         XCTAssertNil(ModeCatalog.overview.destination(id: "account"))
         XCTAssertEqual(sections[1].items.map(\.title), ["Movies", "Series", "Videos"])
         XCTAssertEqual(sections[2].items.map(\.title), ["Galleries", "Images"])
-        XCTAssertEqual(sections[3].items.map(\.title), ["Artists", "Audio"])
+        XCTAssertEqual(
+            sections[3].items.map(\.title),
+            ["Albums", "Artists", "Tracks", "Collections"]
+        )
         XCTAssertEqual(sections[4].items.map(\.title), ["Authors", "Books", "Comics", "eBooks"])
         XCTAssertEqual(
             sections[5].items.map(\.title),

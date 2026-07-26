@@ -1,7 +1,7 @@
-#if os(macOS)
-    import SwiftUI
+import SwiftUI
 
-    struct MacIdentifyDashboardView: View {
+#if os(iOS) || os(macOS)
+    struct IdentifyDashboardView: View {
         @Bindable var session: IdentifySession
 
         let onOpenKind: (EntityKind) -> Void
@@ -137,10 +137,11 @@
             let state = IdentifyQueueState(rawServerValue: item.state)
 
             return HStack(spacing: PrismediaSpacing.medium) {
-                Toggle("Select \(item.title)", isOn: selectionBinding(for: item.entityID))
-                    .labelsHidden()
-                    .toggleStyle(.checkbox)
-                    .frame(width: 42, alignment: .leading)
+                IdentifyQueueSelectionButton(
+                    isSelected: selectionBinding(for: item.entityID),
+                    title: item.title
+                )
+                .frame(width: 42, alignment: .leading)
 
                 Text(state.label)
                     .font(.caption.weight(.semibold))
@@ -271,8 +272,8 @@
     }
 
     #if DEBUG
-        #Preview("Mac Identify Dashboard") {
-            MacIdentifyDashboardView(
+        #Preview("Identify Dashboard") {
+            IdentifyDashboardView(
                 session: .init(
                     service: AdministrativePreviewService(),
                     browser: IdentifyPreviewEntityBrowser(),

@@ -48,8 +48,10 @@ public enum AppSidebarCatalog {
             id: "audio",
             title: "Audio",
             items: [
+                item(in: ModeCatalog.audio, destinationID: "albums"),
                 item(in: ModeCatalog.audio, destinationID: "artists"),
-                item(in: ModeCatalog.audio, destinationID: "albums", title: "Audio"),
+                item(in: ModeCatalog.audio, destinationID: "tracks"),
+                item(in: ModeCatalog.audio, destinationID: "audio-collections"),
             ]
         ),
         AppSidebarSection(

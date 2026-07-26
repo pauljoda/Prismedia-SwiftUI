@@ -20,21 +20,44 @@ struct PrismediaSidebarView: View {
 
     private var sidebarList: some View {
         List(selection: $selection) {
-            ForEach(sections) { section in
+            ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                let accent = PrismediaSidebarPalette.accent(
+                    for: section.id,
+                    fallbackIndex: index
+                )
+
                 Section {
                     ForEach(section.items) { item in
                         NavigationLink(value: item.selection) {
-                            Label(item.title, systemImage: item.systemImage)
+                            Label {
+                                Text(item.title)
+                                    .foregroundStyle(PrismediaColor.textPrimary)
+                            } icon: {
+                                Image(systemName: item.systemImage)
+                                    .foregroundStyle(
+                                        selection == item.selection
+                                            ? PrismediaColor.textPrimary
+                                            : accent
+                                    )
+                            }
                         }
                         .accessibilityIdentifier("sidebar.\(item.id)")
                     }
                 } header: {
                     Text(section.title)
+                        .foregroundStyle(accent)
                 }
             }
         }
         .prismediaScreenBackground()
         .navigationTitle("Prismedia")
+        #if os(iOS)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    PrismediaSidebarBrandView(markSize: 24)
+                }
+            }
+        #endif
         .accessibilityIdentifier("shell.sidebar")
     }
 }

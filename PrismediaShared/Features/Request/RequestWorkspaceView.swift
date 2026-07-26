@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct RequestWorkspaceView: View {
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @State private var section = RequestWorkspaceSection.discover
         @State private var kind: RequestKindDefinition?
         @State private var showsAcquisitionSettings = false
@@ -16,23 +17,25 @@ import SwiftUI
         var body: some View {
             NavigationStack(path: navigationPath) {
                 Group {
-                    switch section {
-                    case .discover:
-                        RequestFeatureView(
-                            service: administrationService,
-                            kind: $kind,
-                            hidesNsfw: hidesNsfw,
-                            onNavigateToEntity: { intent in
-                                openEntity(intent.entityID, intent.entityKind)
-                            }
-                        )
-                    case .activity(let activitySection):
-                        RequestActivitySurface(
-                            section: activitySection,
-                            service: activityService,
-                            resolveAssetURL: resolveAssetURL,
-                            onOpenEntity: openEntity
-                        )
+                    if usesWideWorkspace {
+                        VStack(spacing: 0) {
+                            PrismediaWorkspaceHeaderView(
+                                title: "Request",
+                                subtitle:
+                                    "Discover and add new media, then follow every acquisition through completion.",
+                                systemImage: "paperplane.fill",
+                                accent: PrismediaColor.materialSpectrumViolet
+                            )
+
+                            RequestWorkspaceSectionBar(selection: $section)
+
+                            Divider()
+
+                            sectionContent
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    } else {
+                        sectionContent
                     }
                 }
                 .prismediaScreenBackground()
@@ -45,18 +48,17 @@ import SwiftUI
                 #endif
                 .prismediaEntityDestinations(dependencies: detailDependencies)
                 .toolbar {
-                    #if os(macOS)
-                        ToolbarItem(placement: .principal) {
-                            sectionPicker
-                                .pickerStyle(.segmented)
-                        }
-                    #endif
                     ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
                     ToolbarItem(placement: trailingToolbarPlacement) {
                         Button {
                             showsAcquisitionSettings = true
                         } label: {
-                            Image(systemName: "gearshape")
+                            if usesWideWorkspace {
+                                Label("Acquisition Settings", systemImage: "gearshape")
+                                    .foregroundStyle(PrismediaColor.materialSpectrumViolet)
+                            } else {
+                                Image(systemName: "gearshape")
+                            }
                         }
                         .accessibilityLabel("Acquisition Settings")
                     }
@@ -64,8 +66,34 @@ import SwiftUI
             }
             .sheet(isPresented: $showsAcquisitionSettings) {
                 RequestAcquisitionSettingsView(service: administrationService)
+                    .frame(
+                        minWidth: settingsSheetMinimumWidth,
+                        minHeight: settingsSheetMinimumHeight
+                    )
             }
             .accessibilityIdentifier("request.workspace")
+        }
+
+        @ViewBuilder
+        private var sectionContent: some View {
+            switch section {
+            case .discover:
+                RequestFeatureView(
+                    service: administrationService,
+                    kind: $kind,
+                    hidesNsfw: hidesNsfw,
+                    onNavigateToEntity: { intent in
+                        openEntity(intent.entityID, intent.entityKind)
+                    }
+                )
+            case .activity(let activitySection):
+                RequestActivitySurface(
+                    section: activitySection,
+                    service: activityService,
+                    resolveAssetURL: resolveAssetURL,
+                    onOpenEntity: openEntity
+                )
+            }
         }
 
         private var sectionPicker: some View {
@@ -87,6 +115,30 @@ import SwiftUI
                 .topBarTrailing
             #else
                 .primaryAction
+            #endif
+        }
+
+        private var usesWideWorkspace: Bool {
+            #if os(macOS)
+                true
+            #else
+                horizontalSizeClass == .regular
+            #endif
+        }
+
+        private var settingsSheetMinimumWidth: CGFloat? {
+            #if os(macOS)
+                620
+            #else
+                nil
+            #endif
+        }
+
+        private var settingsSheetMinimumHeight: CGFloat? {
+            #if os(macOS)
+                560
+            #else
+                nil
             #endif
         }
     }

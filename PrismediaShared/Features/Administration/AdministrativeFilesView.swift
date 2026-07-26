@@ -2,94 +2,108 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct AdministrativeFilesView: View {
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @State private var roots: [AdministrativeFileRoot] = []
         @State private var selectedRootID: UUID?
         @State private var path: [AdministrativeFileLocation] = []
         @State private var regularLocation: AdministrativeFileLocation?
         @State private var isLoading = true
         @State private var errorMessage: String?
-        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
         private let service: any FileAdministrationServicing
 
         init(service: any FileAdministrationServicing) { self.service = service }
 
         var body: some View {
-            #if os(macOS)
-                macContent
-            #else
-                adaptiveContent
-            #endif
-        }
-
-        #if os(macOS)
-            private var macContent: some View {
-                NavigationStack(path: $path) {
-                    Group {
-                        if let root = roots.first(where: { $0.id == selectedRootID }) {
-                            AdministrativeFileBrowserView(
-                                location: .init(rootID: root.id, rootLabel: root.label, path: ""),
-                                roots: roots,
-                                service: service,
-                                navigatesInPlace: false,
-                                openDirectory: { path.append($0) }
-                            )
-                            .navigationDestination(for: AdministrativeFileLocation.self) { child in
-                                AdministrativeFileBrowserView(
-                                    location: child,
-                                    roots: roots,
-                                    service: service,
-                                    navigatesInPlace: false,
-                                    openDirectory: { path.append($0) }
-                                )
-                            }
-                        } else {
-                            ContentUnavailableView(
-                                "No Library Root",
-                                systemImage: "externaldrive",
-                                description: Text("Add a watched root in Libraries settings.")
-                            )
-                        }
-                    }
-                    .navigationTitle("Files")
-                    .toolbar {
-                        ToolbarItem(placement: .principal) {
-                            Picker("Library Root", selection: $selectedRootID) {
-                                ForEach(roots) { root in
-                                    Label(
-                                        root.label,
-                                        systemImage: root.enabled
-                                            ? "externaldrive.fill"
-                                            : "externaldrive.badge.xmark"
-                                    )
-                                    .tag(Optional(root.id))
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(minWidth: 180)
-                        }
-
-                        ToolbarItem(placement: .primaryAction) {
-                            Button("Refresh Roots", systemImage: "arrow.clockwise") {
-                                Task { await load() }
-                            }
-                            .labelStyle(.iconOnly)
-                        }
-                    }
-                }
+            presentation
                 .prismediaScreenBackground()
                 .task { await load() }
-                .onChange(of: selectedRootID) { path.removeAll() }
+                .onChange(of: selectedRootID) {
+                    path.removeAll()
+                    regularLocation = nil
+                }
                 .alert("Files Unavailable", isPresented: errorIsPresented) {
                     Button("OK", role: .cancel) {}
                 } message: {
                     Text(errorMessage ?? "Unknown error")
                 }
                 .accessibilityIdentifier("administration.files")
+        }
+
+        @ViewBuilder
+        private var presentation: some View {
+            #if os(macOS)
+                workspaceContent
+            #else
+                if horizontalSizeClass == .regular {
+                    workspaceContent
+                } else {
+                    compactContent
+                }
+            #endif
+        }
+
+        private var workspaceContent: some View {
+            NavigationStack(path: $path) {
+                Group {
+                    if let root = roots.first(where: { $0.id == selectedRootID }) {
+                        AdministrativeFileBrowserView(
+                            location: .init(rootID: root.id, rootLabel: root.label, path: ""),
+                            roots: roots,
+                            service: service,
+                            navigatesInPlace: false,
+                            openDirectory: { path.append($0) }
+                        )
+                        .navigationDestination(for: AdministrativeFileLocation.self) { child in
+                            AdministrativeFileBrowserView(
+                                location: child,
+                                roots: roots,
+                                service: service,
+                                navigatesInPlace: false,
+                                openDirectory: { path.append($0) }
+                            )
+                        }
+                    } else {
+                        ContentUnavailableView(
+                            "No Library Root",
+                            systemImage: "externaldrive",
+                            description: Text("Add a watched root in Libraries settings.")
+                        )
+                    }
+                }
+                .navigationTitle("Files")
+                #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Picker("Library Root", selection: $selectedRootID) {
+                            ForEach(roots) { root in
+                                Label(
+                                    root.label,
+                                    systemImage: root.enabled
+                                        ? "externaldrive.fill"
+                                        : "externaldrive.badge.xmark"
+                                )
+                                .tag(Optional(root.id))
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(minWidth: 180)
+                    }
+
+                    ToolbarItem(placement: trailingToolbarPlacement) {
+                        Button("Refresh Roots", systemImage: "arrow.clockwise") {
+                            Task { await load() }
+                        }
+                        .labelStyle(.iconOnly)
+                    }
+                }
             }
-        #endif
+        }
 
         #if os(iOS)
-            private var adaptiveContent: some View {
+            private var compactContent: some View {
                 NavigationSplitView {
                     List(roots, selection: $selectedRootID) { root in
                         NavigationLink(value: root.id) {
@@ -103,10 +117,16 @@ import SwiftUI
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .contentShape(.rect)
                             } icon: {
-                                Image(systemName: root.enabled ? "externaldrive.fill" : "externaldrive.badge.xmark")
+                                Image(
+                                    systemName: root.enabled
+                                        ? "externaldrive.fill"
+                                        : "externaldrive.badge.xmark"
+                                )
                             }
                         }
-                        .accessibilityIdentifier("administration.files.root.\(root.id.uuidString)")
+                        .accessibilityIdentifier(
+                            "administration.files.root.\(root.id.uuidString)"
+                        )
                     }
                     .navigationTitle("Files")
                     .refreshable {
@@ -121,7 +141,10 @@ import SwiftUI
                             ContentUnavailableView(
                                 "No Library Roots",
                                 systemImage: "externaldrive",
-                                description: Text("Add a watched root in Libraries settings."))
+                                description: Text(
+                                    "Add a watched root in Libraries settings."
+                                )
+                            )
                         }
                     }
                 } detail: {
@@ -149,24 +172,12 @@ import SwiftUI
                         ContentUnavailableView(
                             "Select a Library Root",
                             systemImage: "folder",
-                            description: Text("Filesystem actions stay inside the selected watched root."))
+                            description: Text(
+                                "Filesystem actions stay inside the selected watched root."
+                            )
+                        )
                     }
                 }
-                .prismediaScreenBackground()
-                .task { await load() }
-                .onChange(of: selectedRootID) {
-                    path.removeAll()
-                    regularLocation = nil
-                }
-                .alert(
-                    "Files Unavailable",
-                    isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
-                ) {
-                    Button("OK", role: .cancel) {}
-                } message: {
-                    Text(errorMessage ?? "Unknown error")
-                }
-                .accessibilityIdentifier("administration.files")
             }
         #endif
 
@@ -176,7 +187,9 @@ import SwiftUI
             do {
                 let loaded = try await service.roots()
                 roots = loaded
-                if selectedRootID == nil || !loaded.contains(where: { $0.id == selectedRootID }) {
+                if selectedRootID == nil
+                    || !loaded.contains(where: { $0.id == selectedRootID })
+                {
                     selectedRootID = loaded.first?.id
                 }
             } catch {
@@ -205,6 +218,14 @@ import SwiftUI
             } else {
                 path.append(location)
             }
+        }
+
+        private var trailingToolbarPlacement: ToolbarItemPlacement {
+            #if os(iOS)
+                .topBarTrailing
+            #else
+                .primaryAction
+            #endif
         }
     }
 

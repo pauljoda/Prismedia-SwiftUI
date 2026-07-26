@@ -8,6 +8,8 @@ import SwiftUI
         @State private var session: IdentifySession
         @State private var hasLoaded = false
         @State private var compactNavigationPath = NavigationPath()
+        @State private var showsReview = false
+
         private let automaticallyLoads: Bool
 
         init(session: IdentifySession, automaticallyLoads: Bool = true) {
@@ -17,29 +19,10 @@ import SwiftUI
 
         var body: some View {
             Group {
-                if horizontalSizeClass == .compact {
-                    NavigationStack(path: $compactNavigationPath) {
-                        IdentifySidebarList(
-                            session: session,
-                            usesNavigationLinks: true,
-                            onOpenKind: { compactNavigationPath.append($0) }
-                        )
-                            .navigationDestination(for: EntityKind.self) { kind in
-                                IdentifyKindBrowseView(session: session, kind: kind)
-                            }
-                    }
+                if usesWideWorkspace {
+                    wideWorkspace
                 } else {
-                    NavigationSplitView {
-                        IdentifySidebarList(session: session, usesNavigationLinks: false)
-                    } content: {
-                        if let kind = session.selectedKind {
-                            IdentifyKindBrowseView(session: session, kind: kind)
-                        } else {
-                            IdentifyQueueView(session: session)
-                        }
-                    } detail: {
-                        IdentifyReviewView(session: session)
-                    }
+                    compactWorkspace
                 }
             }
             .prismediaScreenBackground()
@@ -56,15 +39,26 @@ import SwiftUI
                     hasLoaded = true
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: AdministrativeProviderCatalogEvent.didChange)) { _ in
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: AdministrativeProviderCatalogEvent.didChange
+                )
+            ) { _ in
                 Task { await session.refreshProviders() }
             }
             .onDisappear { session.cancelPolling() }
+            .sheet(isPresented: $showsReview) {
+                NavigationStack {
+                    IdentifyReviewView(session: session)
+                }
+                .frame(minWidth: reviewSheetMinimumWidth, minHeight: reviewSheetMinimumHeight)
+            }
             .alert(
                 "Identify Unavailable",
                 isPresented: Binding(
                     get: { session.errorMessage != nil },
-                    set: { if !$0 { session.errorMessage = nil } })
+                    set: { if !$0 { session.errorMessage = nil } }
+                )
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -73,20 +67,125 @@ import SwiftUI
             .accessibilityIdentifier("identify.root")
         }
 
+        private var compactWorkspace: some View {
+            NavigationStack(path: $compactNavigationPath) {
+                IdentifySidebarList(
+                    session: session,
+                    usesNavigationLinks: true,
+                    onOpenKind: { compactNavigationPath.append($0) }
+                )
+                .navigationDestination(for: EntityKind.self) { kind in
+                    IdentifyKindBrowseView(session: session, kind: kind)
+                }
+            }
+        }
+
+        private var wideWorkspace: some View {
+            VStack(spacing: 0) {
+                PrismediaWorkspaceHeaderView(
+                    title: "Identify",
+                    subtitle:
+                        "Match unorganized media with provider metadata and review every proposed change.",
+                    systemImage: "sparkles.rectangle.stack.fill",
+                    accent: PrismediaColor.materialSpectrumViolet
+                )
+
+                IdentifyDestinationBar(session: session, onOpenKind: openKind)
+
+                Divider()
+
+                Group {
+                    if let kind = session.selectedKind {
+                        IdentifyKindBrowseView(session: session, kind: kind)
+                    } else {
+                        IdentifyDashboardView(
+                            session: session,
+                            onOpenKind: openKind,
+                            onReviewItem: review,
+                            onReviewAll: reviewAll
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .navigationTitle(session.selectedKind?.displayLabel ?? "Identify")
+        }
+
+        private var usesWideWorkspace: Bool {
+            #if os(macOS)
+                true
+            #else
+                horizontalSizeClass == .regular
+            #endif
+        }
+
         private var liveRefreshIsActive: Bool {
             pageIsActive && scenePhase == .active
         }
 
+        private var reviewSheetMinimumWidth: CGFloat? {
+            #if os(macOS)
+                760
+            #else
+                nil
+            #endif
+        }
+
+        private var reviewSheetMinimumHeight: CGFloat? {
+            #if os(macOS)
+                640
+            #else
+                nil
+            #endif
+        }
+
+        private func openKind(_ kind: EntityKind) {
+            session.prepareBrowse(kind: kind)
+        }
+
+        private func review(_ item: AdministrativeIdentifyQueueItem) {
+            Task {
+                await session.open(entityID: item.entityID)
+                showsReview = true
+            }
+        }
+
+        private func reviewAll() {
+            session.reviewAll()
+            showsReview = session.selectedItem != nil
+        }
     }
 
     #if DEBUG
-        #Preview("Identify · Content") {
+        #Preview("Identify · Compact") {
             IdentifyView(
                 session: .init(
-                    service: AdministrativePreviewService(), browser: IdentifyPreviewEntityBrowser(),
-                    initialQueue: [IdentifyPreviewFixtures.reviewItem, IdentifyPreviewFixtures.errorItem],
-                    initialProviders: [IdentifyPreviewFixtures.provider]),
-                automaticallyLoads: false)
+                    service: AdministrativePreviewService(),
+                    browser: IdentifyPreviewEntityBrowser(),
+                    initialQueue: [
+                        IdentifyPreviewFixtures.reviewItem,
+                        IdentifyPreviewFixtures.errorItem,
+                    ],
+                    initialProviders: [IdentifyPreviewFixtures.provider]
+                ),
+                automaticallyLoads: false
+            )
+        }
+
+        #Preview("Identify · Wide") {
+            IdentifyView(
+                session: .init(
+                    service: AdministrativePreviewService(),
+                    browser: IdentifyPreviewEntityBrowser(),
+                    initialQueue: [
+                        IdentifyPreviewFixtures.reviewItem,
+                        IdentifyPreviewFixtures.errorItem,
+                    ],
+                    initialProviders: [IdentifyPreviewFixtures.provider]
+                ),
+                automaticallyLoads: false
+            )
+            .frame(width: 1_000, height: 720)
         }
     #endif
 #endif

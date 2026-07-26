@@ -3,6 +3,24 @@ import XCTest
 /// Broad cross-boundary smoke tests backed by Scripts/mock-server.py on localhost:8899.
 final class PrismediaShellUITests: XCTestCase {
     @MainActor
+    func testIPadSidebarBrandTogglesNsfwVisibility() throws {
+        let app = signedInApplication(initialModeID: "audio", destinationID: "albums")
+        guard app.frame.width > 700 else {
+            throw XCTSkip("The persistent sidebar is only presented in the regular-width shell.")
+        }
+
+        let brand = element("shell.sidebar.brand", in: app)
+        XCTAssertTrue(brand.waitForExistence(timeout: 10))
+        XCTAssertEqual(brand.value as? String, "SFW content only")
+
+        brand.press(forDuration: 0.8)
+
+        let nsfwValue = NSPredicate(format: "value == %@", "NSFW content visible")
+        expectation(for: nsfwValue, evaluatedWith: brand)
+        waitForExpectations(timeout: 5)
+    }
+
+    @MainActor
     func testStep4FilesFixtureWorkspace() throws {
         let app = signedInApplication(
             initialModeID: "manage",

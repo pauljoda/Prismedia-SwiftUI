@@ -41,43 +41,22 @@ import SwiftUI
                 switch destination {
                 case .files: AdministrativeFilesView(service: fileService)
                 case .identify:
-                    #if os(macOS)
-                        MacIdentifyView(
-                            session: IdentifySession(
-                                service: service,
-                                browser: PrismediaIdentifyEntityBrowser(client: client),
-                                hidesNsfw: !client.allowsNsfwContent
-                            )
+                    IdentifyView(
+                        session: IdentifySession(
+                            service: service,
+                            browser: PrismediaIdentifyEntityBrowser(client: client),
+                            hidesNsfw: !client.allowsNsfwContent
                         )
-                    #else
-                        IdentifyView(
-                            session: IdentifySession(
-                                service: service,
-                                browser: PrismediaIdentifyEntityBrowser(client: client),
-                                hidesNsfw: !client.allowsNsfwContent
-                            )
-                        )
-                    #endif
+                    )
                 case .request:
-                    #if os(macOS)
-                        MacRequestWorkspaceView(
-                            administrationService: service,
-                            activityService: client,
-                            detailDependencies: detailDependencies,
-                            navigationPath: navigationPath,
-                            hidesNsfw: !client.allowsNsfwContent,
-                            resolveAssetURL: client.assetURL
-                        )
-                    #else
-                        RequestWorkspaceView(
-                            administrationService: service,
-                            activityService: client,
-                            detailDependencies: detailDependencies,
-                            navigationPath: navigationPath,
-                            hidesNsfw: !client.allowsNsfwContent,
-                            resolveAssetURL: client.assetURL
-                        )
-                    #endif
+                    RequestWorkspaceView(
+                        administrationService: service,
+                        activityService: client,
+                        detailDependencies: detailDependencies,
+                        navigationPath: navigationPath,
+                        hidesNsfw: !client.allowsNsfwContent,
+                        resolveAssetURL: client.assetURL
+                    )
                 }
             }
         }

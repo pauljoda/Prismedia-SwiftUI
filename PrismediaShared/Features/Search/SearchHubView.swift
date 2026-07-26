@@ -47,7 +47,7 @@ struct SearchHubView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: PrismediaSpacing.section) {
+                LazyVStack(alignment: .leading, spacing: contentSpacing) {
                     if isSearchActive {
                         SearchHubSearchControls(
                             filters: $filters,
@@ -68,6 +68,13 @@ struct SearchHubView: View {
                             onRetryPagination: retryPagination,
                             onLoadNextPage: loadNextPage
                         )
+                    } else if usesDedicatedLanding {
+                        SearchHubDedicatedLandingView(
+                            searchText: $searchText,
+                            recentItems: snapshot.recentItems,
+                            recentState: snapshot.recentState,
+                            onRetry: retrySearch
+                        )
                     } else {
                         SearchHubBrowseGrid(
                             modes: modes,
@@ -76,8 +83,8 @@ struct SearchHubView: View {
                         )
                     }
                 }
-                .padding(.horizontal, PrismediaSpacing.extraLarge)
-                .padding(.top, PrismediaSpacing.small)
+                .padding(.horizontal, horizontalContentPadding)
+                .padding(.top, verticalContentPadding)
                 .padding(.bottom, PrismediaSpacing.section)
                 .containerRelativeFrame(.horizontal, alignment: .center) { length, _ in
                     min(length, SearchHubLayout.maximumContentWidth)
@@ -90,7 +97,7 @@ struct SearchHubView: View {
                     await retryActiveContent()
                 }
             }
-            .navigationTitle("Browse")
+            .navigationTitle(usesDedicatedLanding ? "Search" : "Browse")
             .accessibilityIdentifier("shell.search")
             .prismediaEntityDestinations(dependencies: detailDependencies)
             .toolbar {
@@ -167,6 +174,28 @@ struct SearchHubView: View {
 
     private var usesRegularLayout: Bool {
         horizontalSizeClass != .compact
+    }
+
+    private var usesDedicatedLanding: Bool {
+        #if os(macOS)
+            true
+        #elseif os(iOS)
+            horizontalSizeClass == .regular
+        #else
+            false
+        #endif
+    }
+
+    private var contentSpacing: CGFloat {
+        usesRegularLayout ? PrismediaSpacing.extraExtraLarge : PrismediaSpacing.section
+    }
+
+    private var horizontalContentPadding: CGFloat {
+        usesRegularLayout ? PrismediaSpacing.extraExtraLarge : PrismediaSpacing.extraLarge
+    }
+
+    private var verticalContentPadding: CGFloat {
+        usesRegularLayout ? PrismediaSpacing.extraLarge : PrismediaSpacing.small
     }
 
     private var availableNavigationMatches: [SearchHubNavigationTarget] {

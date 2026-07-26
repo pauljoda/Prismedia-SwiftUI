@@ -16,12 +16,23 @@
                     ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                         Section {
                             ForEach(section.items) { item in
-                                sidebarRow(item, accent: accent(for: section.id, fallbackIndex: index))
+                                sidebarRow(
+                                    item,
+                                    accent: PrismediaSidebarPalette.accent(
+                                        for: section.id,
+                                        fallbackIndex: index
+                                    )
+                                )
                             }
                         } header: {
                             Text(section.title)
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(accent(for: section.id, fallbackIndex: index))
+                                .foregroundStyle(
+                                    PrismediaSidebarPalette.accent(
+                                        for: section.id,
+                                        fallbackIndex: index
+                                    )
+                                )
                                 .textCase(.uppercase)
                                 .tracking(0.8)
                         }
@@ -38,24 +49,13 @@
         }
 
         private var brandHeader: some View {
-            HStack(spacing: PrismediaSpacing.medium) {
-                PrismediaBrandView(markSize: 30)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("PRISMEDIA")
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                        .tracking(1.5)
-                    Text("Media, in one place")
-                        .font(.caption2)
-                        .foregroundStyle(PrismediaColor.textMuted)
-                }
-
-                Spacer(minLength: 0)
-            }
+            PrismediaSidebarBrandView(
+                markSize: 30,
+                subtitle: "Media, in one place"
+            )
             .padding(.horizontal, PrismediaSpacing.large)
             .padding(.top, PrismediaSpacing.medium)
             .padding(.bottom, PrismediaSpacing.small)
-            .accessibilityElement(children: .combine)
         }
 
         private var accountFooter: some View {
@@ -140,18 +140,6 @@
             .accessibilityIdentifier("sidebar.\(item.id)")
         }
 
-        private func accent(for sectionID: String, fallbackIndex: Int) -> Color {
-            switch sectionID {
-            case "overview": PrismediaColor.materialSpectrumRed
-            case "video": PrismediaColor.materialSpectrumOrange
-            case "images": PrismediaColor.materialSpectrumYellow
-            case "audio": PrismediaColor.materialSpectrumGreen
-            case "books": PrismediaColor.materialSpectrumCyan
-            case "browse": PrismediaColor.materialSpectrumBlue
-            case "operate", "library-management": PrismediaColor.materialSpectrumViolet
-            default: PrismediaColor.materialSpectrumColor(at: fallbackIndex)
-            }
-        }
     }
 
     #if DEBUG
