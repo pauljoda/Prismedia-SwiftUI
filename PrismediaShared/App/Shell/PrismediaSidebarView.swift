@@ -18,43 +18,107 @@ struct PrismediaSidebarView: View {
         #endif
     }
 
+    @ViewBuilder
     private var sidebarList: some View {
-        List(selection: $selection) {
-            ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                let accent = PrismediaSidebarPalette.accent(
-                    for: section.id,
-                    fallbackIndex: index
-                )
-
-                Section {
-                    ForEach(section.items) { item in
-                        NavigationLink(value: item.selection) {
-                            Label {
-                                Text(item.title)
-                                    .foregroundStyle(PrismediaColor.textPrimary)
-                            } icon: {
-                                Image(systemName: item.systemImage)
-                                    .foregroundStyle(accent)
-                            }
-                        }
-                        .accessibilityIdentifier("sidebar.\(item.id)")
-                    }
-                } header: {
-                    Text(section.title)
-                        .foregroundStyle(accent)
-                }
-            }
-        }
-        .prismediaScreenBackground()
-        .navigationTitle("Prismedia")
         #if os(iOS)
+            List {
+                sidebarSections
+            }
+            .prismediaScreenBackground()
+            .navigationTitle("Prismedia")
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     PrismediaSidebarBrandView(markSize: 24)
                 }
             }
+            .accessibilityIdentifier("shell.sidebar")
+        #else
+            List(selection: $selection) {
+                sidebarSections
+            }
+            .prismediaScreenBackground()
+            .navigationTitle("Prismedia")
+            .accessibilityIdentifier("shell.sidebar")
         #endif
-        .accessibilityIdentifier("shell.sidebar")
+    }
+
+    private var sidebarSections: some View {
+        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+            let accent = PrismediaSidebarPalette.accent(
+                for: section.id,
+                fallbackIndex: index
+            )
+
+            Section {
+                ForEach(section.items) { item in
+                    #if os(iOS)
+                        sidebarButton(item, accent: accent)
+                    #else
+                        NavigationLink(value: item.selection) {
+                            sidebarLabel(item, accent: accent)
+                        }
+                        .accessibilityIdentifier("sidebar.\(item.id)")
+                    #endif
+                }
+            } header: {
+                Text(section.title)
+                    .foregroundStyle(accent)
+            }
+        }
+    }
+
+    #if os(iOS)
+        private func sidebarButton(
+            _ item: AppSidebarItem,
+            accent: Color
+        ) -> some View {
+            let isSelected = selection == item.selection
+
+            return Button {
+                selection = item.selection
+            } label: {
+                sidebarLabel(item, accent: accent)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: PrismediaLayout.minimumHitTarget,
+                        alignment: .leading
+                    )
+                    .padding(.horizontal, PrismediaSpacing.medium)
+                    .background {
+                        if isSelected {
+                            Capsule()
+                                .fill(PrismediaColor.controlFill)
+                        }
+                    }
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .listRowInsets(
+                EdgeInsets(
+                    top: PrismediaSpacing.extraExtraSmall,
+                    leading: PrismediaSpacing.small,
+                    bottom: PrismediaSpacing.extraExtraSmall,
+                    trailing: PrismediaSpacing.small
+                )
+            )
+            .listRowBackground(Color.clear)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+            .accessibilityIdentifier("sidebar.\(item.id)")
+        }
+    #endif
+
+    private func sidebarLabel(
+        _ item: AppSidebarItem,
+        accent: Color
+    ) -> some View {
+        Label {
+            Text(item.title)
+                .foregroundStyle(PrismediaColor.textPrimary)
+        } icon: {
+            Image(systemName: item.systemImage)
+                .foregroundStyle(accent)
+        }
     }
 }
 

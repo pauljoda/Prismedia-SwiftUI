@@ -4,9 +4,6 @@
     struct MusicAlbumDetailView: View {
         @Environment(PrismediaAppEnvironment.self) private var environment
         @Environment(MusicPlayerController.self) private var controller
-        #if os(iOS)
-            @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-        #endif
         @State private var artworkPalette: ArtworkPalette?
         @State private var resolvedParentArtist: String?
         @State private var trackForCollection: MusicTrack?
@@ -75,11 +72,15 @@
                 systemImage: "music.note",
                 palette: $artworkPalette
             ) {
-                if usesWideLayout {
+                #if os(macOS)
                     wideContent
-                } else {
-                    compactContent
-                }
+                #else
+                    ViewThatFits(in: .horizontal) {
+                        wideContent
+                            .frame(minWidth: 680)
+                        compactContent
+                    }
+                #endif
             }
             .navigationTitle(detail.title)
             #if os(iOS)
@@ -282,14 +283,6 @@
                 }
                 .padding(.top, PrismediaSpacing.small)
             }
-        }
-
-        private var usesWideLayout: Bool {
-            #if os(macOS)
-                true
-            #else
-                horizontalSizeClass == .regular
-            #endif
         }
 
         private var addTrackToCollection: ((MusicTrack) -> Void)? {

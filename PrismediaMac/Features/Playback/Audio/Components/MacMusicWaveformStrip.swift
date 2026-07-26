@@ -23,14 +23,26 @@
                         viewportWidth: geometry.size.width
                     )
 
-                    ZStack {
-                        waveformCanvas(
-                            viewportSize: geometry.size,
-                            stripWidth: stripWidth
+                    ZStack(alignment: .leading) {
+                        MacMusicWaveformTrack(
+                            waveform: waveform,
+                            stripWidth: stripWidth,
+                            accent: accent,
+                            secondaryAccent: secondaryAccent
+                        )
+                        .frame(height: geometry.size.height)
+                        .offset(
+                            x: (geometry.size.width / 2)
+                                - (CGFloat(displayedPosition / safeDuration) * stripWidth)
                         )
                         edgeFades
                         playhead
                     }
+                    .frame(
+                        width: geometry.size.width,
+                        height: geometry.size.height,
+                        alignment: .leading
+                    )
                     .contentShape(.rect)
                     .gesture(scrubGesture(stripWidth: stripWidth))
                     .clipped()
@@ -59,45 +71,6 @@
                     seek(to: displayedPosition - increment)
                 @unknown default:
                     break
-                }
-            }
-        }
-
-        private func waveformCanvas(
-            viewportSize: CGSize,
-            stripWidth: CGFloat
-        ) -> some View {
-            Canvas { context, size in
-                guard waveform.pairCount > 0, stripWidth > 0 else { return }
-                let centerY = size.height / 2
-                let sampleWidth = stripWidth / CGFloat(waveform.pairCount)
-                let maximumAmplitude = waveform.maximumAmplitude
-                let activeX = CGFloat(displayedPosition / safeDuration) * stripWidth
-                let offset = (viewportSize.width / 2) - activeX
-                let visibleStart = max(0, Int(floor(-offset / sampleWidth)) - 1)
-                let visibleEnd = min(
-                    waveform.pairCount - 1,
-                    Int(ceil((viewportSize.width - offset) / sampleWidth)) + 1
-                )
-                guard visibleStart <= visibleEnd else { return }
-
-                for index in visibleStart...visibleEnd {
-                    let minimum = waveform.samples[index * 2] / maximumAmplitude
-                    let maximum = waveform.samples[(index * 2) + 1] / maximumAmplitude
-                    let barTop = centerY - CGFloat(maximum) * centerY * 0.88
-                    let barBottom = centerY - CGFloat(minimum) * centerY * 0.88
-                    let intensity = (abs(minimum) + abs(maximum)) / 2
-                    let color =
-                        intensity > 0.35
-                        ? secondaryAccent.opacity(0.52)
-                        : accent.opacity(0.24)
-                    let rect = CGRect(
-                        x: offset + (CGFloat(index) * sampleWidth),
-                        y: barTop,
-                        width: max(1, sampleWidth - 0.5),
-                        height: max(1, barBottom - barTop)
-                    )
-                    context.fill(Path(rect), with: .color(color))
                 }
             }
         }

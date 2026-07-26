@@ -80,6 +80,7 @@ struct AdministrativeSettingsDetailView: View {
                 }
             }
         }
+        .prismediaSettingsForm()
         .prismediaScreenBackground()
         .navigationTitle(section.title)
         .overlay { if isPerformingAction { ProgressView() } }

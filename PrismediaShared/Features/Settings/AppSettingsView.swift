@@ -4,8 +4,14 @@ struct AppSettingsView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
 
     var body: some View {
-        Form {
-            EntityGridCardStyleSettingsSection(cardStyle: cardStyle)
+        Group {
+            #if os(macOS)
+                MacAppSettingsContentView(cardStyle: cardStyle)
+            #else
+                Form {
+                    EntityGridCardStyleSettingsSection(cardStyle: cardStyle)
+                }
+            #endif
         }
         .prismediaScreenBackground()
         .navigationTitle("App Settings")

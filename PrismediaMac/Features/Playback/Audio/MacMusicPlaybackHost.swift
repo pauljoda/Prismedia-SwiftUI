@@ -7,7 +7,7 @@
         @State private var miniPlayerVisibility = MusicMiniPlayerVisibility()
         @State private var nowPlayingPresented = false
         @State private var waveform: MusicWaveform?
-        @Namespace private var playerArtworkNamespace
+        @State private var remoteCommands: MusicRemoteCommandCoordinator?
 
         private let client: PrismediaAPIClient
         private let waveformLoader: any MusicWaveformLoading
@@ -29,7 +29,6 @@
                 controller: controller,
                 engine: engine,
                 waveform: waveform,
-                artworkNamespace: playerArtworkNamespace,
                 isInspectorPresented: $nowPlayingPresented
             )
 
@@ -61,6 +60,13 @@
 
         private func connectPlaybackSystem() {
             playback.connect(to: client)
+            if remoteCommands == nil {
+                remoteCommands = MusicRemoteCommandCoordinator(
+                    controller: controller,
+                    engine: engine,
+                    artworkURL: playback.artworkURL(for:)
+                )
+            }
             #if DEBUG
                 let tracks = PrismediaUITestBootstrap.musicTracks()
                 if !tracks.isEmpty {
@@ -69,10 +75,6 @@
             #endif
             engine.onPlaybackEnded = { [weak controller] in
                 Task { @MainActor in await controller?.handlePlaybackEnded() }
-            }
-            engine.onNowPlayingProgressChanged = { [weak controller, weak engine] in
-                guard let engine else { return }
-                controller?.updateElapsedTime(engine.elapsedTime)
             }
         }
 

@@ -26,32 +26,30 @@
             _ presentation: MacMusicPlaybackPresentationContext
         ) -> some View {
             content
-                .safeAreaInset(edge: .bottom, spacing: 0) {
+                .overlay(alignment: .bottom) {
                     if showsCompactPlayer(presentation) {
                         MacMusicMiniPlayerView(
                             controller: presentation.controller,
                             engine: presentation.engine,
                             waveform: presentation.waveform,
-                            artworkNamespace: presentation.artworkNamespace,
+                            artworkPalette: $artworkPalette,
                             showNowPlaying: { setInspectorPresented(true, presentation: presentation) }
                         )
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(
+                            .scale(scale: 1.08, anchor: .bottomTrailing)
+                                .combined(with: .opacity)
+                        )
                     }
                 }
-                .inspector(isPresented: presentation.isInspectorPresented) {
+                .inspector(isPresented: inspectorBinding(presentation)) {
                     MusicNowPlayingView(
                         engine: presentation.engine,
                         artworkPalette: $artworkPalette,
-                        artworkNamespace: presentation.artworkNamespace,
                         onDismiss: { setInspectorPresented(false, presentation: presentation) }
                     )
                     .environment(presentation.controller)
                     .inspectorColumnWidth(min: 340, ideal: 420, max: 520)
                 }
-                .animation(
-                    reduceMotion ? nil : .snappy,
-                    value: showsCompactPlayer(presentation)
-                )
         }
 
         private func showsCompactPlayer(
@@ -62,11 +60,25 @@
                 && !presentation.isInspectorPresented.wrappedValue
         }
 
+        private func inspectorBinding(
+            _ presentation: MacMusicPlaybackPresentationContext
+        ) -> Binding<Bool> {
+            Binding(
+                get: { presentation.isInspectorPresented.wrappedValue },
+                set: { setInspectorPresented($0, presentation: presentation) }
+            )
+        }
+
         private func setInspectorPresented(
             _ isPresented: Bool,
             presentation: MacMusicPlaybackPresentationContext
         ) {
-            withAnimation(reduceMotion ? nil : .smooth(duration: isPresented ? 0.38 : 0.34)) {
+            guard isPresented != presentation.isInspectorPresented.wrappedValue else { return }
+            if reduceMotion {
+                presentation.isInspectorPresented.wrappedValue = isPresented
+                return
+            }
+            withAnimation(.smooth(duration: 0.38)) {
                 presentation.isInspectorPresented.wrappedValue = isPresented
             }
         }

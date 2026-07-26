@@ -9,6 +9,7 @@
         public private(set) var elapsedTime: Double = 0
         public private(set) var duration: Double = 0
         public private(set) var isBuffering = false
+        public private(set) var isPlaybackAdvancing = false
 
         @ObservationIgnored public var onPlaybackEnded: (() -> Void)?
         @ObservationIgnored public var onNowPlayingProgressChanged: (() -> Void)?
@@ -22,6 +23,7 @@
         @ObservationIgnored
         nonisolated(unsafe) private var endObserver: NSObjectProtocol?
         @ObservationIgnored private var statusObservation: NSKeyValueObservation?
+        @ObservationIgnored private var timeControlStatusObservation: NSKeyValueObservation?
         @ObservationIgnored private var wantsToPlay = false
         @ObservationIgnored private var playbackRate: Float = 1
 
@@ -29,6 +31,7 @@
             player = AVPlayer()
             super.init()
             observeTime()
+            observeTimeControlStatus()
         }
 
         deinit {
@@ -82,6 +85,17 @@
             let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
             timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
                 Task { @MainActor [weak self] in self?.updateTime(time) }
+            }
+        }
+
+        private func observeTimeControlStatus() {
+            timeControlStatusObservation = player.observe(
+                \.timeControlStatus,
+                options: [.initial, .new]
+            ) { [weak self] player, _ in
+                Task { @MainActor [weak self] in
+                    self?.isPlaybackAdvancing = player.timeControlStatus == .playing
+                }
             }
         }
 

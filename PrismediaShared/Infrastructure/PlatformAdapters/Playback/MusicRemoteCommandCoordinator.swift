@@ -1,7 +1,11 @@
-#if os(iOS)
+#if os(iOS) || os(macOS)
     import Foundation
     import MediaPlayer
-    import UIKit
+    #if os(iOS)
+        import UIKit
+    #else
+        import AppKit
+    #endif
 
     @MainActor
     final class MusicRemoteCommandCoordinator {
@@ -10,7 +14,9 @@
         private let controller: MusicPlayerController
         private let engine: AVPlayerAudioPlaybackEngine
         private let artworkURL: (String?) -> URL?
-        private let nowPlayingSession: MPNowPlayingSession
+        #if os(iOS)
+            private let nowPlayingSession: MPNowPlayingSession
+        #endif
         private var artworkTask: Task<Void, Never>?
         nonisolated(unsafe) private var commandTargets: [(command: MPRemoteCommand, target: Any)] = []
         private var publicationState = MusicNowPlayingPublicationState()
@@ -24,8 +30,10 @@
             self.controller = controller
             self.engine = engine
             self.artworkURL = artworkURL
-            nowPlayingSession = MPNowPlayingSession(players: [engine.player])
-            nowPlayingSession.automaticallyPublishesNowPlayingInfo = false
+            #if os(iOS)
+                nowPlayingSession = MPNowPlayingSession(players: [engine.player])
+                nowPlayingSession.automaticallyPublishesNowPlayingInfo = false
+            #endif
             registerCommands()
             observePlayback()
         }
@@ -37,8 +45,24 @@
             }
         }
 
+        private var nowPlayingInfoCenter: MPNowPlayingInfoCenter {
+            #if os(iOS)
+                nowPlayingSession.nowPlayingInfoCenter
+            #else
+                MPNowPlayingInfoCenter.default()
+            #endif
+        }
+
+        private var remoteCommandCenter: MPRemoteCommandCenter {
+            #if os(iOS)
+                nowPlayingSession.remoteCommandCenter
+            #else
+                MPRemoteCommandCenter.shared()
+            #endif
+        }
+
         private func registerCommands() {
-            let commands = nowPlayingSession.remoteCommandCenter
+            let commands = remoteCommandCenter
             register(commands.playCommand) { [weak controller] _ in
                 Task { @MainActor in controller?.resume() }
                 return .success
@@ -63,7 +87,9 @@
                 return .success
             }
             register(commands.changePlaybackPositionCommand) { [weak controller] event in
-                guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+                guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+                    return .commandFailed
+                }
                 Task { @MainActor in controller?.seek(to: event.positionTime) }
                 return .success
             }
@@ -102,7 +128,10 @@
                 artworkTask?.cancel()
                 artworkTask = nil
                 publicationState.clear()
-                nowPlayingSession.nowPlayingInfoCenter.nowPlayingInfo = nil
+                nowPlayingInfoCenter.nowPlayingInfo = nil
+                #if os(macOS)
+                    nowPlayingInfoCenter.playbackState = .stopped
+                #endif
                 updateCommandAvailability()
                 return
             }
@@ -111,7 +140,7 @@
             let existingArtwork =
                 requiresArtwork
                 ? nil
-                : nowPlayingSession.nowPlayingInfoCenter.nowPlayingInfo?[MPMediaItemPropertyArtwork]
+                : nowPlayingInfoCenter.nowPlayingInfo?[MPMediaItemPropertyArtwork]
             var information: [String: Any] = [
                 MPMediaItemPropertyTitle: track.title,
                 MPMediaItemPropertyArtist: MusicPresentation.artist(track.artist),
@@ -123,8 +152,12 @@
             if let album = track.album { information[MPMediaItemPropertyAlbumTitle] = album }
             let duration = engine.duration > 0 ? engine.duration : track.duration
             if let duration { information[MPMediaItemPropertyPlaybackDuration] = duration }
-            nowPlayingSession.nowPlayingInfoCenter.nowPlayingInfo = information
-            nowPlayingSession.becomeActiveIfPossible(completion: nil)
+            nowPlayingInfoCenter.nowPlayingInfo = information
+            #if os(iOS)
+                nowPlayingSession.becomeActiveIfPossible(completion: nil)
+            #else
+                nowPlayingInfoCenter.playbackState = controller.isPlaying ? .playing : .paused
+            #endif
 
             if requiresArtwork || existingArtwork == nil { loadArtwork(for: track) }
             updateCommandAvailability()
@@ -144,25 +177,41 @@
                     ),
                     !Task.isCancelled
                 else { return }
-                self?.installArtwork(UIImage(cgImage: decodedImage), for: track.id)
+                #if os(iOS)
+                    self?.installArtwork(UIImage(cgImage: decodedImage), for: track.id)
+                #else
+                    let size = NSSize(width: decodedImage.width, height: decodedImage.height)
+                    self?.installArtwork(NSImage(cgImage: decodedImage, size: size), for: track.id)
+                #endif
             }
         }
 
-        private func installArtwork(_ image: UIImage, for trackID: UUID) {
-            guard controller.currentTrack?.id == trackID else { return }
-            var information = nowPlayingSession.nowPlayingInfoCenter.nowPlayingInfo ?? [:]
-            information[MPMediaItemPropertyArtwork] = Self.mediaItemArtwork(for: image)
-            nowPlayingSession.nowPlayingInfoCenter.nowPlayingInfo = information
-        }
+        #if os(iOS)
+            private func installArtwork(_ image: UIImage, for trackID: UUID) {
+                guard controller.currentTrack?.id == trackID else { return }
+                var information = nowPlayingInfoCenter.nowPlayingInfo ?? [:]
+                information[MPMediaItemPropertyArtwork] = Self.mediaItemArtwork(for: image)
+                nowPlayingInfoCenter.nowPlayingInfo = information
+            }
 
-        /// MediaPlayer invokes this request handler on its own access queue. Build
-        /// it outside MainActor isolation so the framework can call it safely.
-        nonisolated private static func mediaItemArtwork(for image: UIImage) -> MPMediaItemArtwork {
-            MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-        }
+            nonisolated private static func mediaItemArtwork(for image: UIImage) -> MPMediaItemArtwork {
+                MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            }
+        #else
+            private func installArtwork(_ image: NSImage, for trackID: UUID) {
+                guard controller.currentTrack?.id == trackID else { return }
+                var information = nowPlayingInfoCenter.nowPlayingInfo ?? [:]
+                information[MPMediaItemPropertyArtwork] = Self.mediaItemArtwork(for: image)
+                nowPlayingInfoCenter.nowPlayingInfo = information
+            }
+
+            nonisolated private static func mediaItemArtwork(for image: NSImage) -> MPMediaItemArtwork {
+                MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            }
+        #endif
 
         private func updateCommandAvailability() {
-            let commands = nowPlayingSession.remoteCommandCenter
+            let commands = remoteCommandCenter
             commands.nextTrackCommand.isEnabled = controller.queue.canGoNext
             commands.previousTrackCommand.isEnabled = controller.queue.canGoPrevious
             commands.changePlaybackPositionCommand.isEnabled = controller.currentTrack != nil

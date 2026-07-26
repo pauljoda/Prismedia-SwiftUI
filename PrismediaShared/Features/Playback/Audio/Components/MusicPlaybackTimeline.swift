@@ -6,6 +6,7 @@
         @Binding var position: Double
         let duration: Double
         let onEditingChanged: (Bool) -> Void
+        var showsTimeLabels = true
 
         var body: some View {
             VStack(spacing: PrismediaSpacing.extraSmall) {
@@ -23,13 +24,15 @@
                     "\(MusicPresentation.clockTime(position)) of \(MusicPresentation.clockTime(duration))"
                 )
 
-                HStack {
-                    Text(MusicPresentation.clockTime(position))
-                    Spacer()
-                    Text("−\(MusicPresentation.clockTime(max(0, duration - position)))")
+                if showsTimeLabels {
+                    HStack {
+                        Text(MusicPresentation.clockTime(position))
+                        Spacer()
+                        Text("−\(MusicPresentation.clockTime(max(0, duration - position)))")
+                    }
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(PrismediaColor.textSecondary)
                 }
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(PrismediaColor.textSecondary)
             }
         }
     }

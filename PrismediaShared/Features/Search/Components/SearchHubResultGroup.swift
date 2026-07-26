@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct SearchHubResultGroup: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     let section: SearchHubResultSection
     let isExpanded: Bool
     let usesRegularLayout: Bool
@@ -38,11 +36,15 @@ struct SearchHubResultGroup: View {
                     .accessibilityLabel("\(section.items.count) loaded results")
             }
 
-            LazyVGrid(columns: resultColumns, spacing: 0) {
-                ForEach(visibleItems) { item in
-                    entityRow(item)
+            ScrollView(.horizontal) {
+                LazyHStack(alignment: .top, spacing: PrismediaSpacing.small) {
+                    ForEach(visibleItems) { item in
+                        entityCard(item)
+                    }
                 }
+                .padding(.bottom, PrismediaSpacing.extraSmall)
             }
+            .scrollIndicators(.hidden)
 
             if section.items.count > collapsedLimit {
                 Button {
@@ -64,66 +66,25 @@ struct SearchHubResultGroup: View {
         .accessibilityIdentifier("shell.search.section.\(section.kind.rawValue)")
     }
 
-    private var resultColumns: [GridItem] {
-        if usesRegularLayout && !dynamicTypeSize.isAccessibilitySize {
-            return [
-                GridItem(.flexible(), spacing: PrismediaSpacing.large),
-                GridItem(.flexible(), spacing: PrismediaSpacing.large),
-            ]
-        }
-        return [GridItem(.flexible())]
+    private var railArtworkHeight: CGFloat {
+        CGFloat(260 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio)
     }
 
-    private func entityRow(_ item: EntityThumbnail) -> some View {
-        NavigationLink(value: EntityLink(thumbnail: item)) {
-            HStack(spacing: PrismediaSpacing.medium) {
-                EntityThumbnailCompactArtworkView(
-                    item: item,
-                    width: usesRegularLayout ? 48 : 56
-                )
-
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    HStack(spacing: PrismediaSpacing.small) {
-                        Text(item.title)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .lineLimit(2)
-
-                        if item.id == topResultID {
-                            Text("Top")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(PrismediaColor.accent)
-                                .accessibilityLabel("Top result")
-                        }
-                    }
-
-                    Text(metadataLine(for: item))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: PrismediaSpacing.small)
-
-                Image(systemName: "chevron.forward")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
-            }
-            .frame(maxWidth: .infinity, minHeight: usesRegularLayout ? 56 : 68, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(item.title), \(metadataLine(for: item))")
+    private func entityCard(_ item: EntityThumbnail) -> some View {
+        EntityThumbnailNavigationSurface(
+            item: item,
+            layout: .rail,
+            preferredWidth: railCardWidth(for: item)
+        )
         .accessibilityHint(item.id == topResultID ? "Top result. Opens details" : "Opens details")
         .accessibilityIdentifier("shell.search.result.\(item.id.uuidString)")
     }
 
-    private func metadataLine(for item: EntityThumbnail) -> String {
-        let firstMetadata = item.meta.first?.label
-        return [item.kind.displayLabel, firstMetadata]
-            .compactMap { $0 }
-            .joined(separator: " · ")
+    private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
+        CGFloat(
+            EntityThumbnailCardPresentation(item: item, layout: .rail)
+                .width(forCardHeight: Double(railArtworkHeight))
+        )
     }
 }
 

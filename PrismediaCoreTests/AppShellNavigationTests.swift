@@ -195,6 +195,31 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
+    func testReselectingSidebarDestinationClearsOnlyItsStack() throws {
+        let router = PrismediaAppRouter(
+            initialMode: ModeCatalog.video,
+            initialDestinationID: "movies"
+        )
+        let movieLink = EntityLink(entityID: UUID(), kind: .movie)
+        let staleSeriesLink = EntityLink(entityID: UUID(), kind: .videoSeries)
+        router.setPath([movieLink], for: "movies")
+        router.setPath([staleSeriesLink], for: "series")
+        let series = try XCTUnwrap(ModeCatalog.video.destination(id: "series"))
+
+        router.selectRoot(mode: ModeCatalog.video, destination: series)
+
+        XCTAssertEqual(router.selectedTab, .destination("series"))
+        XCTAssertEqual(router.path(for: "series"), [staleSeriesLink])
+        XCTAssertEqual(router.path(for: "movies"), [movieLink])
+        XCTAssertEqual(router.rootNavigationRevision, 0)
+
+        router.selectRoot(mode: ModeCatalog.video, destination: series)
+
+        XCTAssertTrue(router.path(for: "series").isEmpty)
+        XCTAssertEqual(router.rootNavigationRevision, 1)
+    }
+
+    @MainActor
     func testFavoritesUseOneMixedPathForKindGridsAndEntityDetails() throws {
         let router = PrismediaAppRouter(
             initialMode: ModeCatalog.overview,

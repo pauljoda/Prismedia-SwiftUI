@@ -61,6 +61,9 @@
                     guard isPlaying else { return }
                     miniPlayerVisibility.revealForPlaybackActivity()
                 }
+                #if DEBUG
+                    .onAppear(perform: bootstrapUITestPlaybackIfNeeded)
+                #endif
         }
 
         @ViewBuilder
@@ -104,9 +107,11 @@
         }
 
         private var iPadMiniPlayer: some View {
-            IPadMusicMiniPlayerView {
-                nowPlayingPresented = true
-            }
+            IPadMusicMiniPlayerView(
+                engine: engine,
+                artworkPalette: artworkPaletteBinding,
+                showNowPlaying: { nowPlayingPresented = true }
+            )
             .environment(controller)
             .matchedTransitionSource(
                 id: nowPlayingTransitionID,
@@ -126,6 +131,15 @@
         private var showsMiniPlayer: Bool {
             controller.currentTrack != nil && !miniPlayerVisibility.isSuppressed
         }
+
+        #if DEBUG
+            private func bootstrapUITestPlaybackIfNeeded() {
+                guard controller.currentTrack == nil else { return }
+                let tracks = PrismediaUITestBootstrap.musicTracks()
+                guard !tracks.isEmpty else { return }
+                controller.play(tracks: tracks, queueMode: .ordered)
+            }
+        #endif
     }
 
     #if DEBUG

@@ -175,7 +175,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
 
                 Task { await submitSearch() }
             }
-            .task {
+            .task(id: configuration.preferencesID) {
                 await loadIfNeeded()
             }
             .task(id: automaticRefreshIsActive) {
@@ -717,7 +717,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     }
 
     private func loadIfNeeded() async {
-        guard snapshot.state == .idle else { return }
+        guard snapshot.state == .idle || snapshot.state == .loading else { return }
         await loadFirstPage(preservingContent: false)
     }
 

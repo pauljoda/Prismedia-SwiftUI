@@ -31,12 +31,8 @@
 
         @ViewBuilder
         private var transport: some View {
-            #if os(iOS)
-                transportButtons
-                    .buttonStyle(.plain)
-            #else
-                transportButtons
-            #endif
+            transportButtons
+                .buttonStyle(.plain)
         }
 
         private var transportButtons: some View {
@@ -49,56 +45,32 @@
             .padding(.top, PrismediaSpacing.large)
         }
 
-        @ViewBuilder
         private var previousButton: some View {
-            let button = Button("Previous", systemImage: "backward.fill", action: controller.skipToPrevious)
+            Button("Previous", systemImage: "backward.fill", action: controller.skipToPrevious)
                 .labelStyle(.iconOnly)
+                .foregroundStyle(selectedTint.opacity(0.78))
                 .disabled(!controller.queue.canGoPrevious)
-
-            #if os(macOS)
-                button
-                    .buttonStyle(.glass)
-                    .foregroundStyle(selectedTint.opacity(0.78))
-            #else
-                button
-            #endif
         }
 
-        @ViewBuilder
         private var playButton: some View {
-            let button = Button(
+            Button(
                 controller.isPlaying ? "Pause" : "Play",
                 systemImage: controller.isPlaying ? "pause.fill" : "play.fill",
                 action: togglePlayback
             )
             .labelStyle(.iconOnly)
             .font(.system(size: 38, weight: .bold))
+            .foregroundStyle(selectedTint)
             .frame(width: 64, height: 64)
             .contentTransition(.identity)
             .animation(nil, value: controller.isPlaying)
-
-            #if os(macOS)
-                button
-                    .buttonStyle(.glassProminent)
-                    .tint(selectedTint)
-            #else
-                button
-            #endif
         }
 
-        @ViewBuilder
         private var nextButton: some View {
-            let button = Button("Next", systemImage: "forward.fill", action: controller.skipToNext)
+            Button("Next", systemImage: "forward.fill", action: controller.skipToNext)
                 .labelStyle(.iconOnly)
+                .foregroundStyle(selectedTint.opacity(0.78))
                 .disabled(!controller.queue.canGoNext)
-
-            #if os(macOS)
-                button
-                    .buttonStyle(.glass)
-                    .foregroundStyle(selectedTint.opacity(0.78))
-            #else
-                button
-            #endif
         }
 
         @ViewBuilder

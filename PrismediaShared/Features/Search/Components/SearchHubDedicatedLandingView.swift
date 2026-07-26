@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SearchHubDedicatedLandingView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var searchText: String
     @FocusState private var searchFieldFocused: Bool
 
@@ -14,6 +13,7 @@ struct SearchHubDedicatedLandingView: View {
             searchPrompt
             recentContent
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear { searchFieldFocused = true }
     }
 
@@ -45,6 +45,7 @@ struct SearchHubDedicatedLandingView: View {
                 .accessibilityIdentifier("shell.search.primary-field")
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
         .padding(.vertical, PrismediaSpacing.extraExtraLarge)
     }
 
@@ -56,16 +57,13 @@ struct SearchHubDedicatedLandingView: View {
                 .frame(maxWidth: .infinity)
 
         case .content:
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Label("Recently Added", systemImage: "clock.arrow.circlepath")
-                    .font(.title2.bold())
-
-                LazyVGrid(columns: recentColumns, spacing: PrismediaSpacing.small) {
-                    ForEach(recentItems.prefix(12)) { item in
-                        recentItem(item)
-                    }
-                }
-            }
+            DashboardShelfView(
+                title: "Recently Added",
+                systemImage: "clock.arrow.circlepath",
+                colorRole: .recent,
+                items: recentItems,
+                onSelect: nil
+            )
 
         case .empty:
             ContentUnavailableView(
@@ -87,35 +85,6 @@ struct SearchHubDedicatedLandingView: View {
         }
     }
 
-    private var recentColumns: [GridItem] {
-        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
-        return Array(
-            repeating: GridItem(.flexible(), spacing: PrismediaSpacing.large),
-            count: count
-        )
-    }
-
-    private func recentItem(_ item: EntityThumbnail) -> some View {
-        NavigationLink(value: EntityLink(thumbnail: item)) {
-            HStack(spacing: PrismediaSpacing.medium) {
-                EntityThumbnailCompactArtworkView(item: item, width: 52)
-
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text(item.title)
-                        .font(.body.weight(.medium))
-                        .lineLimit(2)
-                    Text(item.kind.displayLabel)
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 #if DEBUG

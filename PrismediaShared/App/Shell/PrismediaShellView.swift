@@ -136,6 +136,8 @@ public struct PrismediaShellView: View {
                         detailDependencies: detailDependencies,
                         videoPlaybackSession: videoPlaybackSession
                     )
+                    .id(router.selectedTab)
+                    .id(router.rootNavigationRevision)
                 }
             #else
                 wideDetail(
@@ -144,6 +146,8 @@ public struct PrismediaShellView: View {
                     detailDependencies: detailDependencies,
                     videoPlaybackSession: videoPlaybackSession
                 )
+                .id(router.selectedTab)
+                .id(router.rootNavigationRevision)
             #endif
         }
         .navigationSplitViewStyle(.balanced)
@@ -412,6 +416,7 @@ public struct PrismediaShellView: View {
                 EntityThumbnailNavigationSurface(item: item, layout: layout)
             }
         )
+        .id(destination.id)
     }
 
     private var libraryActionPolicy: EntityGridActionPolicy {
@@ -541,13 +546,13 @@ public struct PrismediaShellView: View {
 
                 switch newSelection {
                 case .search:
-                    router.select(tab: .search, availableModes: availableModes)
+                    router.selectSearchRoot()
                 case .destination(let modeID, let destinationID):
                     guard
                         let mode = availableModes.first(where: { $0.id == modeID }),
                         let destination = mode.destination(id: destinationID)
                     else { return }
-                    router.select(mode: mode, destination: destination)
+                    router.selectRoot(mode: mode, destination: destination)
                 }
             }
         )

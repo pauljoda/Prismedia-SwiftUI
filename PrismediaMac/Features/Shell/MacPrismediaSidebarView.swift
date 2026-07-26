@@ -4,7 +4,6 @@
     struct MacPrismediaSidebarView: View {
         @Environment(PrismediaAppEnvironment.self) private var environment
         @Binding var selection: AppSidebarSelection?
-        @State private var hoveredItemID: String?
 
         let sections: [AppSidebarSection]
 
@@ -12,29 +11,26 @@
             VStack(spacing: 0) {
                 brandHeader
 
-                List {
+                List(selection: $selection) {
                     ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                         Section {
                             ForEach(section.items) { item in
-                                sidebarRow(
-                                    item,
-                                    accent: PrismediaSidebarPalette.accent(
-                                        for: section.id,
-                                        fallbackIndex: index
-                                    )
-                                )
+                                Label {
+                                    Text(item.title)
+                                } icon: {
+                                    Image(systemName: item.systemImage)
+                                        .foregroundStyle(
+                                            PrismediaSidebarPalette.accent(
+                                                for: section.id,
+                                                fallbackIndex: index
+                                            )
+                                        )
+                                }
+                                .tag(item.selection)
+                                .accessibilityIdentifier("sidebar.\(item.id)")
                             }
                         } header: {
                             Text(section.title)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(
-                                    PrismediaSidebarPalette.accent(
-                                        for: section.id,
-                                        fallbackIndex: index
-                                    )
-                                )
-                                .textCase(.uppercase)
-                                .tracking(0.8)
                         }
                     }
                 }
@@ -88,56 +84,6 @@
                     .accessibilityElement(children: .combine)
                 }
             }
-        }
-
-        private func sidebarRow(_ item: AppSidebarItem, accent: Color) -> some View {
-            let isSelected = selection == item.selection
-            let isHovered = hoveredItemID == item.id
-
-            return Button {
-                selection = item.selection
-            } label: {
-                HStack(spacing: PrismediaSpacing.small) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(isSelected ? accent : .clear)
-                        .frame(width: 3, height: 18)
-
-                    Image(systemName: item.systemImage)
-                        .frame(width: 18)
-                        .foregroundStyle(isSelected ? PrismediaColor.textPrimary : accent)
-
-                    Text(item.title)
-                        .foregroundStyle(
-                            isSelected ? PrismediaColor.textPrimary : PrismediaColor.textSecondary
-                        )
-
-                    Spacer(minLength: 0)
-                }
-                .font(.callout.weight(isSelected ? .semibold : .regular))
-                .padding(.horizontal, PrismediaSpacing.small)
-                .frame(maxWidth: .infinity, minHeight: PrismediaLayout.minimumHitTarget)
-                .background(
-                    isSelected || isHovered
-                        ? PrismediaColor.controlFill.opacity(isSelected ? 0.72 : 0.36)
-                        : .clear,
-                    in: .rect(cornerRadius: PrismediaRadius.compact)
-                )
-                .overlay {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: PrismediaRadius.compact)
-                            .stroke(PrismediaColor.borderSubtle, lineWidth: PrismediaLayout.hairline)
-                    }
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .listRowInsets(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))
-            .listRowBackground(Color.clear)
-            .onHover { isHovering in
-                hoveredItemID = isHovering ? item.id : nil
-            }
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-            .accessibilityIdentifier("sidebar.\(item.id)")
         }
 
     }

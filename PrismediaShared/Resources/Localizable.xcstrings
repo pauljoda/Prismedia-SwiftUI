@@ -513,9 +513,6 @@
     "Audiobook Now Playing" : {
 
     },
-    "Audiobook parts play in order" : {
-
-    },
     "Auto ID" : {
 
     },
@@ -646,9 +643,6 @@
 
     },
     "Change Server" : {
-
-    },
-    "Changes queue order" : {
 
     },
     "Changing your password keeps this device signed in and signs out every other session." : {
@@ -1171,9 +1165,6 @@
     "Exit Full Screen" : {
 
     },
-    "Expand Player" : {
-
-    },
     "Expanded" : {
 
     },
@@ -1296,6 +1287,9 @@
 
     },
     "Hero artwork for %@" : {
+
+    },
+    "Hide Now Playing Inspector" : {
 
     },
     "Hide Password" : {
@@ -1652,9 +1646,6 @@
     "Media" : {
 
     },
-    "Media, in one place" : {
-
-    },
     "Member" : {
 
     },
@@ -1758,6 +1749,9 @@
 
     },
     "New Folder" : {
+
+    },
+    "New library items will appear here." : {
 
     },
     "New media and playback activity will appear here." : {
@@ -1898,6 +1892,9 @@
     "No provider description available." : {
 
     },
+    "No Recent Additions" : {
+
+    },
     "No references" : {
 
     },
@@ -1956,6 +1953,9 @@
 
     },
     "NSFW" : {
+
+    },
+    "NSFW content visible" : {
 
     },
     "NSFW Library" : {
@@ -2029,6 +2029,9 @@
 
     },
     "Opens in your default browser" : {
+
+    },
+    "Opens playback position, queue, and audio controls" : {
 
     },
     "Opens tag details" : {
@@ -2170,6 +2173,12 @@
     "Playback timeline" : {
 
     },
+    "Playback waveform" : {
+
+    },
+    "Player" : {
+
+    },
     "Playing" : {
 
     },
@@ -2261,6 +2270,9 @@
 
     },
     "Prismedia will estimate the matching page from your current audiobook position." : {
+
+    },
+    "Prismedia, NSFW content visible" : {
 
     },
     "prismedia.example.com" : {
@@ -2372,6 +2384,9 @@
     "Rebuild every generated preview?" : {
 
     },
+    "Recent Additions Unavailable" : {
+
+    },
     "Recent Events" : {
 
     },
@@ -2382,6 +2397,9 @@
 
     },
     "Recursive Size" : {
+
+    },
+    "Redo" : {
 
     },
     "References" : {
@@ -2669,6 +2687,12 @@
     "Scroll" : {
 
     },
+    "Scrub Back" : {
+
+    },
+    "Scrub Forward" : {
+
+    },
     "Search" : {
 
     },
@@ -2837,6 +2861,9 @@
     "Settings" : {
 
     },
+    "SFW content only" : {
+
+    },
     "Share Original" : {
 
     },
@@ -2864,10 +2891,13 @@
     "Show Now Playing for %@" : {
 
     },
-    "Show Only Relevant" : {
+    "Show Now Playing Inspector" : {
 
     },
-    "Show or hide Now Playing" : {
+    "Show NSFW Content" : {
+
+    },
+    "Show Only Relevant" : {
 
     },
     "Show Password" : {
@@ -3125,19 +3155,13 @@
     "Toggle animation" : {
 
     },
-    "Toggle Now Playing" : {
+    "Toggle NSFW Content" : {
 
     },
     "Toggle Playback" : {
 
     },
     "Toggles this entity kind in search results" : {
-
-    },
-    "Top" : {
-
-    },
-    "Top result" : {
 
     },
     "Top result. Opens details" : {
@@ -3203,6 +3227,9 @@
     "Unavailable until this item is matched to a supported provider." : {
 
     },
+    "Undo" : {
+
+    },
     "Unknown status" : {
 
     },
@@ -3231,9 +3258,6 @@
 
     },
     "Up Next" : {
-
-    },
-    "Up Next Parts" : {
 
     },
     "Up to %@" : {
@@ -3300,13 +3324,13 @@
     "Use at least 8 characters." : {
 
     },
-    "Use Compact Player" : {
-
-    },
     "Use paragraph spacing for a modern layout, indentation for a traditional book layout, or combine them to taste." : {
 
     },
     "Use Publisher Formatting" : {
+
+    },
+    "Use SFW Mode" : {
 
     },
     "Use the Choose Files button if drag and drop is unavailable." : {

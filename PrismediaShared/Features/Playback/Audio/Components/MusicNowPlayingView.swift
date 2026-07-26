@@ -54,10 +54,11 @@
                     environment: environment
                 )
             #else
-                VStack(spacing: 0) {
-                    inspectorHeader
-                    playerSurface
-                }
+                playerSurface
+                    .safeAreaPadding(.top, PrismediaSpacing.extraLarge)
+                    .overlay(alignment: .topTrailing) {
+                        inspectorCloseButton
+                    }
                 .musicNowPlayingPresentationBehavior(
                     engine: engine,
                     isScrubbing: isScrubbing,
@@ -134,29 +135,6 @@
             }
         }
 
-        #if os(macOS)
-            private var inspectorHeader: some View {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-                        Text("Now Playing")
-                            .font(.headline)
-                        Text(presentation == .queue ? "Queue and History" : "Player")
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                    Spacer()
-                    Button("Close Now Playing", systemImage: "xmark", action: closePlayer)
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.glass)
-                        .help("Hide Now Playing Inspector")
-                }
-                .padding(.horizontal, PrismediaSpacing.section)
-                .padding(.top, PrismediaSpacing.large)
-                .padding(.bottom, PrismediaSpacing.medium)
-                .background(PrismediaColor.background)
-            }
-        #endif
-
         private var artworkNamespace: Namespace.ID {
             providedArtworkNamespace ?? localArtworkNamespace
         }
@@ -164,6 +142,18 @@
         private var artworkIsSource: Bool {
             providedArtworkNamespace == nil
         }
+
+        #if os(macOS)
+            private var inspectorCloseButton: some View {
+                Button("Close Now Playing", systemImage: "xmark", action: closePlayer)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                    .help("Hide Now Playing Inspector")
+                    .padding(PrismediaSpacing.medium)
+                    .accessibilityIdentifier("music.close-player")
+            }
+        #endif
 
         private var selectedTint: Color {
             artworkPalette?.primary.color ?? PrismediaColor.accent

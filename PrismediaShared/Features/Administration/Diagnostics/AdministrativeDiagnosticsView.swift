@@ -60,6 +60,7 @@ struct AdministrativeDiagnosticsView: View {
                 }
             }
         }
+        .prismediaSettingsForm()
         .overlay { if isLoading && snapshot == nil { PrismediaLoadingView("Loading diagnostics…") } }
         .prismediaScreenBackground()
         .navigationTitle("Diagnostics")

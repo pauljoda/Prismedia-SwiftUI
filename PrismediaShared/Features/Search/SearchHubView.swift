@@ -47,50 +47,51 @@ struct SearchHubView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: contentSpacing) {
-                    if isSearchActive {
-                        SearchHubSearchControls(
-                            filters: $filters,
-                            usesRegularLayout: usesRegularLayout
-                        ) {
-                            filtersPresented = true
-                        }
+                if usesDedicatedLanding && !isSearchActive {
+                    SearchHubDedicatedLandingView(
+                        searchText: $searchText,
+                        recentItems: snapshot.recentItems,
+                        recentState: snapshot.recentState,
+                        onRetry: retrySearch
+                    )
+                    .padding(.top, verticalContentPadding)
+                    .padding(.bottom, PrismediaSpacing.section)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: contentSpacing) {
+                        if isSearchActive {
+                            SearchHubSearchControls(
+                                filters: $filters,
+                                usesRegularLayout: usesRegularLayout
+                            ) {
+                                filtersPresented = true
+                            }
 
-                        SearchHubResultsView(
-                            expandedKinds: $expandedKinds,
-                            snapshot: snapshot,
-                            query: normalizedSearchText,
-                            navigationMatches: availableNavigationMatches,
-                            usesRegularLayout: usesRegularLayout,
-                            topResultID: topSearchResult?.id,
-                            onSelectNavigation: selectNavigationTarget,
-                            onRetrySearch: retrySearch,
-                            onRetryPagination: retryPagination,
-                            onLoadNextPage: loadNextPage
-                        )
-                    } else if usesDedicatedLanding {
-                        SearchHubDedicatedLandingView(
-                            searchText: $searchText,
-                            recentItems: snapshot.recentItems,
-                            recentState: snapshot.recentState,
-                            onRetry: retrySearch
-                        )
-                    } else {
-                        SearchHubBrowseGrid(
-                            modes: modes,
-                            recentItems: snapshot.recentItems,
-                            onSelectMode: onSelectMode
-                        )
+                            SearchHubResultsView(
+                                expandedKinds: $expandedKinds,
+                                snapshot: snapshot,
+                                query: normalizedSearchText,
+                                navigationMatches: availableNavigationMatches,
+                                usesRegularLayout: usesRegularLayout,
+                                topResultID: topSearchResult?.id,
+                                onSelectNavigation: selectNavigationTarget,
+                                onRetrySearch: retrySearch,
+                                onRetryPagination: retryPagination,
+                                onLoadNextPage: loadNextPage
+                            )
+                        } else {
+                            SearchHubBrowseGrid(
+                                modes: modes,
+                                recentItems: snapshot.recentItems,
+                                onSelectMode: onSelectMode
+                            )
+                        }
                     }
-                }
-                .padding(.horizontal, horizontalContentPadding)
-                .padding(.top, verticalContentPadding)
-                .padding(.bottom, PrismediaSpacing.section)
-                .containerRelativeFrame(.horizontal, alignment: .center) { length, _ in
-                    min(length, SearchHubLayout.maximumContentWidth)
+                    .padding(.horizontal, horizontalContentPadding)
+                    .padding(.top, verticalContentPadding)
+                    .padding(.bottom, PrismediaSpacing.section)
+                    .searchHubContentWidth()
                 }
             }
-            .prismediaScreenBackground()
             .prismediaKeyboardDismissal()
             .refreshable {
                 await PrismediaRefreshAction.perform {
@@ -121,6 +122,7 @@ struct SearchHubView: View {
                 }
             }
         }
+        .prismediaScreenBackground()
         #if os(iOS)
             .searchable(
                 text: $searchText,

@@ -5,7 +5,6 @@
         let controller: MusicPlayerController
         let engine: AVPlayerAudioPlaybackEngine
         let waveform: MusicWaveform?
-        let artworkNamespace: Namespace.ID
         let isInspectorPresented: Binding<Bool>
     }
 

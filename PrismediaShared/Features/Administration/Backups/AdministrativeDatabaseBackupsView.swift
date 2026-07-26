@@ -49,6 +49,7 @@ struct AdministrativeDatabaseBackupsView: View {
             }
             if let message { Section { Text(message).foregroundStyle(PrismediaColor.destructive) } }
         }
+        .prismediaSettingsForm()
         .overlay { if isLoading && state == nil { PrismediaLoadingView("Loading database backups…") } }
         .prismediaScreenBackground()
         .navigationTitle("Database Backups")

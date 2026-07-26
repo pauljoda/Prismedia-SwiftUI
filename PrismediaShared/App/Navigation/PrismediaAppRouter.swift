@@ -17,6 +17,7 @@ public final class PrismediaAppRouter {
     public var searchText: String
     public var searchFilters: SearchHubFilterState
     public private(set) var favoritesPath: NavigationPath
+    public private(set) var rootNavigationRevision: Int
 
     /// Synchronous platform handoff invoked before a shared entity link mutates
     /// the active stack. The video host uses it to request PiP while its player
@@ -44,6 +45,7 @@ public final class PrismediaAppRouter {
         searchText = ""
         searchFilters = SearchHubFilterState()
         favoritesPath = NavigationPath()
+        rootNavigationRevision = 0
         navigationPaths = [:]
     }
 
@@ -80,6 +82,26 @@ public final class PrismediaAppRouter {
     public func select(mode: AppMode, destination: AppDestination) {
         navigation.select(mode: mode, destination: destination)
         selectedTab = .destination(destination.id)
+    }
+
+    public func selectRoot(mode: AppMode, destination: AppDestination) {
+        let reselectsCurrentDestination = selectedTab == .destination(destination.id)
+        if reselectsCurrentDestination {
+            resetPath(for: destination.id)
+            rootNavigationRevision += 1
+        } else {
+            select(mode: mode, destination: destination)
+        }
+    }
+
+    public func selectSearchRoot() {
+        let reselectsSearch = selectedTab == .search
+        if reselectsSearch {
+            navigationPaths[Self.searchPathID] = []
+            rootNavigationRevision += 1
+        } else {
+            selectedTab = .search
+        }
     }
 
     @discardableResult
@@ -187,7 +209,16 @@ public final class PrismediaAppRouter {
         searchText = ""
         searchFilters = SearchHubFilterState()
         favoritesPath = NavigationPath()
+        rootNavigationRevision = 0
         navigationPaths.removeAll()
         onWillOpenEntity = nil
+    }
+
+    private func resetPath(for destinationID: String) {
+        if destinationID == Self.favoritesPathID {
+            favoritesPath = NavigationPath()
+        } else {
+            navigationPaths[destinationID] = []
+        }
     }
 }
