@@ -14,13 +14,28 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     var onDismiss: () -> Void = {}
     @State private var usesRotatedLandscapeFallback = false
     @State private var orientationController = VideoFullscreenOrientationController()
+    #if os(macOS)
+        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
+        @State private var macFullscreenWindowController = MacVideoFullscreenWindowController()
+    #endif
 
     func body(content: Content) -> some View {
         Group {
             #if os(macOS)
-                content.sheet(isPresented: $isPresented, onDismiss: presentationDidDismiss) {
-                    expandedPlayer
-                }
+                content
+                    .background {
+                        MacVideoFullscreenPresentationBridge(
+                            isPresented: isPresented,
+                            fullscreenContent: expandedPlayer
+                                .environment(\.artworkPrimaryAccent, artworkPrimaryAccent)
+                                .preferredColorScheme(.dark),
+                            windowController: macFullscreenWindowController,
+                            onDismiss: macPresentationDidDismiss
+                        )
+                    }
+                    .onDisappear {
+                        macFullscreenWindowController.closeImmediately()
+                    }
             #else
                 content.fullScreenCover(isPresented: $isPresented, onDismiss: presentationDidDismiss) {
                     expandedPlayer
@@ -126,6 +141,15 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
         orientationController.exitFullscreen()
         onDismiss()
     }
+
+    #if os(macOS)
+        private func macPresentationDidDismiss() {
+            if isPresented {
+                isPresented = false
+            }
+            presentationDidDismiss()
+        }
+    #endif
 
     private func requestDismissal() {
         orientationController.beginDismissal()

@@ -43,18 +43,17 @@ import SwiftUI
 
             }
             .contentShape(Rectangle())
-            .simultaneousGesture(fullscreenDismissGesture)
+            #if os(iOS)
+                .simultaneousGesture(fullscreenDismissGesture)
+            #endif
             .task(id: autoHideTaskIdentity) { await scheduleAutoHide() }
             .animation(.easeOut(duration: 0.18), value: controlsVisible)
             .accessibilityIdentifier("video-player.surface")
             #if os(macOS)
-                .focusable()
+                .focusable(interactions: .edit)
                 .focused($hasKeyboardFocus)
                 .onAppear { hasKeyboardFocus = true }
                 .onHover(perform: pointerHoverDidChange)
-                .simultaneousGesture(
-                    TapGesture().onEnded { hasKeyboardFocus = true }
-                )
                 .onKeyPress(.space, action: togglePlaybackFromKeyboard)
                 .onKeyPress(.leftArrow) { skipFromKeyboard(by: -10) }
                 .onKeyPress(.rightArrow) { skipFromKeyboard(by: 10) }
