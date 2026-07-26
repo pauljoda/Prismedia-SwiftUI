@@ -73,8 +73,16 @@
                     Task { await applyControls(controls) }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search \(configuration.title.lowercased())")
-            .onSubmit(of: .search) { Task { await submitSearch() } }
+            #if os(macOS)
+                .prismediaMacInlineSearch(
+                    text: $searchText,
+                    prompt: "Search \(configuration.title.lowercased())",
+                    onSubmit: { Task { await submitSearch() } }
+                )
+            #else
+                .searchable(text: $searchText, prompt: "Search \(configuration.title.lowercased())")
+                .onSubmit(of: .search) { Task { await submitSearch() } }
+            #endif
             .task(id: searchText) {
                 try? await Task.sleep(for: .milliseconds(300))
                 guard !Task.isCancelled else { return }

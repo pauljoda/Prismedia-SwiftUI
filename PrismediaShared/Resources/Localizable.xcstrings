@@ -30,6 +30,16 @@
         }
       }
     },
+    "%@ / %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -420,6 +430,9 @@
     "Administrators always have access to every library." : {
 
     },
+    "Album" : {
+
+    },
     "ALBUM" : {
 
     },
@@ -471,6 +484,9 @@
     "App Settings" : {
 
     },
+    "Applied to browse, search, and collection grids." : {
+
+    },
     "Apply" : {
 
     },
@@ -478,6 +494,9 @@
 
     },
     "Apply Filters" : {
+
+    },
+    "Artist" : {
 
     },
     "Artwork" : {
@@ -704,6 +723,9 @@
 
     },
     "Choose Chapter" : {
+
+    },
+    "Choose how artwork and metadata are presented throughout your libraries." : {
 
     },
     "Choose local content to use for this item. Prismedia will validate it, upload it securely, then continue through the normal import lifecycle." : {
@@ -1269,6 +1291,9 @@
 
     },
     "Gentle" : {
+
+    },
+    "Go To" : {
 
     },
     "Goal fulfilled" : {
@@ -2029,9 +2054,6 @@
 
     },
     "Opens in your default browser" : {
-
-    },
-    "Opens playback position, queue, and audio controls" : {
 
     },
     "Opens tag details" : {
@@ -2910,6 +2932,9 @@
 
     },
     "Showing the latest %lld acquisition events." : {
+
+    },
+    "Shows collection and library navigation actions" : {
 
     },
     "Shows file details and actions" : {

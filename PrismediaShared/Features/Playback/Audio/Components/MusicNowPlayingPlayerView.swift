@@ -58,14 +58,12 @@
                 .accessibilityLabel("Show Queue")
                 .accessibilityHint("Shows the playing queue")
                 .simultaneousGesture(queueRevealGesture)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .layoutPriority(1)
 
                 metadata
                     .opacity(isActive ? 1 : 0)
                     .padding(.bottom, PrismediaSpacing.small)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
 
         private var metadata: some View {

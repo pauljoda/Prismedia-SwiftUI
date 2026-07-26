@@ -56,7 +56,7 @@
                 )
             #else
                 playerSurface
-                    .safeAreaPadding(.top, PrismediaSpacing.extraLarge)
+                    .safeAreaPadding(.top, PrismediaSpacing.screen)
                     .overlay(alignment: .topTrailing) {
                         inspectorCloseButton
                     }
@@ -148,12 +148,13 @@
 
         #if os(macOS)
             private var inspectorCloseButton: some View {
-                Button("Close Now Playing", systemImage: "xmark", action: closePlayer)
+                Button("Close Now Playing", systemImage: "sidebar.trailing", action: closePlayer)
                     .labelStyle(.iconOnly)
                     .buttonStyle(.glass)
                     .buttonBorderShape(.circle)
                     .help("Hide Now Playing Inspector")
-                    .padding(PrismediaSpacing.medium)
+                    .padding(.top, PrismediaSpacing.section)
+                    .padding(.trailing, PrismediaSpacing.large)
                     .accessibilityIdentifier("music.close-player")
             }
         #endif

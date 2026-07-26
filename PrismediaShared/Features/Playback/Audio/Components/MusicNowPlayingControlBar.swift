@@ -28,26 +28,24 @@
 
         @ViewBuilder
         private var shuffleButton: some View {
-            if controller.queue.isShuffled {
-                shuffleControl
-                    .buttonStyle(.glassProminent)
-                    .tint(selectedTint)
-            } else {
-                shuffleControl
-                    .buttonStyle(.glass)
-            }
+            shuffleControl
+                .foregroundStyle(
+                    controller.queue.isShuffled
+                        ? selectedTint.opacity(0.82)
+                        : PrismediaColor.textSecondary
+                )
+                .buttonStyle(.glass)
         }
 
         @ViewBuilder
         private var repeatButton: some View {
-            if controller.queue.repeatMode == .off {
-                repeatControl
-                    .buttonStyle(.glass)
-            } else {
-                repeatControl
-                    .buttonStyle(.glassProminent)
-                    .tint(selectedTint)
-            }
+            repeatControl
+                .foregroundStyle(
+                    controller.queue.repeatMode == .off
+                        ? PrismediaColor.textSecondary
+                        : selectedTint.opacity(0.82)
+                )
+                .buttonStyle(.glass)
         }
 
         private var shuffleControl: some View {

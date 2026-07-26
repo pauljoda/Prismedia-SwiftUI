@@ -7,9 +7,17 @@ struct EntityGridSearchModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         if isEnabled {
-            content
-                .searchable(text: $text, prompt: "Search your library")
-                .onSubmit(of: .search, onSubmit)
+            #if os(macOS)
+                content.prismediaMacInlineSearch(
+                    text: $text,
+                    prompt: "Search your library",
+                    onSubmit: onSubmit
+                )
+            #else
+                content
+                    .searchable(text: $text, prompt: "Search your library")
+                    .onSubmit(of: .search, onSubmit)
+            #endif
         } else {
             content
         }
