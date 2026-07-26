@@ -186,6 +186,9 @@ public struct EntityGridSnapshot: Equatable, Sendable {
         guard request.generation == generation else { return }
         if request.cursor == nil {
             isRefreshing = false
+            if state == .loading {
+                state = .idle
+            }
         } else {
             isLoadingNextPage = false
             if let cursor = request.cursor { requestedCursors.remove(cursor) }

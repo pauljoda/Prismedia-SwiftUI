@@ -207,6 +207,51 @@ final class EntityGridFeatureTests: XCTestCase {
         XCTAssertEqual(snapshot.state, .loading)
     }
 
+    func testCancellingInitialLoadReturnsSnapshotToRetryableIdleState() {
+        var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
+        let cancelledRequest = snapshot.beginFirstPage(
+            configuration: gridConfiguration,
+            preservingContent: false
+        )
+
+        snapshot.cancel(cancelledRequest)
+
+        XCTAssertEqual(snapshot.state, .idle)
+        XCTAssertFalse(snapshot.isRefreshing)
+
+        _ = snapshot.beginFirstPage(
+            configuration: gridConfiguration,
+            preservingContent: false
+        )
+
+        XCTAssertEqual(snapshot.state, .loading)
+    }
+
+    func testCancellingRefreshPreservesExistingContent() {
+        var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
+        let initialRequest = snapshot.beginFirstPage(
+            configuration: gridConfiguration,
+            preservingContent: false
+        )
+        let initialPage = EntityGridPage(
+            items: [gridThumbnail(id: 1, title: "One")],
+            nextCursor: nil,
+            totalCount: 1,
+            excludedNsfwIDs: []
+        )
+        snapshot.receiveFirstPage(initialPage, for: initialRequest)
+        let cancelledRequest = snapshot.beginFirstPage(
+            configuration: gridConfiguration,
+            preservingContent: true
+        )
+
+        snapshot.cancel(cancelledRequest)
+
+        XCTAssertEqual(snapshot.state, .content)
+        XCTAssertEqual(snapshot.items, initialPage.items)
+        XCTAssertFalse(snapshot.isRefreshing)
+    }
+
     func testRandomRefreshStartsOverWithFreshSeedAndKeepsItAcrossPagination() throws {
         var snapshot = EntityGridSnapshot(configuration: gridConfiguration)
         var controls = snapshot.controls
