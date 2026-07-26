@@ -72,7 +72,7 @@ struct DashboardView: View {
                                     )
                                 }
                                 DashboardShelfView(
-                                    title: "Continue Watching",
+                                    title: "Continue",
                                     systemImage: "play.circle.fill",
                                     colorRole: .continueWatching,
                                     items: visibleContinueItems,

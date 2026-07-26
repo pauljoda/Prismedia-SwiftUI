@@ -28,7 +28,6 @@ struct DashboardShelfView: View {
                             )
                         }
                     }
-                    .frame(height: railCardHeight, alignment: .top)
                     .padding(.horizontal, PrismediaSpacing.large)
                     .padding(.bottom, PrismediaSpacing.extraSmall)
                 }
@@ -37,14 +36,14 @@ struct DashboardShelfView: View {
         }
     }
 
-    private var railCardHeight: CGFloat {
+    private var railArtworkHeight: CGFloat {
         CGFloat(260 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio)
     }
 
     private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
         CGFloat(
             EntityThumbnailCardPresentation(item: item, layout: .rail)
-                .width(forCardHeight: Double(railCardHeight))
+                .width(forCardHeight: Double(railArtworkHeight))
         )
     }
 }
