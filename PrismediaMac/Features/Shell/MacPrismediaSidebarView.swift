@@ -40,6 +40,14 @@
                 accountFooter
             }
             .background(.ultraThinMaterial)
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: MacNavigationSidebarWidthPreferenceKey.self,
+                        value: proxy.size.width
+                    )
+                }
+            }
             .navigationSplitViewColumnWidth(min: 208, ideal: 232, max: 284)
             .accessibilityIdentifier("shell.sidebar")
         }

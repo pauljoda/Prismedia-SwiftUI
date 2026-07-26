@@ -5,13 +5,22 @@ struct EntityDetailPlatformLoadingView: View {
     let link: EntityLink
 
     var body: some View {
-        if link.kind == .audioLibrary, let preview = link.thumbnailPreview {
+        if usesAlbumLoadingSurface, let preview = link.thumbnailPreview {
             MusicAlbumLoadingView(preview: preview)
                 .accessibilityIdentifier("entity-detail.loading")
         } else {
             PrismediaLoadingView("Loading details…")
                 .accessibilityIdentifier("entity-detail.loading")
         }
+    }
+
+    private var usesAlbumLoadingSurface: Bool {
+        let style = EntityDestinationPolicy.style(
+            for: link.kind,
+            on: .current,
+            intent: link.intent
+        )
+        return style == .nativeAlbum || style == .nativeAudioCollection
     }
 }
 

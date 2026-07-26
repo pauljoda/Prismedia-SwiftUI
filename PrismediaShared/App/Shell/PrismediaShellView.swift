@@ -128,27 +128,14 @@ public struct PrismediaShellView: View {
                 selection: sidebarSelection(videoPlaybackSession: videoPlaybackSession)
             )
         } detail: {
-            #if os(macOS)
-                MacMusicPlaybackPresentationHost {
-                    wideDetail(
-                        user: user,
-                        client: client,
-                        detailDependencies: detailDependencies,
-                        videoPlaybackSession: videoPlaybackSession
-                    )
-                    .id(router.selectedTab)
-                    .id(router.rootNavigationRevision)
-                }
-            #else
-                wideDetail(
-                    user: user,
-                    client: client,
-                    detailDependencies: detailDependencies,
-                    videoPlaybackSession: videoPlaybackSession
-                )
-                .id(router.selectedTab)
-                .id(router.rootNavigationRevision)
-            #endif
+            wideDetail(
+                user: user,
+                client: client,
+                detailDependencies: detailDependencies,
+                videoPlaybackSession: videoPlaybackSession
+            )
+            .id(router.selectedTab)
+            .id(router.rootNavigationRevision)
         }
         .navigationSplitViewStyle(.balanced)
         .onAppear {
@@ -463,17 +450,19 @@ public struct PrismediaShellView: View {
             client: PrismediaAPIClient
         ) -> some View {
             MacMusicPlaybackHost(client: client) {
-                VideoPlaybackHost(
-                    client: client,
-                    preferences: playbackPreferences,
-                    onRestore: restoreVideoPlayback,
-                    content: { session in
-                        wideShell(
-                            user: user,
-                            client: client,
-                            videoPlaybackSession: session
-                        )
-                    })
+                MacMusicPlaybackPresentationHost {
+                    VideoPlaybackHost(
+                        client: client,
+                        preferences: playbackPreferences,
+                        onRestore: restoreVideoPlayback,
+                        content: { session in
+                            wideShell(
+                                user: user,
+                                client: client,
+                                videoPlaybackSession: session
+                            )
+                        })
+                }
             }
         }
     #endif

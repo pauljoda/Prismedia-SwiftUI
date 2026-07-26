@@ -6,6 +6,7 @@
         @Environment(\.musicMiniPlayerVisibility) private var miniPlayerVisibility
         @Environment(\.macMusicPlaybackPresentation) private var presentation
         @State private var artworkPalette: ArtworkPalette?
+        @State private var navigationSidebarWidth: CGFloat = 232
 
         private let content: Content
 
@@ -15,10 +16,15 @@
 
         @ViewBuilder
         var body: some View {
-            if let presentation {
-                presentedContent(presentation)
-            } else {
-                content
+            Group {
+                if let presentation {
+                    presentedContent(presentation)
+                } else {
+                    content
+                }
+            }
+            .onPreferenceChange(MacNavigationSidebarWidthPreferenceKey.self) { width in
+                navigationSidebarWidth = width
             }
         }
 
@@ -39,6 +45,7 @@
                             .scale(scale: 1.08, anchor: .bottomTrailing)
                                 .combined(with: .opacity)
                         )
+                        .padding(.leading, navigationSidebarWidth)
                     }
                 }
                 .inspector(isPresented: inspectorBinding(presentation)) {

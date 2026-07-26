@@ -44,6 +44,7 @@
                     .frame(maxWidth: .infinity)
 
                     MacMusicCompactUtilityControls(
+                        track: track,
                         controller: controller,
                         engine: engine,
                         showNowPlaying: showNowPlaying,
@@ -55,6 +56,13 @@
                 .padding(.vertical, PrismediaSpacing.small)
                 .frame(maxWidth: 900)
                 .glassEffect(.regular, in: .capsule)
+                .background {
+                    Capsule()
+                        .fill(.clear)
+                        .contentShape(.capsule)
+                        .onTapGesture {}
+                        .accessibilityHidden(true)
+                }
                 .overlay {
                     Capsule()
                         .stroke(accent.opacity(0.16), lineWidth: PrismediaLayout.hairline)

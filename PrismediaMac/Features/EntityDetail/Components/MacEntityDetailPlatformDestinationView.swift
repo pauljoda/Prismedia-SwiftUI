@@ -29,10 +29,10 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
             )
         case .nativeAudioCollection:
             if let collectionItemsLoader = dependencies.collectionItemsLoader {
-                MusicCollectionDetailView(
+                MusicAlbumDetailView(
                     detail: detail,
                     preview: link.thumbnailPreview,
-                    loader: MusicCollectionQueueLoader(
+                    collectionLoader: MusicCollectionQueueLoader(
                         collectionItemsLoader: collectionItemsLoader,
                         detailLoader: dependencies.detailLoader
                     ),

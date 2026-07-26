@@ -10,6 +10,7 @@
             navigationDestination(item: item) { item in
                 content(item)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .suppressesMusicMiniPlayer()
             }
         }
     }

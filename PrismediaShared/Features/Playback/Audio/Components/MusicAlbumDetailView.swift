@@ -5,25 +5,44 @@
         @Environment(PrismediaAppEnvironment.self) private var environment
         @Environment(MusicPlayerController.self) private var controller
         @State private var artworkPalette: ArtworkPalette?
+        @State private var collectionPhase = MusicCollectionPlaybackPhase.loading
         @State private var resolvedParentArtist: String?
         @State private var trackForCollection: MusicTrack?
         @State private var selectedSection = EntityDetailSectionID.details
         let detail: EntityDetail
         let preview: EntityLinkPreview?
+        let collectionLoader: MusicCollectionQueueLoader?
         let sectionSupport: EntityDetailSectionSupport
 
         init(
             detail: EntityDetail,
             preview: EntityLinkPreview? = nil,
+            collectionLoader: MusicCollectionQueueLoader? = nil,
             sectionSupport: EntityDetailSectionSupport = EntityDetailSectionSupport()
         ) {
             self.detail = detail
             self.preview = preview
+            self.collectionLoader = collectionLoader
             self.sectionSupport = sectionSupport
         }
 
         private var artist: String {
-            MusicPresentation.albumArtist(detail: detail, resolvedParentArtist: resolvedParentArtist)
+            guard collectionLoader == nil else { return collectionArtist }
+            return MusicPresentation.albumArtist(
+                detail: detail,
+                resolvedParentArtist: resolvedParentArtist
+            )
+        }
+
+        private var collectionArtist: String {
+            let artists = Set(
+                tracks.compactMap { track -> String? in
+                    let artist = track.artist?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return artist?.isEmpty == false ? artist : nil
+                }
+            )
+            if artists.count == 1, let artist = artists.first { return artist }
+            return artists.isEmpty ? "Audio Collection" : "Various Artists"
         }
 
         private var artworkPath: String? {
@@ -39,15 +58,36 @@
         }
 
         private var tracks: [MusicTrack] {
-            MusicEntityProjection.tracks(in: detail, artist: artist)
+            if collectionLoader != nil {
+                guard case .content(let snapshot) = collectionPhase else { return [] }
+                return snapshot.tracks
+            }
+            return MusicEntityProjection.tracks(in: detail, artist: artist)
         }
 
         private var trackSections: [MusicTrackSection] {
-            MusicTrackSection.sections(for: tracks)
+            if collectionLoader != nil, case .content(let snapshot) = collectionPhase {
+                return snapshot.sections
+            }
+            return MusicTrackSection.sections(for: tracks)
         }
 
         private var facts: MusicAlbumFacts {
             MusicPresentation.albumFacts(detail: detail, tracks: tracks)
+        }
+
+        private var secondaryFacts: String {
+            guard collectionLoader != nil else { return facts.secondary }
+            switch collectionPhase {
+            case .loading:
+                return "Loading tracks…"
+            case .content:
+                return facts.secondary
+            case .empty:
+                return "No playable audio"
+            case .failure:
+                return "Tracks unavailable"
+            }
         }
 
         private var sectionPresentation: EntityDetailPresentation {
@@ -93,6 +133,7 @@
                 }
             #endif
             .task(id: detail.parentEntityID) { await resolveParentArtist() }
+            .task(id: detail.id) { await loadCollectionIfNeeded() }
         }
 
         private var compactContent: some View {
@@ -114,7 +155,7 @@
                     horizontalPadding: PrismediaSpacing.large,
                     support: sectionSupport
                 ) {
-                    trackList
+                    trackContent
                 }
             }
             .listStyle(.plain)
@@ -140,7 +181,7 @@
                         horizontalPadding: PrismediaSpacing.extraExtraLarge,
                         support: sectionSupport
                     ) {
-                        trackList
+                        trackContent
                             .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
                     }
                 }
@@ -156,6 +197,38 @@
                 },
                 onAddToCollection: addTrackToCollection
             )
+        }
+
+        @ViewBuilder
+        private var trackContent: some View {
+            if collectionLoader == nil {
+                trackList
+            } else {
+                switch collectionPhase {
+                case .loading:
+                    ProgressView("Loading collection audio…")
+                        .frame(maxWidth: .infinity, minHeight: 180)
+                        .listRowBackground(Color.clear)
+                case .content:
+                    trackList
+                case .empty:
+                    ContentUnavailableView(
+                        "No Playable Audio",
+                        systemImage: "music.note",
+                        description: Text("This collection no longer contains playable audio.")
+                    )
+                    .listRowBackground(Color.clear)
+                case .failure(let message):
+                    ContentUnavailableView {
+                        Label("Couldn’t Load Collection", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text(message)
+                    } actions: {
+                        Button("Try Again") { Task { await loadCollectionIfNeeded() } }
+                    }
+                    .listRowBackground(Color.clear)
+                }
+            }
         }
 
         private var compactAlbumHeader: some View {
@@ -174,7 +247,7 @@
                         .font(.subheadline)
                         .foregroundStyle(artworkPalette?.secondary.color ?? PrismediaColor.textSecondary)
                 }
-                Text(facts.secondary)
+                Text(secondaryFacts)
                     .font(.caption)
                     .foregroundStyle(artworkPalette?.secondary.color ?? PrismediaColor.textSecondary)
 
@@ -240,7 +313,7 @@
 
         private func wideAlbumInformation(alignment: HorizontalAlignment) -> some View {
             VStack(alignment: alignment, spacing: PrismediaSpacing.small) {
-                Text("ALBUM")
+                Text(collectionLoader == nil ? "ALBUM" : "COLLECTION")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PrismediaColor.textMuted)
 
@@ -259,7 +332,7 @@
                         .foregroundStyle(PrismediaColor.textSecondary)
                 }
 
-                Text(facts.secondary)
+                Text(secondaryFacts)
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.textMuted)
 
@@ -299,6 +372,21 @@
 
         private func shuffleAlbum() {
             controller.play(tracks: tracks, queueMode: .shuffled)
+        }
+
+        private func loadCollectionIfNeeded() async {
+            guard let collectionLoader else { return }
+            collectionPhase = .loading
+            do {
+                let snapshot = try await collectionLoader.load(collectionID: detail.id)
+                guard !Task.isCancelled else { return }
+                collectionPhase = snapshot.tracks.isEmpty ? .empty : .content(snapshot)
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled else { return }
+                collectionPhase = .failure(error.localizedDescription)
+            }
         }
 
         private func resolveParentArtist() async {
@@ -341,6 +429,34 @@
                     .environment(controller)
             }
             .environment(\.dynamicTypeSize, .accessibility3)
+        }
+
+        #Preview("Music Album Detail · Audio Collection") {
+            @Previewable @State var controller = MusicPreviewData.controller(playing: false)
+            let preview = MusicCollectionPreviewLoader()
+
+            PreviewShell(signedIn: true) {
+                NavigationStack {
+                    MusicAlbumDetailView(
+                        detail: EntityDetail(
+                            id: MusicCollectionPreviewLoader.collection.id,
+                            kind: .collection,
+                            title: MusicCollectionPreviewLoader.collection.title,
+                            parentEntityID: nil,
+                            sortOrder: nil,
+                            hasSourceMedia: false,
+                            capabilities: [],
+                            childrenByKind: [],
+                            relationships: []
+                        ),
+                        collectionLoader: MusicCollectionQueueLoader(
+                            collectionItemsLoader: preview,
+                            detailLoader: preview
+                        )
+                    )
+                }
+                .environment(controller)
+            }
         }
     #endif
 #endif

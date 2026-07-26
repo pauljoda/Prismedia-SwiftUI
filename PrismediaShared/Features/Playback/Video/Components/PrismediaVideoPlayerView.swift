@@ -14,6 +14,10 @@ import SwiftUI
         @Environment(\.verticalSizeClass) private var verticalSizeClass
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @State private var controlsVisible = true
+        #if os(macOS)
+            @State private var pointerIsInside = false
+            @FocusState private var hasKeyboardFocus: Bool
+        #endif
 
         private var showsExpandedChrome: Bool { isExpanded || verticalSizeClass == .compact }
 
@@ -43,6 +47,19 @@ import SwiftUI
             .task(id: autoHideTaskIdentity) { await scheduleAutoHide() }
             .animation(.easeOut(duration: 0.18), value: controlsVisible)
             .accessibilityIdentifier("video-player.surface")
+            #if os(macOS)
+                .focusable()
+                .focused($hasKeyboardFocus)
+                .onAppear { hasKeyboardFocus = true }
+                .onHover(perform: pointerHoverDidChange)
+                .simultaneousGesture(
+                    TapGesture().onEnded { hasKeyboardFocus = true }
+                )
+                .onKeyPress(.space, action: togglePlaybackFromKeyboard)
+                .onKeyPress(.leftArrow) { skipFromKeyboard(by: -10) }
+                .onKeyPress(.rightArrow) { skipFromKeyboard(by: 10) }
+                .onKeyPress(.escape, action: dismissFromKeyboard)
+            #endif
         }
 
         private var autoHideTaskIdentity: String {
@@ -304,6 +321,12 @@ import SwiftUI
         }
 
         private func scheduleAutoHide() async {
+            #if os(macOS)
+                guard !pointerIsInside else {
+                    controlsVisible = true
+                    return
+                }
+            #endif
             guard
                 VideoPlayerChromePolicy.shouldAutoHide(
                     isPlaying: controller.isPlaying,
@@ -320,8 +343,43 @@ import SwiftUI
                     optionsPresented: false
                 )
             else { return }
+            #if os(macOS)
+                guard !pointerIsInside else { return }
+            #endif
             controlsVisible = false
         }
+
+        #if os(macOS)
+            private func pointerHoverDidChange(_ isInside: Bool) {
+                pointerIsInside = isInside
+                if isInside {
+                    hasKeyboardFocus = true
+                    controlsVisible = true
+                } else if controller.isPlaying {
+                    Task { await scheduleAutoHide() }
+                }
+            }
+
+            private func togglePlaybackFromKeyboard() -> KeyPress.Result {
+                guard isInteractive else { return .ignored }
+                controlsVisible = true
+                controller.togglePlayback()
+                return .handled
+            }
+
+            private func skipFromKeyboard(by seconds: Double) -> KeyPress.Result {
+                guard isInteractive else { return .ignored }
+                controlsVisible = true
+                controller.skip(by: seconds)
+                return .handled
+            }
+
+            private func dismissFromKeyboard() -> KeyPress.Result {
+                guard isExpanded, let onDismiss else { return .ignored }
+                onDismiss()
+                return .handled
+            }
+        #endif
     }
 
     #if DEBUG

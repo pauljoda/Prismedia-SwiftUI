@@ -3,9 +3,12 @@
     import SwiftUI
 
     struct MacMusicCompactUtilityControls: View {
+        @Environment(PrismediaAppRouter.self) private var router
         @State private var volume = 1.0
         @State private var showsVolume = false
+        @State private var trackForCollection: MusicTrack?
 
+        let track: MusicTrack
         let controller: MusicPlayerController
         let engine: AVPlayerAudioPlaybackEngine
         let showNowPlaying: () -> Void
@@ -13,13 +16,13 @@
 
         var body: some View {
             HStack(spacing: PrismediaSpacing.extraExtraSmall) {
-                Menu("More", systemImage: "ellipsis") {
-                    Button("Show Now Playing", systemImage: "sidebar.trailing", action: showNowPlaying)
-                    Divider()
-                    Button("Hide Player", systemImage: "xmark", action: hidePlayer)
-                }
-                .menuIndicator(.hidden)
-                .labelStyle(.iconOnly)
+                MusicTrackActionsMenu(
+                    track: track,
+                    onNavigate: router.open,
+                    onAddToCollection: { trackForCollection = track },
+                    onShowNowPlaying: showNowPlaying,
+                    onHidePlayer: hidePlayer
+                )
                 .help("More")
 
                 Button("Show Now Playing", systemImage: "sidebar.trailing", action: showNowPlaying)
@@ -52,6 +55,11 @@
             .onChange(of: volume) { _, value in
                 engine.player.volume = Float(min(max(value, 0), 1))
             }
+            .sheet(item: $trackForCollection) { track in
+                AddToCollectionSheet(
+                    items: [CollectionEntityReference(entityType: .audioTrack, entityID: track.id)]
+                )
+            }
         }
 
         private var volumeSystemImage: String {
@@ -71,6 +79,7 @@
 
             PreviewShell(signedIn: true) {
                 MacMusicCompactUtilityControls(
+                    track: MusicPreviewData.tracks[0],
                     controller: controller,
                     engine: engine,
                     showNowPlaying: {},
