@@ -1,5 +1,5 @@
 import SwiftUI
 
 extension EnvironmentValues {
-    @Entry var entityGridCardStyle: EntityGridCardStyle = .artworkFade
+    @Entry var entityGridCardStyle: EntityGridCardStyle = .detailsBelow
 }

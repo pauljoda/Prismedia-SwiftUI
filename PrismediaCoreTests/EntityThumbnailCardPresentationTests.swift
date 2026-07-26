@@ -55,6 +55,21 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         XCTAssertTrue(presentation.showsArtworkBadges)
     }
 
+    func testArtworkFadeAddsAStableExtensionBelowPosterArtwork() {
+        let sourceAspectRatio = 2.0 / 3.0
+
+        let cardAspectRatio = EntityThumbnailCardPresentation.artworkFadeAspectRatio(
+            for: sourceAspectRatio
+        )
+
+        XCTAssertLessThan(cardAspectRatio, sourceAspectRatio)
+        XCTAssertEqual(
+            cardAspectRatio,
+            1.0 / ((1.0 / sourceAspectRatio) + (9.0 / 20.0)),
+            accuracy: 0.001
+        )
+    }
+
     func testRailWidthsPreserveAConsistentCardHeightAcrossThumbnailShapes() {
         let cardHeight = 216.0
         let presentations = [EntityKind.video, .movie, .collection, .person].map { kind in

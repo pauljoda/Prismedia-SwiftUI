@@ -61,20 +61,16 @@ public struct EntityThumbnailNavigationSurface: View {
                 open(intent: .detail)
             }
         } label: {
-            PrismediaGlassStatusChip(
-                nil,
-                systemImage: "ellipsis",
-                tint: PrismediaColor.mediaOverlayGlassTint,
-                size: .thumbnail
-            )
-            .foregroundStyle(PrismediaColor.onMedia)
-            .fixedSize()
-            .frame(
-                minWidth: PrismediaLayout.minimumHitTarget,
-                minHeight: PrismediaLayout.minimumHitTarget,
-                alignment: .topTrailing
-            )
-            .contentShape(Circle())
+            Image(systemName: "ellipsis")
+                .font(.callout.weight(.heavy))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(PrismediaColor.onMedia)
+                .shadow(color: PrismediaColor.background.opacity(0.95), radius: 2, y: 1)
+                .frame(
+                    width: PrismediaLayout.minimumHitTarget,
+                    height: PrismediaLayout.minimumHitTarget
+                )
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("More actions for \(item.title)")

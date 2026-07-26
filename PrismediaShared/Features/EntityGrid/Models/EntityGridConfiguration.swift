@@ -22,7 +22,7 @@ public struct EntityGridConfiguration: Hashable, Sendable {
         pageSize: Int = 48,
         minimumColumnWidth: CGFloat = 150,
         defaultDisplayMode: EntityGridDisplayMode = .grid,
-        defaultCardStyle: EntityGridCardStyle = .artworkFade,
+        defaultCardStyle: EntityGridCardStyle = .detailsBelow,
         availableDisplayModes: [EntityGridDisplayMode] = EntityGridDisplayMode.allCases,
         emptyTitle: String? = nil,
         emptyDescription: String = "Items will appear here when they’re added to your library.",

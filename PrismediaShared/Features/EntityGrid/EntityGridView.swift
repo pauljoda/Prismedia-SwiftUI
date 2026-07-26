@@ -876,11 +876,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
 
             for candidate in candidates {
                 let layout = displayMode.thumbnailLayout(for: candidate.kind)
-                let presentation = EntityThumbnailCardPresentation(
-                    item: candidate,
-                    layout: layout
-                )
-                guard presentation.usesArtworkExtension,
+                guard layout != .list,
+                    layout != .feed,
                     let artworkURL = client.assetURL(for: candidate.bestCoverPath)
                 else { continue }
 
@@ -888,7 +885,9 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                     for: artworkURL,
                     artworkLoader: artworkLoader,
                     sourceAspectRatio: candidate.thumbnailArtworkPresentation.aspectRatio,
-                    outputAspectRatio: presentation.cardAspectRatio,
+                    outputAspectRatio: EntityThumbnailCardPresentation.artworkFadeAspectRatio(
+                        for: candidate.thumbnailArtworkPresentation.aspectRatio
+                    ),
                     maxPixelSize: 512
                 )
             }

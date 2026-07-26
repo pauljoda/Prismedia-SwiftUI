@@ -15,7 +15,7 @@ struct EntityGridCardStyleSettingsSection: View {
             Label("Entity Grids", systemImage: "rectangle.grid.2x2")
         } footer: {
             Text(
-                "Artwork Fade extends each thumbnail behind its details. Text Below Artwork uses a simpler Apple-style layout."
+                "Artwork Fade extends each thumbnail behind its details. Text Below Artwork uses a simpler Apple-style layout. None shows only the artwork."
             )
         }
     }
@@ -23,7 +23,7 @@ struct EntityGridCardStyleSettingsSection: View {
 
 #if DEBUG
     #Preview("Entity Grid Card Style Settings") {
-        @Previewable @State var cardStyle = EntityGridCardStyle.artworkFade
+        @Previewable @State var cardStyle = EntityGridCardStyle.detailsBelow
 
         Form {
             EntityGridCardStyleSettingsSection(cardStyle: $cardStyle)

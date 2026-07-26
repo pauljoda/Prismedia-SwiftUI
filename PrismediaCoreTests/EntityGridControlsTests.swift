@@ -81,7 +81,7 @@ final class EntityGridControlsTests: XCTestCase {
 
     func testLegacyPreferencePayloadDefaultsToGridWithStandardDensity() throws {
         let legacyPayload = Data(
-            #"{"sort":"title","sortDescending":false,"favoriteOnly":false,"organization":"any","availability":"any","engagement":"any","isUnrated":false,"taxonomy":"any","bookTypes":[],"bookFormats":[],"cardStyle":"detailsBelow"}"#
+            #"{"sort":"title","sortDescending":false,"favoriteOnly":false,"organization":"any","availability":"any","engagement":"any","isUnrated":false,"taxonomy":"any","bookTypes":[],"bookFormats":[],"cardStyle":"artworkFade"}"#
                 .utf8
         )
 
@@ -90,7 +90,7 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.displayMode, .grid)
         XCTAssertEqual(preferences.density, .standard)
         XCTAssertNil(preferences.pageSize)
-        XCTAssertEqual(preferences.cardStyle, .artworkFade)
+        XCTAssertEqual(preferences.cardStyle, .detailsBelow)
         XCTAssertNil(preferences.cardStyleOverride)
         XCTAssertEqual(preferences.sort, "title")
     }
@@ -188,11 +188,11 @@ final class EntityGridControlsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = EntityGridCardStylePreferenceStore(defaults: defaults)
 
-        XCTAssertEqual(store.load(), .artworkFade)
-
-        store.save(.detailsBelow)
-
         XCTAssertEqual(store.load(), .detailsBelow)
+
+        store.save(.none)
+
+        XCTAssertEqual(store.load(), .none)
     }
 
     func testPreferenceStorePersistsNamedPresetsAndReplacesMatchingName() throws {

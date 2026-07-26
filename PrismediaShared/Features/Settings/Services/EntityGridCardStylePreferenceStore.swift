@@ -25,7 +25,7 @@ public struct EntityGridCardStylePreferenceStore: @unchecked Sendable {
         guard
             let rawValue = defaults?.string(forKey: Self.key),
             let style = EntityGridCardStyle(rawValue: rawValue)
-        else { return .artworkFade }
+        else { return .detailsBelow }
         return style
     }
 

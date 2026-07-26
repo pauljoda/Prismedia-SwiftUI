@@ -477,7 +477,7 @@
     "Artwork" : {
 
     },
-    "Artwork Fade extends each thumbnail behind its details. Text Below Artwork uses a simpler Apple-style layout." : {
+    "Artwork Fade extends each thumbnail behind its details. Text Below Artwork uses a simpler Apple-style layout. None shows only the artwork." : {
 
     },
     "Artwork for %@" : {

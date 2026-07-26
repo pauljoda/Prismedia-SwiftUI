@@ -27,7 +27,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
     public var taxonomy: String { savedControls.filters.taxonomy.rawValue }
     public var bookTypes: [String] { savedControls.filters.bookTypes.sorted() }
     public var bookFormats: [String] { savedControls.filters.bookFormats.sorted() }
-    public var cardStyle: EntityGridCardStyle { cardStyleOverride ?? .artworkFade }
+    public var cardStyle: EntityGridCardStyle { cardStyleOverride ?? .detailsBelow }
 
     public init(
         controls: EntityGridControls,

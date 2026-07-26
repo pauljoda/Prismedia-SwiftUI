@@ -13,7 +13,7 @@ struct EntityThumbnailLandscapeCardView: View {
     var body: some View {
         EntityThumbnailArtworkExtensionView(
             item: item,
-            outputAspectRatio: presentation.cardAspectRatio,
+            outputAspectRatio: cardAspectRatio,
             isEnabled: !reduceTransparency
         )
         .overlay {
@@ -48,7 +48,7 @@ struct EntityThumbnailLandscapeCardView: View {
                 progressMeter(progress)
             }
         }
-        .aspectRatio(presentation.cardAspectRatio, contentMode: .fit)
+        .aspectRatio(cardAspectRatio, contentMode: .fit)
         .background(PrismediaColor.groupedContentBackground)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .prismediaCard(cornerRadius: layout == .wall ? 8 : 6)
@@ -59,8 +59,10 @@ struct EntityThumbnailLandscapeCardView: View {
         )
     }
 
-    private var presentation: EntityThumbnailCardPresentation {
-        EntityThumbnailCardPresentation(item: item, layout: layout)
+    private var cardAspectRatio: Double {
+        EntityThumbnailCardPresentation.artworkFadeAspectRatio(
+            for: item.thumbnailArtworkPresentation.aspectRatio
+        )
     }
 
     private var legibilityGradient: some View {
@@ -109,7 +111,9 @@ struct EntityThumbnailLandscapeCardView: View {
 
     private var detailedMetadata: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            contextChip
+            if showsContextChip {
+                contextChip
+            }
 
             Text(item.title)
                 .font(PrismediaTypography.cardTitle)
@@ -132,7 +136,9 @@ struct EntityThumbnailLandscapeCardView: View {
 
     private var compactMetadata: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            contextChip
+            if showsContextChip {
+                contextChip
+            }
 
             Text(item.title)
                 .font(PrismediaTypography.captionEmphasized)
@@ -172,6 +178,10 @@ struct EntityThumbnailLandscapeCardView: View {
                 systemImage: item.kind.thumbnailFallbackSystemImage,
                 tone: .muted
             )
+    }
+
+    private var showsContextChip: Bool {
+        item.thumbnailArtworkPresentation.isWide
     }
 
     private var metadataTrailingPadding: CGFloat {
@@ -216,7 +226,7 @@ struct EntityThumbnailLandscapeCardView: View {
 }
 
 #if DEBUG
-    #Preview("Extended Landscape Card · Stable Artwork") {
+    #Preview("Artwork Fade Cards · Stable Artwork") {
         PreviewShell {
             HStack(alignment: .top, spacing: PrismediaSpacing.large) {
                 EntityThumbnailLandscapeCardView(
@@ -254,6 +264,13 @@ struct EntityThumbnailLandscapeCardView: View {
                     ),
                     layout: .grid,
                     preferredWidth: 220,
+                    onPreviewHoldChanged: { _ in }
+                )
+
+                EntityThumbnailLandscapeCardView(
+                    item: PrismediaPreviewData.series,
+                    layout: .grid,
+                    preferredWidth: 180,
                     onPreviewHoldChanged: { _ in }
                 )
             }

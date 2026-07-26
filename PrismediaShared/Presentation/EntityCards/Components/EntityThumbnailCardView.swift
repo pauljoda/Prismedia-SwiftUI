@@ -71,42 +71,46 @@ public struct EntityThumbnailCardView: View {
                         .prismediaCard(cornerRadius: PrismediaRadius.badge)
                 }
             case .mediaOnly:
-                if gridCardStyle == .detailsBelow {
+                switch gridCardStyle {
+                case .detailsBelow:
                     EntityThumbnailDetailsBelowCardView(
                         item: item,
                         layout: layout,
                         preferredWidth: preferredWidth,
                         onPreviewHoldChanged: onPreviewHoldChanged
                     )
-                } else {
+                case .artworkFade:
+                    artworkFadeCard
+                case .none:
                     media
                         .prismediaCard(cornerRadius: PrismediaRadius.badge)
                 }
             case .grid, .rail, .wall:
-                if gridCardStyle == .detailsBelow {
+                switch gridCardStyle {
+                case .detailsBelow:
                     EntityThumbnailDetailsBelowCardView(
                         item: item,
                         layout: layout,
                         preferredWidth: preferredWidth,
                         onPreviewHoldChanged: onPreviewHoldChanged
                     )
-                } else if cardPresentation.usesArtworkExtension {
-                    EntityThumbnailLandscapeCardView(
-                        item: item,
-                        layout: layout,
-                        preferredWidth: preferredWidth,
-                        onPreviewHoldChanged: onPreviewHoldChanged
-                    )
-                } else {
-                    EntityThumbnailPosterCardView(
-                        item: item,
-                        layout: layout,
-                        preferredWidth: preferredWidth,
-                        onPreviewHoldChanged: onPreviewHoldChanged
-                    )
+                case .artworkFade:
+                    artworkFadeCard
+                case .none:
+                    media
+                        .prismediaCard(cornerRadius: PrismediaRadius.badge)
                 }
             }
         }
+    }
+
+    private var artworkFadeCard: some View {
+        EntityThumbnailLandscapeCardView(
+            item: item,
+            layout: layout,
+            preferredWidth: preferredWidth,
+            onPreviewHoldChanged: onPreviewHoldChanged
+        )
     }
 
     private var listCard: some View {
