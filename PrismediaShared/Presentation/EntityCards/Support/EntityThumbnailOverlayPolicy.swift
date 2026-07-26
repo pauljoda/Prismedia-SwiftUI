@@ -6,7 +6,7 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
     public let bottomTrailing: [EntityThumbnailBadgePresentation]
 
     public init(item: EntityThumbnail) {
-        topLeading = Self.positionBadge(item).map { [$0] } ?? []
+        topLeading = Self.contextBadge(item).map { [$0] } ?? []
 
         var topTrailing: [EntityThumbnailBadgePresentation] = []
         if item.isWanted {
@@ -36,6 +36,19 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
                     )
                 ]
             } ?? []
+    }
+
+    private static func contextBadge(_ item: EntityThumbnail) -> EntityThumbnailBadgePresentation? {
+        if let positionBadge = positionBadge(item) {
+            return positionBadge
+        }
+        guard item.thumbnailArtworkPresentation.isWide else { return nil }
+        return EntityThumbnailBadgePresentation(
+            kind: .position,
+            label: item.kind.displayLabel,
+            systemImage: item.kind.thumbnailFallbackSystemImage,
+            tone: .muted
+        )
     }
 
     private static func positionBadge(_ item: EntityThumbnail) -> EntityThumbnailBadgePresentation? {

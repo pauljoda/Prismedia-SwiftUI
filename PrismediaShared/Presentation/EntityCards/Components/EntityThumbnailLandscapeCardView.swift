@@ -111,10 +111,6 @@ struct EntityThumbnailLandscapeCardView: View {
 
     private var detailedMetadata: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            if showsContextChip {
-                contextChip
-            }
-
             Text(item.title)
                 .font(PrismediaTypography.cardTitle)
                 .lineLimit(2)
@@ -136,10 +132,6 @@ struct EntityThumbnailLandscapeCardView: View {
 
     private var compactMetadata: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            if showsContextChip {
-                contextChip
-            }
-
             Text(item.title)
                 .font(PrismediaTypography.captionEmphasized)
                 .foregroundStyle(PrismediaColor.onMedia)
@@ -159,29 +151,6 @@ struct EntityThumbnailLandscapeCardView: View {
 
     private func metadataChipRow(limit: Int) -> some View {
         MetaChipRow(meta: Array(item.meta.prefix(limit)))
-    }
-
-    private var contextChip: some View {
-        PrismediaGlassStatusChip(
-            contextBadge.label,
-            systemImage: contextBadge.systemImage,
-            tint: PrismediaColor.background,
-            size: .thumbnail
-        )
-    }
-
-    private var contextBadge: EntityThumbnailBadgePresentation {
-        EntityThumbnailOverlayPolicy(item: item).topLeading.first
-            ?? EntityThumbnailBadgePresentation(
-                kind: .position,
-                label: item.kind.displayLabel,
-                systemImage: item.kind.thumbnailFallbackSystemImage,
-                tone: .muted
-            )
-    }
-
-    private var showsContextChip: Bool {
-        item.thumbnailArtworkPresentation.isWide
     }
 
     private var metadataTrailingPadding: CGFloat {

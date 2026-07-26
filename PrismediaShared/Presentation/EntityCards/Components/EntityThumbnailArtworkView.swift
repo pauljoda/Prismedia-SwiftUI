@@ -80,9 +80,7 @@ struct EntityThumbnailArtworkView: View {
                 }
             }
             .overlay(alignment: .topLeading) {
-                if cardPresentation.showsArtworkBadges,
-                    !cardPresentation.usesArtworkExtension
-                {
+                if cardPresentation.showsArtworkBadges {
                     EntityThumbnailBadgeRow(badges: overlayPolicy.topLeading)
                         .padding(PrismediaSpacing.small)
                 }
