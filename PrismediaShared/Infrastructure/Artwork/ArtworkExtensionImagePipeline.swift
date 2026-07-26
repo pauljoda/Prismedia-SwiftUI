@@ -5,7 +5,7 @@ import Foundation
 actor ArtworkExtensionImagePipeline {
     static let shared = ArtworkExtensionImagePipeline()
 
-    private static let effectVersion = 1
+    private static let effectVersion = 2
 
     private let context: CIContext
     private let byteCostLimit: Int
@@ -97,8 +97,8 @@ actor ArtworkExtensionImagePipeline {
             .applyingFilter(
                 "CIColorControls",
                 parameters: [
-                    kCIInputBrightnessKey: -0.08,
-                    kCIInputSaturationKey: 0.82,
+                    kCIInputBrightnessKey: -0.02,
+                    kCIInputSaturationKey: 0.96,
                 ]
             )
 
@@ -131,7 +131,7 @@ actor ArtworkExtensionImagePipeline {
             .cropped(to: outputRect)
             .applyingFilter(
                 "CIColorControls",
-                parameters: [kCIInputBrightnessKey: -0.1]
+                parameters: [kCIInputBrightnessKey: -0.04]
             )
 
         guard

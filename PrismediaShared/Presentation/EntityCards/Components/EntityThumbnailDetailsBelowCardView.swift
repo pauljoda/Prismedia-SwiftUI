@@ -32,9 +32,9 @@ struct EntityThumbnailDetailsBelowCardView: View {
                 }
             }
             .padding(.horizontal, PrismediaSpacing.extraSmall)
-            .padding(.trailing, contextMenuTrailingPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.bottom, PrismediaSpacing.small)
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
@@ -44,11 +44,6 @@ struct EntityThumbnailDetailsBelowCardView: View {
         return labels.joined(separator: " • ")
     }
 
-    private var contextMenuTrailingPadding: CGFloat {
-        EntityThumbnailInteractionPolicy(item: item, layout: layout).showsContextMenu
-            ? PrismediaLayout.minimumHitTarget
-            : 0
-    }
 }
 
 #if DEBUG

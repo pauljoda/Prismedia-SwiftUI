@@ -39,6 +39,10 @@ struct AdministrativeSettingsView: View {
         NavigationStack {
             List {
                 #if os(iOS) || os(macOS)
+                    Section("App Settings") {
+                        directoryLink("Entity Grids", "rectangle.grid.2x2", "app-settings")
+                    }
+
                     Section {
                         directoryLink("Watched Libraries", "folder", "libraries")
                         if user.isAdmin { directoryLink("Users", "person.2", "users") }
@@ -145,6 +149,8 @@ struct AdministrativeSettingsView: View {
         @ViewBuilder
         private func dedicatedDestination(_ destination: String) -> some View {
             switch destination {
+            case "app-settings":
+                AppSettingsView()
             case "libraries":
                 AdministrativeLibrariesView(
                     user: user, service: libraryService, userService: user.isAdmin ? userService : nil)

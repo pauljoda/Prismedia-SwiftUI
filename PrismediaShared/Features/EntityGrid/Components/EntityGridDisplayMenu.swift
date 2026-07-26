@@ -5,13 +5,14 @@ struct EntityGridDisplayMenu: View {
     let displayMode: EntityGridDisplayMode
     let density: EntityGridDensity
     let pageSize: Int
-    let cardStyle: EntityGridCardStyle
+    let appDefaultCardStyle: EntityGridCardStyle
+    let cardStyleOverride: EntityGridCardStyle?
     let presets: [EntityGridPreset]
     let preferencesAreDefault: Bool
     let onSelectDisplayMode: (EntityGridDisplayMode) -> Void
     let onSelectDensity: (EntityGridDensity) -> Void
     let onSelectPageSize: (Int) -> Void
-    let onSelectCardStyle: (EntityGridCardStyle) -> Void
+    let onSelectCardStyle: (EntityGridCardStyle?) -> Void
     let onApplyPreset: (EntityGridPreset) -> Void
     let onRequestSavePreset: () -> Void
     let onDeletePreset: (EntityGridPreset) -> Void
@@ -36,14 +37,25 @@ struct EntityGridDisplayMenu: View {
                 }
             }
 
-            Section("App Settings") {
+            Section("Card Style") {
+                Button {
+                    onSelectCardStyle(nil)
+                } label: {
+                    Label(
+                        "App Default (\(appDefaultCardStyle.label))",
+                        systemImage: cardStyleOverride == nil
+                            ? "checkmark"
+                            : "gearshape"
+                    )
+                }
+
                 ForEach(EntityGridCardStyle.allCases) { option in
                     Button {
                         onSelectCardStyle(option)
                     } label: {
                         Label(
                             option.label,
-                            systemImage: cardStyle == option
+                            systemImage: cardStyleOverride == option
                                 ? "checkmark"
                                 : option.systemImage
                         )
@@ -115,8 +127,12 @@ struct EntityGridDisplayMenu: View {
             Image(systemName: displayMode.systemImage)
         }
         .accessibilityLabel("Display options")
-        .accessibilityValue("\(displayMode.label), \(density.label) size, \(cardStyle.label)")
+        .accessibilityValue("\(displayMode.label), \(density.label) size, \(resolvedCardStyle.label)")
         .accessibilityIdentifier("entity.grid.display")
+    }
+
+    private var resolvedCardStyle: EntityGridCardStyle {
+        cardStyleOverride ?? appDefaultCardStyle
     }
 }
 
@@ -127,7 +143,8 @@ struct EntityGridDisplayMenu: View {
             displayMode: .grid,
             density: .standard,
             pageSize: 48,
-            cardStyle: .artworkFade,
+            appDefaultCardStyle: .artworkFade,
+            cardStyleOverride: nil,
             presets: [],
             preferencesAreDefault: true,
             onSelectDisplayMode: { _ in },
@@ -149,7 +166,8 @@ struct EntityGridDisplayMenu: View {
             displayMode: .list,
             density: .compact,
             pageSize: 24,
-            cardStyle: .detailsBelow,
+            appDefaultCardStyle: .artworkFade,
+            cardStyleOverride: .detailsBelow,
             presets: [EntityGridPreviewFactory.compactListPreset],
             preferencesAreDefault: false,
             onSelectDisplayMode: { _ in },

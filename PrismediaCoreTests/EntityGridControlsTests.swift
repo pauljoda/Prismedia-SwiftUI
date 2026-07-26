@@ -47,12 +47,17 @@ final class EntityGridControlsTests: XCTestCase {
         controls.filters.maximumRating = 5
         controls.filters.bookFormats = ["cbz", "pdf"]
 
-        let preferences = EntityGridPreferences(
-            controls: controls,
-            displayMode: .list,
-            density: .large,
-            pageSize: 96,
-            cardStyle: .detailsBelow
+        let preferences = try JSONDecoder().decode(
+            EntityGridPreferences.self,
+            from: JSONEncoder().encode(
+                EntityGridPreferences(
+                    controls: controls,
+                    displayMode: .list,
+                    density: .large,
+                    pageSize: 96,
+                    cardStyle: .detailsBelow
+                )
+            )
         )
         let restored = preferences.controls(baselineQuery: baseline)
         let query = restored.applying(to: baseline)
@@ -69,13 +74,14 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.density, .large)
         XCTAssertEqual(preferences.pageSize, 96)
         XCTAssertEqual(preferences.cardStyle, .detailsBelow)
+        XCTAssertEqual(preferences.cardStyleOverride, .detailsBelow)
         XCTAssertEqual(query.kind, .book)
         XCTAssertEqual(query.bookType, "comic,manga")
     }
 
     func testLegacyPreferencePayloadDefaultsToGridWithStandardDensity() throws {
         let legacyPayload = Data(
-            #"{"sort":"title","sortDescending":false,"favoriteOnly":false,"organization":"any","availability":"any","engagement":"any","isUnrated":false,"taxonomy":"any","bookTypes":[],"bookFormats":[]}"#
+            #"{"sort":"title","sortDescending":false,"favoriteOnly":false,"organization":"any","availability":"any","engagement":"any","isUnrated":false,"taxonomy":"any","bookTypes":[],"bookFormats":[],"cardStyle":"detailsBelow"}"#
                 .utf8
         )
 
@@ -85,6 +91,7 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.density, .standard)
         XCTAssertNil(preferences.pageSize)
         XCTAssertEqual(preferences.cardStyle, .artworkFade)
+        XCTAssertNil(preferences.cardStyleOverride)
         XCTAssertEqual(preferences.sort, "title")
     }
 
@@ -142,7 +149,8 @@ final class EntityGridControlsTests: XCTestCase {
 
         XCTAssertEqual(savedControls["sort"] as? String, "rating")
         XCTAssertEqual(savedControls["sortDescending"] as? Bool, false)
-        XCTAssertEqual(object["cardStyle"] as? String, "artworkFade")
+        XCTAssertNil(object["cardStyle"], "An absent override must continue following the app default.")
+        XCTAssertNil(object["cardStyleOverride"])
         XCTAssertNil(object["favoriteOnly"], "Filter fields should not be mirrored at the preference root.")
     }
 
@@ -172,6 +180,19 @@ final class EntityGridControlsTests: XCTestCase {
 
         XCTAssertNil(store.load(for: "videos"))
         XCTAssertEqual(store.load(for: "books"), books)
+    }
+
+    func testAppCardStylePreferenceDefaultsAndPersists() throws {
+        let suiteName = "EntityGridCardStylePreferenceTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = EntityGridCardStylePreferenceStore(defaults: defaults)
+
+        XCTAssertEqual(store.load(), .artworkFade)
+
+        store.save(.detailsBelow)
+
+        XCTAssertEqual(store.load(), .detailsBelow)
     }
 
     func testPreferenceStorePersistsNamedPresetsAndReplacesMatchingName() throws {

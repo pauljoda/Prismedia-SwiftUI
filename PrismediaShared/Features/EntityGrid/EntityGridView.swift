@@ -10,7 +10,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @State private var displayMode: EntityGridDisplayMode
     @State private var density: EntityGridDensity
     @State private var pageSize: Int
-    @State private var cardStyle: EntityGridCardStyle
+    @State private var cardStyleOverride: EntityGridCardStyle?
     @State private var presets: [EntityGridPreset]
     @State private var presetName = ""
     @State private var savePresetPresented = false
@@ -90,9 +90,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         )
         _density = State(initialValue: restoredPreferences?.density ?? .standard)
         _pageSize = State(initialValue: restoredPreferences?.pageSize ?? configuration.pageSize)
-        _cardStyle = State(
-            initialValue: restoredPreferences?.cardStyle ?? configuration.defaultCardStyle
-        )
+        _cardStyleOverride = State(initialValue: restoredPreferences?.cardStyleOverride)
         _presets = State(initialValue: preferencesStore.loadPresets(for: configuration.preferencesID))
         _selection = State(
             initialValue: EntityGridSelectionState(
@@ -617,7 +615,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             displayMode: displayMode,
             density: density,
             pageSize: pageSize,
-            cardStyle: cardStyle,
+            appDefaultCardStyle: environment.entityGridCardStyle,
+            cardStyleOverride: cardStyleOverride,
             presets: presets,
             preferencesAreDefault: preferencesAreDefault,
             onSelectDisplayMode: selectDisplayMode,
@@ -629,6 +628,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             onDeletePreset: deletePreset,
             onResetPreferences: requestResetPreferences
         )
+    }
+
+    private var cardStyle: EntityGridCardStyle {
+        cardStyleOverride ?? environment.entityGridCardStyle
     }
 
     private func selectSort(_ sort: EntityGridSort) {
@@ -665,9 +668,9 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         Task { await loadFirstPage(preservingContent: false) }
     }
 
-    private func selectCardStyle(_ newCardStyle: EntityGridCardStyle) {
-        guard cardStyle != newCardStyle else { return }
-        cardStyle = newCardStyle
+    private func selectCardStyle(_ newCardStyle: EntityGridCardStyle?) {
+        guard cardStyleOverride != newCardStyle else { return }
+        cardStyleOverride = newCardStyle
         savePreferences()
     }
 
@@ -681,7 +684,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         displayMode = configuration.resolvedDisplayMode(restoring: preferences.displayMode)
         density = preferences.density
         pageSize = preferences.pageSize ?? configuration.pageSize
-        cardStyle = preferences.cardStyle
+        cardStyleOverride = preferences.cardStyleOverride
         savePreferences()
         await loadFirstPage(preservingContent: false)
     }
@@ -756,7 +759,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         displayMode = configuration.defaultDisplayMode
         density = .standard
         pageSize = configuration.pageSize
-        cardStyle = configuration.defaultCardStyle
+        cardStyleOverride = nil
         preferencesStore.reset(for: configuration.preferencesID)
         await loadFirstPage(preservingContent: false)
     }
@@ -775,7 +778,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             displayMode: displayMode,
             density: density,
             pageSize: pageSize,
-            cardStyle: cardStyle
+            cardStyle: cardStyleOverride
         )
     }
 
@@ -784,8 +787,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             == EntityGridPreferences(
                 controls: configuration.defaultControls(),
                 displayMode: configuration.defaultDisplayMode,
-                pageSize: configuration.pageSize,
-                cardStyle: configuration.defaultCardStyle
+                pageSize: configuration.pageSize
             )
     }
 

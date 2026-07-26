@@ -16,6 +16,7 @@ public final class PrismediaAppEnvironment {
     public private(set) var entityListRevision = 0
     public private(set) var contentRevision = 0
     public private(set) var allowsNsfwContent: Bool
+    public private(set) var entityGridCardStyle: EntityGridCardStyle
     public private(set) var databaseRestoreServerURL: URL?
     public let artworkLoader: any RemoteArtworkLoading
     public let artworkPaletteLoader: any ArtworkPaletteLoading
@@ -25,6 +26,7 @@ public final class PrismediaAppEnvironment {
     private let localSessionStateCleaner: any LocalSessionStateClearing
     private let serverPreferenceStore: ServerPreferenceStoring
     private let nsfwPreferenceStore: NsfwPreferenceStoring
+    private let entityGridCardStylePreferenceStore: EntityGridCardStylePreferenceStore
     private let clientFactory: (URL) -> PrismediaAPIClient
     @ObservationIgnored private var isSessionRestoreInFlight = false
 
@@ -41,15 +43,21 @@ public final class PrismediaAppEnvironment {
                 isUITesting
                 ? VolatileServerPreferenceStore()
                 : UserDefaultsServerPreferenceStore()
+            let entityGridCardStylePreferenceStore =
+                isUITesting
+                ? EntityGridCardStylePreferenceStore.disabled
+                : .standard
         #else
             let resetSession = false
             let uiTestSession: AuthSession? = nil
             let sessionStore: SessionStoring = KeychainSessionStore()
             let serverPreferenceStore: ServerPreferenceStoring = UserDefaultsServerPreferenceStore()
+            let entityGridCardStylePreferenceStore = EntityGridCardStylePreferenceStore.standard
         #endif
         self.init(
             sessionStore: sessionStore,
             serverPreferenceStore: serverPreferenceStore,
+            entityGridCardStylePreferenceStore: entityGridCardStylePreferenceStore,
             initialSession: uiTestSession,
             restoreOnInit: uiTestSession == nil,
             resetSessionOnInit: resetSession && uiTestSession == nil
@@ -61,6 +69,7 @@ public final class PrismediaAppEnvironment {
         localSessionStateCleaner: any LocalSessionStateClearing = UserDefaultsLocalSessionStateCleaner(),
         serverPreferenceStore: ServerPreferenceStoring = UserDefaultsServerPreferenceStore(),
         nsfwPreferenceStore: NsfwPreferenceStoring = UserDefaultsNsfwPreferenceStore(),
+        entityGridCardStylePreferenceStore: EntityGridCardStylePreferenceStore = .disabled,
         clientFactory: @escaping (URL) -> PrismediaAPIClient = { PrismediaAPIClient(serverURL: $0) },
         artworkLoader: any RemoteArtworkLoading = RemoteArtworkPipeline.shared,
         artworkPaletteLoader: (any ArtworkPaletteLoading)? = nil,
@@ -72,6 +81,7 @@ public final class PrismediaAppEnvironment {
         self.localSessionStateCleaner = localSessionStateCleaner
         self.serverPreferenceStore = serverPreferenceStore
         self.nsfwPreferenceStore = nsfwPreferenceStore
+        self.entityGridCardStylePreferenceStore = entityGridCardStylePreferenceStore
         self.clientFactory = clientFactory
         self.artworkLoader = artworkLoader
         self.artworkPaletteLoader =
@@ -84,6 +94,7 @@ public final class PrismediaAppEnvironment {
             } ?? false
         session = initialSession
         self.allowsNsfwContent = allowsNsfwContent
+        entityGridCardStyle = entityGridCardStylePreferenceStore.load()
         client = initialSession.map {
             clientFactory($0.serverURL)
                 .allowingNsfwContent(allowsNsfwContent)
@@ -193,6 +204,12 @@ public final class PrismediaAppEnvironment {
         self.allowsNsfwContent = allowed
         client?.updateNsfwContentPreference(allowed)
         publishContentChange()
+    }
+
+    public func setEntityGridCardStyle(_ style: EntityGridCardStyle) {
+        guard style != entityGridCardStyle else { return }
+        entityGridCardStylePreferenceStore.save(style)
+        entityGridCardStyle = style
     }
 
     public func verifyCurrentSession() async {

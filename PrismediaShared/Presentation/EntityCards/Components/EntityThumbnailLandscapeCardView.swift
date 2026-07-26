@@ -99,9 +99,6 @@ struct EntityThumbnailLandscapeCardView: View {
             ZStack {
                 if reduceTransparency {
                     PrismediaColor.groupedContentBackground
-                } else {
-                    Rectangle()
-                        .fill(.thinMaterial)
                 }
                 legibilityGradient
                 accessibilityScrim
@@ -177,15 +174,8 @@ struct EntityThumbnailLandscapeCardView: View {
             )
     }
 
-    private var showsContextMenu: Bool {
-        EntityThumbnailInteractionPolicy(item: item, layout: layout).showsContextMenu
-    }
-
     private var metadataTrailingPadding: CGFloat {
-        let basePadding = PrismediaSpacing.small
-        return showsContextMenu
-            ? PrismediaLayout.minimumHitTarget + basePadding
-            : basePadding
+        PrismediaSpacing.small
     }
 
     private var metadataBottomPadding: CGFloat {

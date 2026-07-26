@@ -35,7 +35,7 @@ public struct EntityThumbnailNavigationSurface: View {
     }
 
     private var navigationSurface: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack(alignment: .topTrailing) {
             Button(action: openPrimaryAction) {
                 EntityThumbnailCardView(
                     item: item,
@@ -61,15 +61,20 @@ public struct EntityThumbnailNavigationSurface: View {
                 open(intent: .detail)
             }
         } label: {
-            Image(systemName: "ellipsis")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(PrismediaColor.onMedia.opacity(0.72))
-                .frame(
-                    minWidth: PrismediaLayout.minimumHitTarget,
-                    minHeight: PrismediaLayout.minimumHitTarget,
-                    alignment: .bottomTrailing
-                )
-                .contentShape(Circle())
+            PrismediaGlassStatusChip(
+                nil,
+                systemImage: "ellipsis",
+                tint: PrismediaColor.mediaOverlayGlassTint,
+                size: .thumbnail
+            )
+            .foregroundStyle(PrismediaColor.onMedia)
+            .fixedSize()
+            .frame(
+                minWidth: PrismediaLayout.minimumHitTarget,
+                minHeight: PrismediaLayout.minimumHitTarget,
+                alignment: .topTrailing
+            )
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("More actions for \(item.title)")

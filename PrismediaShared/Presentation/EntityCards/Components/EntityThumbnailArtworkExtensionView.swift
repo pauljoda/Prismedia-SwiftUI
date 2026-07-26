@@ -27,6 +27,8 @@ struct EntityThumbnailArtworkExtensionView: View {
                 extensionImage
                     .resizable()
                     .scaledToFill()
+            } else if isEnabled {
+                fallbackExtension
             } else {
                 PrismediaColor.groupedContentBackground
             }
@@ -56,6 +58,47 @@ struct EntityThumbnailArtworkExtensionView: View {
     private var artworkURL: URL? {
         environment.client?.assetURL(for: item.bestCoverPath)
     }
+
+    private var fallbackExtension: some View {
+        ZStack {
+            LinearGradient(
+                colors: fallbackColors,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            LinearGradient(
+                colors: [
+                    PrismediaColor.onMedia.opacity(0.08),
+                    .clear,
+                    PrismediaColor.background.opacity(0.16),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+
+    private var fallbackColors: [Color] {
+        let palette = Self.fallbackPalettes[
+            StableStringHash.paletteIndex(
+                for: item.title,
+                paletteCount: Self.fallbackPalettes.count
+            )
+        ]
+        return palette.map { Color(hex: $0) }
+    }
+
+    private static let fallbackPalettes: [[UInt32]] = [
+        [0x1A1028, 0x2D1B4E, 0x4A2040],
+        [0x0F1A2E, 0x1B3A5C, 0x0D2847],
+        [0x1A0F0A, 0x3D2415, 0x5C3A1B],
+        [0x0A1A14, 0x153D2B, 0x1B5C3F],
+        [0x1A1018, 0x3D1535, 0x5C1B4A],
+        [0x1A180A, 0x3D3515, 0x5C4F1B],
+        [0x0A0F1A, 0x15243D, 0x1B365C],
+        [0x1A0A12, 0x3D1528, 0x5C1B3B],
+    ]
 
     private var requestID: String {
         [

@@ -34,6 +34,7 @@ public struct PrismediaShellView: View {
                 #endif
             }
         }
+        .environment(\.entityGridCardStyle, environment.entityGridCardStyle)
         .onAppear { router.reconcile(with: availableModes) }
         .onChange(of: availableModes) { _, _ in
             router.reconcile(with: availableModes)

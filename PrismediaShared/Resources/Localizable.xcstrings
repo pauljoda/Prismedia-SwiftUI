@@ -79,12 +79,12 @@
         }
       }
     },
-    "%@, %@ size" : {
+    "%@, %@ size, %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@, %2$@ size"
+            "value" : "%1$@, %2$@ size, %3$@"
           }
         }
       }
@@ -459,6 +459,12 @@
     "API" : {
 
     },
+    "App Default (%@)" : {
+
+    },
+    "App Settings" : {
+
+    },
     "Apply" : {
 
     },
@@ -469,6 +475,9 @@
 
     },
     "Artwork" : {
+
+    },
+    "Artwork Fade extends each thumbnail behind its details. Text Below Artwork uses a simpler Apple-style layout." : {
 
     },
     "Artwork for %@" : {
@@ -616,6 +625,12 @@
 
     },
     "Capabilities" : {
+
+    },
+    "Card Presentation" : {
+
+    },
+    "Card Style" : {
 
     },
     "Change Password" : {
@@ -1091,6 +1106,9 @@
 
     },
     "Entity actions" : {
+
+    },
+    "Entity Grids" : {
 
     },
     "Entity Kind" : {
@@ -2573,7 +2591,7 @@
     "Save Profile" : {
 
     },
-    "Save the current sort, filters, layout, density, and page size." : {
+    "Save the current sort, filters, layout, density, card style, and page size." : {
 
     },
     "Saved file information may be out of date." : {

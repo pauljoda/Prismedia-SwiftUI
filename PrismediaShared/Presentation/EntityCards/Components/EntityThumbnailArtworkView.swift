@@ -91,6 +91,7 @@ struct EntityThumbnailArtworkView: View {
                 if cardPresentation.showsArtworkBadges {
                     EntityThumbnailBadgeRow(badges: overlayPolicy.topTrailing)
                         .padding(PrismediaSpacing.small)
+                        .padding(.trailing, topTrailingActionPadding)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
@@ -99,6 +100,12 @@ struct EntityThumbnailArtworkView: View {
                         .padding(PrismediaSpacing.small)
                 }
             }
+    }
+
+    private var topTrailingActionPadding: CGFloat {
+        EntityThumbnailInteractionPolicy(item: item, layout: layout).showsContextMenu
+            ? PrismediaLayout.minimumHitTarget
+            : 0
     }
 
     private func progressMeter(_ value: Double) -> some View {
