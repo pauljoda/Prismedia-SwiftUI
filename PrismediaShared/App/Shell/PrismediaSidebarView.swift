@@ -6,7 +6,9 @@ struct PrismediaSidebarView: View {
 
     @ViewBuilder
     var body: some View {
-        #if os(tvOS)
+        #if os(macOS)
+            MacPrismediaSidebarView(selection: $selection, sections: sections)
+        #elseif os(tvOS)
             sidebarList
                 .listStyle(.plain)
         #else

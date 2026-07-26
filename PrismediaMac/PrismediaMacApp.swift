@@ -12,9 +12,9 @@ struct PrismediaMacApp: App {
                 .environment(router)
                 .frame(minWidth: 920, minHeight: 680)
         }
-        .defaultSize(width: 1180, height: 780)
+        .defaultSize(width: 1_280, height: 820)
         .windowResizability(.contentMinSize)
-        .windowToolbarStyle(.unified)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             PrismediaMacCommands(environment: environment, router: router)
         }

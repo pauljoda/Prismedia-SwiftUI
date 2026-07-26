@@ -26,10 +26,12 @@
                 .focusedSceneValue(controller)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if showsMiniPlayer {
-                        MacMusicMiniPlayerView {
-                            nowPlayingPresented = true
-                        }
+                        MacMusicMiniPlayerView(
+                            engine: engine,
+                            showNowPlaying: { nowPlayingPresented = true }
+                        )
                         .environment(controller)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
                 .inspector(isPresented: $nowPlayingPresented) {
@@ -37,15 +39,7 @@
                         .environment(controller)
                         .inspectorColumnWidth(min: 300, ideal: 360, max: 480)
                 }
-                .toolbar {
-                    if showsMiniPlayer {
-                        ToolbarItem(placement: .primaryAction) {
-                            Button("Now Playing", systemImage: "music.note.list") {
-                                nowPlayingPresented.toggle()
-                            }
-                        }
-                    }
-                }
+                .animation(.snappy, value: showsMiniPlayer)
                 .onAppear(perform: connectPlaybackSystem)
                 .onChange(of: scenePhase) { _, phase in
                     guard phase != .active else { return }
