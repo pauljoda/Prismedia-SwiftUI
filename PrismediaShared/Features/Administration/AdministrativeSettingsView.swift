@@ -54,7 +54,8 @@ struct AdministrativeSettingsView: View {
                                     Text(section.description).font(.caption).foregroundStyle(.secondary)
                                 }
                             } icon: {
-                                Image(systemName: section.systemImageName).foregroundStyle(.tint)
+                                Image(systemName: section.systemImageName)
+                                    .foregroundStyle(settingsAccent(for: section.id))
                             }
                         }
                         .accessibilityIdentifier("administration.settings.section.\(section.id)")
@@ -116,8 +117,28 @@ struct AdministrativeSettingsView: View {
     }
 
     private func directoryLink(_ title: String, _ image: String, _ value: String) -> some View {
-        NavigationLink(value: value) { Label(title, systemImage: image) }
+        NavigationLink(value: value) {
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: image)
+                    .foregroundStyle(settingsAccent(for: value))
+            }
+        }
             .accessibilityIdentifier("administration.settings.section.\(value)")
+    }
+
+    private func settingsAccent(for id: String) -> Color {
+        let index = orderedSettingsIDs.firstIndex(of: id) ?? 0
+        return PrismediaColor.materialSpectrumColor(at: index)
+    }
+
+    private var orderedSettingsIDs: [String] {
+        var ids = ["app-settings", "libraries"]
+        if user.isAdmin { ids.append("users") }
+        ids.append(contentsOf: sections.map(\.id))
+        if user.isAdmin { ids.append(contentsOf: ["database-backups", "diagnostics"]) }
+        return ids
     }
 
     #if os(iOS) || os(macOS)

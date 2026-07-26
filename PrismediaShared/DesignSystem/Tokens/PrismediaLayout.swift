@@ -34,8 +34,8 @@ public enum PrismediaLayout {
     #endif
     public static let readableContentWidth: CGFloat = 760
     public static let mediaContentWidth: CGFloat = 1_280
-    public static let backdropBlur: CGFloat = 72
-    public static let backdropOverscan: CGFloat = 1.16
+    public static let backdropBlur: CGFloat = 92
+    public static let backdropOverscan: CGFloat = 1.24
     public static let brandMark: CGFloat = 104
     public static let compactBrandMark: CGFloat = 72
     public static let televisionBrandMark: CGFloat = 148

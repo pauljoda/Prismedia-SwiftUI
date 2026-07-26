@@ -16,21 +16,30 @@ struct SearchHubModeCardView: View {
                     RemotePosterImage(
                         path: artwork?.bestCoverPath,
                         fallbackSeed: artwork?.title ?? card.title,
+                        fallbackColors: orderedFallbackColors,
                         systemImage: card.systemImage
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
                 }
                 .overlay {
-                    LinearGradient(
-                        colors: [
-                            .clear,
-                            PrismediaColor.background.opacity(PrismediaOpacity.statusFill),
-                            PrismediaColor.background.opacity(0.88),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                    ZStack {
+                        LinearGradient(
+                            colors: orderedFallbackColors.map { $0.opacity(0.18) },
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+
+                        LinearGradient(
+                            colors: [
+                                .clear,
+                                PrismediaColor.background.opacity(PrismediaOpacity.statusFill),
+                                PrismediaColor.background.opacity(0.88),
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    }
                 }
                 .overlay(alignment: .bottomLeading) {
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
@@ -64,6 +73,11 @@ struct SearchHubModeCardView: View {
 
     private var cardShape: PrismediaStableRoundedRectangle {
         PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.card)
+    }
+
+    private var orderedFallbackColors: [Color] {
+        let index = ModeCatalog.all.firstIndex { $0.id == card.id } ?? 0
+        return PrismediaColor.materialSpectrumPair(at: index)
     }
 }
 

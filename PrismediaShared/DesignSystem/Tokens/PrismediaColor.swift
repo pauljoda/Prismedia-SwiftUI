@@ -29,6 +29,39 @@ public enum PrismediaColor {
     public static let spectrumViolet = Color(red: 0.48, green: 0.08, blue: 0.96)
     public static let spectrumMagenta = Color(red: 0.84, green: 0.05, blue: 0.88)
 
+    /// The shared web/native spectrum for persistent UI color. These hues keep
+    /// the prism order while reading as material paint instead of emitted light.
+    public static let materialSpectrumRed = Color(hex: 0xB3484D)
+    public static let materialSpectrumOrange = Color(hex: 0xB76337)
+    public static let materialSpectrumYellow = Color(hex: 0x9E873B)
+    public static let materialSpectrumGreen = Color(hex: 0x4D925D)
+    public static let materialSpectrumCyan = Color(hex: 0x3B869C)
+    public static let materialSpectrumBlue = Color(hex: 0x536FB0)
+    public static let materialSpectrumViolet = Color(hex: 0x775CA5)
+    public static let materialSpectrumMagenta = Color(hex: 0x9A4F9D)
+
+    public static let materialSpectrum = [
+        materialSpectrumRed,
+        materialSpectrumOrange,
+        materialSpectrumYellow,
+        materialSpectrumGreen,
+        materialSpectrumCyan,
+        materialSpectrumBlue,
+        materialSpectrumViolet,
+        materialSpectrumMagenta,
+    ]
+
+    public static func materialSpectrumColor(at index: Int) -> Color {
+        materialSpectrum[wrappedMaterialSpectrumIndex(index)]
+    }
+
+    public static func materialSpectrumPair(at index: Int) -> [Color] {
+        [
+            materialSpectrumColor(at: index),
+            materialSpectrumColor(at: index + 1),
+        ]
+    }
+
     public static let destructive = Color.red
     public static let warning = spectrumOrange
     public static let success = spectrumGreen
@@ -81,5 +114,10 @@ public enum PrismediaColor {
         #else
             Color(name)
         #endif
+    }
+
+    private static func wrappedMaterialSpectrumIndex(_ index: Int) -> Int {
+        let remainder = index % materialSpectrum.count
+        return remainder >= 0 ? remainder : remainder + materialSpectrum.count
     }
 }
