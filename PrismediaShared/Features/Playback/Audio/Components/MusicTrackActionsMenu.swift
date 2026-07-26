@@ -28,15 +28,15 @@
                     Button("Show Now Playing", systemImage: "music.note.list", action: onShowNowPlaying)
                 }
 
-                if albumLink != nil || artistLink != nil {
+                if track.albumNavigationLink != nil || track.artistNavigationLink != nil {
                     Menu("Go To", systemImage: "arrow.up.right") {
-                        if let albumLink {
+                        if let albumLink = track.albumNavigationLink {
                             Button("Album", systemImage: "square.stack") {
                                 onNavigate(albumLink)
                             }
                         }
 
-                        if let artistLink {
+                        if let artistLink = track.artistNavigationLink {
                             Button("Artist", systemImage: "music.mic") {
                                 onNavigate(artistLink)
                             }
@@ -69,32 +69,6 @@
             .accessibilityLabel("More actions for \(track.title)")
             .accessibilityHint("Shows collection and library navigation actions")
             .accessibilityIdentifier("music.track-actions")
-        }
-
-        private var albumLink: EntityLink? {
-            guard let albumID = track.albumID else { return nil }
-            return EntityLink(
-                entityID: albumID,
-                kind: .audioLibrary,
-                thumbnailPreview: EntityLinkPreview(
-                    title: track.album ?? "Album",
-                    subtitle: track.artist,
-                    artworkPath: track.artworkPath
-                )
-            )
-        }
-
-        private var artistLink: EntityLink? {
-            guard let artistID = track.artistID else { return nil }
-            return EntityLink(
-                entityID: artistID,
-                kind: .musicArtist,
-                thumbnailPreview: EntityLinkPreview(
-                    title: MusicPresentation.artist(track.artist),
-                    subtitle: nil,
-                    artworkPath: track.artworkPath
-                )
-            )
         }
     }
 

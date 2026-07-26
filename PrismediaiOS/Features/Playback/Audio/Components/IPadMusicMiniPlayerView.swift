@@ -7,14 +7,20 @@
         @Environment(PrismediaAppRouter.self) private var router
         @Environment(MusicPlayerController.self) private var controller
         @Binding private var artworkPalette: ArtworkPalette?
+        @State private var actionsPresented = false
         @State private var trackForCollection: MusicTrack?
+        @State private var scrubPosition = 0.0
+        @State private var isScrubbing = false
 
+        let engine: AVPlayerAudioPlaybackEngine
         let showNowPlaying: () -> Void
 
         init(
+            engine: AVPlayerAudioPlaybackEngine,
             artworkPalette: Binding<ArtworkPalette?>,
             showNowPlaying: @escaping () -> Void
         ) {
+            self.engine = engine
             _artworkPalette = artworkPalette
             self.showNowPlaying = showNowPlaying
         }
@@ -22,9 +28,11 @@
         var body: some View {
             if let track = controller.currentTrack {
                 HStack(spacing: PrismediaSpacing.extraSmall) {
+                    shuffleButton
                     previousButton
                     playButton
                     nextButton
+                    repeatButton
 
                     Capsule()
                         .fill(PrismediaColor.textMuted.opacity(0.28))
@@ -34,13 +42,9 @@
 
                     trackButton(track)
 
-                    MusicTrackActionsMenu(
-                        track: track,
-                        onNavigate: router.open,
-                        onAddToCollection: { trackForCollection = track },
-                        onShowNowPlaying: showNowPlaying,
-                        onHidePlayer: { visibility?.hideByUser() }
-                    )
+                    playbackTimeline(track)
+
+                    actionsButton(track)
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, PrismediaSpacing.small)
@@ -50,6 +54,15 @@
                 .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
                 .padding(.top, PrismediaSpacing.small)
                 .padding(.bottom, PrismediaSpacing.medium)
+                .onAppear(perform: synchronizeTimeline)
+                .onChange(of: engine.elapsedTime) { _, elapsedTime in
+                    guard !isScrubbing else { return }
+                    scrubPosition = elapsedTime
+                }
+                .onChange(of: track.id) { _, _ in
+                    actionsPresented = false
+                    synchronizeTimeline()
+                }
                 .sheet(item: $trackForCollection) { track in
                     AddToCollectionSheet(
                         items: [CollectionEntityReference(entityType: .audioTrack, entityID: track.id)]
@@ -58,6 +71,66 @@
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("music.mini-player")
+            }
+        }
+
+        private func playbackTimeline(_ track: MusicTrack) -> some View {
+            let duration = duration(for: track)
+            return VStack(spacing: 0) {
+                Slider(
+                    value: $scrubPosition,
+                    in: 0 ... duration,
+                    onEditingChanged: scrubDidChange
+                )
+                .controlSize(.mini)
+                .tint(accent)
+                .accessibilityLabel("Playback Position")
+                .accessibilityValue(
+                    "\(MusicPresentation.clockTime(scrubPosition)) of \(MusicPresentation.clockTime(duration))"
+                )
+                .accessibilityIdentifier("music.mini-player.timeline")
+
+                HStack {
+                    Text(MusicPresentation.clockTime(scrubPosition))
+                    Spacer(minLength: PrismediaSpacing.extraSmall)
+                    Text(MusicPresentation.clockTime(duration))
+                }
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(PrismediaColor.textMuted)
+                .accessibilityHidden(true)
+            }
+            .frame(minWidth: 120, idealWidth: 170, maxWidth: 210)
+        }
+
+        private func actionsButton(_ track: MusicTrack) -> some View {
+            Button {
+                actionsPresented = true
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.body.weight(.semibold))
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(PrismediaColor.textSecondary)
+                    .frame(
+                        width: PrismediaLayout.minimumHitTarget,
+                        height: PrismediaLayout.minimumHitTarget
+                    )
+                    .contentShape(.rect)
+            }
+            .accessibilityLabel("More actions for \(track.title)")
+            .accessibilityHint("Shows actions above the compact player")
+            .accessibilityIdentifier("music.track-actions")
+            .popover(
+                isPresented: $actionsPresented,
+                attachmentAnchor: .rect(.bounds),
+                arrowEdge: .bottom
+            ) {
+                MusicTrackActionsPopoverView(
+                    track: track,
+                    onNavigate: router.open,
+                    onAddToCollection: { trackForCollection = track },
+                    onShowNowPlaying: showNowPlaying,
+                    onHidePlayer: { visibility?.hideByUser() }
+                )
             }
         }
 
@@ -110,6 +183,32 @@
             )
         }
 
+        private var shuffleButton: some View {
+            modeButton(
+                controller.queue.isShuffled ? "Turn Shuffle Off" : "Turn Shuffle On",
+                systemImage: "shuffle",
+                isActive: controller.queue.isShuffled,
+                isDisabled: controller.context?.isAudiobook == true,
+                identifier: "music.mini-player.shuffle"
+            ) {
+                withoutMusicControlAnimation {
+                    controller.setShuffleEnabled(!controller.queue.isShuffled)
+                }
+            }
+        }
+
+        private var repeatButton: some View {
+            modeButton(
+                repeatLabel,
+                systemImage: controller.queue.repeatMode == .one ? "repeat.1" : "repeat",
+                isActive: controller.queue.repeatMode != .off,
+                isDisabled: false,
+                identifier: "music.mini-player.repeat"
+            ) {
+                withoutMusicControlAnimation(controller.cycleRepeatMode)
+            }
+        }
+
         private var playButton: some View {
             Button(action: togglePlayback) {
                 Image(systemName: controller.isPlaying ? "pause.fill" : "play.fill")
@@ -145,8 +244,51 @@
                 .disabled(isDisabled)
         }
 
+        private func modeButton(
+            _ title: String,
+            systemImage: String,
+            isActive: Bool,
+            isDisabled: Bool,
+            identifier: String,
+            action: @escaping () -> Void
+        ) -> some View {
+            Button(title, systemImage: systemImage, action: action)
+                .labelStyle(.iconOnly)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(isActive ? accent : PrismediaColor.textSecondary)
+                .frame(
+                    width: PrismediaLayout.minimumHitTarget,
+                    height: PrismediaLayout.minimumHitTarget
+                )
+                .contentShape(.rect)
+                .disabled(isDisabled)
+                .accessibilityValue(isActive ? "On" : "Off")
+                .accessibilityIdentifier(identifier)
+        }
+
         private var accent: Color {
             artworkPalette?.primary.color ?? PrismediaColor.materialSpectrumGreen
+        }
+
+        private var repeatLabel: String {
+            switch controller.queue.repeatMode {
+            case .off: "Set Repeat All"
+            case .all: "Set Repeat One"
+            case .one: "Turn Repeat Off"
+            }
+        }
+
+        private func duration(for track: MusicTrack) -> Double {
+            max(engine.duration, track.duration ?? 0, 1)
+        }
+
+        private func synchronizeTimeline() {
+            scrubPosition = engine.elapsedTime
+        }
+
+        private func scrubDidChange(_ editing: Bool) {
+            isScrubbing = editing
+            if !editing { controller.seek(to: scrubPosition) }
         }
 
         private func togglePlayback() {
@@ -159,10 +301,12 @@
     #if DEBUG
         #Preview("iPad Music Floating Player", traits: .fixedLayout(width: 1_000, height: 100)) {
             @Previewable @State var controller = MusicPreviewData.controller()
+            @Previewable @State var engine = AVPlayerAudioPlaybackEngine()
             @Previewable @State var artworkPalette: ArtworkPalette?
 
             PreviewShell(signedIn: true) {
                 IPadMusicMiniPlayerView(
+                    engine: engine,
                     artworkPalette: $artworkPalette,
                     showNowPlaying: {}
                 )

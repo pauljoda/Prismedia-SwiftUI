@@ -108,6 +108,7 @@
 
         private var iPadMiniPlayer: some View {
             IPadMusicMiniPlayerView(
+                engine: engine,
                 artworkPalette: artworkPaletteBinding,
                 showNowPlaying: { nowPlayingPresented = true }
             )
