@@ -2,6 +2,8 @@
     import SwiftUI
 
     struct EntityDetailPlatformActionsView: View {
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
         let presentation: EntityDetailPresentation
         let palette: ArtworkPalette?
         let horizontalPadding: CGFloat
@@ -10,8 +12,25 @@
         let actionHint: (EntityDetailAction) -> String
         let onAction: (EntityDetailAction) -> Void
 
+        @ViewBuilder
         var body: some View {
-            EmptyView()
+            if horizontalSizeClass == .regular, presentation.detail.kind.isAudioEntity {
+                EntityDetailModificationActionsView(
+                    presentation: presentation,
+                    palette: palette,
+                    horizontalPadding: horizontalPadding,
+                    isActionSupported: isActionSupported,
+                    isActionEnabled: isActionEnabled,
+                    actionHint: actionHint,
+                    onAction: onAction
+                )
+            }
+        }
+    }
+
+    extension EntityKind {
+        fileprivate var isAudioEntity: Bool {
+            self == .audio || self == .audioTrack
         }
     }
 

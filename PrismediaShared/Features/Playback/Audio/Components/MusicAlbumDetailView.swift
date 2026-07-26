@@ -4,6 +4,9 @@
     struct MusicAlbumDetailView: View {
         @Environment(PrismediaAppEnvironment.self) private var environment
         @Environment(MusicPlayerController.self) private var controller
+        #if os(iOS)
+            @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        #endif
         @State private var artworkPalette: ArtworkPalette?
         @State private var resolvedParentArtist: String?
         @State private var trackForCollection: MusicTrack?
@@ -72,35 +75,11 @@
                 systemImage: "music.note",
                 palette: $artworkPalette
             ) {
-                List {
-                    albumHeader
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-
-                    EntityDetailSectionPicker(
-                        sections: sections,
-                        selection: $selectedSection,
-                        horizontalPadding: PrismediaSpacing.large
-                    )
-
-                    EntityDetailSectionSwitcher(
-                        presentation: sectionPresentation,
-                        selection: selectedSection,
-                        horizontalPadding: PrismediaSpacing.large,
-                        support: sectionSupport
-                    ) {
-                        MusicTrackSectionsView(
-                            sections: trackSections,
-                            onPlay: { track in
-                                controller.play(tracks: tracks, startingAt: track.id)
-                            },
-                            onAddToCollection: { trackForCollection = $0 }
-                        )
-                    }
+                if usesWideLayout {
+                    wideContent
+                } else {
+                    compactContent
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle(detail.title)
             #if os(iOS)
@@ -115,19 +94,73 @@
             .task(id: detail.parentEntityID) { await resolveParentArtist() }
         }
 
-        private var albumHeader: some View {
-            VStack(spacing: PrismediaSpacing.medium) {
-                EntityThumbnailArtworkFrame(aspectRatio: 1) {
-                    RemotePosterImage(
-                        path: artworkPath,
-                        previewPath: preview?.artworkPath,
-                        fallbackSeed: detail.title,
-                        systemImage: "music.note"
-                    )
+        private var compactContent: some View {
+            List {
+                compactAlbumHeader
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                EntityDetailSectionPicker(
+                    sections: sections,
+                    selection: $selectedSection,
+                    horizontalPadding: PrismediaSpacing.large
+                )
+
+                EntityDetailSectionSwitcher(
+                    presentation: sectionPresentation,
+                    selection: selectedSection,
+                    horizontalPadding: PrismediaSpacing.large,
+                    support: sectionSupport
+                ) {
+                    trackList
                 }
-                .containerRelativeFrame(.horizontal, count: 5, span: 4, spacing: 0)
-                .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.control, style: .continuous))
-                .shadow(color: .black.opacity(0.4), radius: 24, y: 14)
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+        }
+
+        private var wideContent: some View {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                    wideAlbumHeader
+                        .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+                        .padding(.top, PrismediaSpacing.extraLarge)
+
+                    EntityDetailSectionPicker(
+                        sections: sections,
+                        selection: $selectedSection,
+                        horizontalPadding: PrismediaSpacing.extraExtraLarge
+                    )
+
+                    EntityDetailSectionSwitcher(
+                        presentation: sectionPresentation,
+                        selection: selectedSection,
+                        horizontalPadding: PrismediaSpacing.extraExtraLarge,
+                        support: sectionSupport
+                    ) {
+                        trackList
+                            .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+                    }
+                }
+                .padding(.bottom, PrismediaSpacing.extraExtraLarge)
+            }
+        }
+
+        private var trackList: some View {
+            MusicTrackSectionsView(
+                sections: trackSections,
+                onPlay: { track in
+                    controller.play(tracks: tracks, startingAt: track.id)
+                },
+                onAddToCollection: addTrackToCollection
+            )
+        }
+
+        private var compactAlbumHeader: some View {
+            VStack(spacing: PrismediaSpacing.medium) {
+                albumArtwork
+                    .containerRelativeFrame(.horizontal, count: 5, span: 4, spacing: 0)
 
                 Text(detail.title)
                     .font(.title2.bold())
@@ -151,6 +184,8 @@
                         form: .compactIcon,
                         action: shuffleAlbum
                     )
+                    .disabled(tracks.isEmpty)
+                    .accessibilityIdentifier("music.album.shuffle")
 
                     PrismediaButton(
                         "Play",
@@ -159,6 +194,7 @@
                         action: playAlbum
                     )
                     .disabled(tracks.isEmpty)
+                    .accessibilityIdentifier("music.album.play")
 
                 }
                 .padding(.vertical, PrismediaSpacing.small)
@@ -166,6 +202,102 @@
             .frame(maxWidth: .infinity)
             .padding(.horizontal, PrismediaSpacing.large)
             .padding(.bottom, PrismediaSpacing.large)
+        }
+
+        private var wideAlbumHeader: some View {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .bottom, spacing: PrismediaSpacing.extraExtraLarge) {
+                    albumArtwork
+                        .frame(width: 240, height: 240)
+                    wideAlbumInformation(alignment: .leading)
+                        .frame(maxWidth: 560, alignment: .leading)
+                    Spacer(minLength: 0)
+                }
+
+                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                    albumArtwork
+                        .frame(width: 200, height: 200)
+                        .frame(maxWidth: .infinity)
+                    wideAlbumInformation(alignment: .center)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+
+        private var albumArtwork: some View {
+            EntityThumbnailArtworkFrame(aspectRatio: 1) {
+                RemotePosterImage(
+                    path: artworkPath,
+                    previewPath: preview?.artworkPath,
+                    fallbackSeed: detail.title,
+                    systemImage: "music.note"
+                )
+            }
+            .clipShape(.rect(cornerRadius: PrismediaRadius.control))
+            .shadow(color: .black.opacity(0.38), radius: 22, y: 12)
+        }
+
+        private func wideAlbumInformation(alignment: HorizontalAlignment) -> some View {
+            VStack(alignment: alignment, spacing: PrismediaSpacing.small) {
+                Text("ALBUM")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PrismediaColor.textMuted)
+
+                Text(detail.title)
+                    .font(.largeTitle.bold())
+                    .multilineTextAlignment(alignment == .center ? .center : .leading)
+                    .lineLimit(3)
+
+                Text(artist)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(artworkPalette?.primary.color ?? PrismediaColor.accent)
+
+                if !facts.primary.isEmpty {
+                    Text(facts.primary)
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                }
+
+                Text(facts.secondary)
+                    .font(.caption)
+                    .foregroundStyle(PrismediaColor.textMuted)
+
+                HStack(spacing: PrismediaSpacing.medium) {
+                    PrismediaButton(
+                        "Play",
+                        systemImage: "play.fill",
+                        variant: .prominent,
+                        action: playAlbum
+                    )
+                    .disabled(tracks.isEmpty)
+                    .accessibilityIdentifier("music.album.play")
+
+                    PrismediaButton(
+                        "Shuffle",
+                        systemImage: "shuffle",
+                        action: shuffleAlbum
+                    )
+                    .disabled(tracks.isEmpty)
+                    .accessibilityIdentifier("music.album.shuffle")
+                }
+                .padding(.top, PrismediaSpacing.small)
+            }
+        }
+
+        private var usesWideLayout: Bool {
+            #if os(macOS)
+                true
+            #else
+                horizontalSizeClass == .regular
+            #endif
+        }
+
+        private var addTrackToCollection: ((MusicTrack) -> Void)? {
+            #if os(iOS)
+                { trackForCollection = $0 }
+            #else
+                nil
+            #endif
         }
 
         private func playAlbum() {

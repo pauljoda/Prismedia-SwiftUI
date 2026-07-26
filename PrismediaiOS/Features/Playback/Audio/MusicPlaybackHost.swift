@@ -5,6 +5,8 @@
 
     struct MusicPlaybackHost<Content: View>: View {
         @Environment(\.scenePhase) private var scenePhase
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @Environment(PrismediaAppEnvironment.self) private var environment
         @Environment(MusicPlaybackComposition.self) private var playback
         @State private var miniPlayerVisibility = MusicMiniPlayerVisibility()
@@ -63,23 +65,46 @@
 
         @ViewBuilder
         private var playbackContent: some View {
-            if #available(iOS 26.1, *) {
+            if horizontalSizeClass == .regular {
                 content
                     .environment(controller)
-                    .tabViewBottomAccessory(isEnabled: showsMiniPlayer) {
-                        miniPlayer
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        if showsMiniPlayer {
+                            iPadMiniPlayer
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                     }
+                    .animation(reduceMotion ? nil : .snappy, value: showsMiniPlayer)
             } else {
-                content
-                    .environment(controller)
-                    .tabViewBottomAccessory {
-                        if showsMiniPlayer { miniPlayer }
-                    }
+                if #available(iOS 26.1, *) {
+                    content
+                        .environment(controller)
+                        .tabViewBottomAccessory(isEnabled: showsMiniPlayer) {
+                            miniPlayer
+                        }
+                } else {
+                    content
+                        .environment(controller)
+                        .tabViewBottomAccessory {
+                            if showsMiniPlayer { miniPlayer }
+                        }
+                }
             }
         }
 
         private var miniPlayer: some View {
             MusicMiniPlayerView {
+                nowPlayingPresented = true
+            }
+            .environment(controller)
+            .matchedTransitionSource(
+                id: nowPlayingTransitionID,
+                in: nowPlayingTransitionNamespace
+            )
+        }
+
+        private var iPadMiniPlayer: some View {
+            IPadMusicMiniPlayerView {
                 nowPlayingPresented = true
             }
             .environment(controller)

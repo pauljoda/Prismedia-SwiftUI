@@ -17,7 +17,7 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
             intent: link.intent
         ) {
         case .nativeAlbum:
-            MacMusicAlbumDetailView(
+            MusicAlbumDetailView(
                 detail: detail,
                 preview: link.thumbnailPreview,
                 sectionSupport: sectionSupport

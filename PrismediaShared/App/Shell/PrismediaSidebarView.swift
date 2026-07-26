@@ -34,11 +34,7 @@ struct PrismediaSidebarView: View {
                                     .foregroundStyle(PrismediaColor.textPrimary)
                             } icon: {
                                 Image(systemName: item.systemImage)
-                                    .foregroundStyle(
-                                        selection == item.selection
-                                            ? PrismediaColor.textPrimary
-                                            : accent
-                                    )
+                                    .foregroundStyle(accent)
                             }
                         }
                         .accessibilityIdentifier("sidebar.\(item.id)")
