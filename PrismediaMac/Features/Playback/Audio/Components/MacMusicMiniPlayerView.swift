@@ -6,6 +6,7 @@
         @Environment(\.musicMiniPlayerVisibility) private var visibility
         @Environment(MusicPlayerController.self) private var controller
         @State private var artworkPalette: ArtworkPalette?
+        @State private var isExpanded = false
         @State private var volume = 1.0
 
         let engine: AVPlayerAudioPlaybackEngine
@@ -17,12 +18,24 @@
                     HStack(spacing: PrismediaSpacing.medium) {
                         trackButton(track)
                         transport
-                        timeline(track)
-                        volumeControl
 
-                        Button("Show Queue", systemImage: "list.bullet", action: showNowPlaying)
+                        if isExpanded {
+                            timeline(track)
+                            volumeControl
+                        }
+
+                        Button("Toggle Now Playing", systemImage: "list.bullet", action: showNowPlaying)
                             .labelStyle(.iconOnly)
-                            .help("Show Queue")
+                            .help("Show or hide Now Playing")
+
+                        Button(
+                            isExpanded ? "Use Compact Player" : "Expand Player",
+                            systemImage: isExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right"
+                        ) {
+                            withAnimation(.snappy) { isExpanded.toggle() }
+                        }
+                        .labelStyle(.iconOnly)
+                        .help(isExpanded ? "Use Compact Player" : "Expand Player")
 
                         Button("Hide Player", systemImage: "xmark") {
                             visibility?.hideByUser()
@@ -41,7 +54,7 @@
                 }
                 .buttonStyle(.plain)
                 .controlSize(.large)
-                .frame(maxWidth: 760)
+                .frame(width: isExpanded ? 760 : 470)
                 .glassEffect(.regular, in: .rect(cornerRadius: PrismediaRadius.control))
                 .overlay {
                     RoundedRectangle(cornerRadius: PrismediaRadius.control)
@@ -67,6 +80,7 @@
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("music.mini-player")
+                .animation(.snappy, value: isExpanded)
             }
         }
 
@@ -91,7 +105,7 @@
                             .lineLimit(1)
                     }
                 }
-                .frame(width: 190, alignment: .leading)
+                .frame(width: isExpanded ? 190 : 170, alignment: .leading)
                 .contentShape(.rect)
             }
             .accessibilityLabel("Show Now Playing for \(track.title)")

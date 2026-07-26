@@ -16,7 +16,8 @@ struct EPUBMarkupSanitizer: Sendable {
             options: .regularExpression
         )
         let policy = """
-            <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'none'; object-src 'none'; connect-src 'none'; frame-src 'none'; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'none'; object-src 'none'; connect-src 'none'; frame-src 'none'; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'"/>
+            <style type="text/css">:root { color-scheme: only light; } html, body { background: #ffffff; color: #1c1c1e; }</style>
             """
         if let headStart = markup.range(of: "<head", options: .caseInsensitive),
             let headEnd = markup.range(of: ">", range: headStart.lowerBound..<markup.endIndex)

@@ -20,74 +20,129 @@ struct AdministrativePluginsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            List(visibleSections, selection: $selectedSection) { section in
-                NavigationLink(value: section) {
-                    Label {
-                        Text(section.label)
-                    } icon: {
-                        Image(systemName: section.systemImage)
-                            .foregroundStyle(sectionAccent(for: section))
-                    }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(.rect)
+        platformContent
+            .prismediaScreenBackground()
+            .task { await loadCatalog() }
+            .onChange(of: selectedSection) {
+                searchText = ""
+                capabilityFilter = "all"
+                if selectedSection == .stashCommunity, stashScrapers.isEmpty { Task { await loadStash() } }
+            }
+            .sheet(item: $selectedPlugin) { plugin in
+                AdministrativePluginDetailView(plugin: plugin, service: service) {
+                    Task { await loadCatalog() }
                 }
             }
-            .prismediaScreenBackground()
-            .navigationTitle("Plugins")
-        } detail: {
-            List {
-                if selectedSection == .stashCommunity {
-                    stashContent
-                } else {
-                    pluginContent
-                }
+            .alert(
+                "Plugin Action Failed",
+                isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "Unknown error")
             }
-            .prismediaScreenBackground()
-            .navigationTitle(selectedSection?.label ?? "Plugins")
-            .searchable(text: $searchText, prompt: "Search plugins")
-            .toolbar {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if selectedSection != .stashCommunity {
-                        Menu("Filter Capabilities", systemImage: "line.3.horizontal.decrease.circle") {
-                            Picker("Entity Kind", selection: $capabilityFilter) {
-                                Text("All Capabilities").tag("all")
-                                ForEach(capabilityKinds, id: \.self) { kind in Text(kind).tag(kind) }
+            .accessibilityIdentifier("administration.plugins")
+    }
+
+    @ViewBuilder
+    private var platformContent: some View {
+        #if os(macOS)
+            NavigationStack {
+                List {
+                    Section {
+                        Picker("Plugin Source", selection: $selectedSection) {
+                            ForEach(visibleSections) { section in
+                                Label(section.label, systemImage: section.systemImage)
+                                    .tag(Optional(section))
                             }
                         }
+                        .pickerStyle(.segmented)
                     }
-                    Button("Refresh", systemImage: "arrow.clockwise") { Task { await refreshSelected() } }
-                        .disabled(isLoading || isRefreshingStash)
+                    .listRowBackground(Color.clear)
+
+                    if selectedSection == .stashCommunity {
+                        stashContent
+                    } else {
+                        pluginContent
+                    }
+                }
+                .listStyle(.inset)
+                .navigationTitle(selectedSection?.label ?? "Plugins")
+                .searchable(text: $searchText, prompt: "Search plugins")
+                .toolbar { pluginToolbar }
+                .overlay { emptyOrLoadingOverlay }
+                .refreshable {
+                    await PrismediaRefreshAction.perform { await refreshSelected() }
                 }
             }
-            .overlay { emptyOrLoadingOverlay }
-            .refreshable {
-                await PrismediaRefreshAction.perform {
-                    await refreshSelected()
+        #else
+            NavigationSplitView {
+                List(visibleSections, selection: $selectedSection) { section in
+                    NavigationLink(value: section) {
+                        Label {
+                            Text(section.label)
+                        } icon: {
+                            Image(systemName: section.systemImage)
+                                .foregroundStyle(sectionAccent(for: section))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
+                    }
+                }
+                .prismediaScreenBackground()
+                .navigationTitle("Plugins")
+            } detail: {
+                List {
+                    if selectedSection == .stashCommunity {
+                        stashContent
+                    } else {
+                        pluginContent
+                    }
+                }
+                .prismediaScreenBackground()
+                .navigationTitle(selectedSection?.label ?? "Plugins")
+                .searchable(text: $searchText, prompt: "Search plugins")
+                .toolbar {
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        if selectedSection != .stashCommunity {
+                            Menu("Filter Capabilities", systemImage: "line.3.horizontal.decrease.circle") {
+                                Picker("Entity Kind", selection: $capabilityFilter) {
+                                    Text("All Capabilities").tag("all")
+                                    ForEach(capabilityKinds, id: \.self) { kind in Text(kind).tag(kind) }
+                                }
+                            }
+                        }
+                        Button("Refresh", systemImage: "arrow.clockwise") { Task { await refreshSelected() } }
+                            .disabled(isLoading || isRefreshingStash)
+                    }
+                }
+                .overlay { emptyOrLoadingOverlay }
+                .refreshable {
+                    await PrismediaRefreshAction.perform {
+                        await refreshSelected()
+                    }
                 }
             }
-        }
-        .prismediaScreenBackground()
-        .task { await loadCatalog() }
-        .onChange(of: selectedSection) {
-            searchText = ""
-            capabilityFilter = "all"
-            if selectedSection == .stashCommunity, stashScrapers.isEmpty { Task { await loadStash() } }
-        }
-        .sheet(item: $selectedPlugin) { plugin in
-            AdministrativePluginDetailView(plugin: plugin, service: service) {
-                Task { await loadCatalog() }
+        #endif
+    }
+
+    @ToolbarContentBuilder
+    private var pluginToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            if selectedSection != .stashCommunity {
+                Menu("Filter Capabilities", systemImage: "line.3.horizontal.decrease.circle") {
+                    Picker("Entity Kind", selection: $capabilityFilter) {
+                        Text("All Capabilities").tag("all")
+                        ForEach(capabilityKinds, id: \.self) { kind in Text(kind).tag(kind) }
+                    }
+                }
             }
+
+            Button("Refresh", systemImage: "arrow.clockwise") {
+                Task { await refreshSelected() }
+            }
+            .disabled(isLoading || isRefreshingStash)
         }
-        .alert(
-            "Plugin Action Failed",
-            isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(errorMessage ?? "Unknown error")
-        }
-        .accessibilityIdentifier("administration.plugins")
     }
 
     @ViewBuilder
@@ -105,7 +160,13 @@ struct AdministrativePluginsView: View {
                     HStack(spacing: PrismediaSpacing.small) {
                         Label(
                             plugin.installed ? (plugin.enabled ? "Installed" : "Disabled") : "Available",
-                            systemImage: plugin.installed ? "checkmark.circle" : "arrow.down.circle")
+                            systemImage: plugin.installed ? "checkmark.circle" : "arrow.down.circle"
+                        )
+                        .foregroundStyle(
+                            plugin.installed && plugin.enabled
+                                ? PrismediaColor.materialSpectrumGreen
+                                : PrismediaColor.textSecondary
+                        )
                         if plugin.updateAvailable {
                             Label("v\(plugin.availableVersion ?? "latest") available", systemImage: "sparkles")
                         }

@@ -8,6 +8,7 @@ struct AdministrativeJobCatalogRow: View {
     let queuedCount: Int
     let failedCount: Int
     let isWorking: Bool
+    let accent: Color
     let onRun: () -> Void
     let onStop: () -> Void
     let onClearFailures: () -> Void
@@ -23,6 +24,7 @@ struct AdministrativeJobCatalogRow: View {
                 }
             } icon: {
                 Image(systemName: systemImage)
+                    .foregroundStyle(accent)
             }
 
             Spacer(minLength: PrismediaSpacing.small)
@@ -66,6 +68,7 @@ struct AdministrativeJobCatalogRow: View {
                 queuedCount: 12,
                 failedCount: 0,
                 isWorking: false,
+                accent: PrismediaColor.materialSpectrumGreen,
                 onRun: {},
                 onStop: {},
                 onClearFailures: {}

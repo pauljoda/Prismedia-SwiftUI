@@ -117,9 +117,11 @@ struct DashboardView: View {
             .navigationTitle("Prismedia")
             .prismediaInlineNavigationTitle()
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    dashboardBrandTitle
-                }
+                #if !os(macOS)
+                    ToolbarItem(placement: .principal) {
+                        dashboardBrandTitle
+                    }
+                #endif
 
                 ToolbarItem(placement: .primaryAction) {
                     PrismediaAccountMenu(

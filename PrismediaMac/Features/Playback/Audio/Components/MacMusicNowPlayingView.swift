@@ -8,6 +8,7 @@
         @State private var artworkPalette: ArtworkPalette?
 
         let engine: AVPlayerAudioPlaybackEngine
+        let onClose: () -> Void
 
         var body: some View {
             Group {
@@ -35,6 +36,13 @@
                 }
             }
             .navigationTitle("Now Playing")
+            .overlay(alignment: .topTrailing) {
+                Button("Close Now Playing", systemImage: "xmark", action: onClose)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .padding(PrismediaSpacing.medium)
+            }
             .onChange(of: engine.elapsedTime) { _, elapsedTime in
                 if !isScrubbing { scrubPosition = elapsedTime }
             }
@@ -188,7 +196,7 @@
         #Preview("Mac Now Playing") {
             @Previewable @State var controller = MusicPreviewData.controller()
             @Previewable @State var engine = AVPlayerAudioPlaybackEngine()
-            MacMusicNowPlayingView(engine: engine)
+            MacMusicNowPlayingView(engine: engine, onClose: {})
                 .environment(controller)
                 .frame(width: 360, height: 720)
         }

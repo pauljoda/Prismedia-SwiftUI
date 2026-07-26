@@ -28,14 +28,17 @@
                     if showsMiniPlayer {
                         MacMusicMiniPlayerView(
                             engine: engine,
-                            showNowPlaying: { nowPlayingPresented = true }
+                            showNowPlaying: { nowPlayingPresented.toggle() }
                         )
                         .environment(controller)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
                 .inspector(isPresented: $nowPlayingPresented) {
-                    MacMusicNowPlayingView(engine: engine)
+                    MacMusicNowPlayingView(
+                        engine: engine,
+                        onClose: { nowPlayingPresented = false }
+                    )
                         .environment(controller)
                         .inspectorColumnWidth(min: 300, ideal: 360, max: 480)
                 }

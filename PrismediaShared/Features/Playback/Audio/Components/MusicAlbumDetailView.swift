@@ -186,7 +186,7 @@
         }
 
         #if DEBUG
-            fileprivate static let previewDetail: EntityDetail = {
+            static let previewDetail: EntityDetail = {
                 let json = """
                     {"id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","kind":"audio-library","title":"1","hasSourceMedia":true,
                     "capabilities":[],"relationships":[{"kind":"music-artist","label":"Artist","entities":[{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","kind":"music-artist","title":"The Beatles"}]}],

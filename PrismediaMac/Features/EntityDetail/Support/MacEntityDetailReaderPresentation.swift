@@ -7,7 +7,15 @@ extension View {
         item: Binding<Item?>,
         @ViewBuilder content: @escaping (Item) -> Content
     ) -> some View {
-        sheet(item: item, content: content)
+        sheet(item: item) { item in
+            content(item)
+                .frame(
+                    minWidth: 720,
+                    idealWidth: 960,
+                    minHeight: 560,
+                    idealHeight: 720
+                )
+        }
     }
 }
 

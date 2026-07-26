@@ -149,6 +149,13 @@ final class EPUBPublicationLoaderTests: XCTestCase {
         let sanitized = try String(contentsOf: publication.chapters[1].fileURL, encoding: .utf8)
         XCTAssertFalse(sanitized.localizedCaseInsensitiveContains("<script"))
         XCTAssertTrue(sanitized.contains("Content-Security-Policy"))
+
+        let sanitizedData = try Data(contentsOf: publication.chapters[1].fileURL)
+        let parser = XMLParser(data: sanitizedData)
+        XCTAssertTrue(
+            parser.parse(),
+            "Sanitized XHTML must remain well-formed XML: \(parser.parserError?.localizedDescription ?? "unknown error")"
+        )
     }
 
     func testMetadataOnlyLoadDoesNotExtractPublicationFiles() throws {

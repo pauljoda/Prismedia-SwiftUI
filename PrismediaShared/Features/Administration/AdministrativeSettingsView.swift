@@ -37,6 +37,106 @@ struct AdministrativeSettingsView: View {
 
     var body: some View {
         NavigationStack {
+            settingsRootContent
+                .prismediaScreenBackground()
+                .overlay {
+                    if isWorking && sections.isEmpty {
+                        PrismediaLoadingView("Loading settings…")
+                    } else if isWorking {
+                        ProgressView("Loading settings…")
+                    }
+                }
+                .navigationTitle("Settings")
+                .navigationDestination(for: AdministrativeSettingsSection.self) { section in
+                    AdministrativeSettingsDetailView(
+                        section: currentSection(id: section.id) ?? section,
+                        cacheStatus: cacheStatus,
+                        plugins: plugins,
+                        hidesNsfw: hidesNsfw,
+                        blocklistService: service,
+                        onSave: save,
+                        onClearCache: clearCache,
+                        onCreateBackup: createBackup
+                    )
+                }
+                #if os(iOS) || os(macOS)
+                    .navigationDestination(for: String.self) { destination in
+                        dedicatedDestination(destination)
+                    }
+                #endif
+                .refreshable { await load() }
+                .alert("Settings", isPresented: messageIsPresented) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(message ?? "")
+                }
+        }
+        .task { await load() }
+        .accessibilityIdentifier("administration.settings")
+    }
+
+    @ViewBuilder
+    private var settingsRootContent: some View {
+        #if os(macOS)
+            ScrollView {
+                LazyVGrid(
+                    columns: [
+                        GridItem(
+                            .adaptive(minimum: 260, maximum: 380),
+                            spacing: PrismediaSpacing.large
+                        )
+                    ],
+                    spacing: PrismediaSpacing.large
+                ) {
+                    settingsCard(
+                        title: "Entity Grids",
+                        description: "Artwork, density, labels, and library display preferences.",
+                        systemImage: "rectangle.grid.2x2",
+                        accentID: "app-settings",
+                        destination: "app-settings"
+                    )
+                    settingsCard(
+                        title: "Watched Libraries",
+                        description: "Library roots, scanners, ownership, and access.",
+                        systemImage: "folder",
+                        accentID: "libraries",
+                        destination: "libraries"
+                    )
+
+                    if user.isAdmin {
+                        settingsCard(
+                            title: "Users",
+                            description: "Accounts, roles, and library permissions.",
+                            systemImage: "person.2",
+                            accentID: "users",
+                            destination: "users"
+                        )
+                    }
+
+                    ForEach(sections) { section in
+                        settingsCard(section)
+                    }
+
+                    if user.isAdmin {
+                        settingsCard(
+                            title: "Database Backups",
+                            description: "Create, download, and restore database snapshots.",
+                            systemImage: "archivebox",
+                            accentID: "database-backups",
+                            destination: "database-backups"
+                        )
+                        settingsCard(
+                            title: "Diagnostics",
+                            description: "Inspect server health and troubleshooting information.",
+                            systemImage: "wrench.and.screwdriver",
+                            accentID: "diagnostics",
+                            destination: "diagnostics"
+                        )
+                    }
+                }
+                .padding(PrismediaSpacing.extraExtraLarge)
+            }
+        #else
             List {
                 #if os(iOS) || os(macOS)
                     Section("App Settings") {
@@ -75,42 +175,76 @@ struct AdministrativeSettingsView: View {
                     }
                 #endif
             }
-            .prismediaScreenBackground()
-            .overlay {
-                if isWorking && sections.isEmpty {
-                    PrismediaLoadingView("Loading settings…")
-                } else if isWorking {
-                    ProgressView("Loading settings…")
-                }
-            }
-            .navigationTitle("Settings")
-            .navigationDestination(for: AdministrativeSettingsSection.self) { section in
-                AdministrativeSettingsDetailView(
-                    section: currentSection(id: section.id) ?? section,
-                    cacheStatus: cacheStatus,
-                    plugins: plugins,
-                    hidesNsfw: hidesNsfw,
-                    blocklistService: service,
-                    onSave: save,
-                    onClearCache: clearCache,
-                    onCreateBackup: createBackup
+        #endif
+    }
+
+    #if os(macOS)
+        private func settingsCard(_ section: AdministrativeSettingsSection) -> some View {
+            NavigationLink(value: section) {
+                settingsCardLabel(
+                    title: section.title,
+                    description: section.description,
+                    systemImage: section.systemImageName,
+                    accentID: section.id
                 )
             }
-            #if os(iOS) || os(macOS)
-                .navigationDestination(for: String.self) { destination in
-                    dedicatedDestination(destination)
-                }
-            #endif
-            .refreshable { await load() }
-            .alert("Settings", isPresented: messageIsPresented) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(message ?? "")
-            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("administration.settings.section.\(section.id)")
         }
-        .task { await load() }
-        .accessibilityIdentifier("administration.settings")
-    }
+
+        private func settingsCard(
+            title: String,
+            description: String,
+            systemImage: String,
+            accentID: String,
+            destination: String
+        ) -> some View {
+            NavigationLink(value: destination) {
+                settingsCardLabel(
+                    title: title,
+                    description: description,
+                    systemImage: systemImage,
+                    accentID: accentID
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("administration.settings.section.\(destination)")
+        }
+
+        private func settingsCardLabel(
+            title: String,
+            description: String,
+            systemImage: String,
+            accentID: String
+        ) -> some View {
+            HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+                Image(systemName: systemImage)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(settingsAccent(for: accentID))
+                    .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(PrismediaColor.textPrimary)
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .lineLimit(3)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PrismediaColor.textMuted)
+            }
+            .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+            .padding(PrismediaSpacing.large)
+            .contentShape(.rect)
+            .prismediaCard()
+        }
+    #endif
 
     private var sections: [AdministrativeSettingsSection] {
         AdministrativeSettingsSectionCatalog.sections(for: catalog)

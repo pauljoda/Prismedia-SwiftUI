@@ -94,6 +94,7 @@ let package = Package(
                 "PrismediaiOS/Features",
                 "PrismediaiOS/Infrastructure",
                 "PrismediaMac/Features",
+                "PrismediaMac/Infrastructure",
                 "PrismediaTV/App",
                 "PrismediaTV/Features",
                 "PrismediaTV/Infrastructure",

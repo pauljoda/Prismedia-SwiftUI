@@ -183,7 +183,12 @@ struct AdministrativeJobsView: View {
 
     private func statusLabel(_ title: String, count: Int, systemImage: String) -> some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            Label(title, systemImage: systemImage)
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: systemImage)
+                    .foregroundStyle(statusAccent(for: title))
+            }
                 .font(.caption)
                 .foregroundStyle(PrismediaColor.textSecondary)
             Text(count, format: .number)
@@ -207,6 +212,7 @@ struct AdministrativeJobsView: View {
             queuedCount: count(type: type, statuses: queuedStatuses),
             failedCount: count(type: type, statuses: failedStatuses),
             isWorking: isWorking,
+            accent: jobAccent(for: type),
             onRun: { Task { await createJob(type: type) } },
             onStop: { Task { await cancelJobs(type: type) } },
             onClearFailures: { Task { await clearFailures(type: type) } }
@@ -243,6 +249,27 @@ struct AdministrativeJobsView: View {
     private var queuedJobs: [AdministrativeJobRun] { jobs(statuses: queuedStatuses) }
     private var failedJobs: [AdministrativeJobRun] { jobs(statuses: failedStatuses) }
     private var completedJobs: [AdministrativeJobRun] { jobs(statuses: ["completed"]) }
+
+    private func statusAccent(for title: String) -> Color {
+        switch title {
+        case "Active": PrismediaColor.materialSpectrumCyan
+        case "Queued": PrismediaColor.materialSpectrumYellow
+        case "Failed": PrismediaColor.materialSpectrumRed
+        default: PrismediaColor.textSecondary
+        }
+    }
+
+    private func jobAccent(for type: String) -> Color {
+        let order = [
+            "scan-library",
+            "scan-gallery",
+            "scan-book",
+            "scan-audio",
+            "refresh-collection",
+            "monitored-search",
+        ]
+        return PrismediaColor.materialSpectrumColor(at: order.firstIndex(of: type) ?? 0)
+    }
 
     private func totalCount(statuses: Set<String>) -> Int {
         snapshot.counts

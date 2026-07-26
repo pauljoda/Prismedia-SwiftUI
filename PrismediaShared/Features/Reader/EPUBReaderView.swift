@@ -66,6 +66,82 @@
                     onReady: onReady
                 )
             #else
+                fallbackReader
+                    .prismediaScreenBackground(palette: artworkPalette)
+                    .sheet(item: $presentedSheet) { sheet in
+                        fallbackSheet(sheet)
+                    }
+                    .task { await load() }
+                    .onDisappear {
+                        progressSaveTask?.cancel()
+                        saveProgress()
+                        Task { await progressWriter.flush() }
+                    }
+                    .accessibilityIdentifier("epub-reader.content")
+            #endif
+        }
+
+        @ViewBuilder
+        private var fallbackReader: some View {
+            #if os(macOS)
+                VStack(spacing: 0) {
+                    HStack(spacing: PrismediaSpacing.medium) {
+                        Text(publication?.title ?? useCase.book.title)
+                            .font(.headline)
+                            .lineLimit(1)
+
+                        Spacer(minLength: PrismediaSpacing.medium)
+
+                        if let publication {
+                            Text("Chapter \(currentChapter + 1) of \(publication.chapters.count)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(PrismediaColor.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, PrismediaSpacing.large)
+                    .padding(.vertical, PrismediaSpacing.medium)
+                    .background(PrismediaColor.groupedContentBackground)
+
+                    Divider()
+                    content
+                    Divider()
+
+                    HStack(spacing: PrismediaSpacing.small) {
+                        Button("Close", systemImage: "xmark", action: close)
+
+                        Spacer()
+
+                        if let companionPlayer = activeCompanionPlayer,
+                           companionPlayer.currentTrack != nil
+                        {
+                            ReaderAudiobookButton(
+                                isPlaying: companionPlayer.isPlaying,
+                                action: { presentedSheet = .audiobook }
+                            )
+                        }
+
+                        if let publication {
+                            Button("Previous Chapter", systemImage: "chevron.left") {
+                                selectChapter(max(0, currentChapter - 1))
+                            }
+                            .disabled(currentChapter == 0)
+
+                            Button("Choose Chapter", systemImage: "text.book.closed") {
+                                presentedSheet = .chapters
+                            }
+
+                            Button("Next Chapter", systemImage: "chevron.right") {
+                                selectChapter(min(publication.chapters.count - 1, currentChapter + 1))
+                            }
+                            .disabled(currentChapter >= publication.chapters.count - 1)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.horizontal, PrismediaSpacing.large)
+                    .padding(.vertical, PrismediaSpacing.medium)
+                    .background(PrismediaColor.groupedContentBackground)
+                }
+            #else
                 NavigationStack {
                     content
                         .navigationTitle(publication?.title ?? useCase.book.title)
@@ -106,17 +182,6 @@
                             }
                         }
                 }
-                .prismediaScreenBackground(palette: artworkPalette)
-                .sheet(item: $presentedSheet) { sheet in
-                    fallbackSheet(sheet)
-                }
-                .task { await load() }
-                .onDisappear {
-                    progressSaveTask?.cancel()
-                    saveProgress()
-                    Task { await progressWriter.flush() }
-                }
-                .accessibilityIdentifier("epub-reader.content")
             #endif
         }
 
@@ -125,13 +190,25 @@
             if let publication,
                 publication.chapters.indices.contains(currentChapter)
             {
-                EPUBWebDocumentView(
-                    chapter: publication.chapters[currentChapter],
-                    rootURL: publication.rootURL,
-                    initialScrollProgress: currentChapterProgress,
-                    onLocalNavigation: openLocalURL,
-                    onScrollProgress: recordScrollProgress
-                )
+                Group {
+                    #if os(macOS)
+                        MacEPUBDocumentView(
+                            chapter: publication.chapters[currentChapter],
+                            rootURL: publication.rootURL,
+                            initialScrollProgress: currentChapterProgress,
+                            onLocalNavigation: openLocalURL,
+                            onScrollProgress: recordScrollProgress
+                        )
+                    #else
+                        EPUBWebDocumentView(
+                            chapter: publication.chapters[currentChapter],
+                            rootURL: publication.rootURL,
+                            initialScrollProgress: currentChapterProgress,
+                            onLocalNavigation: openLocalURL,
+                            onScrollProgress: recordScrollProgress
+                        )
+                    #endif
+                }
                 .id("\(publication.chapters[currentChapter].id)-\(readerNavigationRequestID)")
                 .accessibilityLabel("EPUB reader")
                 .accessibilityValue("Chapter \(currentChapter + 1) of \(publication.chapters.count)")

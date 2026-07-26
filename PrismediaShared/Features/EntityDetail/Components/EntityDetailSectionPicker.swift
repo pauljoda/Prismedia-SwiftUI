@@ -25,6 +25,9 @@ struct EntityDetailSectionPicker: View {
             }
         }
         .pickerStyle(.segmented)
+        #if os(macOS)
+            .labelsHidden()
+        #endif
         .padding(.horizontal, horizontalPadding)
         .prismediaFocusSection()
         .accessibilityIdentifier("entity-detail.section-picker")
