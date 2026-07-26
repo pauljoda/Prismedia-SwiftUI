@@ -22,8 +22,9 @@ struct EntityThumbnailLandscapeCardView: View {
                     proxy.size.height,
                     proxy.size.width / item.thumbnailArtworkPresentation.aspectRatio
                 )
+                let metadataHeight = max(0, proxy.size.height - artworkHeight)
 
-                VStack(spacing: 0) {
+                ZStack(alignment: .top) {
                     EntityThumbnailArtworkView(
                         item: item,
                         layout: layout,
@@ -33,13 +34,12 @@ struct EntityThumbnailLandscapeCardView: View {
                     )
                     .frame(width: proxy.size.width, height: artworkHeight)
 
-                    metadata
-                        .frame(
-                            width: proxy.size.width,
-                            height: max(0, proxy.size.height - artworkHeight),
-                            alignment: .topLeading
-                        )
-                        .clipped()
+                    Color.clear
+                        .frame(width: proxy.size.width, height: metadataHeight)
+                        .overlay(alignment: .bottomLeading) {
+                            metadata
+                        }
+                        .frame(maxHeight: .infinity, alignment: .bottom)
                 }
             }
         }
@@ -88,7 +88,7 @@ struct EntityThumbnailLandscapeCardView: View {
         ViewThatFits(in: .vertical) {
             detailedMetadata
             compactMetadata
-            titleOnlyMetadata
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.leading, PrismediaSpacing.small)
         .padding(.trailing, metadataTrailingPadding)
@@ -97,6 +97,12 @@ struct EntityThumbnailLandscapeCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
+                if reduceTransparency {
+                    PrismediaColor.groupedContentBackground
+                } else {
+                    Rectangle()
+                        .fill(.thinMaterial)
+                }
                 legibilityGradient
                 accessibilityScrim
             }
@@ -138,17 +144,6 @@ struct EntityThumbnailLandscapeCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             metadataActionRow(limit: 2)
-        }
-    }
-
-    private var titleOnlyMetadata: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            Text(item.title)
-                .font(PrismediaTypography.captionEmphasized)
-                .foregroundStyle(PrismediaColor.onMedia)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
         }
     }
 
@@ -231,14 +226,47 @@ struct EntityThumbnailLandscapeCardView: View {
 }
 
 #if DEBUG
-    #Preview("Extended Landscape Card") {
+    #Preview("Extended Landscape Card · Stable Artwork") {
         PreviewShell {
-            EntityThumbnailLandscapeCardView(
-                item: PrismediaPreviewData.videos[0],
-                layout: .grid,
-                preferredWidth: 320,
-                onPreviewHoldChanged: { _ in }
-            )
+            HStack(alignment: .top, spacing: PrismediaSpacing.large) {
+                EntityThumbnailLandscapeCardView(
+                    item: EntityThumbnail(
+                        id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
+                        kind: .video,
+                        title: "Pilot",
+                        parentKind: .videoSeason,
+                        sortOrder: 6,
+                        coverURL: "/preview/video-1.jpg",
+                        meta: [
+                            EntityThumbnailMeta(icon: "duration", label: "43:22"),
+                            EntityThumbnailMeta(icon: "resolution", label: "4K"),
+                        ],
+                        hasSourceMedia: true
+                    ),
+                    layout: .grid,
+                    preferredWidth: 220,
+                    onPreviewHoldChanged: { _ in }
+                )
+
+                EntityThumbnailLandscapeCardView(
+                    item: EntityThumbnail(
+                        id: UUID(uuidString: "88888888-8888-8888-8888-888888888888")!,
+                        kind: .video,
+                        title: "Beware the Second Beating",
+                        parentKind: .videoSeason,
+                        sortOrder: 7,
+                        coverURL: "/preview/video-1.jpg",
+                        meta: [
+                            EntityThumbnailMeta(icon: "duration", label: "43:22"),
+                            EntityThumbnailMeta(icon: "resolution", label: "4K"),
+                        ],
+                        hasSourceMedia: true
+                    ),
+                    layout: .grid,
+                    preferredWidth: 220,
+                    onPreviewHoldChanged: { _ in }
+                )
+            }
             .padding()
             .background(PrismediaBackdrop())
         }
