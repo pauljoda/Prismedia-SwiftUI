@@ -107,12 +107,10 @@
                     Divider()
 
                     HStack(spacing: PrismediaSpacing.small) {
-                        Button("Close", systemImage: "xmark", action: close)
-
                         Spacer()
 
                         if let companionPlayer = activeCompanionPlayer,
-                           companionPlayer.currentTrack != nil
+                            companionPlayer.currentTrack != nil
                         {
                             ReaderAudiobookButton(
                                 isPlaying: companionPlayer.isPlaying,

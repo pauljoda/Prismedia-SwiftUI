@@ -1,25 +1,20 @@
 #if os(macOS)
-import SwiftUI
+    import SwiftUI
 
-extension View {
-    @ViewBuilder
-    func prismediaReaderCover<Item: Identifiable, Content: View>(
-        item: Binding<Item?>,
-        @ViewBuilder content: @escaping (Item) -> Content
-    ) -> some View {
-        sheet(item: item) { item in
-            content(item)
-                .frame(
-                    minWidth: 720,
-                    idealWidth: 960,
-                    minHeight: 560,
-                    idealHeight: 720
-                )
+    extension View {
+        @ViewBuilder
+        func prismediaReaderCover<Item: Identifiable, Content: View>(
+            item: Binding<Item?>,
+            @ViewBuilder content: @escaping (Item) -> Content
+        ) -> some View where Item: Hashable {
+            navigationDestination(item: item) { item in
+                content(item)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
-}
 
-#Preview("Mac Reader Presentation Host") {
-    Text("Reader presentation host")
-}
+    #Preview("Mac Reader Presentation Host") {
+        Text("Reader presentation host")
+    }
 #endif

@@ -6,50 +6,52 @@
         @State private var playback = MusicPlaybackComposition()
         @State private var miniPlayerVisibility = MusicMiniPlayerVisibility()
         @State private var nowPlayingPresented = false
+        @State private var waveform: MusicWaveform?
+        @Namespace private var playerArtworkNamespace
 
         private let client: PrismediaAPIClient
+        private let waveformLoader: any MusicWaveformLoading
         private let content: Content
 
         @MainActor
         init(
             client: PrismediaAPIClient,
+            waveformLoader: (any MusicWaveformLoading)? = nil,
             @ViewBuilder content: () -> Content
         ) {
             self.client = client
+            self.waveformLoader = waveformLoader ?? PrismediaMusicWaveformLoader(client: client)
             self.content = content()
         }
 
         var body: some View {
+            let presentation = MacMusicPlaybackPresentationContext(
+                controller: controller,
+                engine: engine,
+                waveform: waveform,
+                artworkNamespace: playerArtworkNamespace,
+                isInspectorPresented: $nowPlayingPresented
+            )
+
             content
                 .environment(controller)
                 .environment(\.musicMiniPlayerVisibility, miniPlayerVisibility)
+                .environment(\.macMusicPlaybackPresentation, presentation)
                 .focusedSceneValue(controller)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if showsMiniPlayer {
-                        MacMusicMiniPlayerView(
-                            engine: engine,
-                            showNowPlaying: { nowPlayingPresented.toggle() }
-                        )
-                        .environment(controller)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
-                .inspector(isPresented: $nowPlayingPresented) {
-                    MacMusicNowPlayingView(
-                        engine: engine,
-                        onClose: { nowPlayingPresented = false }
-                    )
-                        .environment(controller)
-                        .inspectorColumnWidth(min: 300, ideal: 360, max: 480)
-                }
-                .animation(.snappy, value: showsMiniPlayer)
                 .onAppear(perform: connectPlaybackSystem)
+                .task(id: controller.currentTrack?.id) {
+                    await loadWaveform()
+                }
                 .onChange(of: scenePhase) { _, phase in
                     guard phase != .active else { return }
                     Task { await controller.flushAudiobookProgress() }
                 }
                 .onChange(of: controller.currentQueueID) {
                     miniPlayerVisibility.revealForPlaybackActivity()
+                }
+                .onChange(of: controller.currentTrack?.id) { _, trackID in
+                    guard trackID == nil else { return }
+                    nowPlayingPresented = false
                 }
                 .onChange(of: controller.isPlaying) { _, isPlaying in
                     guard isPlaying else { return }
@@ -59,6 +61,12 @@
 
         private func connectPlaybackSystem() {
             playback.connect(to: client)
+            #if DEBUG
+                let tracks = PrismediaUITestBootstrap.musicTracks()
+                if !tracks.isEmpty {
+                    controller.play(tracks: tracks, queueMode: .ordered)
+                }
+            #endif
             engine.onPlaybackEnded = { [weak controller] in
                 Task { @MainActor in await controller?.handlePlaybackEnded() }
             }
@@ -70,8 +78,19 @@
 
         private var engine: AVPlayerAudioPlaybackEngine { playback.engine }
         private var controller: MusicPlayerController { playback.controller }
-        private var showsMiniPlayer: Bool {
-            controller.currentTrack != nil && !miniPlayerVisibility.isSuppressed
+
+        private func loadWaveform() async {
+            waveform = nil
+            guard let trackID = controller.currentTrack?.id else { return }
+            do {
+                let resolved = try await waveformLoader.loadWaveform(for: trackID)
+                guard !Task.isCancelled, controller.currentTrack?.id == trackID else { return }
+                waveform = resolved
+            } catch is CancellationError {
+                return
+            } catch {
+                waveform = nil
+            }
         }
     }
 
@@ -79,11 +98,14 @@
         #Preview("Mac Music Playback Host") {
             PreviewShell(signedIn: true) {
                 MacMusicPlaybackHost(
-                    client: PrismediaPreviewData.model(signedIn: true).client!
+                    client: PrismediaPreviewData.model(signedIn: true).client!,
+                    waveformLoader: MusicWaveformPreviewLoader()
                 ) {
-                    NavigationStack {
-                        Text("Music Library")
-                            .navigationTitle("Albums")
+                    MacMusicPlaybackPresentationHost {
+                        NavigationStack {
+                            Text("Music Library")
+                                .navigationTitle("Albums")
+                        }
                     }
                 }
             }

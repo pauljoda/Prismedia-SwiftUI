@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct EntityReaderPresentation: Identifiable, Equatable {
+struct EntityReaderPresentation: Identifiable, Hashable {
     let detail: EntityDetail
     let command: BookReaderCommand
     let initialEPUBLocation: String?

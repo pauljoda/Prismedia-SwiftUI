@@ -128,12 +128,23 @@ public struct PrismediaShellView: View {
                 selection: sidebarSelection(videoPlaybackSession: videoPlaybackSession)
             )
         } detail: {
-            wideDetail(
-                user: user,
-                client: client,
-                detailDependencies: detailDependencies,
-                videoPlaybackSession: videoPlaybackSession
-            )
+            #if os(macOS)
+                MacMusicPlaybackPresentationHost {
+                    wideDetail(
+                        user: user,
+                        client: client,
+                        detailDependencies: detailDependencies,
+                        videoPlaybackSession: videoPlaybackSession
+                    )
+                }
+            #else
+                wideDetail(
+                    user: user,
+                    client: client,
+                    detailDependencies: detailDependencies,
+                    videoPlaybackSession: videoPlaybackSession
+                )
+            #endif
         }
         .navigationSplitViewStyle(.balanced)
         .onAppear {

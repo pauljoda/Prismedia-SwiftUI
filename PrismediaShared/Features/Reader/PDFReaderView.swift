@@ -41,50 +41,63 @@
         }
 
         public var body: some View {
-            NavigationStack {
-                content
-                    .navigationTitle(useCase.book.title)
-                    .prismediaInlineNavigationTitle()
-                    .toolbar {
+            readerNavigation
+                .prismediaScreenBackground(palette: artworkPalette)
+                .sheet(item: $presentedSheet) { sheet in
+                    readerSheet(sheet)
+                }
+                .task { await load() }
+                .onChange(of: currentPage) { _, _ in saveProgress() }
+                .onChange(of: layoutMode) { _, _ in saveProgress() }
+                .onChange(of: searchQuery) { _, query in
+                    guard query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    searchMatches = []
+                    selectedSearchResult = nil
+                }
+                .onDisappear {
+                    searchTask?.cancel()
+                    saveProgress()
+                    Task { await progressWriter.flush() }
+                }
+                .accessibilityIdentifier("pdf-reader.content")
+        }
+
+        @ViewBuilder
+        private var readerNavigation: some View {
+            #if os(macOS)
+                readerPage
+            #else
+                NavigationStack { readerPage }
+            #endif
+        }
+
+        private var readerPage: some View {
+            content
+                .navigationTitle(useCase.book.title)
+                .prismediaInlineNavigationTitle()
+                .toolbar {
+                    #if os(iOS)
                         ToolbarItem(placement: .cancellationAction) {
                             ReaderCloseButton(accessibilityPrefix: "pdf-reader", action: close)
                         }
-                        if let document {
-                            ToolbarItemGroup(placement: .primaryAction) {
-                                tableOfContentsButton
-                                searchButton
-                                viewOptionsButton
-                            }
-                            ReaderPageNavigationToolbar(
-                                status: readerProgressStatus(for: document),
-                                accessibilityPrefix: "pdf-reader",
-                                canGoPrevious: currentPage > 0,
-                                canGoNext: currentPage < document.pageCount - 1,
-                                onOpenContents: openContents,
-                                onPrevious: showPreviousPage,
-                                onNext: showNextPage
-                            )
+                    #endif
+                    if let document {
+                        ToolbarItemGroup(placement: .primaryAction) {
+                            tableOfContentsButton
+                            searchButton
+                            viewOptionsButton
                         }
+                        ReaderPageNavigationToolbar(
+                            status: readerProgressStatus(for: document),
+                            accessibilityPrefix: "pdf-reader",
+                            canGoPrevious: currentPage > 0,
+                            canGoNext: currentPage < document.pageCount - 1,
+                            onOpenContents: openContents,
+                            onPrevious: showPreviousPage,
+                            onNext: showNextPage
+                        )
                     }
-            }
-            .prismediaScreenBackground(palette: artworkPalette)
-            .sheet(item: $presentedSheet) { sheet in
-                readerSheet(sheet)
-            }
-            .task { await load() }
-            .onChange(of: currentPage) { _, _ in saveProgress() }
-            .onChange(of: layoutMode) { _, _ in saveProgress() }
-            .onChange(of: searchQuery) { _, query in
-                guard query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                searchMatches = []
-                selectedSearchResult = nil
-            }
-            .onDisappear {
-                searchTask?.cancel()
-                saveProgress()
-                Task { await progressWriter.flush() }
-            }
-            .accessibilityIdentifier("pdf-reader.content")
+                }
         }
 
         @ViewBuilder

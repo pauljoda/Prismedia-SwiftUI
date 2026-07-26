@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(macOS)
     import SwiftUI
 
     struct MusicNowPlayingQueueView: View {
@@ -8,10 +8,29 @@
 
         let currentTrack: MusicTrack
         let artworkNamespace: Namespace.ID
+        let artworkIsSource: Bool
         let isActive: Bool
         @Binding var showsHistory: Bool
         let onShowPlayer: () -> Void
-        let onAddToCollection: () -> Void
+        let onAddToCollection: (() -> Void)?
+
+        init(
+            currentTrack: MusicTrack,
+            artworkNamespace: Namespace.ID,
+            artworkIsSource: Bool = true,
+            isActive: Bool,
+            showsHistory: Binding<Bool>,
+            onShowPlayer: @escaping () -> Void,
+            onAddToCollection: (() -> Void)?
+        ) {
+            self.currentTrack = currentTrack
+            self.artworkNamespace = artworkNamespace
+            self.artworkIsSource = artworkIsSource
+            self.isActive = isActive
+            _showsHistory = showsHistory
+            self.onShowPlayer = onShowPlayer
+            self.onAddToCollection = onAddToCollection
+        }
 
         var body: some View {
             ZStack {
@@ -38,6 +57,7 @@
                 MusicNowPlayingCurrentTrackView(
                     track: currentTrack,
                     artworkNamespace: artworkNamespace,
+                    artworkIsSource: artworkIsSource,
                     showsContent: isActive,
                     hasHistory: !controller.queue.history.isEmpty,
                     onShowPlayer: onShowPlayer,

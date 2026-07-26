@@ -1,12 +1,29 @@
-#if os(iOS)
+#if os(iOS) || os(macOS)
     import SwiftUI
 
     struct MusicNowPlayingPlayerView: View {
         let track: MusicTrack
         let artworkNamespace: Namespace.ID
+        let artworkIsSource: Bool
         let isActive: Bool
         let onShowQueue: () -> Void
-        let onAddToCollection: () -> Void
+        let onAddToCollection: (() -> Void)?
+
+        init(
+            track: MusicTrack,
+            artworkNamespace: Namespace.ID,
+            artworkIsSource: Bool = true,
+            isActive: Bool,
+            onShowQueue: @escaping () -> Void,
+            onAddToCollection: (() -> Void)?
+        ) {
+            self.track = track
+            self.artworkNamespace = artworkNamespace
+            self.artworkIsSource = artworkIsSource
+            self.isActive = isActive
+            self.onShowQueue = onShowQueue
+            self.onAddToCollection = onAddToCollection
+        }
 
         var body: some View {
             VStack(spacing: PrismediaSpacing.extraExtraLarge) {
@@ -23,7 +40,8 @@
                                         id: "music.now-playing.artwork.\(track.id.uuidString)",
                                         in: artworkNamespace,
                                         properties: .frame,
-                                        anchor: .center
+                                        anchor: .center,
+                                        isSource: artworkIsSource
                                     )
                                     .zIndex(1)
                                     .shadow(color: .black.opacity(0.4), radius: 24, y: 16)
@@ -59,8 +77,10 @@
                         .lineLimit(1)
                 }
                 Spacer()
-                Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
-                    .labelStyle(.iconOnly)
+                if let onAddToCollection {
+                    Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
+                        .labelStyle(.iconOnly)
+                }
             }
             .font(.body.weight(.semibold))
             .padding(.horizontal, PrismediaSpacing.section)

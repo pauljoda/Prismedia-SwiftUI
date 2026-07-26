@@ -64,42 +64,36 @@ struct MacMusicAlbumDetailView: View {
             systemImage: "music.note",
             palette: $artworkPalette
         ) {
-            List {
-                albumHeader
-                    .listRowInsets(
-                        EdgeInsets(
-                            top: PrismediaSpacing.extraLarge,
-                            leading: PrismediaSpacing.extraExtraLarge,
-                            bottom: PrismediaSpacing.large,
-                            trailing: PrismediaSpacing.extraExtraLarge
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                    albumHeader
+                        .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+                        .padding(.top, PrismediaSpacing.extraLarge)
+
+                    EntityDetailSectionPicker(
+                        sections: sections,
+                        selection: $selectedSection,
+                        horizontalPadding: PrismediaSpacing.extraExtraLarge
+                    )
+
+                    EntityDetailSectionSwitcher(
+                        presentation: presentation,
+                        selection: selectedSection,
+                        horizontalPadding: PrismediaSpacing.extraExtraLarge,
+                        support: sectionSupport
+                    ) {
+                        MusicTrackSectionsView(
+                            sections: trackSections,
+                            onPlay: { track in
+                                controller.play(tracks: tracks, startingAt: track.id)
+                            },
+                            onAddToCollection: nil
                         )
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-
-                EntityDetailSectionPicker(
-                    sections: sections,
-                    selection: $selectedSection,
-                    horizontalPadding: PrismediaSpacing.extraExtraLarge
-                )
-
-                EntityDetailSectionSwitcher(
-                    presentation: presentation,
-                    selection: selectedSection,
-                    horizontalPadding: PrismediaSpacing.extraExtraLarge,
-                    support: sectionSupport
-                ) {
-                    MusicTrackSectionsView(
-                        sections: trackSections,
-                        onPlay: { track in
-                            controller.play(tracks: tracks, startingAt: track.id)
-                        },
-                        onAddToCollection: nil
-                    )
+                        .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+                    }
                 }
+                .padding(.bottom, PrismediaSpacing.extraExtraLarge)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
         }
         .navigationTitle(detail.title)
         .task(id: detail.parentEntityID) { await resolveParentArtist() }
@@ -170,6 +164,7 @@ struct MacMusicAlbumDetailView: View {
                     action: playAlbum
                 )
                 .disabled(tracks.isEmpty)
+                .accessibilityIdentifier("music.album.play")
 
                 PrismediaButton(
                     "Shuffle",
@@ -177,6 +172,7 @@ struct MacMusicAlbumDetailView: View {
                     action: shuffleAlbum
                 )
                 .disabled(tracks.isEmpty)
+                .accessibilityIdentifier("music.album.shuffle")
             }
             .padding(.top, PrismediaSpacing.small)
         }

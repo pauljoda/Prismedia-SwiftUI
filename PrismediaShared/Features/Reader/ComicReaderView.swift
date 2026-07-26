@@ -32,58 +32,78 @@
         }
 
         public var body: some View {
-            NavigationStack {
-                ZStack {
-                    Color.black.ignoresSafeArea()
-                    content
-                        .ignoresSafeArea()
+            readerNavigation
+                .sheet(item: $presentedSheet) { sheet in
+                    readerSheet(sheet)
                 }
-                .foregroundStyle(PrismediaColor.onMedia)
-                .toolbar {
-                    ComicReaderToolbar(
-                        onClose: close,
-                        onOpenSettings: openSettings
-                    )
-                    ReaderPageNavigationToolbar(
-                        status: readerProgressStatus,
-                        accessibilityPrefix: "comic-reader",
-                        canGoPrevious: canGoPrevious,
-                        canGoNext: canGoNext,
-                        onOpenContents: openContents,
-                        onPrevious: goPrevious,
-                        onNext: goNext
-                    )
+                .accessibilityIdentifier("comic-reader.content")
+                .task {
+                    await load()
+                    scheduleChromeHide()
                 }
-                #if os(iOS)
-                    .toolbarVisibility(
-                        chrome.isVisible ? .visible : .hidden,
-                        for: .navigationBar, .bottomBar
-                    )
-                #else
-                    .toolbarVisibility(chrome.isVisible ? .visible : .hidden)
-                #endif
+                .onChange(of: chrome.isVisible) {
+                    scheduleChromeHide()
+                }
+                .onChange(of: currentIndex) {
+                    scheduleChromeHide()
+                }
+                .onChange(of: presentedSheet) {
+                    updateChromePin()
+                }
+                .onDisappear {
+                    chromeTask?.cancel()
+                    Task { await progressWriter.flush() }
+                }
+        }
+
+        @ViewBuilder
+        private var readerNavigation: some View {
+            #if os(macOS)
+                readerPage
+            #else
+                NavigationStack { readerPage }
+            #endif
+        }
+
+        private var readerPage: some View {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                content
+                    .ignoresSafeArea()
             }
-            .sheet(item: $presentedSheet) { sheet in
-                readerSheet(sheet)
+            .foregroundStyle(PrismediaColor.onMedia)
+            .toolbar {
+                ComicReaderToolbar(
+                    showsCloseButton: !isMacReaderDestination,
+                    onClose: close,
+                    onOpenSettings: openSettings
+                )
+                ReaderPageNavigationToolbar(
+                    status: readerProgressStatus,
+                    accessibilityPrefix: "comic-reader",
+                    canGoPrevious: canGoPrevious,
+                    canGoNext: canGoNext,
+                    onOpenContents: openContents,
+                    onPrevious: goPrevious,
+                    onNext: goNext
+                )
             }
-            .accessibilityIdentifier("comic-reader.content")
-            .task {
-                await load()
-                scheduleChromeHide()
-            }
-            .onChange(of: chrome.isVisible) {
-                scheduleChromeHide()
-            }
-            .onChange(of: currentIndex) {
-                scheduleChromeHide()
-            }
-            .onChange(of: presentedSheet) {
-                updateChromePin()
-            }
-            .onDisappear {
-                chromeTask?.cancel()
-                Task { await progressWriter.flush() }
-            }
+            #if os(iOS)
+                .toolbarVisibility(
+                    chrome.isVisible ? .visible : .hidden,
+                    for: .navigationBar, .bottomBar
+                )
+            #else
+                .toolbarVisibility(chrome.isVisible ? .visible : .hidden)
+            #endif
+        }
+
+        private var isMacReaderDestination: Bool {
+            #if os(macOS)
+                true
+            #else
+                false
+            #endif
         }
 
         @ViewBuilder

@@ -64,6 +64,7 @@ let package = Package(
                 "PrismediaMac/PrismediaMac.entitlements",
                 "PrismediaMac/PrismediaMacApp.swift",
                 "PrismediaMac/PrismediaMacCommands.swift",
+                "PrismediaMac/App/Commands/PrismediaMacUndoRedoCommands.swift",
                 "PrismediaTV/Assets.xcassets",
                 "PrismediaTV/Info.plist",
                 "PrismediaTV/PrismediaTV.entitlements",

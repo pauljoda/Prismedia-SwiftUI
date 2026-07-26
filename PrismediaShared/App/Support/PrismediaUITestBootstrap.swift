@@ -225,5 +225,36 @@
             arguments.contains("-prismedia-ui-testing")
                 && environment["PRISMEDIA_UI_TEST_STEP4_FIXTURES"] == "1"
         }
+
+        static func musicTracks(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> [MusicTrack] {
+            guard arguments.contains("-prismedia-ui-testing") else { return [] }
+
+            if let value = environment["PRISMEDIA_UI_TEST_MUSIC_TRACKS_JSON"],
+                let data = value.data(using: .utf8),
+                let tracks = try? JSONDecoder().decode([MusicTrack].self, from: data),
+                !tracks.isEmpty
+            {
+                return tracks
+            }
+
+            guard
+                let idValue = environment["PRISMEDIA_UI_TEST_MUSIC_TRACK_ID"],
+                let id = UUID(uuidString: idValue),
+                let title = environment["PRISMEDIA_UI_TEST_MUSIC_TRACK_TITLE"],
+                !title.isEmpty
+            else { return [] }
+
+            return [MusicTrack(
+                id: id,
+                title: title,
+                artist: environment["PRISMEDIA_UI_TEST_MUSIC_TRACK_ARTIST"],
+                album: environment["PRISMEDIA_UI_TEST_MUSIC_TRACK_ALBUM"],
+                artworkPath: environment["PRISMEDIA_UI_TEST_MUSIC_TRACK_ARTWORK_PATH"],
+                duration: environment["PRISMEDIA_UI_TEST_MUSIC_TRACK_DURATION"].flatMap(Double.init)
+            )]
+        }
     }
 #endif

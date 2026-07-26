@@ -1,14 +1,35 @@
-#if os(iOS)
+#if os(iOS) || os(macOS)
     import SwiftUI
 
     struct MusicNowPlayingCurrentTrackView: View {
         let track: MusicTrack
         let artworkNamespace: Namespace.ID
+        let artworkIsSource: Bool
         let showsContent: Bool
         let hasHistory: Bool
         let onShowPlayer: () -> Void
         let onShowHistory: () -> Void
-        let onAddToCollection: () -> Void
+        let onAddToCollection: (() -> Void)?
+
+        init(
+            track: MusicTrack,
+            artworkNamespace: Namespace.ID,
+            artworkIsSource: Bool = true,
+            showsContent: Bool,
+            hasHistory: Bool,
+            onShowPlayer: @escaping () -> Void,
+            onShowHistory: @escaping () -> Void,
+            onAddToCollection: (() -> Void)?
+        ) {
+            self.track = track
+            self.artworkNamespace = artworkNamespace
+            self.artworkIsSource = artworkIsSource
+            self.showsContent = showsContent
+            self.hasHistory = hasHistory
+            self.onShowPlayer = onShowPlayer
+            self.onShowHistory = onShowHistory
+            self.onAddToCollection = onAddToCollection
+        }
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
@@ -44,7 +65,8 @@
                                         id: "music.now-playing.artwork.\(track.id.uuidString)",
                                         in: artworkNamespace,
                                         properties: .frame,
-                                        anchor: .center
+                                        anchor: .center,
+                                        isSource: artworkIsSource
                                     )
                                     .zIndex(1)
                                 }
@@ -68,9 +90,11 @@
                     }
                     .opacity(showsContent ? 1 : 0)
                     Spacer(minLength: 0)
-                    Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
-                        .labelStyle(.iconOnly)
-                        .opacity(showsContent ? 1 : 0)
+                    if let onAddToCollection {
+                        Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
+                            .labelStyle(.iconOnly)
+                            .opacity(showsContent ? 1 : 0)
+                    }
                 }
             }
         }

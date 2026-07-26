@@ -19,5 +19,8 @@ struct PrismediaiOSApp: App {
             }
             .environment(environment)
         }
+        .commands {
+            PrismediaNsfwCommands(environment: environment)
+        }
     }
 }

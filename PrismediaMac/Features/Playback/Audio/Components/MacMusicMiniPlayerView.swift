@@ -4,12 +4,13 @@
 
     struct MacMusicMiniPlayerView: View {
         @Environment(\.musicMiniPlayerVisibility) private var visibility
-        @Environment(MusicPlayerController.self) private var controller
         @State private var artworkPalette: ArtworkPalette?
-        @State private var isExpanded = false
-        @State private var volume = 1.0
+        @State private var positionAnchor = MacMusicPlaybackPositionAnchor()
 
+        let controller: MusicPlayerController
         let engine: AVPlayerAudioPlaybackEngine
+        let waveform: MusicWaveform?
+        let artworkNamespace: Namespace.ID
         let showNowPlaying: () -> Void
 
         var body: some View {
@@ -19,23 +20,10 @@
                         trackButton(track)
                         transport
 
-                        if isExpanded {
-                            timeline(track)
-                            volumeControl
-                        }
-
-                        Button("Toggle Now Playing", systemImage: "list.bullet", action: showNowPlaying)
+                        Button("Show Now Playing", systemImage: "sidebar.right", action: showNowPlaying)
                             .labelStyle(.iconOnly)
-                            .help("Show or hide Now Playing")
-
-                        Button(
-                            isExpanded ? "Use Compact Player" : "Expand Player",
-                            systemImage: isExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right"
-                        ) {
-                            withAnimation(.snappy) { isExpanded.toggle() }
-                        }
-                        .labelStyle(.iconOnly)
-                        .help(isExpanded ? "Use Compact Player" : "Expand Player")
+                            .foregroundStyle(accent)
+                            .help("Show Now Playing Inspector")
 
                         Button("Hide Player", systemImage: "xmark") {
                             visibility?.hideByUser()
@@ -46,15 +34,11 @@
                     .padding(.horizontal, PrismediaSpacing.medium)
                     .padding(.vertical, PrismediaSpacing.small)
 
-                    ProgressView(value: progress, total: 1)
-                        .progressViewStyle(.linear)
-                        .controlSize(.mini)
-                        .tint(accent)
-                        .accessibilityHidden(true)
+                    timeline(track)
                 }
                 .buttonStyle(.plain)
                 .controlSize(.large)
-                .frame(width: isExpanded ? 760 : 470)
+                .frame(width: 520)
                 .glassEffect(.regular, in: .rect(cornerRadius: PrismediaRadius.control))
                 .overlay {
                     RoundedRectangle(cornerRadius: PrismediaRadius.control)
@@ -72,15 +56,8 @@
                         visibility?.hideByUser()
                     }
                 }
-                .onAppear {
-                    volume = Double(engine.player.volume)
-                }
-                .onChange(of: volume) { _, nextVolume in
-                    engine.player.volume = Float(nextVolume)
-                }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("music.mini-player")
-                .animation(.snappy, value: isExpanded)
             }
         }
 
@@ -94,6 +71,12 @@
                     )
                     .frame(width: 40, height: 40)
                     .clipShape(.rect(cornerRadius: PrismediaRadius.badge))
+                    .matchedGeometryEffect(
+                        id: "music.now-playing.artwork.\(track.id.uuidString)",
+                        in: artworkNamespace,
+                        properties: .frame,
+                        isSource: true
+                    )
 
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
                         Text(track.title)
@@ -105,7 +88,7 @@
                             .lineLimit(1)
                     }
                 }
-                .frame(width: isExpanded ? 190 : 170, alignment: .leading)
+                .frame(width: 230, alignment: .leading)
                 .contentShape(.rect)
             }
             .accessibilityLabel("Show Now Playing for \(track.title)")
@@ -115,6 +98,7 @@
             HStack(spacing: PrismediaSpacing.medium) {
                 Button("Previous Track", systemImage: "backward.fill", action: controller.skipToPrevious)
                     .labelStyle(.iconOnly)
+                    .foregroundStyle(secondaryAccent)
                     .disabled(!controller.queue.canGoPrevious)
 
                 Button(
@@ -129,62 +113,75 @@
 
                 Button("Next Track", systemImage: "forward.fill", action: controller.skipToNext)
                     .labelStyle(.iconOnly)
+                    .foregroundStyle(secondaryAccent)
                     .disabled(!controller.queue.canGoNext)
             }
-            .foregroundStyle(PrismediaColor.textPrimary)
         }
 
+        @ViewBuilder
         private func timeline(_ track: MusicTrack) -> some View {
-            VStack(spacing: PrismediaSpacing.extraExtraSmall) {
-                HStack {
-                    Text(MusicPresentation.clockTime(engine.elapsedTime))
-                    Spacer(minLength: PrismediaSpacing.small)
-                    Text("−\(MusicPresentation.clockTime(remainingTime(for: track)))")
-                }
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(PrismediaColor.textMuted)
-
-                Slider(
-                    value: Binding(
-                        get: { min(engine.elapsedTime, duration(for: track)) },
-                        set: { controller.seek(to: $0) }
-                    ),
-                    in: 0...duration(for: track)
-                )
-                .tint(accent)
-                .controlSize(.mini)
-                .accessibilityLabel("Playback Position")
-            }
-            .frame(width: 130)
-        }
-
-        private var volumeControl: some View {
-            HStack(spacing: PrismediaSpacing.extraSmall) {
-                Image(systemName: volume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                    .font(.caption)
-                    .foregroundStyle(PrismediaColor.textSecondary)
-                Slider(value: $volume, in: 0...1)
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !controller.isPlaying)) { timeline in
+                if let waveform, controller.context?.isAudiobook != true {
+                    MacMusicWaveformStrip(
+                        waveform: waveform,
+                        position: interpolatedPosition(at: timeline.date, track: track),
+                        duration: duration(for: track),
+                        accent: accent,
+                        secondaryAccent: secondaryAccent,
+                        onSeek: seek
+                    )
+                } else {
+                    Slider(
+                        value: Binding(
+                            get: { interpolatedPosition(at: timeline.date, track: track) },
+                            set: seek
+                        ),
+                        in: 0...duration(for: track)
+                    )
+                    .tint(accent)
                     .controlSize(.mini)
-                    .accessibilityLabel("Volume")
+                    .accessibilityLabel("Playback Position")
+                    .padding(.horizontal, PrismediaSpacing.medium)
+                    .padding(.bottom, PrismediaSpacing.extraSmall)
+                }
             }
-            .frame(width: 86)
+            .onAppear(perform: synchronizePositionAnchor)
+            .onChange(of: engine.elapsedTime) { _, value in
+                positionAnchor.synchronize(to: value)
+            }
+            .onChange(of: controller.isPlaying) { _, _ in synchronizePositionAnchor() }
+            .onChange(of: controller.playbackRate) { _, _ in synchronizePositionAnchor() }
+            .onChange(of: track.id) { _, _ in synchronizePositionAnchor() }
         }
 
         private var accent: Color {
             artworkPalette?.primary.color ?? PrismediaColor.materialSpectrumGreen
         }
 
-        private var progress: Double {
-            guard let track = controller.currentTrack else { return 0 }
-            return min(max(engine.elapsedTime / duration(for: track), 0), 1)
+        private var secondaryAccent: Color {
+            artworkPalette?.secondary.color ?? PrismediaColor.textSecondary
         }
 
         private func duration(for track: MusicTrack) -> Double {
             max(engine.duration, track.duration ?? 0, 1)
         }
 
-        private func remainingTime(for track: MusicTrack) -> Double {
-            max(0, duration(for: track) - engine.elapsedTime)
+        private func interpolatedPosition(at date: Date, track: MusicTrack) -> Double {
+            positionAnchor.position(
+                at: date,
+                isPlaying: controller.isPlaying,
+                playbackRate: controller.playbackRate,
+                duration: duration(for: track)
+            )
+        }
+
+        private func seek(to position: Double) {
+            positionAnchor.synchronize(to: position)
+            controller.seek(to: position)
+        }
+
+        private func synchronizePositionAnchor() {
+            positionAnchor.synchronize(to: engine.elapsedTime)
         }
 
         private func togglePlayback() {
@@ -198,11 +195,18 @@
         #Preview("Mac Music Floating Player") {
             @Previewable @State var controller = MusicPreviewData.controller()
             @Previewable @State var engine = AVPlayerAudioPlaybackEngine()
+            @Previewable @Namespace var artworkNamespace
 
             PreviewShell(signedIn: true) {
-                MacMusicMiniPlayerView(engine: engine, showNowPlaying: {})
-                    .environment(controller)
-                    .frame(width: 860, height: 120)
+                MacMusicMiniPlayerView(
+                    controller: controller,
+                    engine: engine,
+                    waveform: MusicWaveformPreviewLoader.waveform,
+                    artworkNamespace: artworkNamespace,
+                    showNowPlaying: {}
+                )
+                .environment(controller)
+                .frame(width: 860, height: 180)
             }
         }
     #endif

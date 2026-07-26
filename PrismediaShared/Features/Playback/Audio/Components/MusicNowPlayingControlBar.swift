@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(macOS)
     import SwiftUI
 
     struct MusicNowPlayingControlBar: View {
@@ -10,9 +10,11 @@
 
         var body: some View {
             PrismediaGlassButtonGroup(spacing: PrismediaSpacing.medium) {
-                MusicRoutePicker()
-                    .glassEffect(.regular.interactive(), in: .circle)
-                    .accessibilityLabel("Choose Audio Output")
+                #if os(iOS)
+                    MusicRoutePicker()
+                        .glassEffect(.regular.interactive(), in: .circle)
+                        .accessibilityLabel("Choose Audio Output")
+                #endif
 
                 HStack(spacing: PrismediaSpacing.large) {
                     shuffleButton

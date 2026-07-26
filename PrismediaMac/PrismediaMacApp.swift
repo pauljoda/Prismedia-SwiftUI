@@ -16,7 +16,10 @@ struct PrismediaMacApp: App {
         .windowResizability(.contentMinSize)
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
+            PrismediaMacUndoRedoCommands()
             PrismediaMacCommands(environment: environment, router: router)
+            PrismediaNsfwCommands(environment: environment)
+            InspectorCommands()
         }
     }
 }
