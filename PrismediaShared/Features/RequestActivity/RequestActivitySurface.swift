@@ -79,7 +79,11 @@ import SwiftUI
                 .searchable(text: $query, prompt: searchPrompt)
                 .navigationTitle(selectedIDs.isEmpty ? section.title : "\(selectedIDs.count) Selected")
                 .toolbar { toolbarContent }
-                .refreshable { await refresh() }
+                .refreshable {
+                    await PrismediaRefreshAction.perform {
+                        await refresh()
+                    }
+                }
                 .overlay { overlayContent }
                 .confirmationDialog(
                     removalTitle,

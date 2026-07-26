@@ -42,7 +42,11 @@ struct AdministrativeLibrariesView: View {
         .prismediaScreenBackground()
         .navigationTitle("Watched Libraries")
         .toolbar { Button("Add Library", systemImage: "plus") { editor = AdministrativeLibraryEditorTarget() } }
-        .refreshable { await load() }
+        .refreshable {
+            await PrismediaRefreshAction.perform {
+                await load()
+            }
+        }
         .task { await load() }
         .sheet(item: $editor) { target in
             AdministrativeLibraryRootEditor(

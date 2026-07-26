@@ -183,13 +183,8 @@ extension EntityDetailView {
                     alignment: .topLeading
                 )
                 .refreshable {
-                    await loadDetail()
-                    if case .content(let refreshedDetail) = state.phase {
-                        await loadVideoProgress(for: refreshedDetail)
-                        await loadReadingState(for: refreshedDetail)
-                        await loadCollectionMembers(for: refreshedDetail, force: true)
-                        await loadAudiobook(for: refreshedDetail)
-                        await loadBookChapters(for: refreshedDetail)
+                    await PrismediaRefreshAction.perform {
+                        await refreshDetailContent()
                     }
                 }
                 .task(id: detail.id) {

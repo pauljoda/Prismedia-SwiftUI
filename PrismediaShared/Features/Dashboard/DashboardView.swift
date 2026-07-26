@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @Binding private var navigationPath: [EntityLink]
     @State private var snapshot = DashboardSnapshot()
+    @State private var loadedRevision: Int?
     private let service: DashboardService
     private let detailDependencies: EntityDetailDependencies
     private let user: UserAccount
@@ -133,11 +134,18 @@ struct DashboardView: View {
             #if os(iOS)
                 .toolbarBackground(.hidden, for: .navigationBar)
             #endif
-            .refreshable { await reload() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    _ = await reload(preservingContent: true)
+                }
+            }
             .prismediaEntityDestinations(dependencies: detailDependencies)
         }
         .task(id: reloadRevision) {
-            await reload()
+            guard loadedRevision != reloadRevision else { return }
+            if await reload(preservingContent: true) {
+                loadedRevision = reloadRevision
+            }
         }
         .accessibilityIdentifier("shell.dashboard")
     }
@@ -180,11 +188,17 @@ struct DashboardView: View {
         }
     }
 
-    private func reload() async {
-        snapshot.state = .loading
+    @discardableResult
+    private func reload(
+        preservingContent: Bool
+    ) async -> Bool {
+        if !preservingContent || snapshot.state == .idle {
+            snapshot.state = .loading
+        }
         let loaded = await service.load()
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled else { return false }
         snapshot = loaded
+        return true
     }
 
     private func navigate(_ link: EntityLink) {

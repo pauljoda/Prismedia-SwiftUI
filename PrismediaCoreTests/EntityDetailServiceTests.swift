@@ -54,6 +54,30 @@ final class EntityDetailServiceTests: XCTestCase {
         XCTAssertEqual(detail.title, "Arrival")
     }
 
+    func testVisibleRefreshKeepsLoadedContentAndFailurePreservesIt() throws {
+        var state = EntityDetailState()
+        let initialRequest = try XCTUnwrap(state.beginLoad())
+        let initialDetail = try makeDetail(title: "Arrival")
+        state.finishLoad(.content(initialDetail), request: initialRequest)
+
+        let refreshRequest = try XCTUnwrap(
+            state.beginLoad(preservingContent: true)
+        )
+
+        guard case .content(let visibleDetail) = state.phase else {
+            return XCTFail("Expected refresh to keep the loaded detail visible.")
+        }
+        XCTAssertEqual(visibleDetail.title, "Arrival")
+
+        state.finishLoad(.failure("Offline"), request: refreshRequest)
+
+        guard case .content(let retainedDetail) = state.phase else {
+            return XCTFail("Expected a failed refresh to retain the loaded detail.")
+        }
+        XCTAssertEqual(retainedDetail.title, "Arrival")
+        XCTAssertEqual(state.mutationErrorMessage, "Offline")
+    }
+
     func testFailedMutationPreservesContentAndPublishesActionableError() async throws {
         let initial = try makeDetail(title: "Arrival", capabilities: #"[{"kind":"rating","value":2}]"#)
         let service = EntityDetailMutationServiceStub(

@@ -90,7 +90,11 @@
             .task { await loadIfNeeded() }
             .task(id: parentArtistIDs) { await resolveParentArtists() }
             .task(id: visibleTrackIDs) { await resolveVisibleTracks() }
-            .refreshable { await refresh() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await refresh()
+                }
+            }
         }
 
         @ViewBuilder

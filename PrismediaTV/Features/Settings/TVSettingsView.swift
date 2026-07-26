@@ -41,7 +41,11 @@ import SwiftUI
                 }
             }
             .task { await loadServerSettings() }
-            .refreshable { await loadServerSettings() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await loadServerSettings()
+                }
+            }
             .alert("Sign Out?", isPresented: $isConfirmingSignOut) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive, action: onSignOut)

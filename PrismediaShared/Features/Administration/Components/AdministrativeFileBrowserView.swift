@@ -80,7 +80,11 @@ import UniformTypeIdentifiers
             )
             .navigationSubtitle(location.path.isEmpty ? "Library root" : location.path)
             .toolbar { toolbarContent }
-            .refreshable { await load() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await load()
+                }
+            }
             .overlay {
                 if isLoading, entries.isEmpty {
                     PrismediaLoadingView("Loading folder…")

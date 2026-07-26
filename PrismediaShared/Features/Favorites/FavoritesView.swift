@@ -3,6 +3,7 @@ import SwiftUI
 struct FavoritesView: View {
     @Binding private var navigationPath: NavigationPath
     @State private var snapshot = FavoritesSnapshot()
+    @State private var loadedRevision: Int?
 
     private let service: FavoritesService
     private let gridLoader: any EntityGridLoading
@@ -43,19 +44,27 @@ struct FavoritesView: View {
                     )
 
                 case .empty:
-                    ContentUnavailableView(
-                        "No Favorites Yet",
-                        systemImage: "heart",
-                        description: Text(
-                            "Entities you mark as favorites will appear here."
+                    ScrollView {
+                        ContentUnavailableView(
+                            "No Favorites Yet",
+                            systemImage: "heart",
+                            description: Text(
+                                "Entities you mark as favorites will appear here."
+                            )
                         )
-                    )
+                        .frame(maxWidth: .infinity, minHeight: 320)
+                    }
+                    .scrollBounceBehavior(.always, axes: .vertical)
                 }
             }
             .prismediaScreenBackground()
             .navigationTitle("Favorites")
             .prismediaInlineNavigationTitle()
-            .refreshable { await reload() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    _ = await reload(preservingContent: true)
+                }
+            }
             .navigationDestination(for: FavoritesSectionDefinition.self) { section in
                 FavoriteEntityGridView(
                     section: section,
@@ -68,7 +77,10 @@ struct FavoritesView: View {
             .prismediaEntityDestinations(dependencies: detailDependencies)
         }
         .task(id: reloadRevision) {
-            await reload()
+            guard loadedRevision != reloadRevision else { return }
+            if await reload(preservingContent: true) {
+                loadedRevision = reloadRevision
+            }
         }
         .accessibilityIdentifier("shell.favorites")
     }
@@ -77,11 +89,17 @@ struct FavoritesView: View {
         navigationPath.append(definition)
     }
 
-    private func reload() async {
-        snapshot.state = .loading
+    @discardableResult
+    private func reload(
+        preservingContent: Bool
+    ) async -> Bool {
+        if !preservingContent || snapshot.state == .idle {
+            snapshot.state = .loading
+        }
         let loaded = await service.load()
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled else { return false }
         snapshot = loaded
+        return true
     }
 }
 

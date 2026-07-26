@@ -33,7 +33,11 @@ import SwiftUI
                     .accessibilityIdentifier("administration.files.root.\(root.id.uuidString)")
                 }
                 .navigationTitle("Files")
-                .refreshable { await load() }
+                .refreshable {
+                    await PrismediaRefreshAction.perform {
+                        await load()
+                    }
+                }
                 .overlay {
                     if isLoading, roots.isEmpty {
                         PrismediaLoadingView("Loading roots…")

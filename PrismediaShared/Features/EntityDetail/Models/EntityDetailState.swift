@@ -12,19 +12,29 @@ struct EntityDetailState: Sendable {
 
     private var generation = 0
     private var phaseBeforeLoad: EntityDetailPhase?
+    private var preservesContentDuringLoad = false
 
     var detail: EntityDetail? {
         guard case .content(let detail) = phase else { return nil }
         return detail
     }
 
-    mutating func beginLoad() -> EntityDetailRequest? {
+    var needsLoadOnAppearance: Bool {
+        detail == nil && phase.isLoading
+    }
+
+    mutating func beginLoad(
+        preservingContent: Bool = false
+    ) -> EntityDetailRequest? {
         guard !isMutating else { return nil }
         let request = nextRequest()
+        preservesContentDuringLoad = preservingContent && detail != nil
         if !phase.isLoading {
             phaseBeforeLoad = phase
         }
-        phase = .loading
+        if !preservesContentDuringLoad {
+            phase = .loading
+        }
         mutationErrorMessage = nil
         return request
     }
@@ -34,13 +44,21 @@ struct EntityDetailState: Sendable {
         request: EntityDetailRequest
     ) {
         guard isCurrent(request) else { return }
-        defer { phaseBeforeLoad = nil }
+        defer {
+            phaseBeforeLoad = nil
+            preservesContentDuringLoad = false
+        }
 
         switch outcome {
         case .content(let detail):
             phase = .content(detail)
         case .failure(let message):
-            phase = .failure(message)
+            if preservesContentDuringLoad, let phaseBeforeLoad {
+                phase = phaseBeforeLoad
+                mutationErrorMessage = message
+            } else {
+                phase = .failure(message)
+            }
         case .cancelled:
             if let phaseBeforeLoad {
                 phase = phaseBeforeLoad
@@ -110,9 +128,15 @@ struct EntityDetailState: Sendable {
         phase = .content(detail)
     }
 
-    mutating func finishPlaybackRefresh(_ outcome: EntityDetailLoadOutcome) {
-        guard case .content(let detail) = outcome else { return }
+    @discardableResult
+    mutating func finishPlaybackRefresh(
+        _ outcome: EntityDetailLoadOutcome
+    ) -> Bool {
+        guard case .content(let detail) = outcome,
+            detail != self.detail
+        else { return false }
         replaceContent(with: detail)
+        return true
     }
 
     var favoriteToggleMutation: EntityDetailMutation? {

@@ -72,7 +72,11 @@ import SwiftUI
                     }
                 #endif
             }
-            .refreshable { await session.load() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await session.load()
+                }
+            }
             .task(id: compactRefreshIsActive) {
                 guard compactRefreshIsActive else { return }
                 while compactRefreshIsActive {

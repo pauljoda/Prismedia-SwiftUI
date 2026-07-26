@@ -254,6 +254,7 @@ struct VideoEntityPlaybackView: View {
                 await controller?.waitForPendingPlaybackReports()
                 guard !Task.isCancelled else { return }
                 onPlaybackProgressCommitted()
+                await refreshResolvedVideo()
             }
         }
 
@@ -306,6 +307,23 @@ struct VideoEntityPlaybackView: View {
                 return
             } catch {
                 loadFailed = true
+            }
+        }
+
+        private func refreshResolvedVideo() async {
+            guard let presentedVideoDetail else { return }
+            do {
+                let refreshed = try await detailLoader.loadEntity(
+                    id: presentedVideoDetail.id,
+                    kind: presentedVideoDetail.kind
+                )
+                guard !Task.isCancelled else { return }
+                videoDetail = refreshed
+                loadFailed = false
+            } catch is CancellationError {
+                return
+            } catch {
+                // Keep the last playable detail. The visible-page refresh will retry.
             }
         }
     #endif

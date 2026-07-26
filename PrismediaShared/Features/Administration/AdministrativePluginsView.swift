@@ -54,7 +54,11 @@ struct AdministrativePluginsView: View {
                 }
             }
             .overlay { emptyOrLoadingOverlay }
-            .refreshable { await refreshSelected() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await refreshSelected()
+                }
+            }
         }
         .prismediaScreenBackground()
         .task { await loadCatalog() }

@@ -60,7 +60,11 @@ struct AdministrativeDatabaseBackupsView: View {
             }
         }
         .task { await load() }
-        .refreshable { await load() }
+        .refreshable {
+            await PrismediaRefreshAction.perform {
+                await load()
+            }
+        }
         .confirmationDialog("Restore this backup?", isPresented: $confirmsRestore, titleVisibility: .visible) {
             Button("Restore and Restart", role: .destructive) { Task { await restore() } }
         } message: {

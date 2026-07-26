@@ -6,6 +6,7 @@ struct PlaybackStatisticsView: View {
     @State private var timeframe = StatisticsTimeframe.year
     @State private var eventFilter = StatisticsEventFilter.completed
     @State private var kindFilter: EntityKind?
+    @State private var loadedFilterKey: String?
 
     private let service: PlaybackStatisticsService
     private let detailDependencies: EntityDetailDependencies
@@ -41,10 +42,20 @@ struct PlaybackStatisticsView: View {
             }
             .prismediaScreenBackground()
             .navigationTitle("Playback Stats")
-            .refreshable { await reload() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    _ = await reload(preservingContent: true)
+                }
+            }
             .prismediaEntityDestinations(dependencies: detailDependencies)
         }
-        .task(id: filterKey) { await reload() }
+        .task(id: filterKey) {
+            guard loadedFilterKey != filterKey else { return }
+            let preservesContent = loadedFilterKey == nil
+            if await reload(preservingContent: preservesContent) {
+                loadedFilterKey = filterKey
+            }
+        }
         .accessibilityIdentifier("shell.stats")
     }
 
@@ -104,7 +115,11 @@ struct PlaybackStatisticsView: View {
             ContentUnavailableView {
                 Label("Couldn’t Load Stats", systemImage: "wifi.exclamationmark")
             } actions: {
-                Button("Try Again") { Task { await reload() } }
+                Button("Try Again") {
+                    Task {
+                        _ = await reload(preservingContent: true)
+                    }
+                }
             }
         case .content:
             if let response = snapshot.response {
@@ -236,7 +251,10 @@ struct PlaybackStatisticsView: View {
         "\(timeframe.rawValue)|\(eventFilter.rawValue)|\(kindFilter?.rawValue ?? "all")"
     }
 
-    private func reload() async {
+    @discardableResult
+    private func reload(
+        preservingContent: Bool
+    ) async -> Bool {
         let to = now
         let from =
             timeframe.days.flatMap {
@@ -248,10 +266,13 @@ struct PlaybackStatisticsView: View {
             kind: kindFilter,
             eventKind: eventFilter.kind
         )
-        snapshot.state = .loading
+        if !preservingContent || snapshot.state == .idle {
+            snapshot.state = .loading
+        }
         let loaded = await service.load(query)
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled else { return false }
         snapshot = loaded
+        return true
     }
 
     private let statisticKinds: [EntityKind] = [

@@ -24,7 +24,11 @@ struct AdministrativeJobsView: View {
                 }
             }
             .navigationTitle("Job Control")
-            .refreshable { await load() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await load()
+                }
+            }
             .alert("Jobs", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {

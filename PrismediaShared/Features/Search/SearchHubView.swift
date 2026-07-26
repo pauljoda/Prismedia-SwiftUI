@@ -86,7 +86,9 @@ struct SearchHubView: View {
             .prismediaScreenBackground()
             .prismediaKeyboardDismissal()
             .refreshable {
-                await retryActiveContent()
+                await PrismediaRefreshAction.perform {
+                    await retryActiveContent()
+                }
             }
             .navigationTitle("Browse")
             .accessibilityIdentifier("shell.search")

@@ -51,7 +51,11 @@ struct AdministrativeUsersView: View {
         .prismediaScreenBackground()
         .navigationTitle("Users")
         .task { await load() }
-        .refreshable { await load() }
+        .refreshable {
+            await PrismediaRefreshAction.perform {
+                await load()
+            }
+        }
         .sheet(item: $editor) { target in
             AdministrativeUserEditor(
                 target: target,

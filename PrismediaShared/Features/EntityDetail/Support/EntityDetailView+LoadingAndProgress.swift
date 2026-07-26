@@ -22,8 +22,16 @@ extension EntityDetailView {
         collectionMembersState.finishLoad(outcome, request: request)
     }
 
-    func loadDetail() async {
-        guard let request = state.beginLoad() else { return }
+    func loadDetailIfNeeded() async {
+        guard state.needsLoadOnAppearance else { return }
+        videoPlaybackPreparation.reset()
+        await loadDetail(preservingContent: false)
+    }
+
+    func loadDetail(
+        preservingContent: Bool = true
+    ) async {
+        guard let request = state.beginLoad(preservingContent: preservingContent) else { return }
         let outcome = await service.load(id: link.entityID, kind: link.kind)
         state.finishLoad(outcome, request: request)
         #if os(iOS) || os(macOS)
@@ -35,27 +43,90 @@ extension EntityDetailView {
     func refreshPlaybackState() async {
         let outcome = await service.load(id: link.entityID, kind: link.kind)
         guard !Task.isCancelled else { return }
-        state.finishPlaybackRefresh(outcome)
+        let detailChanged = state.finishPlaybackRefresh(outcome)
         guard case .content(let detail) = state.phase else { return }
         await loadVideoProgress(for: detail)
-        dependencies.onEntityMutated()
+        if detailChanged {
+            dependencies.onEntityMutated()
+        }
+    }
+
+    var livePlaybackRefreshTaskID: String {
+        [
+            currentDetail?.id.uuidString ?? "none",
+            pageIsActive ? "page-active" : "page-inactive",
+            scenePhase == .active ? "scene-active" : "scene-inactive",
+        ].joined(separator: "|")
+    }
+
+    var livePlaybackRefreshIsActive: Bool {
+        guard pageIsActive,
+            scenePhase == .active,
+            dependencies.videoPlaybackService != nil,
+            let detail = currentDetail
+        else { return false }
+
+        return detail.kind == .videoSeries
+            || detail.kind == .videoSeason
+            || PlayableVideoResolver.videoID(
+                in: detail,
+                sourceThumbnail: link.sourceThumbnail
+            ) != nil
+    }
+
+    func pollPlaybackStateWhileVisible() async {
+        guard livePlaybackRefreshIsActive else { return }
+
+        while livePlaybackRefreshIsActive {
+            do {
+                try await Task.sleep(for: .seconds(12))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled, livePlaybackRefreshIsActive else { return }
+            await refreshPlaybackState()
+        }
+    }
+
+    func refreshDetailContent() async {
+        await loadDetail()
+        guard case .content(let refreshedDetail) = state.phase else { return }
+        await loadVideoProgress(for: refreshedDetail)
+        await loadReadingState(for: refreshedDetail)
+        await loadCollectionMembers(for: refreshedDetail, force: true)
+        await loadAudiobook(for: refreshedDetail)
+        await loadBookChapters(for: refreshedDetail)
     }
 
     func loadVideoProgress(for detail: EntityDetail) async {
         guard detail.kind == .videoSeries || detail.kind == .videoSeason else {
-            videoProgressEpisode = nil
-            videoProgressErrorMessage = nil
+            if videoProgressEpisode != nil {
+                videoProgressEpisode = nil
+            }
+            if videoProgressErrorMessage != nil {
+                videoProgressErrorMessage = nil
+            }
             return
         }
 
         do {
-            videoProgressEpisode = try await videoProgressService.loadProgressEpisode(for: detail)
-            videoProgressErrorMessage = nil
+            let nextEpisode = try await videoProgressService.loadProgressEpisode(for: detail)
+            if videoProgressEpisode != nextEpisode {
+                videoProgressEpisode = nextEpisode
+            }
+            if videoProgressErrorMessage != nil {
+                videoProgressErrorMessage = nil
+            }
         } catch is CancellationError {
             return
         } catch {
-            videoProgressEpisode = nil
-            videoProgressErrorMessage = error.localizedDescription
+            if videoProgressEpisode != nil {
+                videoProgressEpisode = nil
+            }
+            let nextMessage = error.localizedDescription
+            if videoProgressErrorMessage != nextMessage {
+                videoProgressErrorMessage = nextMessage
+            }
         }
     }
 

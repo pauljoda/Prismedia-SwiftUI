@@ -3,6 +3,8 @@ import SwiftUI
 /// Generic native detail coordinator for every Prismedia entity kind.
 public struct EntityDetailView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.prismediaPageIsActive) var pageIsActive
+    @Environment(\.scenePhase) var scenePhase
     @Environment(\.videoPlaybackSession) var videoPlaybackSession
     #if os(iOS) || os(macOS)
         @Environment(MusicPlayerController.self) var musicPlayer
@@ -122,8 +124,10 @@ public struct EntityDetailView: View {
             }
         #endif
         .task(id: link) {
-            videoPlaybackPreparation.reset()
-            await loadDetail()
+            await loadDetailIfNeeded()
+        }
+        .task(id: livePlaybackRefreshTaskID) {
+            await pollPlaybackStateWhileVisible()
         }
         .onDisappear {
             videoPlaybackPreparation.reset()

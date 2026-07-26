@@ -51,7 +51,11 @@ import SwiftUI
             }
             .prismediaScreenBackground()
             .task { await loadIfNeeded() }
-            .refreshable { await load() }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await load()
+                }
+            }
             .accessibilityIdentifier("tv.home")
         }
 

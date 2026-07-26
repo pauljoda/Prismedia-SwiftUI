@@ -178,7 +178,11 @@ import SwiftUI
             .overlay { overlayContent }
             .navigationTitle(detail?.summary.title ?? "Acquisition")
             .toolbar { listToolbarContent }
-            .refreshable { await load(showSpinner: detail == nil) }
+            .refreshable {
+                await PrismediaRefreshAction.perform {
+                    await load(showSpinner: detail == nil)
+                }
+            }
         }
 
         private func summarySection(_ summary: RequestActivityAcquisitionSummary) -> some View {

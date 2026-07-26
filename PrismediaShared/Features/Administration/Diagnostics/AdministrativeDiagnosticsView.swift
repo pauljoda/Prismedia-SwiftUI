@@ -65,7 +65,11 @@ struct AdministrativeDiagnosticsView: View {
         .navigationTitle("Diagnostics")
         .toolbar { Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }.disabled(isLoading) }
         .task { await load() }
-        .refreshable { await load() }
+        .refreshable {
+            await PrismediaRefreshAction.perform {
+                await load()
+            }
+        }
         .confirmationDialog(
             "Rebuild every generated preview?",
             isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }),
