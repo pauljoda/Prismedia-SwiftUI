@@ -12,8 +12,13 @@ import SwiftUI
                         .tag(nil as RequestKindDefinition?)
 
                     ForEach(RequestKindDefinition.allCases) { kind in
-                        Label(kind.label, systemImage: kind.systemImage)
-                            .tag(Optional(kind))
+                        Label {
+                            Text(kind.label)
+                        } icon: {
+                            Image(systemName: kind.systemImage)
+                                .foregroundStyle(kindAccent(for: kind))
+                        }
+                        .tag(Optional(kind))
                     }
                 } label: {
                     Text("Entity Type")
@@ -27,6 +32,10 @@ import SwiftUI
             } footer: {
                 Text("Choose what you want to request. Available providers and search fields update for that type.")
             }
+        }
+
+        private func kindAccent(for kind: RequestKindDefinition) -> Color {
+            PrismediaColor.entityAccent(for: kind == .audiobook ? .audio : kind.entityKind)
         }
     }
 

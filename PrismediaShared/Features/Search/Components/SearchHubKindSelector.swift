@@ -38,10 +38,13 @@ struct SearchHubKindSelector: View {
             Button {
                 filters.toggle(kind)
             } label: {
-                Label(
-                    SearchHubKindCatalog.label(for: kind),
-                    systemImage: SearchHubKindCatalog.systemImage(for: kind)
-                )
+                Label {
+                    Text(SearchHubKindCatalog.label(for: kind))
+                        .foregroundStyle(isSelected ? PrismediaColor.textPrimary : PrismediaColor.textSecondary)
+                } icon: {
+                    Image(systemName: SearchHubKindCatalog.systemImage(for: kind))
+                        .foregroundStyle(PrismediaColor.entityAccent(for: kind))
+                }
                 .font(.caption.weight(.semibold))
                 .lineLimit(1)
                 .frame(maxWidth: usesRegularLayout ? .infinity : nil, alignment: .leading)
@@ -52,7 +55,6 @@ struct SearchHubKindSelector: View {
                         ? PrismediaColor.accent.opacity(PrismediaOpacity.statusFill)
                         : PrismediaColor.controlFill
                 )
-                .foregroundStyle(isSelected ? PrismediaColor.accent : PrismediaColor.textSecondary)
                 .clipShape(.capsule)
                 .contentShape(.capsule)
             }

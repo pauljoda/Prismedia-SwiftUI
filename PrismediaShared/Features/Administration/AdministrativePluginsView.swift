@@ -23,11 +23,17 @@ struct AdministrativePluginsView: View {
         NavigationSplitView {
             List(visibleSections, selection: $selectedSection) { section in
                 NavigationLink(value: section) {
-                    Label(section.label, systemImage: section.systemImage)
+                    Label {
+                        Text(section.label)
+                    } icon: {
+                        Image(systemName: section.systemImage)
+                            .foregroundStyle(sectionAccent(for: section))
+                    }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(.rect)
                 }
             }
+            .prismediaScreenBackground()
             .navigationTitle("Plugins")
         } detail: {
             List {
@@ -37,6 +43,7 @@ struct AdministrativePluginsView: View {
                     pluginContent
                 }
             }
+            .prismediaScreenBackground()
             .navigationTitle(selectedSection?.label ?? "Plugins")
             .searchable(text: $searchText, prompt: "Search plugins")
             .toolbar {
@@ -215,6 +222,11 @@ struct AdministrativePluginsView: View {
 
     private var installedPluginIDs: Set<String> {
         Set(plugins.filter(\.installed).map(\.id))
+    }
+
+    private func sectionAccent(for section: AdministrativePluginsSection) -> Color {
+        let index = visibleSections.firstIndex(of: section) ?? 0
+        return PrismediaColor.materialSpectrumColor(at: index)
     }
 
     private func refreshSelected() async {

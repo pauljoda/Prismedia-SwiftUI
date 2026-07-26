@@ -62,6 +62,16 @@ public enum PrismediaColor {
         ]
     }
 
+    /// The stable material-spectrum accent assigned to an entity family across
+    /// browse, search, request, and identify surfaces.
+    public static func entityAccent(for kind: EntityKind) -> Color {
+        materialSpectrumColor(at: entityMaterialSpectrumIndex(for: kind))
+    }
+
+    public static func entityAccentPair(for kind: EntityKind) -> [Color] {
+        materialSpectrumPair(at: entityMaterialSpectrumIndex(for: kind))
+    }
+
     public static let destructive = Color.red
     public static let warning = spectrumOrange
     public static let success = spectrumGreen
@@ -119,5 +129,24 @@ public enum PrismediaColor {
     private static func wrappedMaterialSpectrumIndex(_ index: Int) -> Int {
         let remainder = index % materialSpectrum.count
         return remainder >= 0 ? remainder : remainder + materialSpectrum.count
+    }
+
+    private static func entityMaterialSpectrumIndex(for kind: EntityKind) -> Int {
+        switch kind {
+        case .video: 0
+        case .movie, .studio: 1
+        case .videoSeries, .videoSeason: 2
+        case .gallery, .tag: 3
+        case .book, .bookVolume, .bookChapter, .bookPage, .bookAuthor: 4
+        case .image: 5
+        case .audio, .audioLibrary, .audioTrack, .musicArtist: 6
+        case .collection: 7
+        case .person: 0
+        default:
+            StableStringHash.paletteIndex(
+                for: kind.rawValue,
+                paletteCount: materialSpectrum.count
+            )
+        }
     }
 }

@@ -20,10 +20,12 @@ struct SearchHubResultGroup: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
             HStack {
-                Label(
-                    section.title,
-                    systemImage: SearchHubKindCatalog.systemImage(for: section.kind)
-                )
+                Label {
+                    Text(section.title)
+                } icon: {
+                    Image(systemName: SearchHubKindCatalog.systemImage(for: section.kind))
+                        .foregroundStyle(PrismediaColor.entityAccent(for: section.kind))
+                }
                 .font(.title2.bold())
                 .foregroundStyle(.primary)
                 .accessibilityAddTraits(.isHeader)

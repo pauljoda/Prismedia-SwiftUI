@@ -118,9 +118,7 @@ import SwiftUI
                 VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                     Image(systemName: systemImage(for: summary.kind))
                         .font(.title3)
-                        .foregroundStyle(
-                            summary.pendingCount > 0 ? PrismediaColor.accent : PrismediaColor.textSecondary
-                        )
+                        .foregroundStyle(PrismediaColor.entityAccent(for: summary.kind))
 
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                         Text(summary.kind.displayLabel)
@@ -161,7 +159,12 @@ import SwiftUI
 
         private func kindLabel(_ summary: IdentifyKindSummary) -> some View {
             HStack {
-                Label(summary.kind.displayLabel, systemImage: "square.grid.2x2")
+                Label {
+                    Text(summary.kind.displayLabel)
+                } icon: {
+                    Image(systemName: systemImage(for: summary.kind))
+                        .foregroundStyle(PrismediaColor.entityAccent(for: summary.kind))
+                }
                 Spacer()
                 if summary.pendingCount > 0 {
                     Text(summary.pendingCount, format: .number)
