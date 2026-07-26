@@ -8,7 +8,9 @@
                 id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1")!,
                 title: "Let It Be",
                 artist: "The Beatles",
+                artistID: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
                 album: "1",
+                albumID: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
                 duration: 243,
                 trackNumber: 1
             ),
@@ -16,7 +18,9 @@
                 id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2")!,
                 title: "Come Together",
                 artist: "The Beatles",
+                artistID: UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!,
                 album: "1",
+                albumID: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
                 duration: 259,
                 trackNumber: 2
             ),

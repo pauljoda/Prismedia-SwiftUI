@@ -10,7 +10,14 @@ final class UserDefaultsMusicPlaybackStateStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = UserDefaultsMusicPlaybackStateStore(defaults: defaults)
         let originalTrack = MusicTrack(id: UUID(), title: "Original Track")
-        let replacementTrack = MusicTrack(id: UUID(), title: "Replacement Track")
+        let replacementTrack = MusicTrack(
+            id: UUID(),
+            title: "Replacement Track",
+            artist: "Artist",
+            artistID: UUID(),
+            album: "Album",
+            albumID: UUID()
+        )
 
         store.save(
             MusicPlaybackRestoration(

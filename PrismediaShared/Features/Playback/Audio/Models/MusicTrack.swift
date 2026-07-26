@@ -5,7 +5,9 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
     public let id: UUID
     public let title: String
     public let artist: String?
+    public let artistID: UUID?
     public let album: String?
+    public let albumID: UUID?
     public let artworkPath: String?
     public let duration: Double?
     public let discNumber: Int?
@@ -20,7 +22,9 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         id: UUID,
         title: String,
         artist: String? = nil,
+        artistID: UUID? = nil,
         album: String? = nil,
+        albumID: UUID? = nil,
         artworkPath: String? = nil,
         duration: Double? = nil,
         discNumber: Int? = nil,
@@ -32,7 +36,9 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         self.id = id
         self.title = title
         self.artist = artist
+        self.artistID = artistID
         self.album = album
+        self.albumID = albumID
         self.artworkPath = artworkPath
         self.duration = duration
         self.discNumber = discNumber
@@ -46,7 +52,9 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         case id
         case title
         case artist
+        case artistID
         case album
+        case albumID
         case artworkPath
         case duration
         case discNumber
@@ -61,7 +69,9 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         id = try container.decode(UUID.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
         artist = try container.decodeIfPresent(String.self, forKey: .artist)
+        artistID = try container.decodeIfPresent(UUID.self, forKey: .artistID)
         album = try container.decodeIfPresent(String.self, forKey: .album)
+        albumID = try container.decodeIfPresent(UUID.self, forKey: .albumID)
         artworkPath = try container.decodeIfPresent(String.self, forKey: .artworkPath)
         duration = try container.decodeIfPresent(Double.self, forKey: .duration)
         discNumber = try container.decodeIfPresent(Int.self, forKey: .discNumber)

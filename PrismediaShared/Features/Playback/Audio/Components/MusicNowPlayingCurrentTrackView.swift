@@ -9,6 +9,7 @@
         let hasHistory: Bool
         let onShowPlayer: () -> Void
         let onShowHistory: () -> Void
+        let onNavigate: (EntityLink) -> Void
         let onAddToCollection: (() -> Void)?
 
         init(
@@ -19,6 +20,7 @@
             hasHistory: Bool,
             onShowPlayer: @escaping () -> Void,
             onShowHistory: @escaping () -> Void,
+            onNavigate: @escaping (EntityLink) -> Void,
             onAddToCollection: (() -> Void)?
         ) {
             self.track = track
@@ -28,6 +30,7 @@
             self.hasHistory = hasHistory
             self.onShowPlayer = onShowPlayer
             self.onShowHistory = onShowHistory
+            self.onNavigate = onNavigate
             self.onAddToCollection = onAddToCollection
         }
 
@@ -90,11 +93,12 @@
                     }
                     .opacity(showsContent ? 1 : 0)
                     Spacer(minLength: 0)
-                    if let onAddToCollection {
-                        Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
-                            .labelStyle(.iconOnly)
-                            .opacity(showsContent ? 1 : 0)
-                    }
+                    MusicTrackActionsMenu(
+                        track: track,
+                        onNavigate: onNavigate,
+                        onAddToCollection: onAddToCollection
+                    )
+                    .opacity(showsContent ? 1 : 0)
                 }
             }
         }
@@ -110,6 +114,7 @@
                 hasHistory: true,
                 onShowPlayer: {},
                 onShowHistory: {},
+                onNavigate: { _ in },
                 onAddToCollection: {}
             )
             .environment(PrismediaPreviewData.model(signedIn: true))

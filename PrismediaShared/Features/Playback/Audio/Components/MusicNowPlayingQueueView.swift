@@ -12,6 +12,7 @@
         let isActive: Bool
         @Binding var showsHistory: Bool
         let onShowPlayer: () -> Void
+        let onNavigate: (EntityLink) -> Void
         let onAddToCollection: (() -> Void)?
 
         init(
@@ -21,6 +22,7 @@
             isActive: Bool,
             showsHistory: Binding<Bool>,
             onShowPlayer: @escaping () -> Void,
+            onNavigate: @escaping (EntityLink) -> Void,
             onAddToCollection: (() -> Void)?
         ) {
             self.currentTrack = currentTrack
@@ -29,6 +31,7 @@
             self.isActive = isActive
             _showsHistory = showsHistory
             self.onShowPlayer = onShowPlayer
+            self.onNavigate = onNavigate
             self.onAddToCollection = onAddToCollection
         }
 
@@ -62,6 +65,7 @@
                     hasHistory: !controller.queue.history.isEmpty,
                     onShowPlayer: onShowPlayer,
                     onShowHistory: showHistory,
+                    onNavigate: onNavigate,
                     onAddToCollection: onAddToCollection
                 )
                 .accessibilityAction(named: "Show History", showHistory)
@@ -189,6 +193,7 @@
                 isActive: true,
                 showsHistory: $showsHistory,
                 onShowPlayer: {},
+                onNavigate: { _ in },
                 onAddToCollection: {}
             )
             .environment(controller)

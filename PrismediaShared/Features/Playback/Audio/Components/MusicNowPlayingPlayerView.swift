@@ -7,6 +7,7 @@
         let artworkIsSource: Bool
         let isActive: Bool
         let onShowQueue: () -> Void
+        let onNavigate: (EntityLink) -> Void
         let onAddToCollection: (() -> Void)?
 
         init(
@@ -15,6 +16,7 @@
             artworkIsSource: Bool = true,
             isActive: Bool,
             onShowQueue: @escaping () -> Void,
+            onNavigate: @escaping (EntityLink) -> Void,
             onAddToCollection: (() -> Void)?
         ) {
             self.track = track
@@ -22,6 +24,7 @@
             self.artworkIsSource = artworkIsSource
             self.isActive = isActive
             self.onShowQueue = onShowQueue
+            self.onNavigate = onNavigate
             self.onAddToCollection = onAddToCollection
         }
 
@@ -77,10 +80,11 @@
                         .lineLimit(1)
                 }
                 Spacer()
-                if let onAddToCollection {
-                    Button("Add to Collection", systemImage: "ellipsis", action: onAddToCollection)
-                        .labelStyle(.iconOnly)
-                }
+                MusicTrackActionsMenu(
+                    track: track,
+                    onNavigate: onNavigate,
+                    onAddToCollection: onAddToCollection
+                )
             }
             .font(.body.weight(.semibold))
             .padding(.horizontal, PrismediaSpacing.section)
@@ -104,6 +108,7 @@
                 artworkNamespace: artworkNamespace,
                 isActive: true,
                 onShowQueue: {},
+                onNavigate: { _ in },
                 onAddToCollection: {}
             )
             .environment(PrismediaPreviewData.model(signedIn: true))

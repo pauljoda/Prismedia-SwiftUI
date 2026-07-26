@@ -64,7 +64,9 @@ extension MusicTrack {
     public init(
         thumbnail: EntityThumbnail,
         album: String? = nil,
+        albumID: UUID? = nil,
         artist: String? = nil,
+        artistID: UUID? = nil,
         artworkPath: String? = nil
     ) {
         let durationLabel = thumbnail.meta.first { $0.icon.localizedCaseInsensitiveContains("duration") }?.label
@@ -75,7 +77,9 @@ extension MusicTrack {
             id: thumbnail.id,
             title: thumbnail.title,
             artist: artist ?? thumbnail.musicMetadataValue(matching: ["artist", "person"]),
+            artistID: artistID,
             album: album ?? thumbnail.musicMetadataValue(matching: ["album", "library"]),
+            albumID: albumID ?? thumbnail.parentEntityID,
             artworkPath: thumbnail.bestCoverPath ?? artworkPath,
             duration: Self.seconds(from: durationLabel),
             discNumber: discTitle.flatMap(Self.trailingInteger),

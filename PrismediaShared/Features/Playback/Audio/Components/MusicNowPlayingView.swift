@@ -5,6 +5,7 @@
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @Environment(\.dismiss) private var dismiss
         @Environment(PrismediaAppEnvironment.self) private var environment
+        @Environment(PrismediaAppRouter.self) private var router
         @Environment(MusicPlayerController.self) private var controller
         @Namespace private var localArtworkNamespace
 
@@ -99,6 +100,7 @@
                         isActive: presentation == .queue,
                         showsHistory: $queueShowsHistory,
                         onShowPlayer: showPlayer,
+                        onNavigate: navigate,
                         onAddToCollection: { trackForCollection = track }
                     )
                     .allowsHitTesting(presentation == .queue)
@@ -109,6 +111,7 @@
                         artworkIsSource: artworkIsSource,
                         isActive: presentation == .player,
                         onShowQueue: showQueue,
+                        onNavigate: navigate,
                         onAddToCollection: { trackForCollection = track }
                     )
                     .allowsHitTesting(presentation == .player)
@@ -193,6 +196,11 @@
             }
         }
 
+        private func navigate(to link: EntityLink) {
+            closePlayer()
+            router.open(link: link)
+        }
+
         private var dismissHandle: some View {
             Button(action: closePlayer) {
                 Capsule()
@@ -260,6 +268,7 @@
             MusicNowPlayingView(engine: engine, artworkPalette: $artworkPalette)
                 .environment(controller)
                 .environment(PrismediaPreviewData.model(signedIn: true))
+                .environment(PrismediaAppRouter())
         }
     #endif
 #endif
