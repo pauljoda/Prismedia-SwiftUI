@@ -41,6 +41,7 @@ struct AdministrativeOrderedStringListEditor: View {
                     .disabled(!canAdd)
             }
         }
+        .prismediaScreenBackground()
         .navigationTitle(setting.label)
         .toolbar {
             #if os(iOS)

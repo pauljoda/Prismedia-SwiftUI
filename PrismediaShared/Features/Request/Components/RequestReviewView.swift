@@ -44,6 +44,7 @@ import SwiftUI
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle("Review Request")
             .environment(\.artworkPalette, artworkPalette)
             .environment(\.artworkPrimaryAccent, primaryAccent)

@@ -3,6 +3,7 @@
 
     struct PDFTableOfContentsView: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
 
         let items: [PDFReaderOutlineItem]
         let currentPage: Int
@@ -46,6 +47,7 @@
                         }
                     }
                 }
+                .prismediaScreenBackground(palette: artworkPalette)
                 .navigationTitle("Table of Contents")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {

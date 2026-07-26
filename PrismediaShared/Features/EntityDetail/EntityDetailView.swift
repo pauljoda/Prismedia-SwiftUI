@@ -159,9 +159,14 @@ public struct EntityDetailView: View {
                         #endif
                     }
                 )
+                .environment(\.artworkPalette, artworkPalette)
                 .environment(
                     \.artworkPrimaryAccent,
                     artworkPalette?.primary.color ?? PrismediaColor.accent
+                )
+                .environment(
+                    \.artworkSecondaryText,
+                    artworkPalette?.secondary.color ?? PrismediaColor.textSecondary
                 )
             }
         }

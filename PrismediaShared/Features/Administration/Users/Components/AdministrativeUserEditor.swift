@@ -86,6 +86,7 @@ struct AdministrativeUserEditor: View {
                 }
                 if let error { Section { Text(error).foregroundStyle(PrismediaColor.destructive) } }
             }
+            .prismediaScreenBackground()
             .navigationTitle(target.user == nil ? "Add User" : "Edit User")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

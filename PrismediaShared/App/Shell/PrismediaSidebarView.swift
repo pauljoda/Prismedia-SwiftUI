@@ -31,6 +31,7 @@ struct PrismediaSidebarView: View {
                 }
             }
         }
+        .prismediaScreenBackground()
         .navigationTitle("Prismedia")
         .accessibilityIdentifier("shell.sidebar")
     }

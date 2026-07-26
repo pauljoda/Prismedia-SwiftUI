@@ -68,6 +68,7 @@ struct AdministrativePluginDetailView: View {
                     .foregroundStyle(.secondary)
                 }
             }
+            .prismediaScreenBackground()
             .navigationTitle(plugin.name)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

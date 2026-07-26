@@ -31,6 +31,7 @@ import SwiftUI
                         )
                     }
                 }
+                .prismediaScreenBackground()
                 .navigationTitle("Acquisition Settings")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {

@@ -3,6 +3,7 @@
 
     struct ReadiumEPUBReaderSheet: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
 
         let initialRoute: EPUBReaderSheet
         let tableOfContents: [EPUBTableOfContentsItem]
@@ -29,6 +30,7 @@
                         }
                     }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .accessibilityIdentifier("epub-reader.sheet")
         }
 

@@ -36,6 +36,7 @@ struct AdministrativePluginCredentialEditor: View {
                     }
                 }
             }
+            .prismediaScreenBackground()
             .navigationTitle("\(plugin.name) Credentials")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

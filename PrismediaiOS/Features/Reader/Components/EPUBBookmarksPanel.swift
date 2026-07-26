@@ -3,6 +3,7 @@
 
     struct EPUBBookmarksPanel: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
         @State private var openingBookmarkID: UUID?
         @State private var showsOpenError = false
 
@@ -44,6 +45,7 @@
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle("Bookmarks")
             .accessibilityIdentifier("epub-reader.bookmarks")
             .alert("Couldn’t Open Bookmark", isPresented: $showsOpenError) {

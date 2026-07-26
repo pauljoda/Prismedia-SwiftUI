@@ -42,6 +42,7 @@ import SwiftUI
                         )
                     }
                 }
+                .prismediaScreenBackground()
                 .navigationTitle("Move \(entry.name)")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

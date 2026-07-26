@@ -15,6 +15,7 @@ import SwiftUI
                         .frame(maxWidth: PrismediaLayout.readableContentWidth, alignment: .leading)
                         .padding(PrismediaSpacing.section)
                 }
+                .prismediaScreenBackground()
                 .navigationTitle(title)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {

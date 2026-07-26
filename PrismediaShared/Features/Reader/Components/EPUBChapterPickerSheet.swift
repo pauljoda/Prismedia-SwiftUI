@@ -3,6 +3,7 @@
 
     struct EPUBChapterPickerSheet: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
         let chapters: [EPUBChapter]
@@ -31,6 +32,7 @@
                         .accessibilityAddTraits(index == selectedIndex ? .isSelected : [])
                     }
                 }
+                .prismediaScreenBackground(palette: artworkPalette)
                 .navigationTitle("Chapters")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {

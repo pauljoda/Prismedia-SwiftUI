@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ComicReaderTableOfContentsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.artworkPalette) private var artworkPalette
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
     let chapters: [BookChapterSummary]
@@ -23,6 +24,7 @@ struct ComicReaderTableOfContentsSheet: View {
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle("Table of Contents")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

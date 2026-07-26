@@ -2,6 +2,7 @@
     import SwiftUI
 
     struct EPUBReaderSettingsPanel: View {
+        @Environment(\.artworkPalette) private var artworkPalette
         @Binding var preferences: EPUBReaderPreferences
 
         var body: some View {
@@ -19,6 +20,7 @@
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .formStyle(.grouped)
             .navigationTitle("Reader Settings")
             .accessibilityIdentifier("epub-reader.settings")

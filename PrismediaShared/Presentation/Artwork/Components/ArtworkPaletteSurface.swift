@@ -63,22 +63,22 @@ struct ArtworkPaletteSurface<Content: View>: View {
 
     @ViewBuilder
     private var backdrop: some View {
-        if let palette {
+        if !showsArtworkInBackdrop {
+            ArtworkPaletteBackdrop(palette: palette)
+        } else if let palette {
             ZStack {
                 palette.background.color
 
-                if showsArtworkInBackdrop {
-                    RemotePosterImage(
-                        path: artworkPath,
-                        previewPath: previewPath,
-                        fallbackSeed: fallbackSeed,
-                        systemImage: systemImage
-                    )
-                    .scaleEffect(1.42)
-                    .blur(radius: 76)
-                    .saturation(1.18)
-                    .opacity(0.78)
-                }
+                RemotePosterImage(
+                    path: artworkPath,
+                    previewPath: previewPath,
+                    fallbackSeed: fallbackSeed,
+                    systemImage: systemImage
+                )
+                .scaleEffect(1.42)
+                .blur(radius: 76)
+                .saturation(1.18)
+                .opacity(0.78)
 
                 RadialGradient(
                     colors: [palette.primary.color.opacity(0.4), .clear],
@@ -106,7 +106,7 @@ struct ArtworkPaletteSurface<Content: View>: View {
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
-        } else if showsArtworkInBackdrop {
+        } else {
             ZStack {
                 PrismediaColor.background
 
@@ -133,8 +133,6 @@ struct ArtworkPaletteSurface<Content: View>: View {
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
-        } else {
-            PrismediaBackdrop()
         }
     }
 

@@ -58,6 +58,7 @@ struct AdministrativeMultiSelectionView: View {
                 }
             }
         }
+        .prismediaScreenBackground()
         .navigationTitle(setting.label)
         .toolbar {
             #if os(iOS)

@@ -3,6 +3,7 @@
 
     public struct EPUBReaderView: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
         @State private var publication: EPUBPublication?
         @State private var currentChapter = 0
         @State private var currentChapterProgress = 0.0
@@ -105,6 +106,7 @@
                             }
                         }
                 }
+                .prismediaScreenBackground(palette: artworkPalette)
                 .sheet(item: $presentedSheet) { sheet in
                     fallbackSheet(sheet)
                 }

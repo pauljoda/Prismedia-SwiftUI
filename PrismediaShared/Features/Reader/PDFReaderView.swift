@@ -4,6 +4,7 @@
 
     public struct PDFReaderView: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
         @State private var document: PDFDocument?
         @State private var currentPage = 0
         @State private var layoutMode: PDFReaderLayoutMode
@@ -66,6 +67,7 @@
                         }
                     }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .sheet(item: $presentedSheet) { sheet in
                 readerSheet(sheet)
             }

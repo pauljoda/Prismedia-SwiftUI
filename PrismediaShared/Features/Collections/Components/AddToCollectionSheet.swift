@@ -55,6 +55,7 @@
                         collectionList
                     }
                 }
+                .prismediaScreenBackground()
                 .navigationTitle("Add to Collection")
                 #if os(iOS)
                     .navigationBarTitleDisplayMode(.inline)

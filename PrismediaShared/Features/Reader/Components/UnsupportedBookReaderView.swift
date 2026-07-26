@@ -2,6 +2,7 @@ import SwiftUI
 
 struct UnsupportedBookReaderView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.artworkPalette) private var artworkPalette
     let message: String
 
     var body: some View {
@@ -12,6 +13,7 @@ struct UnsupportedBookReaderView: View {
         } actions: {
             PrismediaButton("Close", variant: .prominent) { dismiss() }
         }
+        .prismediaScreenBackground(palette: artworkPalette)
         .accessibilityIdentifier("book-reader.unsupported")
     }
 }

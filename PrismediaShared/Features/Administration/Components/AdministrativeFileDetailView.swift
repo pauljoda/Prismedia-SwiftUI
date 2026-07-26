@@ -42,6 +42,7 @@ import SwiftUI
                     }
                 }
             }
+            .prismediaScreenBackground()
             .navigationTitle(entry.name)
             .overlay { if isLoading { ProgressView() } }
             .task(id: entry.id) { await load() }

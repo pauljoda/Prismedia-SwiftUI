@@ -42,6 +42,7 @@ import SwiftUI
                     }
                 }
             }
+            .prismediaScreenBackground()
             .task(id: liveRefreshIsActive) {
                 guard automaticallyLoads, liveRefreshIsActive else {
                     session.cancelPolling()

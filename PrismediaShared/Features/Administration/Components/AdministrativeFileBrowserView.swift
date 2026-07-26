@@ -74,6 +74,7 @@ import UniformTypeIdentifiers
                     }
                 }
             }
+            .prismediaScreenBackground()
             .navigationTitle(
                 location.path.isEmpty ? location.rootLabel : URL(fileURLWithPath: location.path).lastPathComponent
             )

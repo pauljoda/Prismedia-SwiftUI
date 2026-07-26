@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ComicReaderSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.artworkPalette) private var artworkPalette
 
     let readerMode: ReaderMode
     @Binding var pageOptions: ComicReaderOptions
@@ -34,6 +35,7 @@ struct ComicReaderSettingsSheet: View {
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .formStyle(.grouped)
             .navigationTitle("Reader Settings")
             .toolbar {

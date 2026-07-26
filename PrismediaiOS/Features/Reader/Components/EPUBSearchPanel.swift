@@ -3,6 +3,7 @@
 
     struct EPUBSearchPanel: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
         @State private var query = ""
         @State private var searchTask: Task<Void, Never>?
         @State private var searchGeneration = 0
@@ -41,6 +42,7 @@
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle("Search")
             .searchable(text: $query, prompt: "Search book")
             .onSubmit(of: .search) {

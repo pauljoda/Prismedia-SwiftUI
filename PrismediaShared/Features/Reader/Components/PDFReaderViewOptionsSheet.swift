@@ -3,6 +3,7 @@
 
     struct PDFReaderViewOptionsSheet: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
         @Binding var layoutMode: PDFReaderLayoutMode
@@ -42,6 +43,7 @@
                         }
                     }
                 }
+                .prismediaScreenBackground(palette: artworkPalette)
                 .formStyle(.grouped)
                 .navigationTitle("View Options")
                 .toolbar {

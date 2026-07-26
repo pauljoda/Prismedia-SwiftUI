@@ -25,6 +25,7 @@ import SwiftUI
             }
             .padding(PrismediaSpacing.extraLarge)
             .frame(minWidth: 320, idealWidth: 420)
+            .prismediaScreenBackground()
         }
     }
 

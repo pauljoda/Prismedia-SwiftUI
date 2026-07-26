@@ -41,6 +41,7 @@ public struct PrismediaRootView: View {
                     }
             }
         }
+        .background { PrismediaBackdrop() }
         .animation(launchAnimation, value: presentation)
         .tint(PrismediaColor.accent)
         .preferredColorScheme(.dark)

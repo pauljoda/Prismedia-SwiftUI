@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EntityDetailReferenceSearchView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.artworkPalette) private var artworkPalette
     @Binding var selection: [EntityDetailReferenceDraft]
     @State private var searchText = ""
     @State private var results: [EntityDetailReferenceDraft] = []
@@ -52,6 +53,7 @@ struct EntityDetailReferenceSearchView: View {
                 }
             }
         }
+        .prismediaScreenBackground(palette: artworkPalette)
         .navigationTitle("Select \(title)")
         .searchable(text: $searchText, prompt: "Search \(title.lowercased())")
         .toolbar {

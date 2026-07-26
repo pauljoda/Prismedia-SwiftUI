@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EntityDetailEditSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.artworkPalette) private var artworkPalette
     @State private var draft: EntityDetailEditDraft
     @State private var selectedSection = EntityDetailEditSection.main
     @State private var isSaving = false
@@ -56,6 +57,7 @@ struct EntityDetailEditSheet: View {
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle("Edit Entity")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

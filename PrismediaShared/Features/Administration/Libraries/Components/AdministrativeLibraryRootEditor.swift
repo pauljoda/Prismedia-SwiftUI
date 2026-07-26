@@ -110,6 +110,7 @@ struct AdministrativeLibraryRootEditor: View {
                 }
                 if let error { Section { Text(error).foregroundStyle(PrismediaColor.destructive) } }
             }
+            .prismediaScreenBackground()
             .navigationTitle(target.root == nil ? "Add Library" : "Edit Library")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

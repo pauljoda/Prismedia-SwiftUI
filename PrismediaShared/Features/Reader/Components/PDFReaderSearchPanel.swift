@@ -4,6 +4,7 @@
 
     struct PDFReaderSearchPanel: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
 
         @Binding var query: String
         let selectedResult: Int?
@@ -50,6 +51,7 @@
 
                     Spacer()
                 }
+                .prismediaScreenBackground(palette: artworkPalette)
                 .padding()
                 .navigationTitle("Search PDF")
                 .toolbar {

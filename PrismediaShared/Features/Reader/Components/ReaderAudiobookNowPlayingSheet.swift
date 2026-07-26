@@ -3,6 +3,7 @@
 
     struct ReaderAudiobookNowPlayingSheet: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
         let controller: MusicPlayerController
@@ -48,7 +49,7 @@
                         ContentUnavailableView("Nothing Playing", systemImage: "headphones")
                     }
                 }
-                .background { PrismediaBackdrop() }
+                .prismediaScreenBackground(palette: artworkPalette)
                 .navigationTitle("Now Playing")
                 .prismediaInlineNavigationTitle()
                 .toolbar {

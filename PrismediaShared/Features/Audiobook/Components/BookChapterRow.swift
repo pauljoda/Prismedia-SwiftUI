@@ -32,11 +32,7 @@ struct BookChapterRow: View {
 
                 Spacer(minLength: PrismediaSpacing.small)
 
-                ViewThatFits(in: .horizontal) {
-                    actionButtons(compact: false)
-                        .fixedSize()
-                    actionButtons(compact: true)
-                }
+                actionButtons
             }
         }
         .padding(.vertical, PrismediaSpacing.medium)
@@ -88,14 +84,13 @@ struct BookChapterRow: View {
             .lineLimit(1)
     }
 
-    private func actionButtons(compact: Bool) -> some View {
+    private var actionButtons: some View {
         HStack(spacing: PrismediaSpacing.extraSmall) {
             if chapter.readTarget != nil {
                 actionButton(
                     title: "Read",
                     systemImage: "book.pages",
                     hint: "Opens this chapter in the native reader",
-                    compact: compact,
                     action: onRead
                 )
             }
@@ -104,7 +99,6 @@ struct BookChapterRow: View {
                     title: "Listen",
                     systemImage: chapter.isCurrentAudio ? "headphones.circle.fill" : "headphones",
                     hint: "Plays this audiobook chapter",
-                    compact: compact,
                     action: onListen
                 )
             }
@@ -113,7 +107,6 @@ struct BookChapterRow: View {
                     title: "Combined",
                     systemImage: "square.2.layers.3d",
                     hint: "Opens this chapter and starts its companion audiobook chapter",
-                    compact: compact,
                     action: onCombined
                 )
             }
@@ -124,19 +117,13 @@ struct BookChapterRow: View {
         title: String,
         systemImage: String,
         hint: String,
-        compact: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            if compact {
-                Image(systemName: systemImage)
-            } else {
-                Label(title, systemImage: systemImage)
-                    .font(.caption.weight(.semibold))
-            }
+            Image(systemName: systemImage)
         }
         .buttonStyle(.glass)
-        .buttonBorderShape(compact ? .circle : .capsule)
+        .buttonBorderShape(.circle)
         .frame(
             minWidth: PrismediaLayout.minimumHitTarget,
             minHeight: PrismediaLayout.minimumHitTarget

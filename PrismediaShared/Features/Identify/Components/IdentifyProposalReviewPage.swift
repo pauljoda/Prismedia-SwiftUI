@@ -62,7 +62,7 @@ import SwiftUI
                 .id(currentProposal.proposalID)
                 .padding()
             }
-            .prismediaScreenBackground()
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle(isRoot ? currentItem.title : currentProposal.patch.title ?? currentItem.title)
             .environment(\.artworkPalette, artworkPalette)
             .environment(\.artworkPrimaryAccent, primaryAccent)

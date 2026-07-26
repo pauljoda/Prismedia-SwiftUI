@@ -3,6 +3,7 @@
 
     struct EPUBTableOfContentsPanel: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.artworkPalette) private var artworkPalette
 
         let items: [EPUBTableOfContentsItem]
         let onSelect: (EPUBTableOfContentsItem) -> Void
@@ -33,6 +34,7 @@
                     }
                 }
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle("Contents")
             .accessibilityIdentifier("epub-reader.contents")
         }

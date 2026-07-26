@@ -2,6 +2,8 @@
     import SwiftUI
 
     struct EPUBReaderNavigationPanel: View {
+        @Environment(\.artworkPalette) private var artworkPalette
+
         var body: some View {
             List {
                 NavigationLink(value: EPUBReaderSheet.contents) {
@@ -19,6 +21,7 @@
                 }
                 .accessibilityIdentifier("epub-reader.bookmarks-button")
             }
+            .prismediaScreenBackground(palette: artworkPalette)
             .navigationTitle("Navigate Book")
             .accessibilityIdentifier("epub-reader.navigation")
         }

@@ -49,6 +49,7 @@ import SwiftUI
                         }
                     }
             }
+            .prismediaScreenBackground()
             .interactiveDismissDisabled(phase.locksDismissal)
             .accessibilityIdentifier("request-identify.flow")
         }

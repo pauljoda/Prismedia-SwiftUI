@@ -26,6 +26,7 @@ struct AdministrativeUserPasswordSheet: View {
                 }
                 if let error { Section { Text(error).foregroundStyle(PrismediaColor.destructive) } }
             }
+            .prismediaScreenBackground()
             .navigationTitle("Reset Password")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

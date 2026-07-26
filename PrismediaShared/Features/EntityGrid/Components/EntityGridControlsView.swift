@@ -88,6 +88,7 @@ struct EntityGridControlsView: View {
                     bookFilters
                 }
             }
+            .prismediaScreenBackground()
             .navigationTitle("Filters")
             .prismediaInlineNavigationTitle()
             .toolbar {

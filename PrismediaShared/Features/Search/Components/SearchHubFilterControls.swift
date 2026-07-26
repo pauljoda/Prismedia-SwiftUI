@@ -77,6 +77,7 @@ struct SearchHubFilterControls: View {
                 .accessibilityHint("Includes every entity kind and clears rating and date filters")
             }
         }
+        .prismediaScreenBackground()
         .navigationTitle("Search Filters")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
