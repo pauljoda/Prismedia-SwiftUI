@@ -2,14 +2,15 @@
 
 actor SystemVideoAudioSession: VideoAudioSessionPreparing {
     func prepare() async throws {
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .moviePlayback)
             try session.setActive(true)
-        #elseif os(tvOS)
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default)
-            try session.setActive(true)
+            if let channelCount = VideoAudioOutputChannelPolicy.preferredChannelCount(
+                maximumAvailable: session.maximumOutputNumberOfChannels
+            ) {
+                try session.setPreferredOutputNumberOfChannels(channelCount)
+            }
         #endif
     }
 }

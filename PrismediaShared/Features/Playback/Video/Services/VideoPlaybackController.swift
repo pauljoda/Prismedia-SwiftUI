@@ -604,6 +604,7 @@ public final class VideoPlaybackController {
         // keeps every request in the native playback chain authenticated.
         let asset = makeAsset(for: plan)
         let item = AVPlayerItem(asset: asset)
+        item.allowedAudioSpatializationFormats = .multichannel
         observeStatus(of: item)
         player.replaceCurrentItem(with: item)
         mediaSelectionTask?.cancel()

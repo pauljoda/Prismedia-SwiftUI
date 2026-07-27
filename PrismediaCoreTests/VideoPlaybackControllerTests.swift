@@ -5,6 +5,36 @@ import XCTest
 
 @MainActor
 final class VideoPlaybackControllerTests: XCTestCase {
+    func testNativePlaybackAllowsMultichannelSpatialization() async {
+        let videoID = UUID(uuidString: "01010101-0101-0101-0101-010101010101")!
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: VideoPlaybackServiceSpy(videoID: videoID),
+            audioSession: FailingVideoAudioSession()
+        )
+
+        await controller.load()
+
+        XCTAssertEqual(
+            controller.player.currentItem?.allowedAudioSpatializationFormats,
+            .multichannel
+        )
+    }
+
+    func testSurroundOutputPolicyUsesEveryAvailableChannelUpToSevenPointOne() {
+        XCTAssertEqual(
+            VideoAudioOutputChannelPolicy.preferredChannelCount(maximumAvailable: 8),
+            8
+        )
+        XCTAssertEqual(
+            VideoAudioOutputChannelPolicy.preferredChannelCount(maximumAvailable: 16),
+            8
+        )
+        XCTAssertNil(
+            VideoAudioOutputChannelPolicy.preferredChannelCount(maximumAvailable: 0)
+        )
+    }
+
     func testAudioSessionFailureDoesNotPreventPlaybackNegotiation() async {
         let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let service = VideoPlaybackServiceSpy(videoID: videoID)
