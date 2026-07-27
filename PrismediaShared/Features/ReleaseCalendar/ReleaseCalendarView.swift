@@ -45,6 +45,9 @@ import SwiftUI
                     calendarContent
                 }
             }
+            #if os(iOS)
+                .simultaneousGesture(monthSwipeGesture)
+            #endif
             .navigationTitle("Release Calendar")
             .toolbar { toolbarContent }
             .prismediaScreenBackground()
@@ -54,11 +57,7 @@ import SwiftUI
                 ReleaseCalendarDaySheet(
                     selection: selection,
                     resolveAssetURL: resolveAssetURL,
-                    onOpen: { event in
-                        navigationPath.wrappedValue.append(
-                            ReleaseCalendarPresentationPolicy.entityLink(for: event)
-                        )
-                    }
+                    onOpen: open
                 )
             }
         }
@@ -91,7 +90,11 @@ import SwiftUI
                         ForEach(agendaDays, id: \.self) { date in
                             Section(date.formatted(date: .complete, time: .omitted)) {
                                 ForEach(events(on: date)) { event in
-                                    ReleaseCalendarEventRow(event: event, resolveAssetURL: resolveAssetURL)
+                                    ReleaseCalendarEventRow(
+                                        event: event,
+                                        resolveAssetURL: resolveAssetURL,
+                                        onOpen: { open(event) }
+                                    )
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
                                 }
@@ -108,6 +111,9 @@ import SwiftUI
             HStack {
                 Button("Previous month", systemImage: "chevron.left") { moveMonth(-1) }
                     .labelStyle(.iconOnly)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
+                    .buttonStyle(.plain)
                     .accessibilityIdentifier("release-calendar.previous-month")
                 Spacer()
                 Text(displayedMonth, format: .dateTime.month(.wide).year())
@@ -117,6 +123,9 @@ import SwiftUI
                 Spacer()
                 Button("Next month", systemImage: "chevron.right") { moveMonth(1) }
                     .labelStyle(.iconOnly)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
+                    .buttonStyle(.plain)
                     .accessibilityIdentifier("release-calendar.next-month")
             }
             .padding(PrismediaSpacing.large)
@@ -203,6 +212,28 @@ import SwiftUI
                 displayedMonth = date
             }
         }
+
+        private func open(_ event: ReleaseCalendarEvent) {
+            navigationPath.wrappedValue.append(
+                ReleaseCalendarPresentationPolicy.entityLink(for: event)
+            )
+        }
+
+        #if os(iOS)
+            private var monthSwipeGesture: some Gesture {
+                DragGesture(minimumDistance: 30)
+                    .onEnded(handleMonthSwipe)
+            }
+
+            private func handleMonthSwipe(_ value: DragGesture.Value) {
+                let horizontalDistance = value.translation.width
+                let verticalDistance = value.translation.height
+                guard abs(horizontalDistance) >= 60,
+                    abs(horizontalDistance) > abs(verticalDistance) * 1.2
+                else { return }
+                moveMonth(horizontalDistance < 0 ? 1 : -1)
+            }
+        #endif
 
         private func load() async {
             guard let interval = ReleaseCalendarDatePolicy.gridInterval(containing: displayedMonth) else { return }

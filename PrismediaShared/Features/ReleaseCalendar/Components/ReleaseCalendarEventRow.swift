@@ -6,12 +6,12 @@ import SwiftUI
 
         let event: ReleaseCalendarEvent
         let resolveAssetURL: (String?) -> URL?
-        let onOpen: (() -> Void)?
+        let onOpen: () -> Void
 
         init(
             event: ReleaseCalendarEvent,
             resolveAssetURL: @escaping (String?) -> URL?,
-            onOpen: (() -> Void)? = nil
+            onOpen: @escaping () -> Void
         ) {
             self.event = event
             self.resolveAssetURL = resolveAssetURL
@@ -19,23 +19,14 @@ import SwiftUI
         }
 
         var body: some View {
-            Group {
-                if let onOpen {
-                    Button(action: onOpen) { rowLabel }
-                        .buttonStyle(.plain)
-                } else {
-                    NavigationLink(value: ReleaseCalendarPresentationPolicy.entityLink(for: event)) {
-                        rowLabel
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.vertical, PrismediaSpacing.extraSmall)
-            .prismediaArtworkPalette(
-                for: event.posterURL,
-                palette: $artworkPalette
-            )
-            .accessibilityHint("Opens entity details")
+            Button(action: onOpen) { rowLabel }
+                .buttonStyle(.plain)
+                .padding(.vertical, PrismediaSpacing.extraSmall)
+                .prismediaArtworkPalette(
+                    for: event.posterURL,
+                    palette: $artworkPalette
+                )
+                .accessibilityHint("Opens entity details")
         }
 
         private var rowLabel: some View {
@@ -69,6 +60,10 @@ import SwiftUI
                     }
                 }
                 Spacer(minLength: 0)
+                Image(systemName: "chevron.forward")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(PrismediaColor.textMuted)
+                    .accessibilityHidden(true)
             }
             .padding(PrismediaSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -116,7 +111,8 @@ import SwiftUI
             NavigationStack {
                 ReleaseCalendarEventRow(
                     event: ReleaseCalendarPreviewFixtures.events[0],
-                    resolveAssetURL: { _ in nil }
+                    resolveAssetURL: { _ in nil },
+                    onOpen: {}
                 )
                 .padding()
             }
