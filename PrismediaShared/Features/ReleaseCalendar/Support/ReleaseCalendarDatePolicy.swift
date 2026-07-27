@@ -3,6 +3,28 @@ import Foundation
 public enum ReleaseCalendarDatePolicy {
     public static let visibleDayEventLimit = 3
 
+    public static func monthCacheKey(
+        for date: Date,
+        calendar: Calendar = .current
+    ) -> String {
+        guard let monthStart = calendar.dateInterval(of: .month, for: date)?.start else {
+            return wireValue(date, calendar: calendar)
+        }
+        return wireValue(monthStart, calendar: calendar)
+    }
+
+    public static func preloadMonths(
+        around date: Date,
+        calendar: Calendar = .current
+    ) -> [Date] {
+        guard let monthStart = calendar.dateInterval(of: .month, for: date)?.start else {
+            return [date]
+        }
+        return (-1...1).compactMap {
+            calendar.date(byAdding: .month, value: $0, to: monthStart)
+        }
+    }
+
     public static func wireValue(_ date: Date, calendar: Calendar = .current) -> String {
         let values = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", values.year ?? 0, values.month ?? 0, values.day ?? 0)

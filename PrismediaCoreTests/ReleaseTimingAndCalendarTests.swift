@@ -169,6 +169,26 @@ final class ReleaseTimingAndCalendarTests: XCTestCase {
         XCTAssertEqual(grouped[day]?.prefix(ReleaseCalendarDatePolicy.visibleDayEventLimit).count, 3)
     }
 
+    func testReleaseCalendarPreloadsStableAdjacentMonthKeys() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let january31 = calendar.date(from: DateComponents(year: 2026, month: 1, day: 31))!
+
+        let months = ReleaseCalendarDatePolicy.preloadMonths(
+            around: january31,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            months.map { ReleaseCalendarDatePolicy.monthCacheKey(for: $0, calendar: calendar) },
+            ["2025-12-01", "2026-01-01", "2026-02-01"]
+        )
+        XCTAssertEqual(
+            ReleaseCalendarDatePolicy.monthCacheKey(for: january31, calendar: calendar),
+            "2026-01-01"
+        )
+    }
+
     func testReleaseCalendarClientUsesCanonicalRouteQueryAndWireShape() async throws {
         let entityID = UUID()
         let monitorID = UUID()

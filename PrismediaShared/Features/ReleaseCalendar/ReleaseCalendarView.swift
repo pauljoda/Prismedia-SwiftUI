@@ -6,7 +6,8 @@ import SwiftUI
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @State private var displayedMonth: Date
         @State private var monthNavigationDirection = 1
-        @State private var events: [ReleaseCalendarEvent] = []
+        @State private var eventsByMonth: [String: [ReleaseCalendarEvent]] = [:]
+        @State private var pendingMonth: Date?
         @State private var isLoading = true
         @State private var errorMessage: String?
         @State private var mediaFilter: EntityKind?
@@ -44,12 +45,12 @@ import SwiftUI
                         Text(errorMessage)
                     } actions: {
                         PrismediaButton("Try Again", systemImage: "arrow.clockwise", variant: .prominent) {
-                            Task { await load() }
+                            Task { await load(forceRefresh: true) }
                         }
                     }
                 } else {
                     calendarContent
-                        .id(ReleaseCalendarDatePolicy.wireValue(displayedMonth))
+                        .id(displayedMonthKey)
                         .transition(monthTransition)
                 }
             }
@@ -59,8 +60,9 @@ import SwiftUI
             .navigationTitle("Release Calendar")
             .toolbar { toolbarContent }
             .prismediaScreenBackground()
-            .task(id: ReleaseCalendarDatePolicy.wireValue(displayedMonth)) { await load() }
-            .refreshable { await load() }
+            .task(id: displayedMonthKey) { await load(forceRefresh: false) }
+            .task(id: pendingMonth) { await loadPendingMonth() }
+            .refreshable { await load(forceRefresh: true) }
             .sheet(item: $selectedDay) { selection in
                 ReleaseCalendarDaySheet(
                     selection: selection,
@@ -123,6 +125,7 @@ import SwiftUI
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(.rect)
                     .buttonStyle(.plain)
+                    .disabled(pendingMonth != nil)
                     .accessibilityIdentifier("release-calendar.previous-month")
                 Spacer()
                 Text(displayedMonth, format: .dateTime.month(.wide).year())
@@ -135,6 +138,7 @@ import SwiftUI
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(.rect)
                     .buttonStyle(.plain)
+                    .disabled(pendingMonth != nil)
                     .accessibilityIdentifier("release-calendar.next-month")
             }
             .padding(PrismediaSpacing.large)
@@ -184,6 +188,14 @@ import SwiftUI
             }
         }
 
+        private var events: [ReleaseCalendarEvent] {
+            eventsByMonth[displayedMonthKey] ?? []
+        }
+
+        private var displayedMonthKey: String {
+            ReleaseCalendarDatePolicy.monthCacheKey(for: displayedMonth)
+        }
+
         private var agendaDays: [Date] {
             ReleaseCalendarPresentationPolicy.groupedByDay(filteredEvents).keys
                 .filter { $0 != .distantPast }
@@ -219,11 +231,21 @@ import SwiftUI
         }
 
         private func moveMonth(_ value: Int) {
-            if let date = Calendar.current.date(byAdding: .month, value: value, to: displayedMonth) {
-                monthNavigationDirection = value
-                withAnimation(monthNavigationAnimation) {
-                    displayedMonth = date
-                }
+            guard pendingMonth == nil,
+                let monthStart = Calendar.current.dateInterval(of: .month, for: displayedMonth)?.start,
+                let date = Calendar.current.date(byAdding: .month, value: value, to: monthStart)
+            else { return }
+            monthNavigationDirection = value
+            if eventsByMonth[ReleaseCalendarDatePolicy.monthCacheKey(for: date)] != nil {
+                transition(to: date)
+            } else {
+                pendingMonth = date
+            }
+        }
+
+        private func transition(to date: Date) {
+            withAnimation(monthNavigationAnimation) {
+                displayedMonth = date
             }
         }
 
@@ -307,18 +329,107 @@ import SwiftUI
             }
         #endif
 
-        private func load() async {
-            guard let interval = ReleaseCalendarDatePolicy.gridInterval(containing: displayedMonth) else { return }
-            isLoading = true
-            defer { isLoading = false }
-            do {
-                events = try await loader.releases(from: interval.start, through: interval.end)
+        private func load(forceRefresh: Bool) async {
+            let targetMonth = displayedMonth
+            let targetKey = ReleaseCalendarDatePolicy.monthCacheKey(for: targetMonth)
+            let cachedKeys = Set(eventsByMonth.keys)
+            let requests: [(key: String, interval: DateInterval)] =
+                ReleaseCalendarDatePolicy.preloadMonths(around: targetMonth).compactMap { month in
+                    let key = ReleaseCalendarDatePolicy.monthCacheKey(for: month)
+                    guard (forceRefresh && key == targetKey) || !cachedKeys.contains(key),
+                        let interval = ReleaseCalendarDatePolicy.gridInterval(containing: month)
+                    else { return nil }
+                    return (key: key, interval: interval)
+                }
+
+            guard !requests.isEmpty else {
+                isLoading = false
                 errorMessage = nil
+                return
+            }
+
+            if eventsByMonth[targetKey] == nil {
+                isLoading = true
+            }
+            defer {
+                if displayedMonthKey == targetKey {
+                    isLoading = false
+                }
+            }
+
+            let loader = loader
+            var targetErrorMessage: String?
+            var loadedEventsByKey: [String: [ReleaseCalendarEvent]] = [:]
+            await withTaskGroup(
+                of: (key: String, events: [ReleaseCalendarEvent]?, errorMessage: String?).self
+            ) { group in
+                for request in requests {
+                    group.addTask {
+                        do {
+                            let events = try await loader.releases(
+                                from: request.interval.start,
+                                through: request.interval.end
+                            )
+                            return (request.key, events, nil)
+                        } catch is CancellationError {
+                            return (request.key, nil, nil)
+                        } catch {
+                            return (request.key, nil, error.localizedDescription)
+                        }
+                    }
+                }
+
+                for await result in group {
+                    guard !Task.isCancelled else { return }
+                    if let events = result.events {
+                        loadedEventsByKey[result.key] = events
+                    } else if result.key == targetKey {
+                        targetErrorMessage = result.errorMessage
+                    }
+                }
+            }
+
+            guard !Task.isCancelled else { return }
+            for (key, events) in loadedEventsByKey {
+                eventsByMonth[key] = events
+            }
+            if let targetErrorMessage {
+                errorMessage = targetErrorMessage
+            } else if eventsByMonth[targetKey] != nil {
+                errorMessage = nil
+            }
+            pruneEventCache(around: targetMonth)
+        }
+
+        private func loadPendingMonth() async {
+            guard let pendingMonth,
+                let interval = ReleaseCalendarDatePolicy.gridInterval(containing: pendingMonth)
+            else { return }
+            let key = ReleaseCalendarDatePolicy.monthCacheKey(for: pendingMonth)
+            do {
+                let events = try await loader.releases(from: interval.start, through: interval.end)
+                guard !Task.isCancelled, self.pendingMonth == pendingMonth else { return }
+                eventsByMonth[key] = events
+                errorMessage = nil
+                transition(to: pendingMonth)
+                self.pendingMonth = nil
+                pruneEventCache(around: pendingMonth)
             } catch is CancellationError {
                 return
             } catch {
+                guard self.pendingMonth == pendingMonth else { return }
                 errorMessage = error.localizedDescription
+                self.pendingMonth = nil
             }
+        }
+
+        private func pruneEventCache(around month: Date) {
+            let retainedKeys = Set(
+                (-2...2).compactMap { offset in
+                    Calendar.current.date(byAdding: .month, value: offset, to: month)
+                }.map { ReleaseCalendarDatePolicy.monthCacheKey(for: $0) }
+            )
+            eventsByMonth = eventsByMonth.filter { retainedKeys.contains($0.key) }
         }
     }
 #endif
