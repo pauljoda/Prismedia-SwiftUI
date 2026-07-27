@@ -65,6 +65,7 @@ import SwiftUI
                 .simultaneousGesture(monthSwipeGesture)
             #endif
             .navigationTitle("Release Calendar")
+            .prismediaInlineNavigationTitle()
             .toolbar { toolbarContent }
             .prismediaScreenBackground()
             .task(id: displayedMonthKey) { await load(forceRefresh: false) }
