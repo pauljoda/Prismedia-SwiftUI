@@ -27,6 +27,7 @@
 
             let media = VLCMedia(url: request.url)
             media.addOption(":no-spu")
+            media.addOption(":network-caching=20000")
             #if !targetEnvironment(simulator)
                 // Prefer VLC's native Apple decoder, then keep VideoToolbox active
                 // if the avcodec path is selected for the source codec. Simulators
