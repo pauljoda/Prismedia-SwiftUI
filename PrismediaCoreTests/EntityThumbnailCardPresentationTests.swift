@@ -32,6 +32,22 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         XCTAssertEqual(policy.bottomTrailing.first?.label, "4")
     }
 
+    func testReleaseGatedThumbnailUsesTheServerAcquisitionStatus() {
+        let item = EntityThumbnail(
+            id: UUID(),
+            kind: .movie,
+            title: "Future Movie",
+            isWanted: true,
+            wantedStatus: AcquisitionStatus(rawValue: "waiting-for-release")
+        )
+
+        let badge = EntityThumbnailOverlayPolicy(item: item).topTrailing.first
+
+        XCTAssertEqual(badge?.label, "Waiting for release")
+        XCTAssertEqual(badge?.systemImage, "calendar.badge.clock")
+        XCTAssertEqual(badge?.tone, .queued)
+    }
+
     func testOverlayPolicyOmitsZeroRating() {
         let item = EntityThumbnail(id: UUID(), kind: .movie, title: "Unrated", rating: 0)
 

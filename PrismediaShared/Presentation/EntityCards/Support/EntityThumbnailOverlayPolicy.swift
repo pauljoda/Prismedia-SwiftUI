@@ -82,20 +82,26 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
     private static func acquisitionDisplay(
         _ status: AcquisitionStatus?
     ) -> (label: String, systemImage: String, tone: EntityThumbnailBadgeTone) {
-        guard let status else { return ("Wanted", "bookmark.fill", .muted) }
+        let presentation = AcquisitionStatusPresentationPolicy.presentation(for: status)
+        return (
+            presentation.label,
+            presentation.systemImage,
+            thumbnailTone(for: presentation.tone)
+        )
+    }
 
-        switch status.rawValue {
-        case "searching", "pending": return ("Searching", "magnifyingglass", .searching)
-        case "awaiting-selection": return ("Review", "magnifyingglass.circle.fill", .attention)
-        case "queued": return ("Queued", "hourglass", .queued)
-        case "downloading", "downloaded", "importing":
-            return ("Downloading", "arrow.down.circle.fill", .downloading)
-        case "stopping": return ("Cleaning up", "arrow.triangle.2.circlepath", .cleanup)
-        case "imported": return ("Imported", "checkmark.circle.fill", .success)
-        case "failed": return ("Failed", "exclamationmark.circle.fill", .failed)
-        case "manual-import-required": return ("Action", "exclamationmark.triangle.fill", .attention)
-        case "cancelled": return ("Cancelled", "xmark.circle.fill", .muted)
-        default: return ("Updating", "arrow.triangle.2.circlepath", .cleanup)
+    private static func thumbnailTone(
+        for tone: AcquisitionStatusPresentationTone
+    ) -> EntityThumbnailBadgeTone {
+        switch tone {
+        case .downloading: .downloading
+        case .searching: .searching
+        case .queued: .queued
+        case .cleanup: .cleanup
+        case .attention: .attention
+        case .failed: .failed
+        case .done: .success
+        case .muted, .wanted: .muted
         }
     }
 }

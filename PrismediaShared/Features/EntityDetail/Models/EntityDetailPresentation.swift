@@ -5,17 +5,20 @@ struct EntityDetailPresentation {
     let canEditMetadata: Bool
     let identifyActionLabel: String
     let identifyActionSystemImage: String
+    let acquisitionStatus: AcquisitionStatus?
 
     init(
         detail: EntityDetail,
         canEditMetadata: Bool = false,
         identifyActionLabel: String = "Identify",
-        identifyActionSystemImage: String = "doc.viewfinder"
+        identifyActionSystemImage: String = "doc.viewfinder",
+        acquisitionStatus: AcquisitionStatus? = nil
     ) {
         self.detail = detail
         self.canEditMetadata = canEditMetadata
         self.identifyActionLabel = identifyActionLabel
         self.identifyActionSystemImage = identifyActionSystemImage
+        self.acquisitionStatus = acquisitionStatus
     }
 
     var sections: [EntityDetailSection] {
@@ -105,9 +108,27 @@ struct EntityDetailPresentation {
                 ? .init(title: "Favorite", systemImage: "heart.fill", tone: .accent) : nil,
             flags.isNsfw == true
                 ? .init(title: "NSFW", systemImage: "eye.slash.fill", tone: .destructive) : nil,
-            flags.isWanted == true
-                ? .init(title: "Wanted", systemImage: "arrow.down.circle.fill", tone: .info) : nil,
+            wantedFlagItem(flags),
         ].compactMap { $0 }
+    }
+
+    private func wantedFlagItem(_ flags: EntityFlagsCapability) -> EntityDetailFlagItem? {
+        guard flags.isWanted == true else { return nil }
+        guard let acquisitionStatus else {
+            return .init(
+                title: "Wanted",
+                systemImage: "arrow.down.circle.fill",
+                tone: .info
+            )
+        }
+        let statusPresentation = AcquisitionStatusPresentationPolicy.presentation(
+            for: acquisitionStatus
+        )
+        return .init(
+            title: statusPresentation.label,
+            systemImage: statusPresentation.systemImage,
+            tone: .acquisition(statusPresentation.tone)
+        )
     }
 
     var markers: [EntityMarker] {

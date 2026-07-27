@@ -313,6 +313,9 @@
     "%lld%%" : {
 
     },
+    "+%lld more" : {
+
+    },
     "−%@" : {
 
     },
@@ -403,6 +406,9 @@
     "Add one value at a time. Drag to change priority; the first value is preferred." : {
 
     },
+    "Add release date" : {
+
+    },
     "Add Role" : {
 
     },
@@ -454,7 +460,13 @@
     "All Kinds" : {
 
     },
+    "All media" : {
+
+    },
     "All Media" : {
+
+    },
+    "All milestones" : {
 
     },
     "All Quiet" : {
@@ -494,6 +506,9 @@
 
     },
     "Apply Filters" : {
+
+    },
+    "Apply release dates" : {
 
     },
     "Artist" : {
@@ -735,6 +750,9 @@
 
     },
     "Choose what you want to request. Available providers and search fields update for that type." : {
+
+    },
+    "Choose when automatic searching begins for each acquisition profile." : {
 
     },
     "Classification" : {
@@ -994,6 +1012,16 @@
     },
     "Default" : {
 
+    },
+    "Delay: %lld day%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Delay: %1$lld day%2$@"
+          }
+        }
+      }
     },
     "Delete" : {
 
@@ -1374,6 +1402,12 @@
     "Images and sub-galleries will appear here when they’re added." : {
 
     },
+    "Immediate searching remains the default. A release milestone delays automatic searching; Manual search remains available from the acquisition." : {
+
+    },
+    "Immediately" : {
+
+    },
     "Import Into" : {
 
     },
@@ -1590,10 +1624,16 @@
     "Loading profiles and libraries…" : {
 
     },
+    "Loading profiles…" : {
+
+    },
     "Loading reading progress…" : {
 
     },
     "Loading recent additions…" : {
+
+    },
+    "Loading release calendar…" : {
 
     },
     "Loading release candidates…" : {
@@ -1680,6 +1720,9 @@
     "Media" : {
 
     },
+    "Media kind" : {
+
+    },
     "Member" : {
 
     },
@@ -1687,6 +1730,9 @@
 
     },
     "Metadata" : {
+
+    },
+    "Milestone" : {
 
     },
     "Minimum rating" : {
@@ -1821,6 +1867,9 @@
     "Next Image" : {
 
     },
+    "Next month" : {
+
+    },
     "Next page" : {
 
     },
@@ -1908,6 +1957,9 @@
     "No metadata is available yet." : {
 
     },
+    "No monitored milestones match these filters." : {
+
+    },
     "No more tracks in the queue" : {
 
     },
@@ -1936,6 +1988,12 @@
 
     },
     "No related details yet." : {
+
+    },
+    "No release date data yet" : {
+
+    },
+    "No Releases" : {
 
     },
     "No Results" : {
@@ -2060,6 +2118,9 @@
 
     },
     "Opens details for %@" : {
+
+    },
+    "Opens entity details" : {
 
     },
     "Opens folder" : {
@@ -2279,6 +2340,9 @@
     "Previous Image" : {
 
     },
+    "Previous month" : {
+
+    },
     "Previous page" : {
 
     },
@@ -2469,10 +2533,28 @@
     "Release Blocklist" : {
 
     },
+    "Release Calendar" : {
+
+    },
     "Release Candidates" : {
 
     },
+    "Release date unavailable" : {
+
+    },
+    "Release dates" : {
+
+    },
+    "Release Dates" : {
+
+    },
+    "Release milestone" : {
+
+    },
     "Release Page" : {
+
+    },
+    "Release Timing" : {
 
     },
     "Reload" : {
@@ -2494,6 +2576,9 @@
 
     },
     "Remove Configuration" : {
+
+    },
+    "Remove date" : {
 
     },
     "Remove Exclusion" : {
@@ -2772,6 +2857,9 @@
     "Search This Book" : {
 
     },
+    "Search Timing" : {
+
+    },
     "Search Transcript" : {
 
     },
@@ -2903,6 +2991,16 @@
     },
     "Show %lld More" : {
 
+    },
+    "Show all %lld releases on %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show all %1$lld releases on %2$@"
+          }
+        }
+      }
     },
     "Show Details" : {
 
@@ -3114,7 +3212,13 @@
     "That saved location is no longer available in this edition of the book." : {
 
     },
+    "The configured metadata provider did not return the required release milestone. You can keep waiting for future metadata or enter a keyed date now." : {
+
+    },
     "The highest total score wins. When scores tie, the first matching track keeps priority." : {
+
+    },
+    "The metadata provider did not include any release milestones in this proposal." : {
 
     },
     "The provider changed this proposal after you reviewed it. Reload and confirm the selection again." : {
@@ -3250,6 +3354,9 @@
 
     },
     "Unable to Load Acquisition" : {
+
+    },
+    "Unable to Load Calendar" : {
 
     },
     "Unable to Load History" : {
@@ -3476,6 +3583,9 @@
 
     },
     "Your progress" : {
+
+    },
+    "YYYY-MM-DD" : {
 
     },
     "ZIP and CBZ files can appear as both books and image galleries." : {

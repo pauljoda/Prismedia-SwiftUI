@@ -205,17 +205,17 @@ public struct EntityThumbnailCardView: View {
         EntityThumbnailPreview(thumbnail: item).hasInteractivePreview
     }
 
-    private func acquisitionLabel(_ value: String) -> String {
-        value.replacingOccurrences(of: "-", with: " ").capitalized
-    }
-
     private var accessibilityLabel: String {
         var components = [item.title, item.kind.displayLabel]
         components.append(contentsOf: item.meta.map(\.label))
         if item.isFavorite { components.append("Favorite") }
         if item.isNsfw { components.append("NSFW") }
         if item.isWanted {
-            components.append(item.wantedStatus.map { acquisitionLabel($0.rawValue) } ?? "Wanted")
+            components.append(
+                AcquisitionStatusPresentationPolicy.presentation(
+                    for: item.wantedStatus ?? item.latestAcquisitionStatus
+                ).label
+            )
         }
         if item.isOrganized { components.append("Organized") }
         if let rating = item.rating { components.append("\(rating) star rating") }

@@ -18,7 +18,11 @@ import SwiftUI
                             onOpen(event)
                         }
                     )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
                 .prismediaScreenBackground()
                 .navigationTitle(selection.date.formatted(date: .complete, time: .omitted))
                 .toolbar {
@@ -33,14 +37,16 @@ import SwiftUI
 
 #if DEBUG && (os(iOS) || os(macOS))
     #Preview("Release Day List") {
-        ReleaseCalendarDaySheet(
-            selection: ReleaseCalendarDaySelection(
-                date: ReleaseCalendarPreviewFixtures.day,
-                events: ReleaseCalendarPreviewFixtures.events
-            ),
-            resolveAssetURL: { _ in nil },
-            onOpen: { _ in }
-        )
+        PreviewShell {
+            ReleaseCalendarDaySheet(
+                selection: ReleaseCalendarDaySelection(
+                    date: ReleaseCalendarPreviewFixtures.day,
+                    events: ReleaseCalendarPreviewFixtures.events
+                ),
+                resolveAssetURL: { _ in nil },
+                onOpen: { _ in }
+            )
+        }
         .preferredColorScheme(.dark)
     }
 #endif

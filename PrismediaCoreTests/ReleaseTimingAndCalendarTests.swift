@@ -77,6 +77,36 @@ final class ReleaseTimingAndCalendarTests: XCTestCase {
         )
     }
 
+    func testEntityDetailWantedChipUsesTheLoadedAcquisitionStatus() {
+        let detail = EntityDetail(
+            id: UUID(),
+            kind: .movie,
+            title: "Future Movie",
+            parentEntityID: nil,
+            sortOrder: nil,
+            hasSourceMedia: false,
+            capabilities: [
+                .flags(
+                    EntityFlagsCapability(
+                        isFavorite: false,
+                        isNsfw: false,
+                        isOrganized: false,
+                        isWanted: true
+                    ))
+            ],
+            childrenByKind: [],
+            relationships: []
+        )
+
+        let presentation = EntityDetailPresentation(
+            detail: detail,
+            acquisitionStatus: AcquisitionStatus(rawValue: "waiting-for-release")
+        )
+
+        XCTAssertEqual(presentation.flagItems.map(\.title), ["Waiting for release"])
+        XCTAssertEqual(presentation.flagItems.map(\.systemImage), ["calendar.badge.clock"])
+    }
+
     func testStreamingAndDigitalProfilesPresentOnlyTheirCompatibleFallback() {
         XCTAssertEqual(EntityDateType.streamingRelease.compatibleFallback, .digitalRelease)
         XCTAssertEqual(EntityDateType.digitalRelease.compatibleFallback, .streamingRelease)

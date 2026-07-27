@@ -16,36 +16,24 @@ public enum RequestActivityStatusPolicy {
     }
 
     public static func label(for status: AcquisitionStatus) -> String {
-        labels[status.rawValue] ?? "Updating"
+        AcquisitionStatusPresentationPolicy.presentation(for: status).label
     }
 
     public static func tone(for status: AcquisitionStatus) -> RequestActivityTone {
-        switch status.rawValue {
-        case "downloading", "downloaded", "importing": .downloading
-        case "queued": .queued
-        case "pending", "searching": .searching
-        case "failed": .failed
-        case "awaiting-selection", "manual-import-required", "waiting-for-release", "manual-search-required": .attention
-        case "imported": .done
-        case "stopping": .cleanup
-        case "cancelled": .muted
-        default: .cleanup
+        switch AcquisitionStatusPresentationPolicy.presentation(for: status).tone {
+        case .downloading: .downloading
+        case .searching: .searching
+        case .queued: .queued
+        case .cleanup: .cleanup
+        case .attention: .attention
+        case .failed: .failed
+        case .done: .done
+        case .muted, .wanted: .muted
         }
     }
 
     public static func systemImage(for status: AcquisitionStatus) -> String {
-        switch status.rawValue {
-        case "downloading", "downloaded", "importing": "arrow.down.circle"
-        case "queued": "hourglass"
-        case "pending", "searching", "awaiting-selection": "magnifyingglass"
-        case "waiting-for-release", "manual-search-required": "calendar.badge.clock"
-        case "failed": "exclamationmark.circle"
-        case "manual-import-required": "exclamationmark.triangle"
-        case "imported": "checkmark.circle"
-        case "stopping": "arrow.trianglehead.2.clockwise.rotate.90"
-        case "cancelled": "xmark.circle"
-        default: "arrow.trianglehead.2.clockwise.rotate.90"
-        }
+        AcquisitionStatusPresentationPolicy.presentation(for: status).systemImage
     }
 
     public static func description(for status: AcquisitionStatus, message: String?) -> String? {
@@ -54,6 +42,7 @@ public enum RequestActivityStatusPolicy {
         case "pending": "Preparing to search…"
         case "searching": "Finding releases…"
         case "queued": "Waiting for a download slot."
+        case "waiting-for-download-client": "Waiting for the download client to become available."
         case "failed": message ?? "The download failed."
         case "downloaded": "Download complete; importing…"
         case "importing": "Importing into your library…"
@@ -85,24 +74,25 @@ public enum RequestActivityStatusPolicy {
         ["downloading", "downloaded", "importing"].contains(status.rawValue)
     }
 
-    private static let knownStatuses: Set<String> = Set(labels.keys)
-    private static let activeStatuses: Set<String> = [
-        "pending", "searching", "queued", "downloading", "downloaded", "importing", "stopping",
+    private static let knownStatuses: Set<String> = [
+        "pending",
+        "waiting-for-release",
+        "manual-search-required",
+        "searching",
+        "awaiting-selection",
+        "queued",
+        "waiting-for-download-client",
+        "downloading",
+        "downloaded",
+        "importing",
+        "imported",
+        "stopping",
+        "failed",
+        "cancelled",
+        "manual-import-required",
     ]
-    private static let labels: [String: String] = [
-        "pending": "Pending",
-        "searching": "Searching",
-        "awaiting-selection": "Choose Release",
-        "queued": "Queued",
-        "downloading": "Downloading",
-        "downloaded": "Downloaded",
-        "importing": "Importing",
-        "imported": "Imported",
-        "stopping": "Cleaning Up",
-        "failed": "Failed",
-        "cancelled": "Cancelled",
-        "manual-import-required": "Manual Import",
-        "waiting-for-release": "Waiting for release",
-        "manual-search-required": "Waiting for release",
+    private static let activeStatuses: Set<String> = [
+        "pending", "searching", "queued", "waiting-for-download-client", "downloading", "downloaded",
+        "importing", "stopping",
     ]
 }

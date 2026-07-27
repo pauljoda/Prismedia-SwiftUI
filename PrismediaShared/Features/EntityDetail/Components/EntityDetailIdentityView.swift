@@ -69,6 +69,7 @@ struct EntityDetailIdentityView: View {
         case .accent: artworkPrimaryAccent
         case .destructive: PrismediaColor.destructive
         case .info: PrismediaColor.info
+        case .acquisition(let tone): tone.foregroundStyle
         }
     }
 }

@@ -2,6 +2,8 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct ReleaseCalendarEventRow: View {
+        @State private var artworkPalette: ArtworkPalette?
+
         let event: ReleaseCalendarEvent
         let resolveAssetURL: (String?) -> URL?
         let onOpen: (() -> Void)?
@@ -28,39 +30,72 @@ import SwiftUI
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.vertical, PrismediaSpacing.extraSmall)
+            .prismediaArtworkPalette(
+                for: event.posterURL,
+                palette: $artworkPalette
+            )
             .accessibilityHint("Opens entity details")
         }
 
         private var rowLabel: some View {
             HStack(spacing: PrismediaSpacing.medium) {
-                    AsyncImage(url: resolveAssetURL(event.posterURL)) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Image(systemName: "photo")
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                    .frame(width: 42, height: 58)
-                    .background(PrismediaColor.controlFill)
-                    .clipShape(.rect(cornerRadius: PrismediaRadius.compact))
+                AsyncImage(url: resolveAssetURL(event.posterURL)) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Image(systemName: "photo")
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                }
+                .frame(width: 42, height: 58)
+                .background(PrismediaColor.controlFill)
+                .clipShape(.rect(cornerRadius: PrismediaRadius.compact))
 
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                        Text(ReleaseCalendarPresentationPolicy.title(for: event))
-                            .font(.headline)
-                            .foregroundStyle(PrismediaColor.textPrimary)
-                            .lineLimit(2)
-                        Text(event.dateType.displayName)
-                            .font(.subheadline)
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                        if event.isSearchGate {
-                            Label(searchGateLabel, systemImage: "magnifyingglass")
-                                .font(.caption)
-                                .foregroundStyle(event.isSearchEligible == true ? PrismediaColor.success : PrismediaColor.warning)
-                        }
+                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                    Text(ReleaseCalendarPresentationPolicy.title(for: event))
+                        .font(.headline)
+                        .foregroundStyle(PrismediaColor.textPrimary)
+                        .lineLimit(2)
+                    Text(event.dateType.displayName)
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                    if event.isSearchGate {
+                        Label(searchGateLabel, systemImage: "magnifyingglass")
+                            .font(.caption)
+                            .foregroundStyle(
+                                event.isSearchEligible == true
+                                    ? PrismediaColor.success
+                                    : PrismediaColor.warning
+                            )
                     }
-                    Spacer(minLength: 0)
+                }
+                Spacer(minLength: 0)
             }
+            .padding(PrismediaSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBackground, in: cardShape)
+            .overlay {
+                cardShape.stroke(
+                    PrismediaColor.borderSubtle,
+                    lineWidth: PrismediaLayout.hairline
+                )
+            }
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(PrismediaColor.entityAccent(for: event.kind))
+                    .frame(width: 4)
+                    .padding(.vertical, PrismediaSpacing.medium)
+                    .padding(.leading, PrismediaSpacing.extraSmall)
+                    .accessibilityHidden(true)
+            }
             .contentShape(.rect)
+        }
+
+        private var cardBackground: Color {
+            artworkPalette?.background.color ?? PrismediaColor.elevatedContentBackground
+        }
+
+        private var cardShape: PrismediaStableRoundedRectangle {
+            PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.card)
         }
 
         private var searchGateLabel: String {
@@ -77,12 +112,14 @@ import SwiftUI
 
 #if DEBUG && (os(iOS) || os(macOS))
     #Preview("Release Calendar Event") {
-        NavigationStack {
-            ReleaseCalendarEventRow(
-                event: ReleaseCalendarPreviewFixtures.events[0],
-                resolveAssetURL: { _ in nil }
-            )
-            .padding()
+        PreviewShell {
+            NavigationStack {
+                ReleaseCalendarEventRow(
+                    event: ReleaseCalendarPreviewFixtures.events[0],
+                    resolveAssetURL: { _ in nil }
+                )
+                .padding()
+            }
         }
         .preferredColorScheme(.dark)
     }

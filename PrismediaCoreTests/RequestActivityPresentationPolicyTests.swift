@@ -4,6 +4,16 @@ import XCTest
 @testable import PrismediaCore
 
 final class RequestActivityPresentationPolicyTests: XCTestCase {
+    func testWaitingForDownloadClientUsesKnownQueuedPresentation() {
+        let status = AcquisitionStatus(rawValue: "waiting-for-download-client")
+
+        XCTAssertTrue(RequestActivityStatusPolicy.isKnown(status))
+        XCTAssertTrue(RequestActivityStatusPolicy.shouldPoll(status))
+        XCTAssertEqual(RequestActivityStatusPolicy.label(for: status), "Waiting for client")
+        XCTAssertEqual(RequestActivityStatusPolicy.systemImage(for: status), "hourglass")
+        XCTAssertEqual(RequestActivityStatusPolicy.tone(for: status), .queued)
+    }
+
     func testHistoryPolicyKeepsCanonicalEventSemanticsAcrossSurfaces() {
         let events: [(String, String, String, RequestActivityTone)] = [
             ("grabbed", "Grabbed", "arrow.down.circle", .downloading),

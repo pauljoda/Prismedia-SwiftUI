@@ -90,6 +90,9 @@ extension EntityDetailView {
 
     func refreshDetailContent() async {
         await loadDetail()
+        #if os(iOS) || os(macOS)
+            await refreshAcquisitionStatus()
+        #endif
         guard case .content(let refreshedDetail) = state.phase else { return }
         await loadVideoProgress(for: refreshedDetail)
         await loadReadingState(for: refreshedDetail)
@@ -208,7 +211,27 @@ extension EntityDetailView {
     func refreshAfterAcquisitionMutation() async {
         dependencies.onEntityMutated()
         await loadDetail()
+        #if os(iOS) || os(macOS)
+            await refreshAcquisitionStatus()
+        #endif
     }
+
+    #if os(iOS) || os(macOS)
+        func refreshAcquisitionStatus() async {
+            guard let acquisitionService = dependencies.acquisitionService else { return }
+            do {
+                let monitorState = try await acquisitionService.loadState(entityID: link.entityID)
+                guard !Task.isCancelled else { return }
+                acquisitionStatus = monitorState.latestAcquisition?.status
+                    ?? monitorState.monitor?.acquisitionStatus
+            } catch is CancellationError {
+                return
+            } catch {
+                // The detail and its navigation thumbnail remain usable when this
+                // best-effort acquisition status refresh is temporarily unavailable.
+            }
+        }
+    #endif
 
     func handlePrunedEntity() {
         videoPlaybackSession?.inlinePlaybackWillNavigate()

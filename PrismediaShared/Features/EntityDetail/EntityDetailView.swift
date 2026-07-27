@@ -32,6 +32,7 @@ public struct EntityDetailView: View {
     @State var isVideoProgressMutating = false
     @State var videoProgressErrorMessage: String?
     @State var artworkPalette: ArtworkPalette?
+    @State var acquisitionStatus: AcquisitionStatus?
     @State var editPresentation: EntityDetailEditPresentation?
     @State var collectionSheetPresented = false
     #if os(iOS) || os(macOS)
@@ -56,6 +57,14 @@ public struct EntityDetailView: View {
         self.link = link
         self.dependencies = dependencies
         self.imageViewerSession = imageViewerSession
+        #if os(iOS) || os(macOS)
+            _acquisitionStatus = State(
+                initialValue: link.sourceThumbnail?.wantedStatus
+                    ?? link.sourceThumbnail?.latestAcquisitionStatus
+            )
+        #else
+            _acquisitionStatus = State(initialValue: nil)
+        #endif
         service = EntityDetailService(
             loader: dependencies.detailLoader,
             mutator: dependencies.mutator
@@ -125,6 +134,9 @@ public struct EntityDetailView: View {
         #endif
         .task(id: link) {
             await loadDetailIfNeeded()
+            #if os(iOS) || os(macOS)
+                await refreshAcquisitionStatus()
+            #endif
             if link.intent == .editReleaseDate {
                 presentReleaseDateEditor()
             }
@@ -221,7 +233,8 @@ public struct EntityDetailView: View {
                 detail: $0,
                 canEditMetadata: dependencies.metadataMutator != nil,
                 identifyActionLabel: identifyActionLabel,
-                identifyActionSystemImage: identifyActionSystemImage
+                identifyActionSystemImage: identifyActionSystemImage,
+                acquisitionStatus: acquisitionStatus
             )
         }
     }

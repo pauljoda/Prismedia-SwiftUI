@@ -77,20 +77,30 @@ import SwiftUI
                     monthHeader
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
-                    ForEach(agendaDays, id: \.self) { date in
-                        Section(date.formatted(date: .complete, time: .omitted)) {
-                            ForEach(events(on: date)) { event in
-                                ReleaseCalendarEventRow(event: event, resolveAssetURL: resolveAssetURL)
+                    if agendaDays.isEmpty {
+                        ContentUnavailableView(
+                            "No Releases",
+                            systemImage: "calendar",
+                            description: Text("No monitored milestones match these filters.")
+                        )
+                        .accessibilityIdentifier("release-calendar.empty")
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    } else {
+                        ForEach(agendaDays, id: \.self) { date in
+                            Section(date.formatted(date: .complete, time: .omitted)) {
+                                ForEach(events(on: date)) { event in
+                                    ReleaseCalendarEventRow(event: event, resolveAssetURL: resolveAssetURL)
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                }
                             }
                         }
                     }
                 }
                 .listStyle(.plain)
-                .overlay {
-                    if agendaDays.isEmpty {
-                        ContentUnavailableView("No Releases", systemImage: "calendar", description: Text("No monitored milestones match these filters."))
-                    }
-                }
+                .scrollContentBackground(.hidden)
             }
         }
 
@@ -98,13 +108,16 @@ import SwiftUI
             HStack {
                 Button("Previous month", systemImage: "chevron.left") { moveMonth(-1) }
                     .labelStyle(.iconOnly)
+                    .accessibilityIdentifier("release-calendar.previous-month")
                 Spacer()
                 Text(displayedMonth, format: .dateTime.month(.wide).year())
                     .font(.title2.bold())
                     .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("release-calendar.month")
                 Spacer()
                 Button("Next month", systemImage: "chevron.right") { moveMonth(1) }
                     .labelStyle(.iconOnly)
+                    .accessibilityIdentifier("release-calendar.next-month")
             }
             .padding(PrismediaSpacing.large)
         }
@@ -209,13 +222,15 @@ import SwiftUI
 
 #if DEBUG && (os(iOS) || os(macOS))
     #Preview("Release Calendar") {
-        NavigationStack {
-            ReleaseCalendarView(
-                loader: PreviewReleaseCalendarLoader(),
-                navigationPath: .constant([]),
-                initialDate: ReleaseCalendarPreviewFixtures.day,
-                resolveAssetURL: { _ in nil }
-            )
+        PreviewShell {
+            NavigationStack {
+                ReleaseCalendarView(
+                    loader: PreviewReleaseCalendarLoader(),
+                    navigationPath: .constant([]),
+                    initialDate: ReleaseCalendarPreviewFixtures.day,
+                    resolveAssetURL: { _ in nil }
+                )
+            }
         }
         .preferredColorScheme(.dark)
     }
