@@ -51,6 +51,11 @@ public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable
         -> AdministrativeRequestCommitResponse
     func libraryRoots() async throws -> [AdministrativeLibraryRoot]
     func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile]
+    func updateAcquisitionProfileTiming(
+        _ profile: AdministrativeAcquisitionProfile,
+        searchAfterDateType: EntityDateType?,
+        searchDelayDays: Int
+    ) async throws -> AdministrativeAcquisitionProfile
     func jobs() async throws -> AdministrativeJobListResponse
     func createJob(type: String) async throws -> AdministrativeJobRun
     func cancelJob(id: UUID) async throws -> Int
@@ -63,4 +68,14 @@ public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable
     func transcodeCacheStatus() async throws -> AdministrativeTranscodeCacheStatus
     func clearTranscodeCache() async throws -> AdministrativeTranscodeCacheStatus
     func createDatabaseBackup() async throws -> AdministrativeDatabaseBackup
+}
+
+extension AdministrationServicing {
+    public func updateAcquisitionProfileTiming(
+        _ profile: AdministrativeAcquisitionProfile,
+        searchAfterDateType: EntityDateType?,
+        searchDelayDays: Int
+    ) async throws -> AdministrativeAcquisitionProfile {
+        throw CancellationError()
+    }
 }

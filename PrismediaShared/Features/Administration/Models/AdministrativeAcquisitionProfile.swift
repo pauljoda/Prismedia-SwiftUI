@@ -28,6 +28,8 @@ public struct AdministrativeAcquisitionProfile: Decodable, Identifiable, Hashabl
     public let formatScores: [String: Int]?
     public let minFormatScore: Int
     public let cutoffFormatScore: Int?
+    public let searchAfterDateType: EntityDateType?
+    public let searchDelayDays: Int
 
     public init(
         id: UUID,
@@ -56,7 +58,9 @@ public struct AdministrativeAcquisitionProfile: Decodable, Identifiable, Hashabl
         cutoffQuality: String? = nil,
         formatScores: [String: Int]? = nil,
         minFormatScore: Int = 0,
-        cutoffFormatScore: Int? = nil
+        cutoffFormatScore: Int? = nil,
+        searchAfterDateType: EntityDateType? = nil,
+        searchDelayDays: Int = 0
     ) {
         self.id = id
         self.kind = kind
@@ -85,6 +89,8 @@ public struct AdministrativeAcquisitionProfile: Decodable, Identifiable, Hashabl
         self.formatScores = formatScores
         self.minFormatScore = minFormatScore
         self.cutoffFormatScore = cutoffFormatScore
+        self.searchAfterDateType = searchAfterDateType
+        self.searchDelayDays = searchDelayDays
     }
 
     enum CodingKeys: String, CodingKey {
@@ -93,7 +99,7 @@ public struct AdministrativeAcquisitionProfile: Decodable, Identifiable, Hashabl
         case pathTemplate, importMode, allowedFormats, preferredLanguages, minSeeders, minSizeBytes, maxSizeBytes
         case requiredTerms, ignoredTerms, preferredTerms, weightedTerms, autoPick, autoRedownload, upgradeUntilCutoff
         case cutoffSourceTier, cutoffFormatTier, downloadCategory, allowedQualities, cutoffQuality, formatScores
-        case minFormatScore, cutoffFormatScore
+        case minFormatScore, cutoffFormatScore, searchAfterDateType, searchDelayDays
     }
 
     public init(from decoder: any Decoder) throws {
@@ -127,5 +133,8 @@ public struct AdministrativeAcquisitionProfile: Decodable, Identifiable, Hashabl
             try PrismediaDecoding.optionalInteger(from: container, forKey: .minFormatScore) ?? 0
         cutoffFormatScore =
             try PrismediaDecoding.optionalInteger(from: container, forKey: .cutoffFormatScore)
+        searchAfterDateType = try container.decodeIfPresent(EntityDateType.self, forKey: .searchAfterDateType)
+        searchDelayDays =
+            try PrismediaDecoding.optionalInteger(from: container, forKey: .searchDelayDays) ?? 0
     }
 }

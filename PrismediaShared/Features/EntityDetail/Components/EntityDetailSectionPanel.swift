@@ -13,6 +13,7 @@ struct EntityDetailSectionPanel: View {
     let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
     let onAcquisitionMutated: @MainActor () async -> Void
     let onEntityPruned: @MainActor () -> Void
+    let onEnterReleaseDate: @MainActor @Sendable () -> Void
 
     init(
         presentation: EntityDetailPresentation,
@@ -23,7 +24,8 @@ struct EntityDetailSectionPanel: View {
         requestActivityService: (any RequestActivityServicing)? = nil,
         transcriptSourceLoader: (any EntityTranscriptSourceLoading)? = nil,
         onAcquisitionMutated: @escaping @MainActor () async -> Void = {},
-        onEntityPruned: @escaping @MainActor () -> Void = {}
+        onEntityPruned: @escaping @MainActor () -> Void = {},
+        onEnterReleaseDate: @escaping @MainActor @Sendable () -> Void = {}
     ) {
         self.presentation = presentation
         self.section = section
@@ -34,6 +36,7 @@ struct EntityDetailSectionPanel: View {
         self.transcriptSourceLoader = transcriptSourceLoader
         self.onAcquisitionMutated = onAcquisitionMutated
         self.onEntityPruned = onEntityPruned
+        self.onEnterReleaseDate = onEnterReleaseDate
     }
 
     var body: some View {
@@ -58,7 +61,8 @@ struct EntityDetailSectionPanel: View {
                     acquisitionService: acquisitionService,
                     requestActivityService: requestActivityService,
                     onMutated: onAcquisitionMutated,
-                    onEntityPruned: onEntityPruned
+                    onEntityPruned: onEntityPruned,
+                    onEnterReleaseDate: onEnterReleaseDate
                 )
             }
         }

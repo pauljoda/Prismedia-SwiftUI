@@ -15,17 +15,7 @@ public enum AppSidebarCatalog {
         AppSidebarSection(
             id: "overview",
             title: "Overview",
-            items: [
-                item(in: ModeCatalog.overview, destinationID: "dashboard"),
-                item(in: ModeCatalog.overview, destinationID: "favorites"),
-                AppSidebarItem(
-                    id: "search",
-                    title: "Search",
-                    systemImage: "magnifyingglass",
-                    selection: .search
-                ),
-                item(in: ModeCatalog.overview, destinationID: "stats"),
-            ]
+            items: overviewItems
         ),
         AppSidebarSection(
             id: "video",
@@ -75,6 +65,26 @@ public enum AppSidebarCatalog {
             ]
         ),
     ]
+
+    private static var overviewItems: [AppSidebarItem] {
+        var values = [
+            item(in: ModeCatalog.overview, destinationID: "dashboard"),
+            item(in: ModeCatalog.overview, destinationID: "favorites"),
+        ]
+        #if os(iOS) || os(macOS)
+            values.append(item(in: ModeCatalog.overview, destinationID: "release-calendar"))
+        #endif
+        values.append(
+            AppSidebarItem(
+                id: "search",
+                title: "Search",
+                systemImage: "magnifyingglass",
+                selection: .search
+            )
+        )
+        values.append(item(in: ModeCatalog.overview, destinationID: "stats"))
+        return values
+    }
 
     #if os(iOS) || os(macOS)
         private static let operateSection = AppSidebarSection(

@@ -8,6 +8,9 @@ enum RequestActivityAcquisitionLifecyclePolicy {
     }
 
     static func description(for status: AcquisitionStatus, message: String?) -> String? {
+        if status.rawValue == "waiting-for-release" || status.rawValue == "manual-search-required" {
+            return "Searching will begin when the configured release milestone is reached."
+        }
         if let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return message
         }
@@ -45,7 +48,7 @@ enum RequestActivityAcquisitionLifecyclePolicy {
                 : .research
         case "manual-import-required":
             return .retryImport(allowFormatChange: true)
-        case "cancelled":
+        case "cancelled", "waiting-for-release", "manual-search-required":
             return .research
         default:
             return nil
@@ -67,6 +70,8 @@ enum RequestActivityAcquisitionLifecyclePolicy {
             return hasResumableImport ? [.startOver] : []
         case "manual-import-required":
             return hasResumableImport ? [.research, .startOver] : [.research]
+        case "waiting-for-release", "manual-search-required":
+            return [.cancel]
         default:
             return []
         }
@@ -81,7 +86,7 @@ enum RequestActivityAcquisitionLifecyclePolicy {
         case "queued", "downloading": return .download
         case "downloaded", "importing", "imported": return .files
         case "awaiting-selection", "manual-import-required": return .releases
-        case "failed", "cancelled": return .lifecycleOnly
+        case "failed", "cancelled", "waiting-for-release", "manual-search-required": return .lifecycleOnly
         default: return .lifecycleOnly
         }
     }

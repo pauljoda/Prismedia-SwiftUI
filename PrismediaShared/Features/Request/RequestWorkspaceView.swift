@@ -91,7 +91,8 @@ import SwiftUI
                     section: activitySection,
                     service: activityService,
                     resolveAssetURL: resolveAssetURL,
-                    onOpenEntity: openEntity
+                    onOpenEntity: openEntity,
+                    onEnterReleaseDate: openReleaseDateEditor
                 )
             }
         }
@@ -108,6 +109,12 @@ import SwiftUI
 
         private func openEntity(_ entityID: UUID, _ kind: EntityKind) {
             navigationPath.wrappedValue.append(EntityLink(entityID: entityID, kind: kind))
+        }
+
+        private func openReleaseDateEditor(_ entityID: UUID, _ kind: EntityKind) {
+            navigationPath.wrappedValue.append(
+                EntityLink(entityID: entityID, kind: kind, intent: .editReleaseDate)
+            )
         }
 
         private var trailingToolbarPlacement: ToolbarItemPlacement {

@@ -8,13 +8,25 @@ import SwiftUI
 
         let acquisitionID: UUID
         let service: any RequestActivityServicing
+        let onEnterReleaseDate: (@MainActor @Sendable () -> Void)?
+
+        init(
+            acquisitionID: UUID,
+            service: any RequestActivityServicing,
+            onEnterReleaseDate: (@MainActor @Sendable () -> Void)? = nil
+        ) {
+            self.acquisitionID = acquisitionID
+            self.service = service
+            self.onEnterReleaseDate = onEnterReleaseDate
+        }
 
         var body: some View {
             NavigationStack {
                 RequestActivityAcquisitionManagementSections(
                     acquisitionID: acquisitionID,
                     service: service,
-                    style: .list
+                    style: .list,
+                    onEnterReleaseDate: onEnterReleaseDate
                 )
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {

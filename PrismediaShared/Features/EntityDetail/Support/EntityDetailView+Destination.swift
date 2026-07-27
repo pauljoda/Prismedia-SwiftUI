@@ -15,15 +15,28 @@ extension EntityDetailView {
     }
 
     func detailView(_ detail: EntityDetail) -> some View {
-        EntityDetailPlatformDestinationView(
-            detail: detail,
-            link: link,
-            dependencies: dependencies,
-            imageViewerSession: imageViewerSession,
-            onAcquisitionMutated: refreshAfterAcquisitionMutation,
-            onEntityPruned: handlePrunedEntity,
-            standardContent: standardDetailView
-        )
+        #if os(iOS) || os(macOS)
+            EntityDetailPlatformDestinationView(
+                detail: detail,
+                link: link,
+                dependencies: dependencies,
+                imageViewerSession: imageViewerSession,
+                onAcquisitionMutated: refreshAfterAcquisitionMutation,
+                onEntityPruned: handlePrunedEntity,
+                onEnterReleaseDate: presentReleaseDateEditor,
+                standardContent: standardDetailView
+            )
+        #else
+            EntityDetailPlatformDestinationView(
+                detail: detail,
+                link: link,
+                dependencies: dependencies,
+                imageViewerSession: imageViewerSession,
+                onAcquisitionMutated: refreshAfterAcquisitionMutation,
+                onEntityPruned: handlePrunedEntity,
+                standardContent: standardDetailView
+            )
+        #endif
     }
 
     func standardDetailView(_ detail: EntityDetail) -> some View {

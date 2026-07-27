@@ -27,6 +27,7 @@ struct EntityDetailEditSheet: View {
         self.referenceSearchService = EntityDetailReferenceSearchService(loader: referenceLoader)
         self.onSaved = onSaved
         _draft = State(initialValue: draft)
+        _selectedSection = State(initialValue: presentation.initialSection)
     }
 
     var body: some View {
@@ -144,6 +145,8 @@ struct EntityDetailEditSheet: View {
 
     @ViewBuilder
     private var metadataForm: some View {
+        EntityDetailDatesEditor(values: $draft.dates)
+
         EntityDetailStringListEditor(
             title: "Links",
             placeholder: "https://example.com",
@@ -156,14 +159,6 @@ struct EntityDetailEditSheet: View {
             valuePlaceholder: "ID",
             valueUsesNumberKeyboard: false,
             values: $draft.externalIDs
-        )
-
-        EntityDetailKeyValueEditor(
-            title: "Dates",
-            keyPlaceholder: "Code",
-            valuePlaceholder: "YYYY-MM-DD",
-            valueUsesNumberKeyboard: false,
-            values: $draft.dates
         )
 
         EntityDetailKeyValueEditor(

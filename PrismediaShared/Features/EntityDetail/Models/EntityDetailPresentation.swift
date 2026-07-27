@@ -202,8 +202,8 @@ struct EntityDetailPresentation {
                     )
                 }
             case .dates(let dates):
-                items += dates.items.prefix(3).map {
-                    .init(label: Self.titleCase($0.code), value: $0.value, systemImage: "calendar")
+                items += EntityDateMilestonePolicy.sorted(dates.items).map {
+                    .init(label: EntityDateMilestonePolicy.label(for: $0), value: $0.value, systemImage: "calendar")
                 }
             case .playback(let playback):
                 items.append(.init(label: "Plays", value: String(playback.playCount), systemImage: "play.circle"))
@@ -262,7 +262,7 @@ struct EntityDetailPresentation {
             default: continue
             }
         }
-        return Array(items.prefix(16))
+        return items
     }
 
     func creditSubtitle(for personID: UUID) -> String? {

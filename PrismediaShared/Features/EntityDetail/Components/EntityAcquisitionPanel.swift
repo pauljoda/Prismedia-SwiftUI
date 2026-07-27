@@ -36,6 +36,7 @@ struct EntityAcquisitionPanel: View {
     private let requestActivityService: (any RequestActivityServicing)?
     private let onMutated: @MainActor () async -> Void
     private let onEntityPruned: @MainActor () -> Void
+    private let onEnterReleaseDate: @MainActor @Sendable () -> Void
     #if DEBUG
         private var disablesLiveLoadingForPreview = false
     #endif
@@ -50,7 +51,8 @@ struct EntityAcquisitionPanel: View {
         acquisitionService: (any EntityAcquisitionServicing)?,
         requestActivityService: (any RequestActivityServicing)? = nil,
         onMutated: @escaping @MainActor () async -> Void,
-        onEntityPruned: @escaping @MainActor () -> Void
+        onEntityPruned: @escaping @MainActor () -> Void,
+        onEnterReleaseDate: @escaping @MainActor @Sendable () -> Void = {}
     ) {
         self.entityID = entityID
         self.entityTitle = entityTitle
@@ -62,6 +64,7 @@ struct EntityAcquisitionPanel: View {
         self.requestActivityService = requestActivityService
         self.onMutated = onMutated
         self.onEntityPruned = onEntityPruned
+        self.onEnterReleaseDate = onEnterReleaseDate
         _historyLoadState = State(
             initialValue: requestActivityService == nil ? .loaded : .loading
         )
@@ -532,6 +535,7 @@ struct EntityAcquisitionPanel: View {
                         await onMutated()
                         await load(using: service)
                     },
+                    onEnterReleaseDate: onEnterReleaseDate,
                     isExternallyDisabled: isManualAcquisitionBusy || state.isMutating,
                     showsDeleteFilesAction: canDeleteFiles,
                     isDeleteFilesDisabled: deleteFilesIsDisabled(
@@ -871,7 +875,16 @@ struct EntityAcquisitionPanel: View {
     }
 
     private func acquisitionContent(_ acquisition: EntityAcquisitionSummary) -> some View {
-        EntityAcquisitionSummaryView(acquisition: acquisition)
+        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+            EntityAcquisitionSummaryView(acquisition: acquisition)
+            #if os(iOS) || os(macOS)
+                if ReleaseDatePromptPolicy.offersManualEntry(
+                    metadataUnavailable: acquisition.releaseDateMetadataUnavailable
+                ) {
+                    ReleaseDateMetadataUnavailableView(onEnterReleaseDate: onEnterReleaseDate)
+                }
+            #endif
+        }
     }
 
     // MARK: - Loading and mutation

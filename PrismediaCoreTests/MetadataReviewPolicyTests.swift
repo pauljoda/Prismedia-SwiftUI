@@ -3,6 +3,33 @@ import XCTest
 @testable import PrismediaCore
 
 final class MetadataReviewPolicyTests: XCTestCase {
+    func testTypedReleaseDatesSurviveReviewedProposalApply() {
+        let root = AdministrativeEntityMetadataProposal(
+            proposalID: "root",
+            provider: "provider",
+            targetKind: "movie",
+            confidence: nil,
+            matchReason: nil,
+            patch: AdministrativeEntityMetadataPatch(
+                title: "Example",
+                dateEntries: [
+                    AdministrativeEntityMetadataDatePatch(type: .streamingRelease, value: "2026-08-14")
+                ]
+            ),
+            images: [],
+            children: [],
+            candidates: [],
+            targetEntityID: nil,
+            relationships: []
+        )
+        let selection = MetadataReviewPolicy.seededSelection(for: root)
+
+        let applied = MetadataReviewPolicy.proposalForApply(root, selection: selection)
+
+        XCTAssertEqual(applied.patch.dateEntries, root.patch.dateEntries)
+        XCTAssertTrue(selection.selectedFieldsByProposal["root"]?.contains(.dates) == true)
+    }
+
     func testFindsProposalRecursivelyAcrossChildrenAndRelationships() {
         let credit = proposal(id: "credit", kind: "person", title: "Amy Adams")
         let episode = proposal(

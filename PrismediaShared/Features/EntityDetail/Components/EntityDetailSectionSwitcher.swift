@@ -33,7 +33,8 @@ struct EntityDetailSectionSwitcher<MainContent: View>: View {
             requestActivityService: support.requestActivityService,
             transcriptSourceLoader: support.transcriptSourceLoader,
             onAcquisitionMutated: support.onAcquisitionMutated,
-            onEntityPruned: support.onEntityPruned
+            onEntityPruned: support.onEntityPruned,
+            onEnterReleaseDate: support.onEnterReleaseDate
         )
     }
 }

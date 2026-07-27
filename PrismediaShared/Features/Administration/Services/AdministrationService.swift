@@ -139,6 +139,17 @@ public struct AdministrationService: AdministrationServicing {
     public func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] {
         try await client.listAdministrativeAcquisitionProfiles()
     }
+    public func updateAcquisitionProfileTiming(
+        _ profile: AdministrativeAcquisitionProfile,
+        searchAfterDateType: EntityDateType?,
+        searchDelayDays: Int
+    ) async throws -> AdministrativeAcquisitionProfile {
+        try await client.updateAdministrativeAcquisitionProfileTiming(
+            profile,
+            searchAfterDateType: searchAfterDateType,
+            searchDelayDays: searchDelayDays
+        )
+    }
     public func acquisitionBlocklist(entityID: UUID?) async throws -> [RequestActivityBlocklistEntry] {
         let entries = try await client.listRequestActivityBlocklist()
         guard let entityID else { return entries }

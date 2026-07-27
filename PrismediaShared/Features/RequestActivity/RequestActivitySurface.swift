@@ -31,6 +31,7 @@ import SwiftUI
         private let resolveAssetURL: (String) -> URL?
         private let onOpenEntity: ((UUID, EntityKind) -> Void)?
         private let onChooseRelease: ((UUID) -> Void)?
+        private let onEnterReleaseDate: (@MainActor @Sendable (UUID, EntityKind) -> Void)?
         #if DEBUG
             private var disablesLiveLoadingForPreview = false
         #endif
@@ -41,7 +42,8 @@ import SwiftUI
             referenceDate: Date = .now,
             resolveAssetURL: @escaping (String) -> URL? = { URL(string: $0) },
             onOpenEntity: ((UUID, EntityKind) -> Void)? = nil,
-            onChooseRelease: ((UUID) -> Void)? = nil
+            onChooseRelease: ((UUID) -> Void)? = nil,
+            onEnterReleaseDate: (@MainActor @Sendable (UUID, EntityKind) -> Void)? = nil
         ) {
             self.section = section
             self.service = service
@@ -49,6 +51,7 @@ import SwiftUI
             self.resolveAssetURL = resolveAssetURL
             self.onOpenEntity = onOpenEntity
             self.onChooseRelease = onChooseRelease
+            self.onEnterReleaseDate = onEnterReleaseDate
         }
 
         #if DEBUG
@@ -120,7 +123,8 @@ import SwiftUI
                 .sheet(item: $selectedAcquisition) { item in
                     RequestActivityAcquisitionDetailView(
                         acquisitionID: item.id,
-                        service: service
+                        service: service,
+                        onEnterReleaseDate: releaseDateEntryAction(for: item)
                     )
                 }
                 .task(id: taskIdentity) {
@@ -137,6 +141,15 @@ import SwiftUI
                 }
                 .prismediaScreenBackground()
                 .accessibilityIdentifier("request-activity.\(section.rawValue)")
+        }
+
+        private func releaseDateEntryAction(
+            for item: RequestActivityDownload
+        ) -> (@MainActor @Sendable () -> Void)? {
+            guard let entityID = item.entityID, let onEnterReleaseDate else { return nil }
+            return { @MainActor @Sendable in
+                onEnterReleaseDate(entityID, item.kind)
+            }
         }
 
         @ViewBuilder

@@ -3,4 +3,5 @@ public enum EntityNavigationIntent: Hashable, Sendable {
     case metadata
     case playback
     case audioCollection
+    case editReleaseDate
 }

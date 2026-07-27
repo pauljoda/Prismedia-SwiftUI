@@ -297,6 +297,23 @@ public struct PrismediaShellView: View {
             .id(destination.id)
 
         #if os(iOS) || os(macOS)
+            case .releaseCalendar:
+                let releaseCalendarPath = pathBinding(
+                    for: destination.id,
+                    videoPlaybackSession: videoPlaybackSession
+                )
+                NavigationStack(
+                    path: releaseCalendarPath
+                ) {
+                    ReleaseCalendarView(
+                        loader: PrismediaReleaseCalendarLoader(client: client),
+                        navigationPath: releaseCalendarPath,
+                        resolveAssetURL: client.assetURL(for:)
+                    )
+                    .prismediaEntityDestinations(dependencies: detailDependencies)
+                }
+                .id(destination.id)
+
             case .manage(let manage):
                 ManageDestinationView(
                     destination: manage,

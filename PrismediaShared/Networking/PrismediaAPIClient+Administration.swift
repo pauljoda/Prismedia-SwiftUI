@@ -283,6 +283,23 @@ extension PrismediaAPIClient {
         try await send([AdministrativeAcquisitionProfile].self, path: "/api/acquisitions/profiles")
     }
 
+    public func updateAdministrativeAcquisitionProfileTiming(
+        _ profile: AdministrativeAcquisitionProfile,
+        searchAfterDateType: EntityDateType?,
+        searchDelayDays: Int
+    ) async throws -> AdministrativeAcquisitionProfile {
+        try await send(
+            AdministrativeAcquisitionProfile.self,
+            path: "/api/acquisitions/profiles/\(profile.id.uuidString.lowercased())",
+            method: "PUT",
+            body: AdministrativeAcquisitionProfileSaveRequest(
+                profile: profile,
+                searchAfterDateType: searchAfterDateType,
+                searchDelayDays: searchDelayDays
+            )
+        )
+    }
+
     public func listAdministrativeJobs() async throws -> AdministrativeJobListResponse {
         try await send(AdministrativeJobListResponse.self, path: "/api/jobs/")
     }

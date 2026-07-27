@@ -38,6 +38,7 @@ import SwiftUI
         let onCancelled: (@MainActor () async -> Void)?
         let onImported: (@MainActor () async -> Void)?
         let onReset: (@MainActor () async -> Void)?
+        let onEnterReleaseDate: (@MainActor @Sendable () -> Void)?
         let isExternallyDisabled: Bool
         let showsDeleteFilesAction: Bool
         let isDeleteFilesDisabled: Bool
@@ -53,6 +54,7 @@ import SwiftUI
             onCancelled: (@MainActor () async -> Void)? = nil,
             onImported: (@MainActor () async -> Void)? = nil,
             onReset: (@MainActor () async -> Void)? = nil,
+            onEnterReleaseDate: (@MainActor @Sendable () -> Void)? = nil,
             isExternallyDisabled: Bool = false,
             showsDeleteFilesAction: Bool = false,
             isDeleteFilesDisabled: Bool = false,
@@ -64,6 +66,7 @@ import SwiftUI
             self.onCancelled = onCancelled
             self.onImported = onImported
             self.onReset = onReset
+            self.onEnterReleaseDate = onEnterReleaseDate
             self.isExternallyDisabled = isExternallyDisabled
             self.showsDeleteFilesAction = showsDeleteFilesAction
             self.isDeleteFilesDisabled = isDeleteFilesDisabled
@@ -168,6 +171,15 @@ import SwiftUI
             List {
                 if let detail {
                     summarySection(detail.summary)
+                    if ReleaseDatePromptPolicy.offersManualEntry(
+                        metadataUnavailable: detail.summary.releaseDateMetadataUnavailable
+                    ),
+                        let onEnterReleaseDate
+                    {
+                        Section {
+                            ReleaseDateMetadataUnavailableView(onEnterReleaseDate: onEnterReleaseDate)
+                        }
+                    }
                     if hasLifecycleMessage {
                         Section { lifecycleMessages }
                     }
@@ -377,6 +389,13 @@ import SwiftUI
             if let detail {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                     embeddedStatusHeader(detail)
+                    if ReleaseDatePromptPolicy.offersManualEntry(
+                        metadataUnavailable: detail.summary.releaseDateMetadataUnavailable
+                    ),
+                        let onEnterReleaseDate
+                    {
+                        ReleaseDateMetadataUnavailableView(onEnterReleaseDate: onEnterReleaseDate)
+                    }
                     lifecycleMessages
                     embeddedBody(detail)
                 }

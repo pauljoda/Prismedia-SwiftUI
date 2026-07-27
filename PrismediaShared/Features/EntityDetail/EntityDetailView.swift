@@ -125,6 +125,9 @@ public struct EntityDetailView: View {
         #endif
         .task(id: link) {
             await loadDetailIfNeeded()
+            if link.intent == .editReleaseDate {
+                presentReleaseDateEditor()
+            }
         }
         .task(id: livePlaybackRefreshTaskID) {
             await pollPlaybackStateWhileVisible()

@@ -6,5 +6,6 @@ public enum AppDestinationContent: Hashable, Sendable {
     case administration(AdministrativeDestination)
     #if os(iOS) || os(macOS)
         case manage(ManageDestination)
+        case releaseCalendar
     #endif
 }

@@ -3,17 +3,33 @@ import Foundation
 /// Native app-shell catalog. This mirrors the web app's broad navigation while
 /// allowing the compact iOS rail to adapt to the active section.
 public enum ModeCatalog {
-    public static let overview = AppMode(
-        id: "overview",
-        title: "Overview",
-        systemImage: "house",
-        destinations: [
-            destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
-            entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
-            destination("favorites", "Favorites", "heart", content: .favorites),
-            destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
-        ]
-    )
+    #if os(iOS) || os(macOS)
+        public static let overview = AppMode(
+            id: "overview",
+            title: "Overview",
+            systemImage: "house",
+            destinations: [
+                destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
+                destination("release-calendar", "Calendar", "calendar", content: .releaseCalendar),
+                entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
+                destination("favorites", "Favorites", "heart", content: .favorites),
+                destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
+            ],
+            preferredTabDestinationIDs: ["dashboard", "favorites", "release-calendar", "stats"]
+        )
+    #else
+        public static let overview = AppMode(
+            id: "overview",
+            title: "Overview",
+            systemImage: "house",
+            destinations: [
+                destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
+                entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
+                destination("favorites", "Favorites", "heart", content: .favorites),
+                destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
+            ]
+        )
+    #endif
 
     public static let video = AppMode(
         id: "video",

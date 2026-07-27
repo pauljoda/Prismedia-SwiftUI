@@ -28,11 +28,11 @@ final class AppShellNavigationTests: XCTestCase {
         )
         XCTAssertEqual(
             sections[0].items.map(\.title),
-            ["Dashboard", "Favorites", "Search", "Stats"]
+            ["Dashboard", "Favorites", "Calendar", "Search", "Stats"]
         )
         XCTAssertEqual(
             ModeCatalog.overview.destinations.map(\.title),
-            ["Dashboard", "Collections", "Favorites", "Stats"]
+            ["Dashboard", "Calendar", "Collections", "Favorites", "Stats"]
         )
         XCTAssertNil(ModeCatalog.overview.destination(id: "account"))
         XCTAssertEqual(sections[1].items.map(\.title), ["Movies", "Series", "Videos"])

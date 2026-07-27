@@ -8,6 +8,7 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
     let imageViewerSession: EntityImageViewerSession?
     let onAcquisitionMutated: @MainActor () async -> Void
     let onEntityPruned: @MainActor () -> Void
+    let onEnterReleaseDate: @MainActor @Sendable () -> Void
     @ViewBuilder let standardContent: (EntityDetail) -> StandardContent
 
     var body: some View {
@@ -61,7 +62,8 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
             ownerLink: link,
             dependencies: dependencies,
             onAcquisitionMutated: onAcquisitionMutated,
-            onEntityPruned: onEntityPruned
+            onEntityPruned: onEntityPruned,
+            onEnterReleaseDate: onEnterReleaseDate
         )
     }
 }
@@ -84,6 +86,7 @@ struct EntityDetailPlatformDestinationView<StandardContent: View>: View {
             imageViewerSession: nil,
             onAcquisitionMutated: {},
             onEntityPruned: {},
+            onEnterReleaseDate: {},
             standardContent: { Text($0.title).padding() }
         )
     }

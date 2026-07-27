@@ -148,7 +148,8 @@ extension EntityDetailView {
                                                 ownerLink: link,
                                                 dependencies: dependencies,
                                                 onAcquisitionMutated: refreshAfterAcquisitionMutation,
-                                                onEntityPruned: handlePrunedEntity
+                                                onEntityPruned: handlePrunedEntity,
+                                                onEnterReleaseDate: presentReleaseDateEditor
                                             ),
                                             actions: {
                                                 EntityDetailPlatformActionsView(

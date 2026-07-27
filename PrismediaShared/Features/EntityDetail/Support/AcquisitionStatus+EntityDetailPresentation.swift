@@ -2,6 +2,9 @@ import Foundation
 
 extension AcquisitionStatus {
     var entityDetailDisplayName: String {
-        rawValue.replacingOccurrences(of: "-", with: " ").capitalized
+        if rawValue == "waiting-for-release" || rawValue == "manual-search-required" {
+            return "Waiting for release"
+        }
+        return rawValue.replacingOccurrences(of: "-", with: " ").capitalized
     }
 }

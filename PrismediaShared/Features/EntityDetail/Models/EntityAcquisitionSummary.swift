@@ -17,6 +17,8 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
     public let entityID: UUID?
     public let hasResumableImport: Bool
     public let bookRendition: RequestActivityBookRendition?
+    public let jobGraphID: UUID?
+    public let releaseDateMetadataUnavailable: Bool
 
     public init(
         id: UUID,
@@ -34,7 +36,9 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         kind: EntityKind = .book,
         entityID: UUID? = nil,
         hasResumableImport: Bool = false,
-        bookRendition: RequestActivityBookRendition? = nil
+        bookRendition: RequestActivityBookRendition? = nil,
+        jobGraphID: UUID? = nil,
+        releaseDateMetadataUnavailable: Bool = false
     ) {
         self.id = id
         self.status = status
@@ -52,6 +56,8 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         self.entityID = entityID
         self.hasResumableImport = hasResumableImport
         self.bookRendition = bookRendition
+        self.jobGraphID = jobGraphID
+        self.releaseDateMetadataUnavailable = releaseDateMetadataUnavailable
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -71,6 +77,8 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         case entityID = "entityId"
         case hasResumableImport
         case bookRendition
+        case jobGraphID = "jobGraphId"
+        case releaseDateMetadataUnavailable
     }
 
     public init(from decoder: any Decoder) throws {
@@ -91,5 +99,10 @@ public struct EntityAcquisitionSummary: Decodable, Equatable, Identifiable, Send
         entityID = try container.decodeIfPresent(UUID.self, forKey: .entityID)
         hasResumableImport = try container.decodeIfPresent(Bool.self, forKey: .hasResumableImport) ?? false
         bookRendition = try container.decodeIfPresent(RequestActivityBookRendition.self, forKey: .bookRendition)
+        jobGraphID = try container.decodeIfPresent(UUID.self, forKey: .jobGraphID)
+        releaseDateMetadataUnavailable = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .releaseDateMetadataUnavailable
+        ) ?? false
     }
 }

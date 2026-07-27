@@ -17,6 +17,7 @@ import SwiftUI
                             section: section,
                             cacheStatus: nil,
                             blocklistService: service,
+                            profileService: service,
                             onSave: save,
                             onClearCache: { nil },
                             onCreateBackup: { false }

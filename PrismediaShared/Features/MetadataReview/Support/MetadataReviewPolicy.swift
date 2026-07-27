@@ -139,7 +139,14 @@ public enum MetadataReviewPolicy {
                 return "\(credit.name) as \(character)"
             }.joined(separator: ", ")
         case .dates:
-            return entries(patch.dates)
+            let typed = patch.dateEntries
+                .sorted {
+                    $0.type.milestoneOrder < $1.type.milestoneOrder
+                        || ($0.type.milestoneOrder == $1.type.milestoneOrder && $0.value < $1.value)
+                }
+                .map { "\($0.type.displayName): \($0.value)" }
+            let legacy = patch.dates.keys.sorted().map { "\($0): \(patch.dates[$0]!)" }
+            return (typed + legacy).joined(separator: ", ")
         case .stats:
             return entries(patch.stats)
         case .positions:
@@ -193,7 +200,8 @@ public enum MetadataReviewPolicy {
                 ? proposal.patch.classification
                 : nil,
             rating: proposal.patch.rating,
-            flags: proposal.patch.flags
+            flags: proposal.patch.flags,
+            dateEntries: selectedFields.contains(.dates) ? proposal.patch.dateEntries : []
         )
         let includedChildren = structuralChildren(of: proposal)
             .filter { !selection.excludedProposalIDs.contains($0.proposalID) }

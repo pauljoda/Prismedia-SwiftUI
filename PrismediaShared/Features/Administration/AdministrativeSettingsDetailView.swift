@@ -7,6 +7,7 @@ struct AdministrativeSettingsDetailView: View {
     let plugins: [AdministrativePlugin]
     let hidesNsfw: Bool
     let blocklistService: (any AcquisitionBlocklistServicing)?
+    let profileService: (any AdministrationServicing)?
     let onSave: (AdministrativeSetting, AdministrativeJSONValue) async -> AdministrativeSettingsSection?
     let onClearCache: () async -> AdministrativeTranscodeCacheStatus?
     let onCreateBackup: () async -> Bool
@@ -17,6 +18,7 @@ struct AdministrativeSettingsDetailView: View {
         plugins: [AdministrativePlugin] = [],
         hidesNsfw: Bool = true,
         blocklistService: (any AcquisitionBlocklistServicing)? = nil,
+        profileService: (any AdministrationServicing)? = nil,
         onSave: @escaping (AdministrativeSetting, AdministrativeJSONValue) async -> AdministrativeSettingsSection?,
         onClearCache: @escaping () async -> AdministrativeTranscodeCacheStatus?,
         onCreateBackup: @escaping () async -> Bool
@@ -26,6 +28,7 @@ struct AdministrativeSettingsDetailView: View {
         self.plugins = plugins
         self.hidesNsfw = hidesNsfw
         self.blocklistService = blocklistService
+        self.profileService = profileService
         self.onSave = onSave
         self.onClearCache = onClearCache
         self.onCreateBackup = onCreateBackup
@@ -73,6 +76,12 @@ struct AdministrativeSettingsDetailView: View {
             if section.id == "acquisition", let blocklistService {
                 AcquisitionBlocklistSettingsSection(service: blocklistService)
             }
+
+            #if os(iOS) || os(macOS)
+                if section.id == "acquisition", let profileService {
+                    AdministrativeAcquisitionProfileTimingSection(service: profileService)
+                }
+            #endif
 
             if section.includesDatabaseBackupActions {
                 AdministrativeDatabaseBackupSection(isWorking: isPerformingAction) {

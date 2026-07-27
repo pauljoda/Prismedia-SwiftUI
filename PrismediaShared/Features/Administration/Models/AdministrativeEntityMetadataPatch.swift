@@ -14,11 +14,12 @@ public struct AdministrativeEntityMetadataPatch: Codable, Hashable, Sendable {
     public let classification: String?
     public let rating: Int?
     public let flags: AdministrativeEntityMetadataFlagsPatch?
+    public let dateEntries: [AdministrativeEntityMetadataDatePatch]
 
     enum CodingKeys: String, CodingKey {
         case title, description
         case externalIDs = "externalIds"
-        case urls, tags, studio, credits, dates, stats, positions, classification, rating, flags
+        case urls, tags, studio, credits, dates, stats, positions, classification, rating, flags, dateEntries
     }
 
     public init(from decoder: any Decoder) throws {
@@ -37,6 +38,8 @@ public struct AdministrativeEntityMetadataPatch: Codable, Hashable, Sendable {
         classification = try container.decodeIfPresent(String.self, forKey: .classification)
         rating = try container.decodeIfPresent(Int.self, forKey: .rating)
         flags = try container.decodeIfPresent(AdministrativeEntityMetadataFlagsPatch.self, forKey: .flags)
+        dateEntries =
+            try container.decodeIfPresent([AdministrativeEntityMetadataDatePatch].self, forKey: .dateEntries) ?? []
     }
 
     public init(
@@ -52,7 +55,8 @@ public struct AdministrativeEntityMetadataPatch: Codable, Hashable, Sendable {
         positions: [String: Int] = [:],
         classification: String? = nil,
         rating: Int? = nil,
-        flags: AdministrativeEntityMetadataFlagsPatch? = nil
+        flags: AdministrativeEntityMetadataFlagsPatch? = nil,
+        dateEntries: [AdministrativeEntityMetadataDatePatch] = []
     ) {
         self.title = title
         self.description = description
@@ -67,5 +71,6 @@ public struct AdministrativeEntityMetadataPatch: Codable, Hashable, Sendable {
         self.classification = classification
         self.rating = rating
         self.flags = flags
+        self.dateEntries = dateEntries
     }
 }

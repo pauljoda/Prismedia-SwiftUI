@@ -288,4 +288,13 @@ extension EntityDetailView {
             )
         }
     }
+
+    @MainActor
+    func presentReleaseDateEditor() {
+        guard case .content(let detail) = state.phase,
+            dependencies.metadataMutator != nil,
+            dependencies.entityGridLoader != nil
+        else { return }
+        editPresentation = EntityDetailEditPresentation(detail: detail, initialSection: .metadata)
+    }
 }

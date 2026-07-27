@@ -25,7 +25,7 @@ public enum RequestActivityStatusPolicy {
         case "queued": .queued
         case "pending", "searching": .searching
         case "failed": .failed
-        case "awaiting-selection", "manual-import-required": .attention
+        case "awaiting-selection", "manual-import-required", "waiting-for-release", "manual-search-required": .attention
         case "imported": .done
         case "stopping": .cleanup
         case "cancelled": .muted
@@ -38,6 +38,7 @@ public enum RequestActivityStatusPolicy {
         case "downloading", "downloaded", "importing": "arrow.down.circle"
         case "queued": "hourglass"
         case "pending", "searching", "awaiting-selection": "magnifyingglass"
+        case "waiting-for-release", "manual-search-required": "calendar.badge.clock"
         case "failed": "exclamationmark.circle"
         case "manual-import-required": "exclamationmark.triangle"
         case "imported": "checkmark.circle"
@@ -57,6 +58,8 @@ public enum RequestActivityStatusPolicy {
         case "downloaded": "Download complete; importing…"
         case "importing": "Importing into your library…"
         case "manual-import-required": message ?? "Manual import required."
+        case "waiting-for-release", "manual-search-required":
+            "Searching will begin when the configured release milestone is reached."
         case "stopping": "Removing download and managed files…"
         default:
             isKnown(status) ? nil : "Waiting for Prismedia to finish this transition…"
@@ -71,7 +74,7 @@ public enum RequestActivityStatusPolicy {
         switch status.rawValue {
         case "awaiting-selection":
             return hasEntity ? RequestActivityPrimaryAction.chooseRelease : nil
-        case "failed", "searching", "pending":
+        case "failed", "searching", "pending", "waiting-for-release", "manual-search-required":
             return RequestActivityPrimaryAction.searchAgain
         default:
             return hasEntity ? RequestActivityPrimaryAction.view : nil
@@ -99,5 +102,7 @@ public enum RequestActivityStatusPolicy {
         "failed": "Failed",
         "cancelled": "Cancelled",
         "manual-import-required": "Manual Import",
+        "waiting-for-release": "Waiting for release",
+        "manual-search-required": "Waiting for release",
     ]
 }

@@ -8,6 +8,7 @@ struct EntityDetailSectionSupport {
     let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
     let onAcquisitionMutated: @MainActor () async -> Void
     let onEntityPruned: @MainActor () -> Void
+    let onEnterReleaseDate: @MainActor @Sendable () -> Void
 
     init(
         ownerLink: EntityLink? = nil,
@@ -16,7 +17,8 @@ struct EntityDetailSectionSupport {
         requestActivityService: (any RequestActivityServicing)? = nil,
         transcriptSourceLoader: (any EntityTranscriptSourceLoading)? = nil,
         onAcquisitionMutated: @escaping @MainActor () async -> Void = {},
-        onEntityPruned: @escaping @MainActor () -> Void = {}
+        onEntityPruned: @escaping @MainActor () -> Void = {},
+        onEnterReleaseDate: @escaping @MainActor @Sendable () -> Void = {}
     ) {
         self.ownerLink = ownerLink
         self.canEditMetadata = canEditMetadata
@@ -25,13 +27,15 @@ struct EntityDetailSectionSupport {
         self.transcriptSourceLoader = transcriptSourceLoader
         self.onAcquisitionMutated = onAcquisitionMutated
         self.onEntityPruned = onEntityPruned
+        self.onEnterReleaseDate = onEnterReleaseDate
     }
 
     init(
         ownerLink: EntityLink,
         dependencies: EntityDetailDependencies,
         onAcquisitionMutated: @escaping @MainActor () async -> Void,
-        onEntityPruned: @escaping @MainActor () -> Void
+        onEntityPruned: @escaping @MainActor () -> Void,
+        onEnterReleaseDate: @escaping @MainActor @Sendable () -> Void = {}
     ) {
         self.init(
             ownerLink: ownerLink,
@@ -40,7 +44,8 @@ struct EntityDetailSectionSupport {
             requestActivityService: dependencies.requestActivityService,
             transcriptSourceLoader: dependencies.transcriptSourceLoader,
             onAcquisitionMutated: onAcquisitionMutated,
-            onEntityPruned: onEntityPruned
+            onEntityPruned: onEntityPruned,
+            onEnterReleaseDate: onEnterReleaseDate
         )
     }
 }

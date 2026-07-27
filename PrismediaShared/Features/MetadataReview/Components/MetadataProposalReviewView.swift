@@ -56,6 +56,10 @@ import SwiftUI
                     currentValues: currentValues,
                     excludedFields: separatelyReviewedFields
                 )
+                MetadataProposalDatesView(
+                    proposal: proposal,
+                    selection: selection
+                )
                 if let selection, !reviewableImages.isEmpty {
                     MetadataArtworkPicker(proposal: proposal, selection: selection)
                 }
@@ -120,8 +124,8 @@ import SwiftUI
         }
 
         private var separatelyReviewedFields: Set<MetadataReviewField> {
-            guard selection != nil else { return [] }
-            var fields = Set<MetadataReviewField>()
+            var fields: Set<MetadataReviewField> = [.dates]
+            guard selection != nil else { return fields }
             if !reviewableImages.isEmpty { fields.insert(.images) }
             if !proposal.patch.tags.isEmpty { fields.insert(.tags) }
             if relationships.contains(where: { $0.targetKind.caseInsensitiveCompare("person") == .orderedSame }) {
