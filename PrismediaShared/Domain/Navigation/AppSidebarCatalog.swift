@@ -71,9 +71,6 @@ public enum AppSidebarCatalog {
             item(in: ModeCatalog.overview, destinationID: "dashboard"),
             item(in: ModeCatalog.overview, destinationID: "favorites"),
         ]
-        #if os(iOS) || os(macOS)
-            values.append(item(in: ModeCatalog.overview, destinationID: "release-calendar"))
-        #endif
         values.append(
             AppSidebarItem(
                 id: "search",
@@ -94,6 +91,7 @@ public enum AppSidebarCatalog {
                 item(in: ModeCatalog.manage, destinationID: "files"),
                 item(in: ModeCatalog.manage, destinationID: "identify"),
                 item(in: ModeCatalog.manage, destinationID: "request"),
+                item(in: ModeCatalog.manage, destinationID: "release-calendar"),
                 item(in: ModeCatalog.operate, destinationID: "plugins"),
                 item(in: ModeCatalog.operate, destinationID: "jobs"),
                 item(in: ModeCatalog.operate, destinationID: "settings"),

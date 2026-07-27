@@ -174,6 +174,10 @@ final class AdministrativeAPIClientTests: XCTestCase {
             ))
 
         XCTAssertEqual(review.proposal.patch.title, "The Matrix")
+        XCTAssertEqual(
+            review.proposal.patch.dateEntries.map(\.type),
+            [.theatricalRelease, .digitalRelease, .physicalRelease, .release]
+        )
         XCTAssertEqual(review.targets.first?.externalIdentity, identity)
         XCTAssertEqual(result.items.first?.entityID, entityID)
         XCTAssertEqual(
@@ -332,7 +336,7 @@ final class AdministrativeAPIClientTests: XCTestCase {
     }
 
     private var proposalJSON: String {
-        #"{"proposalId":"movie-603","provider":"tmdb","targetKind":"movie","confidence":0.99,"matchReason":"id","patch":{"title":"The Matrix","description":"A simulation.","externalIds":{"tmdb":"603"},"urls":[],"tags":["Science Fiction"],"studio":null,"credits":[],"dates":{"released":"1999-03-31"},"stats":{"runtimeMinutes":136},"positions":{},"classification":"R","rating":null,"flags":{"isFavorite":null,"isNsfw":false,"isOrganized":null}},"images":[{"kind":"poster","url":"https://image.example/poster.jpg","source":"tmdb","rank":1,"language":"en","width":1000,"height":1500}],"children":[],"candidates":[],"targetEntityId":null,"relationships":[]}"#
+        #"{"proposalId":"movie-603","provider":"tmdb","targetKind":"movie","confidence":0.99,"matchReason":"id","patch":{"title":"The Matrix","description":"A simulation.","externalIds":{"tmdb":"603"},"urls":[],"tags":["Science Fiction"],"studio":null,"credits":[],"dates":{"release":"1999-03-31"},"dateEntries":[{"type":"theatrical-release","value":"1999-03-31"},{"type":"digital-release","value":"1999-09-21"},{"type":"physical-release","value":"1999-09-21"},{"type":"release","value":"1999-03-31"}],"stats":{"runtimeMinutes":136},"positions":{},"classification":"R","rating":null,"flags":{"isFavorite":null,"isNsfw":false,"isOrganized":null}},"images":[{"kind":"poster","url":"https://image.example/poster.jpg","source":"tmdb","rank":1,"language":"en","width":1000,"height":1500}],"children":[],"candidates":[],"targetEntityId":null,"relationships":[]}"#
     }
 
     private var requestReviewJSON: String {

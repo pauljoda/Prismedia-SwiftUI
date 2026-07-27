@@ -30,6 +30,44 @@ final class MetadataReviewPolicyTests: XCTestCase {
         XCTAssertTrue(selection.selectedFieldsByProposal["root"]?.contains(.dates) == true)
     }
 
+    func testProposalDatesMergeTypedMilestonesAndLegacyAliases() {
+        let root = AdministrativeEntityMetadataProposal(
+            proposalID: "root",
+            provider: "tmdb",
+            targetKind: "movie",
+            confidence: nil,
+            matchReason: nil,
+            patch: AdministrativeEntityMetadataPatch(
+                dates: [
+                    "released": "2026-07-24",
+                    "theatrical": "2026-07-25",
+                    "festival": "2026-06-01",
+                ],
+                dateEntries: [
+                    AdministrativeEntityMetadataDatePatch(type: .release, value: "2026-07-26"),
+                    AdministrativeEntityMetadataDatePatch(type: .digitalRelease, value: "2026-08-14"),
+                ]
+            ),
+            images: [],
+            children: [],
+            candidates: [],
+            targetEntityID: nil,
+            relationships: []
+        )
+
+        let dates = MetadataReviewPolicy.proposedDates(in: root)
+
+        XCTAssertEqual(
+            dates.map(\.code),
+            ["theatrical-release", "digital-release", "release", "festival"]
+        )
+        XCTAssertEqual(dates.first(where: { $0.code == "release" })?.value, "2026-07-26")
+        XCTAssertEqual(
+            MetadataReviewPolicy.fieldValue(.dates, in: root),
+            "Theatrical release: 2026-07-25, Digital / VOD release: 2026-08-14, General release: 2026-07-26, Festival: 2026-06-01"
+        )
+    }
+
     func testFindsProposalRecursivelyAcrossChildrenAndRelationships() {
         let credit = proposal(id: "credit", kind: "person", title: "Amy Adams")
         let episode = proposal(

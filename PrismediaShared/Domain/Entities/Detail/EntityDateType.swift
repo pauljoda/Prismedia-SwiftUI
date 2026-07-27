@@ -18,6 +18,28 @@ public enum EntityDateType: String, Codable, CaseIterable, Hashable, Sendable {
     case careerStart = "career-start"
     case careerEnd = "career-end"
 
+    /// Resolves canonical API codes and the legacy provider aliases accepted by the server.
+    public init?(metadataCode: String) {
+        let code = metadataCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let canonical = Self(rawValue: code) {
+            self = canonical
+            return
+        }
+
+        switch code {
+        case "released", "date": self = .release
+        case "aired", "airDate": self = .air
+        case "firstAir": self = .firstAir
+        case "lastAir": self = .lastAir
+        case "published": self = .publication
+        case "theatrical": self = .theatricalRelease
+        case "streaming": self = .streamingRelease
+        case "digital": self = .digitalRelease
+        case "physical": self = .physicalRelease
+        default: return nil
+        }
+    }
+
     public var displayName: String {
         switch self {
         case .announcement: "Announcement"

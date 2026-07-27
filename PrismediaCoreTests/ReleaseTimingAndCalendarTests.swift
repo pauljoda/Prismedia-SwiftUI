@@ -50,6 +50,33 @@ final class ReleaseTimingAndCalendarTests: XCTestCase {
         )
     }
 
+    func testEntityDetailPresentsEveryTypedReleaseMilestone() {
+        let detail = EntityDetail(
+            id: UUID(),
+            kind: .movie,
+            title: "Example",
+            parentEntityID: nil,
+            sortOrder: nil,
+            hasSourceMedia: false,
+            capabilities: [
+                .dates(
+                    EntityItemsCapability(items: [
+                        EntityDate(code: "released", value: "2026-07-24"),
+                        EntityDate(code: "theatrical-release", value: "2026-07-25"),
+                        EntityDate(code: "digital-release", value: "2026-08-14"),
+                        EntityDate(code: "physical-release", value: "2026-09-22"),
+                    ]))
+            ],
+            childrenByKind: [],
+            relationships: []
+        )
+
+        XCTAssertEqual(
+            EntityDetailPresentation(detail: detail).metadata.map(\.label),
+            ["Theatrical release", "Digital / VOD release", "Physical release", "General release"]
+        )
+    }
+
     func testStreamingAndDigitalProfilesPresentOnlyTheirCompatibleFallback() {
         XCTAssertEqual(EntityDateType.streamingRelease.compatibleFallback, .digitalRelease)
         XCTAssertEqual(EntityDateType.digitalRelease.compatibleFallback, .streamingRelease)

@@ -139,14 +139,9 @@ public enum MetadataReviewPolicy {
                 return "\(credit.name) as \(character)"
             }.joined(separator: ", ")
         case .dates:
-            let typed = patch.dateEntries
-                .sorted {
-                    $0.type.milestoneOrder < $1.type.milestoneOrder
-                        || ($0.type.milestoneOrder == $1.type.milestoneOrder && $0.value < $1.value)
-                }
-                .map { "\($0.type.displayName): \($0.value)" }
-            let legacy = patch.dates.keys.sorted().map { "\($0): \(patch.dates[$0]!)" }
-            return (typed + legacy).joined(separator: ", ")
+            return proposedDates(in: proposal)
+                .map { "\($0.type?.displayName ?? titleCase($0.code)): \($0.value)" }
+                .joined(separator: ", ")
         case .stats:
             return entries(patch.stats)
         case .positions:
@@ -156,6 +151,32 @@ public enum MetadataReviewPolicy {
         case .images:
             let images = reviewableImages(in: proposal)
             return images.isEmpty ? "" : "\(images.count) available"
+        }
+    }
+
+    /// Combines canonical typed dates with legacy keyed dates. Typed entries win when both shapes
+    /// describe the same milestone, matching the server's metadata normalization contract.
+    public static func proposedDates(
+        in proposal: AdministrativeEntityMetadataProposal
+    ) -> [EntityDate] {
+        var datesByCode: [String: EntityDate] = [:]
+
+        for (legacyCode, value) in proposal.patch.dates {
+            let code = EntityDateType(metadataCode: legacyCode)?.rawValue ?? legacyCode
+            datesByCode[code] = EntityDate(code: code, value: value)
+        }
+        for entry in proposal.patch.dateEntries {
+            datesByCode[entry.type.rawValue] = EntityDate(code: entry.type.rawValue, value: entry.value)
+        }
+
+        return datesByCode.values.sorted { lhs, rhs in
+            let lhsOrder = lhs.type?.milestoneOrder ?? Int.max
+            let rhsOrder = rhs.type?.milestoneOrder ?? Int.max
+            if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+            if lhs.code != rhs.code {
+                return lhs.code.localizedStandardCompare(rhs.code) == .orderedAscending
+            }
+            return lhs.value.localizedStandardCompare(rhs.value) == .orderedAscending
         }
     }
 
@@ -361,6 +382,10 @@ public enum MetadataReviewPolicy {
 
     private static func entries<T>(_ values: [String: T]) -> String {
         values.keys.sorted().map { "\($0): \(values[$0]!)" }.joined(separator: ", ")
+    }
+
+    private static func titleCase(_ value: String) -> String {
+        value.replacingOccurrences(of: "-", with: " ").capitalized
     }
 
     private static func update<Value: Hashable>(

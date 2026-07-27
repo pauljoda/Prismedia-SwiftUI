@@ -10,12 +10,11 @@ public enum ModeCatalog {
             systemImage: "house",
             destinations: [
                 destination("dashboard", "Dashboard", "rectangle.3.group", content: .dashboard),
-                destination("release-calendar", "Calendar", "calendar", content: .releaseCalendar),
                 entityDestination("overview-collections", "Collections", "square.stack.3d.up", kind: .collection),
                 destination("favorites", "Favorites", "heart", content: .favorites),
                 destination("stats", "Stats", "chart.line.uptrend.xyaxis", content: .playbackStatistics),
             ],
-            preferredTabDestinationIDs: ["dashboard", "favorites", "release-calendar", "stats"]
+            preferredTabDestinationIDs: ["dashboard", "favorites", "stats"]
         )
     #else
         public static let overview = AppMode(
@@ -118,8 +117,9 @@ public enum ModeCatalog {
                 manageDestination(.files, "Files", "folder.badge.gearshape"),
                 manageDestination(.identify, "Identify", "doc.viewfinder"),
                 manageDestination(.request, "Request", "paperplane"),
+                destination("release-calendar", "Calendar", "calendar", content: .releaseCalendar),
             ],
-            preferredTabDestinationIDs: ["files", "identify", "request"]
+            preferredTabDestinationIDs: ["files", "identify", "request", "release-calendar"]
         )
     #endif
 

@@ -15,7 +15,13 @@
                     { "kind": "description", "value": "A patient, atmospheric mystery about a signal that should not exist and the people compelled to follow it." },
                     { "kind": "rating", "value": 4 },
                     { "kind": "flags", "isFavorite": true, "isNsfw": false, "isOrganized": true, "isWanted": false },
-                    { "kind": "dates", "items": [{ "code": "released", "value": "2025-10-17" }] },
+                    { "kind": "dates", "items": [
+                      { "code": "premiere", "value": "2025-09-28" },
+                      { "code": "theatrical-release", "value": "2025-10-17" },
+                      { "code": "digital-release", "value": "2025-12-02" },
+                      { "code": "physical-release", "value": "2026-01-20" },
+                      { "code": "release", "value": "2025-10-17" }
+                    ] },
                     { "kind": "stats", "items": [{ "code": "budget", "value": 42000000 }, { "code": "revenue", "value": 138000000 }] },
                     { "kind": "position", "items": [{ "code": "part", "value": 1, "label": "Part One" }] },
                     { "kind": "classification", "value": "Feature", "system": "Prismedia" },

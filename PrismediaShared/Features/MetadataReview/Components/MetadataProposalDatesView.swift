@@ -19,7 +19,7 @@ import SwiftUI
                     }
                 }
 
-                if entries.isEmpty {
+                if dates.isEmpty {
                     ContentUnavailableView {
                         Label("No release date data yet", systemImage: "calendar.badge.questionmark")
                     } description: {
@@ -27,24 +27,19 @@ import SwiftUI
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    ForEach(entries, id: \.key) { entry in
-                        LabeledContent(entry.label, value: entry.value)
+                    ForEach(dates, id: \.code) { date in
+                        LabeledContent(
+                            date.type?.displayName ?? titleCase(date.code),
+                            value: date.value
+                        )
                     }
                 }
             }
             .accessibilityIdentifier("metadata-review.release-dates")
         }
 
-        private var entries: [(key: String, label: String, value: String)] {
-            if !proposal.patch.dateEntries.isEmpty {
-                return proposal.patch.dateEntries
-                    .sorted { $0.type.milestoneOrder < $1.type.milestoneOrder }
-                    .map { ($0.type.rawValue, $0.type.displayName, $0.value) }
-            }
-            return proposal.patch.dates.keys.sorted().map { key in
-                let type = EntityDateType(rawValue: key)
-                return (key, type?.displayName ?? titleCase(key), proposal.patch.dates[key] ?? "")
-            }
+        private var dates: [EntityDate] {
+            MetadataReviewPolicy.proposedDates(in: proposal)
         }
 
         private func selectedBinding(

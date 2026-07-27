@@ -28,11 +28,19 @@ final class AppShellNavigationTests: XCTestCase {
         )
         XCTAssertEqual(
             sections[0].items.map(\.title),
-            ["Dashboard", "Favorites", "Calendar", "Search", "Stats"]
+            ["Dashboard", "Favorites", "Search", "Stats"]
         )
         XCTAssertEqual(
             ModeCatalog.overview.destinations.map(\.title),
-            ["Dashboard", "Calendar", "Collections", "Favorites", "Stats"]
+            ["Dashboard", "Collections", "Favorites", "Stats"]
+        )
+        XCTAssertEqual(
+            ModeCatalog.manage.destinations.map(\.title),
+            ["Files", "Identify", "Request", "Calendar"]
+        )
+        XCTAssertEqual(
+            ModeCatalog.manage.tabDestinations(selectedDestinationID: "files").map(\.title),
+            ["Files", "Identify", "Request", "Calendar"]
         )
         XCTAssertNil(ModeCatalog.overview.destination(id: "account"))
         XCTAssertEqual(sections[1].items.map(\.title), ["Movies", "Series", "Videos"])
@@ -48,7 +56,7 @@ final class AppShellNavigationTests: XCTestCase {
         )
         XCTAssertEqual(
             sections[6].items.map(\.title),
-            ["Files", "Identify", "Request", "Plugins", "Jobs", "Settings"]
+            ["Files", "Identify", "Request", "Calendar", "Plugins", "Jobs", "Settings"]
         )
     }
 

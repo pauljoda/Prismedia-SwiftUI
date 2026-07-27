@@ -6,7 +6,7 @@ public struct EntityDate: Decodable, Hashable, Sendable {
     public let sortableValue: String?
     public let precision: String?
 
-    public var type: EntityDateType? { EntityDateType(rawValue: code) }
+    public var type: EntityDateType? { EntityDateType(metadataCode: code) }
 
     public init(
         code: String,
