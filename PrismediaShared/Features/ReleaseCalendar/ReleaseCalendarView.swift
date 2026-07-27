@@ -49,9 +49,16 @@ import SwiftUI
                         }
                     }
                 } else {
-                    calendarContent
-                        .id(displayedMonthKey)
-                        .transition(monthTransition)
+                    ZStack(alignment: .top) {
+                        monthPage
+                            .id(displayedMonthKey)
+                            .transition(monthTransition)
+                        ReleaseCalendarMonthNavigationControls(
+                            isDisabled: pendingMonth != nil,
+                            onPrevious: { moveMonth(-1) },
+                            onNext: { moveMonth(1) }
+                        )
+                    }
                 }
             }
             #if os(iOS)
@@ -73,75 +80,54 @@ import SwiftUI
         }
 
         @ViewBuilder
-        private var calendarContent: some View {
-            if usesMonthGrid {
-                ScrollView {
-                    monthHeader
-                    monthGrid
-                        .padding(.horizontal, PrismediaSpacing.large)
-                        .padding(.bottom, PrismediaSpacing.extraLarge)
-                }
-            } else {
-                List {
-                    monthHeader
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    if agendaDays.isEmpty {
-                        ContentUnavailableView(
-                            "No Releases",
-                            systemImage: "calendar",
-                            description: Text("No monitored milestones match these filters.")
-                        )
-                        .accessibilityIdentifier("release-calendar.empty")
-                        .frame(maxWidth: .infinity)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    } else {
-                        ForEach(agendaDays, id: \.self) { date in
-                            Section(date.formatted(date: .complete, time: .omitted)) {
-                                ForEach(events(on: date)) { event in
-                                    ReleaseCalendarEventRow(
-                                        event: event,
-                                        resolveAssetURL: resolveAssetURL,
-                                        onOpen: { open(event) }
-                                    )
+        private var monthPage: some View {
+            VStack(spacing: 0) {
+                Text(displayedMonth, format: .dateTime.month(.wide).year())
+                    .font(.title2.bold())
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .padding(PrismediaSpacing.large)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("release-calendar.month")
+
+                if usesMonthGrid {
+                    ScrollView {
+                        monthGrid
+                            .padding(.horizontal, PrismediaSpacing.large)
+                            .padding(.bottom, PrismediaSpacing.extraLarge)
+                    }
+                } else {
+                    List {
+                        if agendaDays.isEmpty {
+                            ContentUnavailableView(
+                                "No Releases",
+                                systemImage: "calendar",
+                                description: Text("No monitored milestones match these filters.")
+                            )
+                            .accessibilityIdentifier("release-calendar.empty")
+                            .frame(maxWidth: .infinity)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        } else {
+                            ForEach(agendaDays, id: \.self) { date in
+                                Section(date.formatted(date: .complete, time: .omitted)) {
+                                    ForEach(events(on: date)) { event in
+                                        ReleaseCalendarEventRow(
+                                            event: event,
+                                            resolveAssetURL: resolveAssetURL,
+                                            onOpen: { open(event) }
+                                        )
                                         .allowsHitTesting(calendarContentAllowsHitTesting)
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
+                                    }
                                 }
                             }
                         }
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
             }
-        }
-
-        private var monthHeader: some View {
-            HStack {
-                Button("Previous month", systemImage: "chevron.left") { moveMonth(-1) }
-                    .labelStyle(.iconOnly)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(.rect)
-                    .buttonStyle(.plain)
-                    .disabled(pendingMonth != nil)
-                    .accessibilityIdentifier("release-calendar.previous-month")
-                Spacer()
-                Text(displayedMonth, format: .dateTime.month(.wide).year())
-                    .font(.title2.bold())
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityIdentifier("release-calendar.month")
-                Spacer()
-                Button("Next month", systemImage: "chevron.right") { moveMonth(1) }
-                    .labelStyle(.iconOnly)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(.rect)
-                    .buttonStyle(.plain)
-                    .disabled(pendingMonth != nil)
-                    .accessibilityIdentifier("release-calendar.next-month")
-            }
-            .padding(PrismediaSpacing.large)
         }
 
         private var monthGrid: some View {
@@ -165,19 +151,15 @@ import SwiftUI
 
         @ToolbarContentBuilder
         private var toolbarContent: some ToolbarContent {
-            ToolbarItemGroup {
-                Picker("Media kind", selection: $mediaFilter) {
-                    Text("All media").tag(EntityKind?.none)
-                    ForEach(availableKinds, id: \.self) { kind in
-                        Text(kind.displayLabel).tag(EntityKind?.some(kind))
-                    }
-                }
-                Picker("Milestone", selection: $milestoneFilter) {
-                    Text("All milestones").tag(EntityDateType?.none)
-                    ForEach(availableMilestones, id: \.self) { type in
-                        Text(type.displayName).tag(EntityDateType?.some(type))
-                    }
-                }
+            ToolbarItemGroup(placement: .primaryAction) {
+                ReleaseCalendarMediaFilterMenu(
+                    selection: $mediaFilter,
+                    options: availableKinds
+                )
+                ReleaseCalendarMilestoneFilterMenu(
+                    selection: $milestoneFilter,
+                    options: availableMilestones
+                )
             }
         }
 
