@@ -44,6 +44,10 @@
             player.delegate = self
             player.media = media
             player.rate = request.playbackRate
+            #if os(tvOS)
+                // Prefer encoded surround output when the HDMI receiver supports it.
+                player.audio?.passthrough = true
+            #endif
             mediaPlayer = player
 
             controller?.attachCompatibilityPlayback(commands(for: player))

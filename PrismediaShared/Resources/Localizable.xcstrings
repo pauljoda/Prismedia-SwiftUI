@@ -1299,6 +1299,12 @@
     "Go To" : {
 
     },
+    "Go to Album" : {
+
+    },
+    "Go to Artist" : {
+
+    },
     "Goal fulfilled" : {
 
     },
@@ -2935,6 +2941,9 @@
 
     },
     "Showing the latest %lld acquisition events." : {
+
+    },
+    "Shows actions above the compact player" : {
 
     },
     "Shows collection and library navigation actions" : {
