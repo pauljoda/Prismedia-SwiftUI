@@ -22,7 +22,6 @@ struct EntityThumbnailLandscapeCardView: View {
                     proxy.size.height,
                     proxy.size.width / item.thumbnailArtworkPresentation.aspectRatio
                 )
-                let metadataHeight = max(0, proxy.size.height - artworkHeight)
 
                 ZStack(alignment: .top) {
                     EntityThumbnailArtworkView(
@@ -34,11 +33,8 @@ struct EntityThumbnailLandscapeCardView: View {
                     )
                     .frame(width: proxy.size.width, height: artworkHeight)
 
-                    Color.clear
-                        .frame(width: proxy.size.width, height: metadataHeight)
-                        .overlay(alignment: .bottomLeading) {
-                            metadata
-                        }
+                    metadata
+                        .frame(width: proxy.size.width, alignment: .leading)
                         .frame(maxHeight: .infinity, alignment: .bottom)
                 }
             }
@@ -87,11 +83,15 @@ struct EntityThumbnailLandscapeCardView: View {
     }
 
     private var metadata: some View {
-        ViewThatFits(in: .vertical) {
-            detailedMetadata
-            compactMetadata
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+            Text(item.title)
+                .font(PrismediaTypography.cardTitle)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            metadataActionRow(limit: 3)
         }
+        .foregroundStyle(PrismediaColor.onMedia)
         .padding(.leading, PrismediaSpacing.small)
         .padding(.trailing, metadataTrailingPadding)
         .padding(.top, PrismediaSpacing.extraSmall)
@@ -107,39 +107,6 @@ struct EntityThumbnailLandscapeCardView: View {
             }
         }
         .shadow(color: PrismediaColor.background.opacity(0.7), radius: 2, y: 1)
-    }
-
-    private var detailedMetadata: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            Text(item.title)
-                .font(PrismediaTypography.cardTitle)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let summary = item.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
-                !summary.isEmpty
-            {
-                Text(summary)
-                    .font(PrismediaTypography.compactCaption)
-                    .foregroundStyle(PrismediaColor.onMedia.opacity(0.84))
-                    .lineLimit(2)
-            }
-
-            metadataActionRow(limit: 3)
-        }
-        .foregroundStyle(PrismediaColor.onMedia)
-    }
-
-    private var compactMetadata: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-            Text(item.title)
-                .font(PrismediaTypography.captionEmphasized)
-                .foregroundStyle(PrismediaColor.onMedia)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            metadataActionRow(limit: 2)
-        }
     }
 
     @ViewBuilder

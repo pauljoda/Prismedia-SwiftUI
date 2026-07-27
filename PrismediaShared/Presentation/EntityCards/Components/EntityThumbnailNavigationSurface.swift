@@ -3,6 +3,7 @@ import SwiftUI
 public struct EntityThumbnailNavigationSurface: View {
     @Environment(PrismediaAppRouter.self) private var router
     @Environment(\.entityMediaSequence) private var mediaSequence
+    @Environment(\.entityGridCardStyle) private var gridCardStyle
     @State private var preventsNavigation = false
     @State private var previewReleaseID = UUID()
 
@@ -45,7 +46,9 @@ public struct EntityThumbnailNavigationSurface: View {
                 )
                 .contentShape(Rectangle())
             }
-            .prismediaEntityNavigationButtonStyle()
+            .prismediaEntityNavigationButtonStyle(
+                separatesArtworkAndCaption: separatesArtworkAndCaption
+            )
             .accessibilityHint(primaryAccessibilityHint)
 
             if showsContextMenu {
@@ -91,6 +94,16 @@ public struct EntityThumbnailNavigationSurface: View {
 
     private var showsContextMenu: Bool {
         intent == .detail && interaction.showsContextMenu
+    }
+
+    private var separatesArtworkAndCaption: Bool {
+        guard gridCardStyle == .detailsBelow else { return false }
+        switch layout {
+        case .grid, .rail, .wall, .mediaOnly:
+            return true
+        case .list, .feed:
+            return false
+        }
     }
 
     private func openPrimaryAction() {

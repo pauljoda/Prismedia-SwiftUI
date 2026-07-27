@@ -195,6 +195,54 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
+    func testEntityGridPageRestorationSurvivesDetailNavigationUntilRootIsReselected() throws {
+        let router = PrismediaAppRouter(
+            initialMode: ModeCatalog.video,
+            initialDestinationID: "movies"
+        )
+        let configuration = EntityGridConfiguration.library(
+            destinationID: "movies",
+            title: "Movies",
+            query: EntityListQuery(kind: .movie)
+        )
+        let movie = EntityThumbnail(id: UUID(), kind: .movie, title: "Arrival")
+        var snapshot = EntityGridSnapshot(configuration: configuration)
+        let request = snapshot.beginFirstPage(
+            configuration: configuration,
+            preservingContent: false
+        )
+        snapshot.receiveFirstPage(
+            EntityGridPage(
+                items: [movie],
+                nextCursor: nil,
+                totalCount: 1,
+                excludedNsfwIDs: []
+            ),
+            for: request
+        )
+        router.cacheEntityGridPage(
+            EntityGridPageRestoration(
+                snapshot: snapshot,
+                scrollTargetID: movie.id,
+                focusedItemID: movie.id
+            ),
+            for: try XCTUnwrap(configuration.restorationID)
+        )
+
+        router.open(entity: movie)
+        XCTAssertTrue(router.navigateBack(in: "movies"))
+        XCTAssertEqual(
+            router.entityGridPageRestoration(for: "movies")?.scrollTargetID,
+            movie.id
+        )
+
+        let movies = try XCTUnwrap(ModeCatalog.video.destination(id: "movies"))
+        router.selectRoot(mode: ModeCatalog.video, destination: movies)
+
+        XCTAssertNil(router.entityGridPageRestoration(for: "movies"))
+    }
+
+    @MainActor
     func testReselectingSidebarDestinationClearsOnlyItsStack() throws {
         let router = PrismediaAppRouter(
             initialMode: ModeCatalog.video,

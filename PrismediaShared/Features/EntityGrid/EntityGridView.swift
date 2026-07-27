@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
+    @Environment(PrismediaAppRouter.self) private var router
     @Environment(\.prismediaPageIsActive) private var pageIsActive
     @Environment(\.scenePhase) private var scenePhase
     @State private var snapshot: EntityGridSnapshot
@@ -19,6 +20,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @State private var actionConfirmation: EntityGridActionConfirmation?
     @State private var mutationFailures: [EntityGridMutationFailure] = []
     @State private var mutationFailureAlertPresented = false
+    @State private var scrollTargetID: UUID?
     #if os(iOS) || os(macOS)
         @State private var collectionSheetPresented = false
         @State private var collectionSheetReferences: [CollectionEntityReference] = []
@@ -103,6 +105,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 restoredControls: restoredControls
             )
         )
+        _scrollTargetID = State(initialValue: nil)
     }
 
     public var body: some View {
@@ -176,7 +179,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 Task { await submitSearch() }
             }
             .task(id: configuration.preferencesID) {
-                await loadIfNeeded()
+                await restoreOrLoadPage()
             }
             .task(id: automaticRefreshIsActive) {
                 guard automaticRefreshIsActive, let automaticRefreshInterval else { return }
@@ -195,12 +198,19 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 .onChange(of: tvGridFocus) { _, focus in
                     guard case .item(let itemID) = focus else { return }
                     lastFocusedItemID = itemID
+                    cacheCurrentPage()
                 }
                 .onAppear(perform: restoreTVGridFocusIfNeeded)
                 .onChange(of: snapshot.items.map(\.id)) {
                     restoreTVGridFocusIfNeeded()
                 }
             #endif
+            .onChange(of: scrollTargetID) {
+                cacheCurrentPage()
+            }
+            .onDisappear {
+                cacheCurrentPage()
+            }
             .onChange(of: environment.entityListRevision) { _, _ in
                 Task { await refresh() }
             }
@@ -259,6 +269,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                     .padding(.vertical, PrismediaSpacing.extraLarge)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .scrollPosition(id: $scrollTargetID, anchor: .top)
                 .refreshable {
                     await refresh()
                 }
@@ -526,18 +537,6 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 tvGridFocus = .item(firstID)
             case .up:
                 tabFocusCoordinator.requestFocus()
-            case .left:
-                switch tvGridFocus {
-                case .display: tvGridFocus = .filter
-                case .filter: tvGridFocus = .sort
-                default: tvGridFocus = .sort
-                }
-            case .right:
-                switch tvGridFocus {
-                case .sort: tvGridFocus = .filter
-                case .filter: tvGridFocus = .display
-                default: tvGridFocus = .display
-                }
             default:
                 break
             }
@@ -721,6 +720,27 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         await loadFirstPage(preservingContent: false)
     }
 
+    private func restoreOrLoadPage() async {
+        guard
+            let restorationID = configuration.restorationID,
+            let restoration = router.entityGridPageRestoration(for: restorationID)
+        else {
+            await loadIfNeeded()
+            return
+        }
+
+        #if os(tvOS)
+            lastFocusedItemID = restoration.focusedItemID
+        #endif
+        searchText = restoration.snapshot.activeSearch ?? ""
+        snapshot = restoration.snapshot
+        await Task.yield()
+        scrollTargetID = restoration.scrollTargetID
+        #if os(tvOS)
+            restoreTVGridFocusIfNeeded()
+        #endif
+    }
+
     private func refresh() async {
         let clock = ContinuousClock()
         let startedAt = clock.now
@@ -802,6 +822,9 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     }
 
     private func loadFirstPage(preservingContent: Bool) async {
+        if !preservingContent {
+            clearCachedPage()
+        }
         let request = snapshot.beginFirstPage(
             configuration: configuration,
             pageSize: pageSize,
@@ -820,6 +843,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             }
             if snapshot.receiveFirstPage(page, for: request) {
                 selection.reconcile(withAvailableIDs: Set(snapshot.items.map(\.id)))
+                cacheCurrentPage()
             }
         } catch is CancellationError {
             snapshot.cancel(request)
@@ -847,6 +871,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 return
             }
             snapshot.receiveNextPage(page, for: request)
+            cacheCurrentPage()
         } catch is CancellationError {
             snapshot.cancel(request)
         } catch {
@@ -856,6 +881,40 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             }
             snapshot.failNextPage(for: request)
         }
+    }
+
+    private func cacheCurrentPage() {
+        guard
+            let restorationID = configuration.restorationID,
+            !snapshot.isRefreshing,
+            !snapshot.isLoadingNextPage,
+            snapshot.state == .content || snapshot.state == .empty
+        else { return }
+
+        router.cacheEntityGridPage(
+            EntityGridPageRestoration(
+                snapshot: snapshot,
+                scrollTargetID: scrollTargetID,
+                focusedItemID: focusedTVGridItemID
+            ),
+            for: restorationID
+        )
+    }
+
+    private func clearCachedPage() {
+        guard let restorationID = configuration.restorationID else { return }
+        router.clearEntityGridPageRestoration(for: restorationID)
+    }
+
+    private var focusedTVGridItemID: UUID? {
+        #if os(tvOS)
+            if case .item(let itemID) = tvGridFocus {
+                return itemID
+            }
+            return lastFocusedItemID
+        #else
+            return nil
+        #endif
     }
 
     private func prewarmArtwork(after itemID: UUID) {

@@ -3,6 +3,7 @@ import SwiftUI
 #if os(tvOS)
 
     struct TVEpisodeRail: View {
+        @Environment(\.entityGridCardStyle) private var gridCardStyle
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @FocusState private var focusedTarget: TVEpisodeRailFocusTarget?
         @State private var pendingBoundaryDirection: TVSeasonBoundaryDirection?
@@ -61,7 +62,9 @@ import SwiftUI
                                         preferredWidth: 300
                                     )
                                 }
-                                .buttonStyle(.card)
+                                .prismediaEntityNavigationButtonStyle(
+                                    separatesArtworkAndCaption: gridCardStyle == .detailsBelow
+                                )
                                 .focused($focusedTarget, equals: .episode(episode.id))
                                 .id(episode.id)
                                 .accessibilityHint("Updates the selected episode")

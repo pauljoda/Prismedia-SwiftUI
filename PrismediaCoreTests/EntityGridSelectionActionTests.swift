@@ -144,6 +144,7 @@ final class EntityGridSelectionActionTests: XCTestCase {
         XCTAssertEqual(videos.availableDisplayModes, [.wall, .grid, .list, .feed])
         XCTAssertEqual(movies.availableDisplayModes, [.grid, .list])
         XCTAssertEqual(movies.resolvedDisplayMode(restoring: .feed), .grid)
+        XCTAssertEqual(movies.restorationID, "movies")
         XCTAssertEqual(images.emptyTitle, "No Images")
         XCTAssertTrue(images.emptyDescription.contains("library root"))
     }

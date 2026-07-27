@@ -8,6 +8,7 @@ public struct EntityGridConfiguration: Hashable, Sendable {
     public let pageSize: Int
     public let minimumColumnWidth: CGFloat
     public let preferencesID: String
+    public let restorationID: String?
     public let defaultDisplayMode: EntityGridDisplayMode
     public let defaultCardStyle: EntityGridCardStyle
     public let availableDisplayModes: [EntityGridDisplayMode]
@@ -26,7 +27,8 @@ public struct EntityGridConfiguration: Hashable, Sendable {
         availableDisplayModes: [EntityGridDisplayMode] = EntityGridDisplayMode.allCases,
         emptyTitle: String? = nil,
         emptyDescription: String = "Items will appear here when they’re added to your library.",
-        preferencesID: String? = nil
+        preferencesID: String? = nil,
+        restorationID: String? = nil
     ) {
         precondition(pageSize > 0, "An entity grid page size must be positive.")
         precondition(minimumColumnWidth > 0, "An entity grid column width must be positive.")
@@ -48,6 +50,7 @@ public struct EntityGridConfiguration: Hashable, Sendable {
         self.emptyTitle = emptyTitle ?? "No \(title)"
         self.emptyDescription = emptyDescription
         self.preferencesID = preferencesID ?? Self.defaultPreferencesID(title: title, query: query)
+        self.restorationID = restorationID
     }
 
     func resolvedDisplayMode(restoring restoredDisplayMode: EntityGridDisplayMode?) -> EntityGridDisplayMode {
@@ -93,7 +96,8 @@ extension EntityGridConfiguration {
             availableDisplayModes: presentation.availableModes,
             emptyTitle: presentation.emptyTitle,
             emptyDescription: presentation.emptyDescription,
-            preferencesID: preferencesID
+            preferencesID: preferencesID,
+            restorationID: destinationID
         )
     }
 

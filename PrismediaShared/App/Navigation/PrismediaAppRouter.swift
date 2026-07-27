@@ -25,6 +25,7 @@ public final class PrismediaAppRouter {
     @ObservationIgnored public var onWillOpenEntity: (() -> Void)?
 
     private var navigationPaths: [String: [EntityLink]]
+    @ObservationIgnored private var entityGridPageRestorations: [String: EntityGridPageRestoration]
 
     public init(
         initialMode: AppMode = ModeCatalog.overview,
@@ -47,6 +48,7 @@ public final class PrismediaAppRouter {
         favoritesPath = NavigationPath()
         rootNavigationRevision = 0
         navigationPaths = [:]
+        entityGridPageRestorations = [:]
     }
 
     public func activeMode(in availableModes: [AppMode]) -> AppMode {
@@ -88,6 +90,7 @@ public final class PrismediaAppRouter {
         let reselectsCurrentDestination = selectedTab == .destination(destination.id)
         if reselectsCurrentDestination {
             resetPath(for: destination.id)
+            clearEntityGridPageRestoration(for: destination.id)
             rootNavigationRevision += 1
         } else {
             select(mode: mode, destination: destination)
@@ -127,6 +130,21 @@ public final class PrismediaAppRouter {
 
     public func setFavoritesPath(_ path: NavigationPath) {
         favoritesPath = path
+    }
+
+    func entityGridPageRestoration(for restorationID: String) -> EntityGridPageRestoration? {
+        entityGridPageRestorations[restorationID]
+    }
+
+    func cacheEntityGridPage(
+        _ restoration: EntityGridPageRestoration,
+        for restorationID: String
+    ) {
+        entityGridPageRestorations[restorationID] = restoration
+    }
+
+    func clearEntityGridPageRestoration(for restorationID: String) {
+        entityGridPageRestorations[restorationID] = nil
     }
 
     @discardableResult
@@ -211,6 +229,7 @@ public final class PrismediaAppRouter {
         favoritesPath = NavigationPath()
         rootNavigationRevision = 0
         navigationPaths.removeAll()
+        entityGridPageRestorations.removeAll()
         onWillOpenEntity = nil
     }
 

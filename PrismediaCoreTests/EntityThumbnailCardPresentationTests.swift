@@ -55,7 +55,7 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         XCTAssertTrue(presentation.showsArtworkBadges)
     }
 
-    func testArtworkFadeAddsAStableExtensionBelowPosterArtwork() {
+    func testArtworkFadeReservesOnlyTheCompactMetadataBandBelowArtwork() {
         let sourceAspectRatio = 2.0 / 3.0
 
         let cardAspectRatio = EntityThumbnailCardPresentation.artworkFadeAspectRatio(
@@ -65,7 +65,7 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         XCTAssertLessThan(cardAspectRatio, sourceAspectRatio)
         XCTAssertEqual(
             cardAspectRatio,
-            1.0 / ((1.0 / sourceAspectRatio) + (9.0 / 20.0)),
+            1.0 / ((1.0 / sourceAspectRatio) + ((1.0 / (6.0 / 5.0)) - (1.0 / (16.0 / 9.0)))),
             accuracy: 0.001
         )
     }

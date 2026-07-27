@@ -1,6 +1,6 @@
 public struct EntityThumbnailCardPresentation: Hashable, Sendable {
     public static let extendedLandscapeAspectRatio = 6.0 / 5.0
-    private static let artworkFadeExtensionHeightRatio =
+    private static let artworkFadeMetadataHeightRatio =
         (1.0 / extendedLandscapeAspectRatio) - (1.0 / (16.0 / 9.0))
 
     public let usesArtworkExtension: Bool
@@ -27,11 +27,7 @@ public struct EntityThumbnailCardPresentation: Hashable, Sendable {
 
     public static func artworkFadeAspectRatio(for sourceAspectRatio: Double) -> Double {
         guard sourceAspectRatio > 0 else { return extendedLandscapeAspectRatio }
-        let extensionHeightRatio =
-            sourceAspectRatio < 1
-            ? 9.0 / 20.0
-            : artworkFadeExtensionHeightRatio
-        return 1.0 / ((1.0 / sourceAspectRatio) + extensionHeightRatio)
+        return 1.0 / ((1.0 / sourceAspectRatio) + artworkFadeMetadataHeightRatio)
     }
 
     private static func alwaysIdentifiesWithTitle(_ kind: EntityKind) -> Bool {
