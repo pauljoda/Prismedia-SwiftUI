@@ -121,7 +121,7 @@ struct EntityDetailPresentation {
                 tone: .info
             )
         }
-        let statusPresentation = AcquisitionStatusPresentationPolicy.presentation(
+        let statusPresentation = AcquisitionStatusPresentationPolicy.compactPresentation(
             for: acquisitionStatus
         )
         return .init(

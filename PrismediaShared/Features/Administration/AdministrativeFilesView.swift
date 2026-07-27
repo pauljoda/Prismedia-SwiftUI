@@ -187,10 +187,10 @@ import SwiftUI
             do {
                 let loaded = try await service.roots()
                 roots = loaded
-                if selectedRootID == nil
-                    || !loaded.contains(where: { $0.id == selectedRootID })
+                if let selectedRootID,
+                    !loaded.contains(where: { $0.id == selectedRootID })
                 {
-                    selectedRootID = loaded.first?.id
+                    self.selectedRootID = nil
                 }
             } catch {
                 errorMessage = error.localizedDescription

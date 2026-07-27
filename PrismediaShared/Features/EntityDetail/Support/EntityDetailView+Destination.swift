@@ -42,7 +42,8 @@ extension EntityDetailView {
     func standardDetailView(_ detail: EntityDetail) -> some View {
         let presentation = EntityDetailPresentation(
             detail: detail,
-            canEditMetadata: dependencies.metadataMutator != nil
+            canEditMetadata: dependencies.metadataMutator != nil,
+            acquisitionStatus: acquisitionStatus
         )
 
         return EntityDetailPlatformSurface(

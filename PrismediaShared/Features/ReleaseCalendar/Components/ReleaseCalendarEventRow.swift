@@ -67,7 +67,10 @@ import SwiftUI
             }
             .padding(PrismediaSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(cardBackground, in: cardShape)
+            .background {
+                cardBackground
+                    .clipShape(cardShape)
+            }
             .overlay {
                 cardShape.stroke(
                     PrismediaColor.borderSubtle,
@@ -85,8 +88,23 @@ import SwiftUI
             .contentShape(.rect)
         }
 
-        private var cardBackground: Color {
-            artworkPalette?.background.color ?? PrismediaColor.elevatedContentBackground
+        private var cardBackground: some View {
+            ZStack {
+                PrismediaColor.elevatedContentBackground
+                if let artworkPalette {
+                    artworkPalette.background.color
+                    LinearGradient(
+                        colors: [
+                            artworkPalette.primary.color.opacity(0.42),
+                            artworkPalette.secondary.color.opacity(0.24),
+                            .clear,
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
+            .animation(.easeInOut(duration: 0.18), value: artworkPalette)
         }
 
         private var cardShape: PrismediaStableRoundedRectangle {

@@ -103,7 +103,7 @@ final class ReleaseTimingAndCalendarTests: XCTestCase {
             acquisitionStatus: AcquisitionStatus(rawValue: "waiting-for-release")
         )
 
-        XCTAssertEqual(presentation.flagItems.map(\.title), ["Waiting for release"])
+        XCTAssertEqual(presentation.flagItems.map(\.title), ["Waiting"])
         XCTAssertEqual(presentation.flagItems.map(\.systemImage), ["calendar.badge.clock"])
     }
 

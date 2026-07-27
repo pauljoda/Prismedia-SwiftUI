@@ -82,7 +82,7 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
     private static func acquisitionDisplay(
         _ status: AcquisitionStatus?
     ) -> (label: String, systemImage: String, tone: EntityThumbnailBadgeTone) {
-        let presentation = AcquisitionStatusPresentationPolicy.presentation(for: status)
+        let presentation = AcquisitionStatusPresentationPolicy.compactPresentation(for: status)
         return (
             presentation.label,
             presentation.systemImage,

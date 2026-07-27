@@ -43,7 +43,7 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
 
         let badge = EntityThumbnailOverlayPolicy(item: item).topTrailing.first
 
-        XCTAssertEqual(badge?.label, "Waiting for release")
+        XCTAssertEqual(badge?.label, "Waiting")
         XCTAssertEqual(badge?.systemImage, "calendar.badge.clock")
         XCTAssertEqual(badge?.tone, .queued)
     }

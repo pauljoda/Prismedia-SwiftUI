@@ -1,6 +1,20 @@
 import Foundation
 
 public enum AcquisitionStatusPresentationPolicy {
+    public static func compactPresentation(
+        for status: AcquisitionStatus?
+    ) -> AcquisitionStatusPresentation {
+        let presentation = presentation(for: status)
+        guard status?.rawValue == "waiting-for-release"
+            || status?.rawValue == "manual-search-required"
+        else { return presentation }
+        return AcquisitionStatusPresentation(
+            label: "Waiting",
+            systemImage: presentation.systemImage,
+            tone: presentation.tone
+        )
+    }
+
     public static func presentation(
         for status: AcquisitionStatus?
     ) -> AcquisitionStatusPresentation {

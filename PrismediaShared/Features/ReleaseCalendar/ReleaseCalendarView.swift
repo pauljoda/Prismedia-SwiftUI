@@ -2,14 +2,20 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     public struct ReleaseCalendarView: View {
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @State private var displayedMonth: Date
+        @State private var monthNavigationDirection = 1
         @State private var events: [ReleaseCalendarEvent] = []
         @State private var isLoading = true
         @State private var errorMessage: String?
         @State private var mediaFilter: EntityKind?
         @State private var milestoneFilter: EntityDateType?
         @State private var selectedDay: ReleaseCalendarDaySelection?
+        #if os(iOS)
+            @GestureState private var isMonthSwipeActive = false
+            @State private var eventActivationSuppressedUntil = Date.distantPast
+        #endif
 
         private let loader: any ReleaseCalendarLoading
         private let resolveAssetURL: (String?) -> URL?
@@ -28,7 +34,7 @@ import SwiftUI
         }
 
         public var body: some View {
-            Group {
+            ZStack {
                 if isLoading && events.isEmpty {
                     PrismediaLoadingView("Loading release calendar…")
                 } else if let errorMessage, events.isEmpty {
@@ -43,6 +49,8 @@ import SwiftUI
                     }
                 } else {
                     calendarContent
+                        .id(ReleaseCalendarDatePolicy.wireValue(displayedMonth))
+                        .transition(monthTransition)
                 }
             }
             #if os(iOS)
@@ -95,6 +103,7 @@ import SwiftUI
                                         resolveAssetURL: resolveAssetURL,
                                         onOpen: { open(event) }
                                     )
+                                        .allowsHitTesting(calendarContentAllowsHitTesting)
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
                                 }
@@ -142,8 +151,10 @@ import SwiftUI
                         date: date,
                         displayedMonth: displayedMonth,
                         events: dayEvents,
-                        onShowAll: { selectedDay = ReleaseCalendarDaySelection(date: date, events: dayEvents) }
+                        onOpen: open,
+                        onShowAll: { showAll(on: date, events: dayEvents) }
                     )
+                    .allowsHitTesting(calendarContentAllowsHitTesting)
                 }
             }
         }
@@ -209,29 +220,90 @@ import SwiftUI
 
         private func moveMonth(_ value: Int) {
             if let date = Calendar.current.date(byAdding: .month, value: value, to: displayedMonth) {
-                displayedMonth = date
+                monthNavigationDirection = value
+                withAnimation(monthNavigationAnimation) {
+                    displayedMonth = date
+                }
             }
         }
 
         private func open(_ event: ReleaseCalendarEvent) {
+            guard eventActivationAllowed else { return }
             navigationPath.wrappedValue.append(
                 ReleaseCalendarPresentationPolicy.entityLink(for: event)
+            )
+        }
+
+        private var eventActivationAllowed: Bool {
+            #if os(iOS)
+                Date.now >= eventActivationSuppressedUntil
+            #else
+                true
+            #endif
+        }
+
+        private var calendarContentAllowsHitTesting: Bool {
+            #if os(iOS)
+                !isMonthSwipeActive
+            #else
+                true
+            #endif
+        }
+
+        private func showAll(on date: Date, events: [ReleaseCalendarEvent]) {
+            guard eventActivationAllowed else { return }
+            selectedDay = ReleaseCalendarDaySelection(date: date, events: events)
+        }
+
+        private var monthNavigationAnimation: Animation {
+            reduceMotion
+                ? .easeInOut(duration: 0.16)
+                : .smooth(duration: 0.28)
+        }
+
+        private var monthTransition: AnyTransition {
+            guard !reduceMotion else { return .opacity }
+            let insertionEdge: Edge = monthNavigationDirection > 0 ? .trailing : .leading
+            let removalEdge: Edge = monthNavigationDirection > 0 ? .leading : .trailing
+            return .asymmetric(
+                insertion: .move(edge: insertionEdge).combined(with: .opacity),
+                removal: .move(edge: removalEdge).combined(with: .opacity)
             )
         }
 
         #if os(iOS)
             private var monthSwipeGesture: some Gesture {
                 DragGesture(minimumDistance: 30)
+                    .updating($isMonthSwipeActive) { value, isActive, _ in
+                        isActive = isHorizontalMonthSwipe(value)
+                    }
+                    .onChanged(handleMonthSwipeChange)
                     .onEnded(handleMonthSwipe)
+            }
+
+            private func handleMonthSwipeChange(_ value: DragGesture.Value) {
+                guard isHorizontalMonthSwipe(value) else { return }
+                eventActivationSuppressedUntil = Date.now.addingTimeInterval(0.2)
             }
 
             private func handleMonthSwipe(_ value: DragGesture.Value) {
                 let horizontalDistance = value.translation.width
                 let verticalDistance = value.translation.height
-                guard abs(horizontalDistance) >= 60,
+                if isHorizontalMonthSwipe(value) {
+                    eventActivationSuppressedUntil = Date.now.addingTimeInterval(0.2)
+                }
+                if abs(horizontalDistance) >= 60,
                     abs(horizontalDistance) > abs(verticalDistance) * 1.2
-                else { return }
-                moveMonth(horizontalDistance < 0 ? 1 : -1)
+                {
+                    moveMonth(horizontalDistance < 0 ? 1 : -1)
+                }
+            }
+
+            private func isHorizontalMonthSwipe(_ value: DragGesture.Value) -> Bool {
+                let horizontalDistance = abs(value.translation.width)
+                let verticalDistance = abs(value.translation.height)
+                return horizontalDistance >= 12
+                    && horizontalDistance > verticalDistance * 1.2
             }
         #endif
 

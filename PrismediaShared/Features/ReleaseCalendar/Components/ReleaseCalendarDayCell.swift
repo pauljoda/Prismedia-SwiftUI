@@ -5,6 +5,7 @@ import SwiftUI
         let date: Date
         let displayedMonth: Date
         let events: [ReleaseCalendarEvent]
+        let onOpen: (ReleaseCalendarEvent) -> Void
         let onShowAll: () -> Void
 
         var body: some View {
@@ -15,7 +16,9 @@ import SwiftUI
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 ForEach(events.prefix(ReleaseCalendarDatePolicy.visibleDayEventLimit)) { event in
-                    NavigationLink(value: ReleaseCalendarPresentationPolicy.entityLink(for: event)) {
+                    Button {
+                        onOpen(event)
+                    } label: {
                         HStack(spacing: 3) {
                             Circle()
                                 .fill(event.isSearchGate ? PrismediaColor.warning : PrismediaColor.accent)
@@ -59,6 +62,7 @@ import SwiftUI
                 date: ReleaseCalendarPreviewFixtures.day,
                 displayedMonth: ReleaseCalendarPreviewFixtures.day,
                 events: ReleaseCalendarPreviewFixtures.events,
+                onOpen: { _ in },
                 onShowAll: {}
             )
             .frame(width: 180)
