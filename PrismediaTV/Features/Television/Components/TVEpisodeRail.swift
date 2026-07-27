@@ -53,24 +53,7 @@ import SwiftUI
                             }
 
                             ForEach(episodes) { episode in
-                                Button {
-                                    onActivate(episode)
-                                } label: {
-                                    EntityThumbnailCardView(
-                                        item: episode,
-                                        layout: .rail,
-                                        preferredWidth: 300
-                                    )
-                                }
-                                .prismediaEntityNavigationButtonStyle(
-                                    separatesArtworkAndCaption: gridCardStyle == .detailsBelow
-                                )
-                                .focused($focusedTarget, equals: .episode(episode.id))
-                                .id(episode.id)
-                                .accessibilityHint("Updates the selected episode")
-                                .accessibilityIdentifier(
-                                    "tv.seasons-detail.episode.\(episode.id.uuidString)"
-                                )
+                                episodeControl(episode)
                             }
 
                             if let nextSeason {
@@ -98,6 +81,42 @@ import SwiftUI
                 .frame(height: 300)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .prismediaFocusSection()
+            }
+        }
+
+        @ViewBuilder
+        private func episodeControl(_ episode: EntityThumbnail) -> some View {
+            if gridCardStyle == .detailsBelow {
+                EntityThumbnailDetailsBelowCardView(
+                    item: episode,
+                    layout: .rail,
+                    preferredWidth: 300,
+                    onPreviewHoldChanged: { _ in },
+                    onPrimaryAction: { onActivate(episode) },
+                    primaryAccessibilityHint: "Updates the selected episode"
+                )
+                .focused($focusedTarget, equals: .episode(episode.id))
+                .id(episode.id)
+                .accessibilityIdentifier(
+                    "tv.seasons-detail.episode.\(episode.id.uuidString)"
+                )
+            } else {
+                Button {
+                    onActivate(episode)
+                } label: {
+                    EntityThumbnailCardView(
+                        item: episode,
+                        layout: .rail,
+                        preferredWidth: 300
+                    )
+                }
+                .prismediaEntityNavigationButtonStyle()
+                .focused($focusedTarget, equals: .episode(episode.id))
+                .id(episode.id)
+                .accessibilityHint("Updates the selected episode")
+                .accessibilityIdentifier(
+                    "tv.seasons-detail.episode.\(episode.id.uuidString)"
+                )
             }
         }
 

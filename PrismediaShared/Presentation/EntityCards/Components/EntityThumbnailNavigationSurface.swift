@@ -37,6 +37,27 @@ public struct EntityThumbnailNavigationSurface: View {
 
     private var navigationSurface: some View {
         ZStack(alignment: .topTrailing) {
+            primaryNavigationControl
+
+            if showsContextMenu {
+                contextMenu
+                    .padding(PrismediaSpacing.small)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var primaryNavigationControl: some View {
+        if separatesArtworkAndCaption {
+            EntityThumbnailDetailsBelowCardView(
+                item: item,
+                layout: layout,
+                preferredWidth: preferredWidth,
+                onPreviewHoldChanged: previewHoldDidChange,
+                onPrimaryAction: openPrimaryAction,
+                primaryAccessibilityHint: primaryAccessibilityHint
+            )
+        } else {
             Button(action: openPrimaryAction) {
                 EntityThumbnailCardView(
                     item: item,
@@ -46,15 +67,8 @@ public struct EntityThumbnailNavigationSurface: View {
                 )
                 .contentShape(Rectangle())
             }
-            .prismediaEntityNavigationButtonStyle(
-                separatesArtworkAndCaption: separatesArtworkAndCaption
-            )
+            .prismediaEntityNavigationButtonStyle()
             .accessibilityHint(primaryAccessibilityHint)
-
-            if showsContextMenu {
-                contextMenu
-                    .padding(PrismediaSpacing.small)
-            }
         }
     }
 
@@ -97,13 +111,17 @@ public struct EntityThumbnailNavigationSurface: View {
     }
 
     private var separatesArtworkAndCaption: Bool {
-        guard gridCardStyle == .detailsBelow else { return false }
-        switch layout {
-        case .grid, .rail, .wall, .mediaOnly:
-            return true
-        case .list, .feed:
+        #if os(tvOS)
+            guard gridCardStyle == .detailsBelow else { return false }
+            switch layout {
+            case .grid, .rail, .wall, .mediaOnly:
+                return true
+            case .list, .feed:
+                return false
+            }
+        #else
             return false
-        }
+        #endif
     }
 
     private func openPrimaryAction() {

@@ -4,8 +4,8 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
     @MainActor
     func testCollectionGridHeaderControlsRemainAvailable() {
         let app = launchCollectionDetail()
-        let firstItem = focusedSurface(
-            "entity.thumbnail.media.33333333-3333-3333-3333-333333333333",
+        let firstItem = button(
+            "entity.thumbnail.33333333-3333-3333-3333-333333333333",
             in: app
         )
 
@@ -31,8 +31,8 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
     @MainActor
     func testLongPressRetainsAddToCollectionMenu() {
         let app = launchCollectionDetail()
-        let firstItem = focusedSurface(
-            "entity.thumbnail.media.33333333-3333-3333-3333-333333333333",
+        let firstItem = button(
+            "entity.thumbnail.33333333-3333-3333-3333-333333333333",
             in: app
         )
 
@@ -49,8 +49,8 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
     @MainActor
     func testCollectionOpensOnFirstGridItemAndUpMovesToCollectionsTab() {
         let app = launchCollectionDetail()
-        let firstItem = focusedSurface(
-            "entity.thumbnail.media.33333333-3333-3333-3333-333333333333",
+        let firstItem = button(
+            "entity.thumbnail.33333333-3333-3333-3333-333333333333",
             in: app
         )
 
@@ -76,8 +76,8 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
     @MainActor
     func testFirstLateralMoveAdvancesFocus() {
         let app = launchCollectionDetail()
-        let firstItem = focusedSurface(
-            "entity.thumbnail.media.33333333-3333-3333-3333-333333333333",
+        let firstItem = button(
+            "entity.thumbnail.33333333-3333-3333-3333-333333333333",
             in: app
         )
         let secondItem = button(
@@ -126,14 +126,6 @@ final class PrismediaTVCollectionDetailUITests: XCTestCase {
     @MainActor
     private func button(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.buttons[identifier]
-    }
-
-    @MainActor
-    private func focusedSurface(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any)
-            .matching(identifier: identifier)
-            .matching(NSPredicate(format: "hasFocus == true"))
-            .firstMatch
     }
 
     @MainActor

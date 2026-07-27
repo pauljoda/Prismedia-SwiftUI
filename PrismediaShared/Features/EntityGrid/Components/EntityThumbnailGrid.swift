@@ -33,23 +33,19 @@ struct EntityThumbnailGrid<ItemContent: View>: View {
             LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                 itemsView
             }
-            .scrollTargetLayout()
         case .feed:
             LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                 itemsView
             }
             .frame(maxWidth: .infinity)
-            .scrollTargetLayout()
         case .wall:
             LazyVGrid(columns: columns, alignment: .leading, spacing: PrismediaSpacing.large) {
                 itemsView
             }
-            .scrollTargetLayout()
         case .grid:
             LazyVGrid(columns: columns, alignment: .leading, spacing: PrismediaSpacing.large) {
                 itemsView
             }
-            .scrollTargetLayout()
         }
     }
 
@@ -59,7 +55,6 @@ struct EntityThumbnailGrid<ItemContent: View>: View {
             itemContent(item, layout)
                 .environment(\.entityMediaSequence, mediaSequence)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .id(item.id)
         }
     }
 

@@ -1,6 +1,17 @@
 import Foundation
 
 public enum EntityGridArtworkPrewarming {
+    public static func shouldStartBatch(
+        after itemID: UUID,
+        in items: [EntityThumbnail],
+        batchSize: Int = 8
+    ) -> Bool {
+        guard batchSize > 0, let index = items.firstIndex(where: { $0.id == itemID }) else {
+            return false
+        }
+        return index.isMultiple(of: batchSize)
+    }
+
     public static func items(
         after itemID: UUID,
         in items: [EntityThumbnail],

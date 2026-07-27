@@ -6,6 +6,31 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityGridArtworkPrewarmingTests: XCTestCase {
+    func testOnlyOneItemPerBatchStartsPrewarming() {
+        let items = (0..<17).map {
+            EntityThumbnail(id: UUID(), kind: .movie, title: "Movie \($0)")
+        }
+
+        XCTAssertTrue(
+            EntityGridArtworkPrewarming.shouldStartBatch(
+                after: items[0].id,
+                in: items
+            )
+        )
+        XCTAssertFalse(
+            EntityGridArtworkPrewarming.shouldStartBatch(
+                after: items[1].id,
+                in: items
+            )
+        )
+        XCTAssertTrue(
+            EntityGridArtworkPrewarming.shouldStartBatch(
+                after: items[8].id,
+                in: items
+            )
+        )
+    }
+
     func testPipelineCoalescesPrewarmAndVisibleLoadThenCachesTheResult() async throws {
         let url = URL(string: "https://media.example.test/assets/cover.jpg")!
         let loader = ArtworkLoaderSpy(data: Data([1, 2, 3]))

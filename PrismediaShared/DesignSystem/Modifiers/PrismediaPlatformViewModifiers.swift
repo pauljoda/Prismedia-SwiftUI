@@ -74,17 +74,9 @@ extension View {
     }
 
     @ViewBuilder
-    public func prismediaEntityNavigationButtonStyle(
-        separatesArtworkAndCaption: Bool = false
-    ) -> some View {
+    public func prismediaEntityNavigationButtonStyle() -> some View {
         #if os(tvOS)
-            if separatesArtworkAndCaption {
-                self
-                    .buttonStyle(.plain)
-                    .hoverEffect(.highlight)
-            } else {
-                self.buttonStyle(.card)
-            }
+            self.buttonStyle(.card)
         #else
             self.buttonStyle(.plain)
         #endif
