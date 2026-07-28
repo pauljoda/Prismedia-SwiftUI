@@ -103,7 +103,6 @@ public struct EntityThumbnailCardView: View {
             EntityThumbnailCaptionView(item: item, subtitle: subtitle)
                 .accessibilityHidden(onArtworkAction != nil)
         }
-        .padding(.bottom, PrismediaSpacing.small)
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
@@ -207,7 +206,7 @@ public struct EntityThumbnailCardView: View {
     private var accessibilityLabel: String {
         var components = [item.title, item.kind.displayLabel]
         if let subtitle = subtitle ?? item.subtitle { components.append(subtitle) }
-        components.append(contentsOf: item.meta.map(\.label))
+        components.append(contentsOf: item.meta.map(\.thumbnailAccessibilityLabel))
         if item.isFavorite { components.append("Favorite") }
         if item.isNsfw { components.append("NSFW") }
         if item.isWanted {
@@ -237,7 +236,7 @@ public struct EntityThumbnailCardView: View {
                         sortOrder: 1,
                         coverURL: "/preview/video-1.jpg",
                         meta: [
-                            EntityThumbnailMeta(icon: "video", label: "12 episodes"),
+                            EntityThumbnailMeta(icon: "episode", label: "12"),
                             EntityThumbnailMeta(icon: "resolution", label: "4K"),
                         ],
                         rating: 4,

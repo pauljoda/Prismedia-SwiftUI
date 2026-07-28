@@ -25,10 +25,10 @@ public struct MetaChipRow: View {
         return HStack(spacing: metrics.rowSpacing) {
             ForEach(Array(meta.prefix(limit)), id: \.self) { item in
                 HStack(spacing: metrics.contentSpacing) {
-                    Image(systemName: symbol(for: item.icon))
+                    Image(systemName: item.thumbnailSystemImage)
                         .font(PrismediaTypography.compactCaption)
                         .imageScale(.small)
-                        .foregroundStyle(PrismediaColor.accent)
+                        .foregroundStyle(item.thumbnailTint)
                     Text(item.label)
                         .font(PrismediaTypography.badge)
                         .foregroundStyle(PrismediaColor.textSecondary)
@@ -45,29 +45,16 @@ public struct MetaChipRow: View {
                     maxWidth: fillsAvailableWidth ? .infinity : nil,
                     alignment: .leading
                 )
-                .background(PrismediaColor.controlFill.opacity(0.72))
+                .background(item.thumbnailTint.opacity(0.11))
                 .overlay {
                     RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous)
-                        .stroke(PrismediaColor.border, lineWidth: PrismediaLayout.hairline)
+                        .stroke(item.thumbnailTint.opacity(0.32), lineWidth: PrismediaLayout.hairline)
                 }
                 .compositingGroup()
                 .clipShape(.rect(cornerRadius: PrismediaRadius.badge, style: .continuous))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(item.thumbnailAccessibilityLabel)
             }
-        }
-    }
-
-    private func symbol(for icon: String) -> String {
-        switch icon {
-        case "duration", "clock": return "clock"
-        case "resolution": return "rectangle"
-        case "video": return "film"
-        case "image", "gallery": return "photo"
-        case "person": return "person.2"
-        case "progress": return "gauge.with.dots.needle.bottom.50percent"
-        case "codec", "format": return "film"
-        case "folder": return "folder"
-        case "book": return "book"
-        default: return "square.grid.2x2"
         }
     }
 }

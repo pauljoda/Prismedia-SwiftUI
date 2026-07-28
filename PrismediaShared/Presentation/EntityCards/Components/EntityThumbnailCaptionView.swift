@@ -1,12 +1,6 @@
 import SwiftUI
 
 struct EntityThumbnailCaptionView: View {
-    #if os(tvOS)
-        @ScaledMetric(relativeTo: .subheadline) private var captionHeight: CGFloat = 76
-    #else
-        @ScaledMetric(relativeTo: .subheadline) private var captionHeight: CGFloat = 54
-    #endif
-
     let item: EntityThumbnail
     let subtitle: String?
     let horizontalPadding: CGFloat
@@ -30,16 +24,6 @@ struct EntityThumbnailCaptionView: View {
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            secondarySlot
-        }
-        .padding(.horizontal, horizontalPadding)
-        .frame(height: captionHeight, alignment: .topLeading)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .clipped()
-    }
-
-    private var secondarySlot: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
             if let subtitle = normalizedSubtitle {
                 Text(subtitle)
                     .font(PrismediaTypography.compactCaption)
@@ -53,7 +37,9 @@ struct EntityThumbnailCaptionView: View {
                 MetaChipRow(meta: item.meta)
             }
         }
-        .frame(maxHeight: .infinity, alignment: .bottomLeading)
+        .padding(.horizontal, horizontalPadding)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .clipped()
     }
 
     private var normalizedSubtitle: String? {
@@ -73,7 +59,7 @@ struct EntityThumbnailCaptionView: View {
                 title: "A Season Title That Is Far Too Long for Its Thumbnail",
                 subtitle: "A Series Title That Also Needs Bounded Space",
                 meta: [
-                    EntityThumbnailMeta(icon: "video", label: "12 episodes"),
+                    EntityThumbnailMeta(icon: "episode", label: "12"),
                     EntityThumbnailMeta(icon: "resolution", label: "4K"),
                 ]
             )
