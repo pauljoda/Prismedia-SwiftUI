@@ -75,7 +75,7 @@ struct DashboardView: View {
                                     title: "Continue",
                                     systemImage: "play.circle.fill",
                                     colorRole: .continueWatching,
-                                    items: visibleContinueItems,
+                                    items: snapshot.continueItems,
                                     onSelect: nil
                                 )
                                 DashboardShelfView(
@@ -150,19 +150,6 @@ struct DashboardView: View {
             }
         }
         .accessibilityIdentifier("shell.dashboard")
-    }
-
-    private var visibleContinueItems: [EntityThumbnail] {
-        guard showsHero, let heroID = snapshot.hero?.id else {
-            return snapshot.continueItems
-        }
-
-        var removedHero = false
-        return snapshot.continueItems.filter { item in
-            guard !removedHero, item.id == heroID else { return true }
-            removedHero = true
-            return false
-        }
     }
 
     private var dashboardBrandTitle: some View {

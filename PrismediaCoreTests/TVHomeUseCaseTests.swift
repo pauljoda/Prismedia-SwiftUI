@@ -4,6 +4,22 @@ import XCTest
 
 @MainActor
 final class TVHomeUseCaseTests: XCTestCase {
+    func testContinueShelfKeepsTheHeroItemAtTheFront() {
+        let latestPlayed = PrismediaPreviewData.videos[0]
+        let previouslyPlayed = PrismediaPreviewData.videos[1]
+        let snapshot = TVHomeSnapshot(
+            itemsByShelfID: [
+                "in-progress": [latestPlayed, previouslyPlayed]
+            ]
+        )
+
+        XCTAssertEqual(snapshot.hero?.id, latestPlayed.id)
+        XCTAssertEqual(
+            snapshot.items(for: "in-progress").map(\.id),
+            [latestPlayed.id, previouslyPlayed.id]
+        )
+    }
+
     func testOneFailedShelfDoesNotHideTheOtherHomeContent() async {
         let hero = PrismediaPreviewData.videos[0]
         let movie = PrismediaPreviewData.videos[1]

@@ -20,7 +20,6 @@ public struct TVHomeSnapshot: Equatable, Sendable {
     }
 
     public func items(for shelfID: String) -> [EntityThumbnail] {
-        let items = itemsByShelfID[shelfID] ?? []
-        return shelfID == "in-progress" ? Array(items.dropFirst()) : items
+        itemsByShelfID[shelfID] ?? []
     }
 }
