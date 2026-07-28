@@ -59,7 +59,7 @@ public struct EntityLink: Hashable, Sendable {
                 sourceThumbnail: thumbnail,
                 thumbnailPreview: EntityLinkPreview(
                     title: thumbnail.title,
-                    subtitle: previewSubtitle,
+                    subtitle: previewSubtitle ?? thumbnail.subtitle,
                     artworkPath: thumbnail.bestCoverPath,
                     progress: thumbnail.progress,
                     resumeSeconds: thumbnail.resumeSeconds
@@ -78,7 +78,7 @@ public struct EntityLink: Hashable, Sendable {
             sourceThumbnail: thumbnail,
             thumbnailPreview: EntityLinkPreview(
                 title: thumbnail.title,
-                subtitle: previewSubtitle,
+                subtitle: previewSubtitle ?? thumbnail.subtitle,
                 artworkPath: thumbnail.bestCoverPath,
                 progress: thumbnail.progress,
                 resumeSeconds: thumbnail.resumeSeconds

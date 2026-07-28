@@ -132,17 +132,7 @@
             ) {
                 ForEach(albums) { album in
                     NavigationLink(value: EntityLink(thumbnail: album, previewSubtitle: detail.title)) {
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                            EntityThumbnailCompactArtworkView(item: album)
-                            Text(album.title)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
-                            Text(album.musicMetadataValue(matching: ["year", "date"]) ?? detail.title)
-                                .font(.caption)
-                                .foregroundStyle(artworkPalette?.secondary.color ?? PrismediaColor.textSecondary)
-                                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
-                        }
+                        EntityThumbnailCardView(item: album, subtitle: detail.title)
                     }
                     .buttonStyle(.plain)
                     .onAppear { prewarmArtwork(after: album.id) }

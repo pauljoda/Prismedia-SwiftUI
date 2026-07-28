@@ -8,6 +8,10 @@ public struct EntityThumbnailArtworkPresentation: Hashable, Sendable {
 
     public var isWide: Bool { aspectRatio > 1 }
 
+    public func width(forHeight height: CGFloat) -> CGFloat {
+        height * aspectRatio
+    }
+
     public init(kind: EntityKind) {
         aspectRatio = kind.thumbnailAspectRatio
         contentMode = kind == .studio ? .fit : .fill

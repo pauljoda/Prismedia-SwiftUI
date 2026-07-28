@@ -3,7 +3,6 @@ import SwiftUI
 #if os(tvOS)
 
     struct TVEpisodeRail: View {
-        @Environment(\.entityGridCardStyle) private var gridCardStyle
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @FocusState private var focusedTarget: TVEpisodeRailFocusTarget?
         @State private var pendingBoundaryDirection: TVSeasonBoundaryDirection?
@@ -84,40 +83,19 @@ import SwiftUI
             }
         }
 
-        @ViewBuilder
         private func episodeControl(_ episode: EntityThumbnail) -> some View {
-            if gridCardStyle == .detailsBelow {
-                EntityThumbnailDetailsBelowCardView(
-                    item: episode,
-                    layout: .rail,
-                    preferredWidth: 300,
-                    onPreviewHoldChanged: { _ in },
-                    onPrimaryAction: { onActivate(episode) },
-                    primaryAccessibilityHint: "Updates the selected episode"
-                )
-                .focused($focusedTarget, equals: .episode(episode.id))
-                .id(episode.id)
-                .accessibilityIdentifier(
-                    "tv.seasons-detail.episode.\(episode.id.uuidString)"
-                )
-            } else {
-                Button {
-                    onActivate(episode)
-                } label: {
-                    EntityThumbnailCardView(
-                        item: episode,
-                        layout: .rail,
-                        preferredWidth: 300
-                    )
-                }
-                .prismediaEntityNavigationButtonStyle()
-                .focused($focusedTarget, equals: .episode(episode.id))
-                .id(episode.id)
-                .accessibilityHint("Updates the selected episode")
-                .accessibilityIdentifier(
-                    "tv.seasons-detail.episode.\(episode.id.uuidString)"
-                )
-            }
+            EntityThumbnailNavigationSurface(
+                item: episode,
+                layout: .rail,
+                preferredWidth: 300,
+                onPrimaryAction: onActivate
+            )
+            .focused($focusedTarget, equals: .episode(episode.id))
+            .id(episode.id)
+            .accessibilityHint("Updates the selected episode")
+            .accessibilityIdentifier(
+                "tv.seasons-detail.episode.\(episode.id.uuidString)"
+            )
         }
 
         private func seasonBoundaryButton(

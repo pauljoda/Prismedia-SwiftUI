@@ -11,16 +11,24 @@ import SwiftUI
                 id: seasonID,
                 kind: .videoSeason,
                 title: "Season 1",
+                subtitle: "The Chair Company",
                 parentEntityID: seriesID,
-                sortOrder: 1
+                parentKind: .videoSeries,
+                sortOrder: 1,
+                meta: [EntityThumbnailMeta(icon: "video", label: "10 episodes")]
             )
             static let episodeThumbnail = EntityThumbnail(
                 id: episodeID,
                 kind: .video,
                 title: "The Signal",
+                subtitle: "Season 1",
                 parentEntityID: seasonID,
                 parentKind: .videoSeason,
-                sortOrder: 1
+                sortOrder: 1,
+                meta: [
+                    EntityThumbnailMeta(icon: "duration", label: "42 min"),
+                    EntityThumbnailMeta(icon: "resolution", label: "4K"),
+                ]
             )
             static let series = EntityDetail(
                 id: seriesID,

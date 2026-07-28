@@ -99,7 +99,7 @@ struct EntityGridSelectionSurface<Content: View>: View {
                     .accessibilityIdentifier("entity.grid.selection.item.\(item.id.uuidString)")
                 }
             }
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .topLeading) {
                 if isSelectionActive {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.title2.weight(.semibold))

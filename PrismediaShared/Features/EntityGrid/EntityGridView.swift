@@ -10,7 +10,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @State private var displayMode: EntityGridDisplayMode
     @State private var density: EntityGridDensity
     @State private var pageSize: Int
-    @State private var cardStyleOverride: EntityGridCardStyle?
+    @State private var showsThumbnailTextOverride: Bool?
     @State private var presets: [EntityGridPreset]
     @State private var presetName = ""
     @State private var savePresetPresented = false
@@ -90,7 +90,9 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         )
         _density = State(initialValue: restoredPreferences?.density ?? .standard)
         _pageSize = State(initialValue: restoredPreferences?.pageSize ?? configuration.pageSize)
-        _cardStyleOverride = State(initialValue: restoredPreferences?.cardStyleOverride)
+        _showsThumbnailTextOverride = State(
+            initialValue: restoredPreferences?.showsThumbnailTextOverride
+        )
         _presets = State(initialValue: preferencesStore.loadPresets(for: configuration.preferencesID))
         _selection = State(
             initialValue: EntityGridSelectionState(
@@ -495,7 +497,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 ) {
                     itemContent(item, layout)
                 }
-                .environment(\.entityGridCardStyle, cardStyle)
+                .environment(\.entityThumbnailShowsText, showsThumbnailText)
                 #if os(tvOS)
                     .focused($tvGridFocus, equals: .item(item.id))
                     .prefersDefaultFocus(
@@ -603,14 +605,14 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             displayMode: displayMode,
             density: density,
             pageSize: pageSize,
-            appDefaultCardStyle: environment.entityGridCardStyle,
-            cardStyleOverride: cardStyleOverride,
+            appDefaultShowsThumbnailText: environment.entityThumbnailShowsText,
+            showsThumbnailTextOverride: showsThumbnailTextOverride,
             presets: presets,
             preferencesAreDefault: preferencesAreDefault,
             onSelectDisplayMode: selectDisplayMode,
             onSelectDensity: selectDensity,
             onSelectPageSize: selectPageSize,
-            onSelectCardStyle: selectCardStyle,
+            onSetShowsThumbnailText: setShowsThumbnailText,
             onApplyPreset: requestApplyPreset,
             onRequestSavePreset: presentSavePreset,
             onDeletePreset: deletePreset,
@@ -618,8 +620,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         )
     }
 
-    private var cardStyle: EntityGridCardStyle {
-        cardStyleOverride ?? environment.entityGridCardStyle
+    private var showsThumbnailText: Bool {
+        showsThumbnailTextOverride ?? environment.entityThumbnailShowsText
     }
 
     private func selectSort(_ sort: EntityGridSort) {
@@ -656,9 +658,9 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         Task { await loadFirstPage(preservingContent: false) }
     }
 
-    private func selectCardStyle(_ newCardStyle: EntityGridCardStyle?) {
-        guard cardStyleOverride != newCardStyle else { return }
-        cardStyleOverride = newCardStyle
+    private func setShowsThumbnailText(_ showsText: Bool?) {
+        guard showsThumbnailTextOverride != showsText else { return }
+        showsThumbnailTextOverride = showsText
         savePreferences()
     }
 
@@ -672,7 +674,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         displayMode = configuration.resolvedDisplayMode(restoring: preferences.displayMode)
         density = preferences.density
         pageSize = preferences.pageSize ?? configuration.pageSize
-        cardStyleOverride = preferences.cardStyleOverride
+        showsThumbnailTextOverride = preferences.showsThumbnailTextOverride
         savePreferences()
         await loadFirstPage(preservingContent: false)
     }
@@ -747,7 +749,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         displayMode = configuration.defaultDisplayMode
         density = .standard
         pageSize = configuration.pageSize
-        cardStyleOverride = nil
+        showsThumbnailTextOverride = nil
         preferencesStore.reset(for: configuration.preferencesID)
         await loadFirstPage(preservingContent: false)
     }
@@ -766,7 +768,7 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             displayMode: displayMode,
             density: density,
             pageSize: pageSize,
-            cardStyle: cardStyleOverride
+            showsThumbnailText: showsThumbnailTextOverride
         )
     }
 
@@ -865,29 +867,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
         guard !urls.isEmpty else { return }
 
         let artworkLoader = environment.artworkLoader
-        let cardStyle = cardStyle
-        let displayMode = displayMode
         Task(priority: .utility) {
             await artworkLoader.prewarm(urls)
-            guard cardStyle == .artworkFade else { return }
-
-            for candidate in candidates {
-                let layout = displayMode.thumbnailLayout(for: candidate.kind)
-                guard layout != .list,
-                    layout != .feed,
-                    let artworkURL = client.assetURL(for: candidate.bestCoverPath)
-                else { continue }
-
-                _ = await ArtworkExtensionImagePipeline.shared.image(
-                    for: artworkURL,
-                    artworkLoader: artworkLoader,
-                    sourceAspectRatio: candidate.thumbnailArtworkPresentation.aspectRatio,
-                    outputAspectRatio: EntityThumbnailCardPresentation.artworkFadeAspectRatio(
-                        for: candidate.thumbnailArtworkPresentation.aspectRatio
-                    ),
-                    maxPixelSize: 512
-                )
-            }
         }
     }
 

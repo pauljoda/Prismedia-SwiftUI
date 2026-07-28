@@ -48,7 +48,7 @@ extension EntityThumbnailLayout {
         switch self {
         case .grid, .wall, .rail:
             true
-        case .list, .feed, .mediaOnly:
+        case .list, .feed, .mediaOnly, .compact:
             false
         }
     }

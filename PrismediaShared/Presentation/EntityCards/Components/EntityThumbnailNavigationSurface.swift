@@ -3,7 +3,7 @@ import SwiftUI
 public struct EntityThumbnailNavigationSurface: View {
     @Environment(PrismediaAppRouter.self) private var router
     @Environment(\.entityMediaSequence) private var mediaSequence
-    @Environment(\.entityGridCardStyle) private var gridCardStyle
+    @Environment(\.entityThumbnailShowsText) private var showsThumbnailText
     @State private var preventsNavigation = false
     @State private var previewReleaseID = UUID()
 
@@ -49,13 +49,14 @@ public struct EntityThumbnailNavigationSurface: View {
     @ViewBuilder
     private var primaryNavigationControl: some View {
         if separatesArtworkAndCaption {
-            EntityThumbnailDetailsBelowCardView(
+            EntityThumbnailCardView(
                 item: item,
                 layout: layout,
                 preferredWidth: preferredWidth,
+                subtitle: previewSubtitle,
                 onPreviewHoldChanged: previewHoldDidChange,
-                onPrimaryAction: openPrimaryAction,
-                primaryAccessibilityHint: primaryAccessibilityHint
+                onArtworkAction: openPrimaryAction,
+                artworkActionHint: primaryAccessibilityHint
             )
         } else {
             Button(action: openPrimaryAction) {
@@ -63,6 +64,7 @@ public struct EntityThumbnailNavigationSurface: View {
                     item: item,
                     layout: layout,
                     preferredWidth: preferredWidth,
+                    subtitle: previewSubtitle,
                     onPreviewHoldChanged: previewHoldDidChange
                 )
                 .contentShape(Rectangle())
@@ -112,11 +114,11 @@ public struct EntityThumbnailNavigationSurface: View {
 
     private var separatesArtworkAndCaption: Bool {
         #if os(tvOS)
-            guard gridCardStyle == .detailsBelow else { return false }
+            guard showsThumbnailText else { return false }
             switch layout {
             case .grid, .rail, .wall, .mediaOnly:
                 return true
-            case .list, .feed:
+            case .list, .feed, .compact:
                 return false
             }
         #else

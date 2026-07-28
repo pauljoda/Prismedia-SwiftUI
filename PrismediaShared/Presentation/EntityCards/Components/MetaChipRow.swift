@@ -8,29 +8,50 @@ public struct MetaChipRow: View {
     }
 
     public var body: some View {
+        ViewThatFits(in: .horizontal) {
+            chipRow(limit: 5)
+            chipRow(limit: 4)
+            chipRow(limit: 3)
+            chipRow(limit: 2)
+            chipRow(limit: 1, fillsAvailableWidth: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipped()
+    }
+
+    private func chipRow(limit: Int, fillsAvailableWidth: Bool = false) -> some View {
         let metrics = MetaChipMetrics.compact
 
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: metrics.rowSpacing) {
-                ForEach(Array(meta.prefix(5)), id: \.self) { item in
-                    HStack(spacing: metrics.contentSpacing) {
-                        Image(systemName: symbol(for: item.icon))
-                            .font(PrismediaTypography.compactCaption)
-                            .imageScale(.small)
-                            .foregroundStyle(PrismediaColor.accent)
-                        Text(item.label)
-                            .font(PrismediaTypography.badge)
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                    }
-                    .padding(.horizontal, metrics.horizontalPadding)
-                    .padding(.vertical, metrics.verticalPadding)
-                    .background(PrismediaColor.controlFill.opacity(0.72))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous)
-                            .stroke(PrismediaColor.border, lineWidth: PrismediaLayout.hairline)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous))
+        return HStack(spacing: metrics.rowSpacing) {
+            ForEach(Array(meta.prefix(limit)), id: \.self) { item in
+                HStack(spacing: metrics.contentSpacing) {
+                    Image(systemName: symbol(for: item.icon))
+                        .font(PrismediaTypography.compactCaption)
+                        .imageScale(.small)
+                        .foregroundStyle(PrismediaColor.accent)
+                    Text(item.label)
+                        .font(PrismediaTypography.badge)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .frame(
+                            maxWidth: fillsAvailableWidth ? .infinity : nil,
+                            alignment: .leading
+                        )
                 }
+                .padding(.horizontal, metrics.horizontalPadding)
+                .padding(.vertical, metrics.verticalPadding)
+                .frame(
+                    maxWidth: fillsAvailableWidth ? .infinity : nil,
+                    alignment: .leading
+                )
+                .background(PrismediaColor.controlFill.opacity(0.72))
+                .overlay {
+                    RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous)
+                        .stroke(PrismediaColor.border, lineWidth: PrismediaLayout.hairline)
+                }
+                .compositingGroup()
+                .clipShape(.rect(cornerRadius: PrismediaRadius.badge, style: .continuous))
             }
         }
     }

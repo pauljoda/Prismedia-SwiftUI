@@ -67,7 +67,7 @@ struct SearchHubResultGroup: View {
     }
 
     private var railArtworkHeight: CGFloat {
-        CGFloat(260 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio)
+        216
     }
 
     private func entityCard(_ item: EntityThumbnail) -> some View {
@@ -81,10 +81,7 @@ struct SearchHubResultGroup: View {
     }
 
     private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
-        CGFloat(
-            EntityThumbnailCardPresentation(item: item, layout: .rail)
-                .width(forCardHeight: Double(railArtworkHeight))
-        )
+        item.thumbnailArtworkPresentation.width(forHeight: railArtworkHeight)
     }
 }
 

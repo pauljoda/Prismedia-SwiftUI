@@ -113,9 +113,9 @@ struct EntityDetailReferenceSearchView: View {
     private func resultLabel(_ reference: EntityDetailReferenceDraft, isNew: Bool) -> some View {
         HStack(spacing: PrismediaSpacing.small) {
             if let thumbnail = reference.sourceThumbnail {
-                EntityThumbnailCompactArtworkView(item: thumbnail, width: 44)
+                EntityThumbnailCardView(item: thumbnail, layout: .compact, preferredWidth: 44)
             } else {
-                EntityThumbnailCompactArtworkView(
+                EntityReferenceDraftArtworkView(
                     title: reference.title,
                     kind: reference.kind,
                     artworkPath: reference.artworkPath,

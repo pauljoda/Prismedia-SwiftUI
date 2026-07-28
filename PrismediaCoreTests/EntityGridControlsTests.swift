@@ -55,7 +55,7 @@ final class EntityGridControlsTests: XCTestCase {
                     displayMode: .list,
                     density: .large,
                     pageSize: 96,
-                    cardStyle: .detailsBelow
+                    showsThumbnailText: false
                 )
             )
         )
@@ -73,13 +73,13 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.displayMode, .list)
         XCTAssertEqual(preferences.density, .large)
         XCTAssertEqual(preferences.pageSize, 96)
-        XCTAssertEqual(preferences.cardStyle, .detailsBelow)
-        XCTAssertEqual(preferences.cardStyleOverride, .detailsBelow)
+        XCTAssertFalse(preferences.showsThumbnailText)
+        XCTAssertEqual(preferences.showsThumbnailTextOverride, false)
         XCTAssertEqual(query.kind, .book)
         XCTAssertEqual(query.bookType, "comic,manga")
     }
 
-    func testLegacyPreferencePayloadDefaultsToGridWithStandardDensity() throws {
+    func testLegacyArtworkFadePreferenceMigratesToVisibleThumbnailText() throws {
         let legacyPayload = Data(
             #"{"sort":"title","sortDescending":false,"favoriteOnly":false,"organization":"any","availability":"any","engagement":"any","isUnrated":false,"taxonomy":"any","bookTypes":[],"bookFormats":[],"cardStyle":"artworkFade"}"#
                 .utf8
@@ -90,9 +90,20 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(preferences.displayMode, .grid)
         XCTAssertEqual(preferences.density, .standard)
         XCTAssertNil(preferences.pageSize)
-        XCTAssertEqual(preferences.cardStyle, .detailsBelow)
-        XCTAssertNil(preferences.cardStyleOverride)
+        XCTAssertTrue(preferences.showsThumbnailText)
+        XCTAssertEqual(preferences.showsThumbnailTextOverride, true)
         XCTAssertEqual(preferences.sort, "title")
+    }
+
+    func testLegacyNoneOverrideMigratesToHiddenThumbnailText() throws {
+        let legacyPayload = Data(
+            #"{"controls":{},"cardStyleOverride":"none"}"#.utf8
+        )
+
+        let preferences = try JSONDecoder().decode(EntityGridPreferences.self, from: legacyPayload)
+
+        XCTAssertFalse(preferences.showsThumbnailText)
+        XCTAssertEqual(preferences.showsThumbnailTextOverride, false)
     }
 
     func testConfigurationRejectsARestoredDisplayModeOutsideItsSupportedLayouts() {
@@ -149,7 +160,8 @@ final class EntityGridControlsTests: XCTestCase {
 
         XCTAssertEqual(savedControls["sort"] as? String, "rating")
         XCTAssertEqual(savedControls["sortDescending"] as? Bool, false)
-        XCTAssertNil(object["cardStyle"], "An absent override must continue following the app default.")
+        XCTAssertNil(object["showsThumbnailTextOverride"], "An absent override must continue following the app default.")
+        XCTAssertNil(object["cardStyle"], "Legacy card settings must not be re-encoded.")
         XCTAssertNil(object["cardStyleOverride"])
         XCTAssertNil(object["favoriteOnly"], "Filter fields should not be mirrored at the preference root.")
     }
@@ -182,17 +194,19 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(store.load(for: "books"), books)
     }
 
-    func testAppCardStylePreferenceDefaultsAndPersists() throws {
-        let suiteName = "EntityGridCardStylePreferenceTests.\(UUID().uuidString)"
+    func testAppThumbnailTextPreferenceDefaultsPersistsAndMigrates() throws {
+        let suiteName = "EntityThumbnailTextPreferenceTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = EntityGridCardStylePreferenceStore(defaults: defaults)
+        let store = EntityThumbnailTextPreferenceStore(defaults: defaults)
 
-        XCTAssertEqual(store.load(), .detailsBelow)
+        XCTAssertTrue(store.load())
 
-        store.save(.none)
+        defaults.set("none", forKey: "prismedia.app-settings.entity-grid-card-style.v1")
+        XCTAssertFalse(store.load())
 
-        XCTAssertEqual(store.load(), .none)
+        store.save(true)
+        XCTAssertTrue(store.load())
     }
 
     func testPreferenceStorePersistsNamedPresetsAndReplacesMatchingName() throws {

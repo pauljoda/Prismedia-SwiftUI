@@ -87,9 +87,10 @@
                     Task { await add(to: collection) }
                 } label: {
                     HStack(spacing: PrismediaSpacing.medium) {
-                        EntityThumbnailCompactArtworkView(
+                        EntityThumbnailCardView(
                             item: collection,
-                            width: PrismediaLayout.minimumHitTarget
+                            layout: .compact,
+                            preferredWidth: PrismediaLayout.minimumHitTarget
                         )
 
                         Text(collection.title)

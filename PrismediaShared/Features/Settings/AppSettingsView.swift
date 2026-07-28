@@ -6,10 +6,10 @@ struct AppSettingsView: View {
     var body: some View {
         Group {
             #if os(macOS)
-                MacAppSettingsContentView(cardStyle: cardStyle)
+                MacAppSettingsContentView(showsThumbnailText: showsThumbnailText)
             #else
                 Form {
-                    EntityGridCardStyleSettingsSection(cardStyle: cardStyle)
+                    EntityThumbnailTextSettingsSection(showsThumbnailText: showsThumbnailText)
                 }
             #endif
         }
@@ -17,10 +17,10 @@ struct AppSettingsView: View {
         .navigationTitle("App Settings")
     }
 
-    private var cardStyle: Binding<EntityGridCardStyle> {
+    private var showsThumbnailText: Binding<Bool> {
         Binding(
-            get: { environment.entityGridCardStyle },
-            set: { environment.setEntityGridCardStyle($0) }
+            get: { environment.entityThumbnailShowsText },
+            set: { environment.setEntityThumbnailShowsText($0) }
         )
     }
 }

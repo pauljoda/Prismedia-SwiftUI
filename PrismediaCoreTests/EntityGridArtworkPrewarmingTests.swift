@@ -1,5 +1,4 @@
 import CoreGraphics
-import CoreImage
 import Foundation
 import XCTest
 
@@ -118,53 +117,6 @@ final class EntityGridArtworkPrewarmingTests: XCTestCase {
         let requestCount = await loader.requestCount()
         XCTAssertEqual(requestCount, 2)
     }
-
-    func testArtworkExtensionPipelineRendersOnceThenReusesTheStaticComposition() async throws {
-        let url = URL(string: "https://media.example.test/assets/wide-cover.jpg")!
-        let loader = StaticArtworkLoader(image: try makeImage(width: 120, height: 68))
-        let pipeline = ArtworkExtensionImagePipeline(
-            context: CIContext(options: [.useSoftwareRenderer: true]),
-            byteCostLimit: 1_000_000
-        )
-
-        let first = await pipeline.image(
-            for: url,
-            artworkLoader: loader,
-            sourceAspectRatio: 16.0 / 9.0,
-            outputAspectRatio: 6.0 / 5.0,
-            maxPixelSize: 120
-        )
-        let second = await pipeline.image(
-            for: url,
-            artworkLoader: loader,
-            sourceAspectRatio: 16.0 / 9.0,
-            outputAspectRatio: 6.0 / 5.0,
-            maxPixelSize: 120
-        )
-
-        XCTAssertEqual(first?.width, 120)
-        XCTAssertEqual(first?.height, 100)
-        XCTAssertEqual(second?.width, first?.width)
-        XCTAssertEqual(second?.height, first?.height)
-        XCTAssertEqual(loader.cachedImageRequestCount, 1)
-    }
-
-    private func makeImage(width: Int, height: Int) throws -> CGImage {
-        let context = try XCTUnwrap(
-            CGContext(
-                data: nil,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: width * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            )
-        )
-        context.setFillColor(CGColor(red: 0.12, green: 0.42, blue: 0.86, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        return try XCTUnwrap(context.makeImage())
-    }
 }
 
 private actor ArtworkLoaderSpy: HTTPDataLoading {
@@ -215,33 +167,4 @@ private actor ArtworkLoaderSpy: HTTPDataLoading {
     func decodeCount(maxPixelSize: Int) -> Int {
         decodeCounts[maxPixelSize, default: 0]
     }
-}
-
-private final class StaticArtworkLoader: RemoteArtworkLoading, @unchecked Sendable {
-    private let image: CGImage
-    private let lock = NSLock()
-    private var cachedRequests = 0
-
-    init(image: CGImage) {
-        self.image = image
-    }
-
-    var cachedImageRequestCount: Int {
-        lock.withLock { cachedRequests }
-    }
-
-    func data(for url: URL) async throws -> Data {
-        throw URLError(.resourceUnavailable)
-    }
-
-    func cachedData(for url: URL) -> Data? {
-        nil
-    }
-
-    func cachedImage(for url: URL, maxPixelSize: Int) -> CGImage? {
-        lock.withLock { cachedRequests += 1 }
-        return image
-    }
-
-    func prewarm(_ urls: [URL]) async {}
 }

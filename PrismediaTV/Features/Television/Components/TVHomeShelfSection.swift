@@ -53,15 +53,12 @@ import SwiftUI
             .frame(height: 420)
         }
 
-        private var railCardHeight: Double {
-            360 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
+        private var railCardHeight: CGFloat {
+            300
         }
 
         private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
-            CGFloat(
-                EntityThumbnailCardPresentation(item: item, layout: .rail)
-                    .width(forCardHeight: railCardHeight)
-            )
+            item.thumbnailArtworkPresentation.width(forHeight: railCardHeight)
         }
     }
 #endif

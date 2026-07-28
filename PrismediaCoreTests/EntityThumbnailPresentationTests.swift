@@ -2,7 +2,7 @@ import XCTest
 
 @testable import PrismediaCore
 
-final class EntityThumbnailCardPresentationTests: XCTestCase {
+final class EntityThumbnailPresentationTests: XCTestCase {
     func testThumbnailDecodesConciseDescriptionFromExistingServerNames() throws {
         let description = try decodeThumbnail(descriptionMember: #""description":"A description.""#)
         let overview = try decodeThumbnail(descriptionMember: #""overview":"An overview.""#)
@@ -13,11 +13,23 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         XCTAssertEqual(summary.summary, "A summary.")
     }
 
-    func testOverlayPolicyCarriesWebThumbnailStatusChips() {
+    func testThumbnailDecodesCanonicalSubtitle() throws {
+        let data = Data(
+            #"{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","kind":"video-season","title":"Season 1","subtitle":"Example Series"}"#.utf8
+        )
+
+        let thumbnail = try PrismediaJSON.decoder().decode(EntityThumbnail.self, from: data)
+
+        XCTAssertEqual(thumbnail.subtitle, "Example Series")
+    }
+
+    func testOverlayPolicyPlacesPositionStatusSafetyAndRatingInCanonicalCorners() {
         let item = EntityThumbnail(
             id: UUID(),
             kind: .video,
             title: "Wanted Video",
+            parentKind: .videoSeason,
+            sortOrder: 1,
             rating: 4,
             isNsfw: true,
             isWanted: true,
@@ -26,10 +38,12 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
 
         let policy = EntityThumbnailOverlayPolicy(item: item)
 
-        XCTAssertEqual(policy.topTrailing.map(\.kind), [.wanted, .nsfw])
+        XCTAssertEqual(policy.topTrailing.map(\.kind), [.wanted])
         XCTAssertEqual(policy.topTrailing.first?.label, "Downloading")
-        XCTAssertEqual(policy.bottomTrailing.map(\.kind), [.rating])
-        XCTAssertEqual(policy.bottomTrailing.first?.label, "4")
+        XCTAssertEqual(policy.bottomLeading.map(\.kind), [.position])
+        XCTAssertEqual(policy.bottomLeading.first?.label, "E1")
+        XCTAssertEqual(policy.bottomTrailing.map(\.kind), [.nsfw, .rating])
+        XCTAssertEqual(policy.bottomTrailing.last?.label, "4")
     }
 
     func testReleaseGatedThumbnailUsesTheServerAcquisitionStatus() {
@@ -52,54 +66,6 @@ final class EntityThumbnailCardPresentationTests: XCTestCase {
         let item = EntityThumbnail(id: UUID(), kind: .movie, title: "Unrated", rating: 0)
 
         XCTAssertTrue(EntityThumbnailOverlayPolicy(item: item).bottomTrailing.isEmpty)
-    }
-
-    func testPosterArtworkKeepsStatusChipsVisible() {
-        let item = EntityThumbnail(
-            id: UUID(),
-            kind: .movie,
-            title: "Poster Movie",
-            coverURL: "/poster.jpg",
-            rating: 5,
-            isNsfw: true,
-            isWanted: true
-        )
-
-        let presentation = EntityThumbnailCardPresentation(item: item, layout: .grid)
-
-        XCTAssertFalse(presentation.usesArtworkExtension)
-        XCTAssertTrue(presentation.showsArtworkBadges)
-    }
-
-    func testArtworkFadeReservesOnlyTheCompactMetadataBandBelowArtwork() {
-        let sourceAspectRatio = 2.0 / 3.0
-
-        let cardAspectRatio = EntityThumbnailCardPresentation.artworkFadeAspectRatio(
-            for: sourceAspectRatio
-        )
-
-        XCTAssertLessThan(cardAspectRatio, sourceAspectRatio)
-        XCTAssertEqual(
-            cardAspectRatio,
-            1.0 / ((1.0 / sourceAspectRatio) + ((1.0 / (6.0 / 5.0)) - (1.0 / (16.0 / 9.0)))),
-            accuracy: 0.001
-        )
-    }
-
-    func testRailWidthsPreserveAConsistentCardHeightAcrossThumbnailShapes() {
-        let cardHeight = 216.0
-        let presentations = [EntityKind.video, .movie, .collection, .person].map { kind in
-            EntityThumbnailCardPresentation(
-                item: EntityThumbnail(id: UUID(), kind: kind, title: kind.displayLabel),
-                layout: .rail
-            )
-        }
-
-        for presentation in presentations {
-            let width = presentation.width(forCardHeight: cardHeight)
-
-            XCTAssertEqual(width / presentation.cardAspectRatio, cardHeight, accuracy: 0.001)
-        }
     }
 
     func testVideoListModeReusesTheRailCardWhileOtherKindsKeepListPresentation() {

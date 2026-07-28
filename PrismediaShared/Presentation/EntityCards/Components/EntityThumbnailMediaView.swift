@@ -15,18 +15,21 @@ public struct EntityThumbnailMediaView: View {
     private let preview: EntityThumbnailPreview
     private let systemImage: String
     private let contentMode: ContentMode
+    private let restingArtworkPathOverride: String?
     private let onPreviewHoldChanged: (Bool) -> Void
 
     public init(
         item: EntityThumbnail,
         systemImage: String,
         contentMode: ContentMode,
+        restingArtworkPathOverride: String? = nil,
         onPreviewHoldChanged: @escaping (Bool) -> Void = { _ in }
     ) {
         self.item = item
         preview = EntityThumbnailPreview(thumbnail: item)
         self.systemImage = systemImage
         self.contentMode = contentMode
+        self.restingArtworkPathOverride = restingArtworkPathOverride
         self.onPreviewHoldChanged = onPreviewHoldChanged
     }
 
@@ -79,7 +82,7 @@ public struct EntityThumbnailMediaView: View {
         ZStack {
             RemotePosterImage(
                 path: displayedArtworkPath,
-                previewPath: preview.restingArtworkPath,
+                previewPath: restingArtworkPath,
                 fallbackSeed: item.title,
                 systemImage: systemImage,
                 contentMode: contentMode,
@@ -108,8 +111,12 @@ public struct EntityThumbnailMediaView: View {
     }
 
     private var displayedArtworkPath: String? {
-        guard let activeImageIndex else { return preview.restingArtworkPath }
+        guard let activeImageIndex else { return restingArtworkPath }
         return preview.imageOptions[activeImageIndex].path
+    }
+
+    private var restingArtworkPath: String? {
+        restingArtworkPathOverride ?? preview.restingArtworkPath
     }
 
     private var activeImageIndex: Int? {

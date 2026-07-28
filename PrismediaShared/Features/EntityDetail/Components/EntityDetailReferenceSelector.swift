@@ -44,9 +44,9 @@ struct EntityDetailReferenceSelector: View {
     @ViewBuilder
     private func referenceArtwork(_ reference: EntityDetailReferenceDraft) -> some View {
         if let thumbnail = reference.sourceThumbnail {
-            EntityThumbnailCompactArtworkView(item: thumbnail, width: 42)
+            EntityThumbnailCardView(item: thumbnail, layout: .compact, preferredWidth: 42)
         } else {
-            EntityThumbnailCompactArtworkView(
+            EntityReferenceDraftArtworkView(
                 title: reference.title,
                 kind: reference.kind,
                 artworkPath: reference.artworkPath,

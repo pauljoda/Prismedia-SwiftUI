@@ -9,7 +9,6 @@ public struct EntityGridConfiguration: Hashable, Sendable {
     public let minimumColumnWidth: CGFloat
     public let preferencesID: String
     public let defaultDisplayMode: EntityGridDisplayMode
-    public let defaultCardStyle: EntityGridCardStyle
     public let availableDisplayModes: [EntityGridDisplayMode]
     public let emptyTitle: String
     public let emptyDescription: String
@@ -22,7 +21,6 @@ public struct EntityGridConfiguration: Hashable, Sendable {
         pageSize: Int = 48,
         minimumColumnWidth: CGFloat = 150,
         defaultDisplayMode: EntityGridDisplayMode = .grid,
-        defaultCardStyle: EntityGridCardStyle = .detailsBelow,
         availableDisplayModes: [EntityGridDisplayMode] = EntityGridDisplayMode.allCases,
         emptyTitle: String? = nil,
         emptyDescription: String = "Items will appear here when they’re added to your library.",
@@ -43,7 +41,6 @@ public struct EntityGridConfiguration: Hashable, Sendable {
         self.pageSize = pageSize
         self.minimumColumnWidth = minimumColumnWidth
         self.defaultDisplayMode = defaultDisplayMode
-        self.defaultCardStyle = defaultCardStyle
         self.availableDisplayModes = availableDisplayModes
         self.emptyTitle = emptyTitle ?? "No \(title)"
         self.emptyDescription = emptyDescription

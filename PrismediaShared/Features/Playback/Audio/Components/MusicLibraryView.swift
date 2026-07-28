@@ -165,10 +165,11 @@
                         playVisibleTracks(startingAt: track.id)
                     } label: {
                         HStack(spacing: PrismediaSpacing.medium) {
-                            EntityThumbnailCompactArtworkView(
+                            EntityThumbnailCardView(
                                 item: thumbnail,
+                                layout: .compact,
+                                preferredWidth: PrismediaLayout.minimumHitTarget,
                                 artworkPathOverride: track.artworkPath,
-                                width: PrismediaLayout.minimumHitTarget
                             )
 
                             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
@@ -218,17 +219,13 @@
                             previewSubtitle: MusicPresentation.albumArtist(album, artistNamesByID: artistNamesByID)
                         )
                     ) {
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                            EntityThumbnailCompactArtworkView(item: album)
-                            Text(album.title)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(PrismediaColor.textPrimary)
-                                .lineLimit(1)
-                            Text(MusicPresentation.albumArtist(album, artistNamesByID: artistNamesByID))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
+                        EntityThumbnailCardView(
+                            item: album,
+                            subtitle: MusicPresentation.albumArtist(
+                                album,
+                                artistNamesByID: artistNamesByID
+                            )
+                        )
                     }
                     .buttonStyle(.plain)
                     .onAppear {
@@ -243,7 +240,7 @@
                 ForEach(artists) { artist in
                     NavigationLink(value: EntityLink(thumbnail: artist)) {
                         HStack(spacing: PrismediaSpacing.medium) {
-                            EntityThumbnailCompactArtworkView(item: artist, width: 38)
+                            EntityThumbnailCardView(item: artist, layout: .compact, preferredWidth: 38)
                             Text(artist.title)
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(PrismediaColor.textPrimary)

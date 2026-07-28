@@ -16,7 +16,7 @@ public final class PrismediaAppEnvironment {
     public private(set) var entityListRevision = 0
     public private(set) var contentRevision = 0
     public private(set) var allowsNsfwContent: Bool
-    public private(set) var entityGridCardStyle: EntityGridCardStyle
+    public private(set) var entityThumbnailShowsText: Bool
     public private(set) var databaseRestoreServerURL: URL?
     public let artworkLoader: any RemoteArtworkLoading
     public let artworkPaletteLoader: any ArtworkPaletteLoading
@@ -26,7 +26,7 @@ public final class PrismediaAppEnvironment {
     private let localSessionStateCleaner: any LocalSessionStateClearing
     private let serverPreferenceStore: ServerPreferenceStoring
     private let nsfwPreferenceStore: NsfwPreferenceStoring
-    private let entityGridCardStylePreferenceStore: EntityGridCardStylePreferenceStore
+    private let entityThumbnailTextPreferenceStore: EntityThumbnailTextPreferenceStore
     private let clientFactory: (URL) -> PrismediaAPIClient
     @ObservationIgnored private var isSessionRestoreInFlight = false
 
@@ -43,21 +43,21 @@ public final class PrismediaAppEnvironment {
                 isUITesting
                 ? VolatileServerPreferenceStore()
                 : UserDefaultsServerPreferenceStore()
-            let entityGridCardStylePreferenceStore =
+            let entityThumbnailTextPreferenceStore =
                 isUITesting
-                ? EntityGridCardStylePreferenceStore.disabled
+                ? EntityThumbnailTextPreferenceStore.disabled
                 : .standard
         #else
             let resetSession = false
             let uiTestSession: AuthSession? = nil
             let sessionStore: SessionStoring = KeychainSessionStore()
             let serverPreferenceStore: ServerPreferenceStoring = UserDefaultsServerPreferenceStore()
-            let entityGridCardStylePreferenceStore = EntityGridCardStylePreferenceStore.standard
+            let entityThumbnailTextPreferenceStore = EntityThumbnailTextPreferenceStore.standard
         #endif
         self.init(
             sessionStore: sessionStore,
             serverPreferenceStore: serverPreferenceStore,
-            entityGridCardStylePreferenceStore: entityGridCardStylePreferenceStore,
+            entityThumbnailTextPreferenceStore: entityThumbnailTextPreferenceStore,
             initialSession: uiTestSession,
             restoreOnInit: uiTestSession == nil,
             resetSessionOnInit: resetSession && uiTestSession == nil
@@ -69,7 +69,7 @@ public final class PrismediaAppEnvironment {
         localSessionStateCleaner: any LocalSessionStateClearing = UserDefaultsLocalSessionStateCleaner(),
         serverPreferenceStore: ServerPreferenceStoring = UserDefaultsServerPreferenceStore(),
         nsfwPreferenceStore: NsfwPreferenceStoring = UserDefaultsNsfwPreferenceStore(),
-        entityGridCardStylePreferenceStore: EntityGridCardStylePreferenceStore = .disabled,
+        entityThumbnailTextPreferenceStore: EntityThumbnailTextPreferenceStore = .disabled,
         clientFactory: @escaping (URL) -> PrismediaAPIClient = { PrismediaAPIClient(serverURL: $0) },
         artworkLoader: any RemoteArtworkLoading = RemoteArtworkPipeline.shared,
         artworkPaletteLoader: (any ArtworkPaletteLoading)? = nil,
@@ -81,7 +81,7 @@ public final class PrismediaAppEnvironment {
         self.localSessionStateCleaner = localSessionStateCleaner
         self.serverPreferenceStore = serverPreferenceStore
         self.nsfwPreferenceStore = nsfwPreferenceStore
-        self.entityGridCardStylePreferenceStore = entityGridCardStylePreferenceStore
+        self.entityThumbnailTextPreferenceStore = entityThumbnailTextPreferenceStore
         self.clientFactory = clientFactory
         self.artworkLoader = artworkLoader
         self.artworkPaletteLoader =
@@ -94,7 +94,7 @@ public final class PrismediaAppEnvironment {
             } ?? false
         session = initialSession
         self.allowsNsfwContent = allowsNsfwContent
-        entityGridCardStyle = entityGridCardStylePreferenceStore.load()
+        entityThumbnailShowsText = entityThumbnailTextPreferenceStore.load()
         client = initialSession.map {
             clientFactory($0.serverURL)
                 .allowingNsfwContent(allowsNsfwContent)
@@ -206,10 +206,10 @@ public final class PrismediaAppEnvironment {
         publishContentChange()
     }
 
-    public func setEntityGridCardStyle(_ style: EntityGridCardStyle) {
-        guard style != entityGridCardStyle else { return }
-        entityGridCardStylePreferenceStore.save(style)
-        entityGridCardStyle = style
+    public func setEntityThumbnailShowsText(_ showsText: Bool) {
+        guard showsText != entityThumbnailShowsText else { return }
+        entityThumbnailTextPreferenceStore.save(showsText)
+        entityThumbnailShowsText = showsText
     }
 
     public func verifyCurrentSession() async {

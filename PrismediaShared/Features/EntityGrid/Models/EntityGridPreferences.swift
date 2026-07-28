@@ -6,7 +6,7 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
     public let displayMode: EntityGridDisplayMode
     public let density: EntityGridDensity
     public let pageSize: Int?
-    public let cardStyleOverride: EntityGridCardStyle?
+    public let showsThumbnailTextOverride: Bool?
 
     private let savedControls: EntityGridControls
 
@@ -27,20 +27,20 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
     public var taxonomy: String { savedControls.filters.taxonomy.rawValue }
     public var bookTypes: [String] { savedControls.filters.bookTypes.sorted() }
     public var bookFormats: [String] { savedControls.filters.bookFormats.sorted() }
-    public var cardStyle: EntityGridCardStyle { cardStyleOverride ?? .detailsBelow }
+    public var showsThumbnailText: Bool { showsThumbnailTextOverride ?? true }
 
     public init(
         controls: EntityGridControls,
         displayMode: EntityGridDisplayMode = .grid,
         density: EntityGridDensity = .standard,
         pageSize: Int? = nil,
-        cardStyle: EntityGridCardStyle? = nil
+        showsThumbnailText: Bool? = nil
     ) {
         precondition(pageSize == nil || pageSize! > 0, "A persisted page size must be positive.")
         self.displayMode = displayMode
         self.density = density
         self.pageSize = pageSize
-        cardStyleOverride = cardStyle
+        showsThumbnailTextOverride = showsThumbnailText
         savedControls = Self.normalized(controls)
     }
 
@@ -49,10 +49,10 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         displayMode = try container.decodeIfPresent(EntityGridDisplayMode.self, forKey: .displayMode) ?? .grid
         density = try container.decodeIfPresent(EntityGridDensity.self, forKey: .density) ?? .standard
         pageSize = try container.decodeIfPresent(Int.self, forKey: .pageSize)
-        cardStyleOverride = try container.decodeIfPresent(
-            EntityGridCardStyle.self,
-            forKey: .cardStyleOverride
-        )
+        showsThumbnailTextOverride = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .showsThumbnailTextOverride
+        ) ?? Self.legacyShowsThumbnailText(in: container)
         if let controls = try container.decodeIfPresent(EntityGridControls.self, forKey: .controls) {
             savedControls = Self.normalized(controls)
         } else {
@@ -65,7 +65,10 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         try container.encode(displayMode, forKey: .displayMode)
         try container.encode(density, forKey: .density)
         try container.encodeIfPresent(pageSize, forKey: .pageSize)
-        try container.encodeIfPresent(cardStyleOverride, forKey: .cardStyleOverride)
+        try container.encodeIfPresent(
+            showsThumbnailTextOverride,
+            forKey: .showsThumbnailTextOverride
+        )
         try container.encode(savedControls, forKey: .controls)
     }
 
@@ -79,6 +82,16 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         var controls = controls
         controls.randomSeed = 0
         return controls
+    }
+
+    private static func legacyShowsThumbnailText(
+        in container: KeyedDecodingContainer<CodingKeys>
+    ) throws -> Bool? {
+        let value =
+            try container.decodeIfPresent(String.self, forKey: .cardStyleOverride)
+            ?? container.decodeIfPresent(String.self, forKey: .cardStyle)
+        guard let value else { return nil }
+        return value != "none"
     }
 
     private static func decodeLegacyControls(
@@ -115,6 +128,8 @@ public struct EntityGridPreferences: Codable, Equatable, Sendable {
         case displayMode
         case density
         case pageSize
+        case showsThumbnailTextOverride
+        case cardStyle
         case cardStyleOverride
         case controls
         case sort

@@ -64,6 +64,7 @@ import SwiftUI
                 id: item.entity.id,
                 kind: EntityKind(rawValue: proposal.targetKind),
                 title: proposal.patch.title ?? item.entity.title,
+                subtitle: item.entity.subtitle,
                 summary: proposal.patch.description ?? item.entity.summary,
                 parentEntityID: item.entity.parentEntityID,
                 parentKind: item.entity.parentKind,

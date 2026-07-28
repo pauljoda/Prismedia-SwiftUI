@@ -73,16 +73,11 @@ import SwiftUI
             let item = thumbnail ?? fallbackThumbnail
 
             return HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-                RemotePosterImage(
-                    path: item.bestCoverPath,
-                    fallbackSeed: item.title,
-                    systemImage: item.kind.thumbnailFallbackSystemImage,
-                    contentMode: .fit,
-                    maxPixelSize: 256
+                EntityThumbnailCardView(
+                    item: item,
+                    layout: .compact,
+                    preferredWidth: 64
                 )
-                .frame(width: 64, height: 84)
-                .background(PrismediaColor.background.opacity(PrismediaOpacity.statusFill))
-                .clipShape(.rect(cornerRadius: PrismediaRadius.badge))
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                     Text(item.title)

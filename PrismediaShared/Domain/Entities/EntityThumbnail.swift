@@ -4,6 +4,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
     public let id: UUID
     public let kind: EntityKind
     public let title: String
+    public let subtitle: String?
     public let summary: String?
     public let parentEntityID: UUID?
     public let parentKind: EntityKind?
@@ -56,45 +57,11 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         kind == .video && parentKind == .movie ? .movie : kind
     }
 
-    public func replacingCoverArtwork(with source: EntityThumbnail) -> EntityThumbnail {
-        guard source.bestCoverPath != nil else { return self }
-        return EntityThumbnail(
-            id: id,
-            kind: kind,
-            title: title,
-            summary: summary,
-            parentEntityID: parentEntityID,
-            parentKind: parentKind,
-            sortOrder: sortOrder,
-            coverURL: source.coverURL,
-            coverThumbURL: source.coverThumbURL,
-            coverThumb2xURL: source.coverThumb2xURL,
-            hoverKind: hoverKind,
-            hoverURL: hoverURL,
-            hoverImages: hoverImages,
-            meta: meta,
-            rating: rating,
-            isFavorite: isFavorite,
-            isNsfw: isNsfw,
-            isOrganized: isOrganized,
-            isWanted: isWanted,
-            hasSourceMedia: hasSourceMedia,
-            latestAcquisitionStatus: latestAcquisitionStatus,
-            acquisitionStatuses: acquisitionStatuses,
-            wantedStatus: wantedStatus,
-            createdAt: createdAt,
-            progress: progress,
-            resumeSeconds: resumeSeconds,
-            playCount: playCount,
-            genres: genres,
-            referenceCounts: referenceCounts
-        )
-    }
-
     private enum CodingKeys: String, CodingKey {
         case id
         case kind
         case title
+        case subtitle
         case summary
         case description
         case overview
@@ -129,6 +96,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         id: UUID,
         kind: EntityKind,
         title: String,
+        subtitle: String? = nil,
         summary: String? = nil,
         parentEntityID: UUID? = nil,
         parentKind: EntityKind? = nil,
@@ -159,6 +127,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         self.id = id
         self.kind = kind
         self.title = title
+        self.subtitle = subtitle
         self.summary = summary
         self.parentEntityID = parentEntityID
         self.parentKind = parentKind
@@ -193,6 +162,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         id = try container.decode(UUID.self, forKey: .id)
         kind = try container.decode(EntityKind.self, forKey: .kind)
         title = try container.decode(String.self, forKey: .title)
+        subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
         summary =
             try container.decodeIfPresent(String.self, forKey: .summary)
             ?? container.decodeIfPresent(String.self, forKey: .description)

@@ -2,7 +2,7 @@
     import SwiftUI
 
     struct MacAppSettingsContentView: View {
-        @Binding var cardStyle: EntityGridCardStyle
+        @Binding var showsThumbnailText: Bool
 
         var body: some View {
             ScrollView {
@@ -35,18 +35,11 @@
         private var cardPresentationSetting: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                 LabeledContent {
-                    Picker("Card Presentation", selection: $cardStyle) {
-                        ForEach(EntityGridCardStyle.allCases) { option in
-                            Label(option.label, systemImage: option.systemImage)
-                                .tag(option)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .frame(width: 230)
+                    Toggle("Show Text", isOn: $showsThumbnailText)
+                        .labelsHidden()
                 } label: {
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                        Text("Card Presentation")
+                        Text("Show Text Below Thumbnails")
                             .font(.headline)
                         Text("Applied to browse, search, and collection grids.")
                             .font(.subheadline)
@@ -57,9 +50,7 @@
                 Divider()
 
                 Label {
-                    Text(
-                        "Artwork Fade extends each thumbnail behind its details. Text Below Artwork uses a simpler Apple-style layout. None shows only the artwork."
-                    )
+                    Text("Shows each entity’s title, subtitle, and metadata below its artwork.")
                     .font(.callout)
                     .foregroundStyle(PrismediaColor.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -75,10 +66,10 @@
 
     #if DEBUG
         #Preview("Mac App Settings") {
-            @Previewable @State var cardStyle = EntityGridCardStyle.detailsBelow
+            @Previewable @State var showsThumbnailText = true
 
             NavigationStack {
-                MacAppSettingsContentView(cardStyle: $cardStyle)
+                MacAppSettingsContentView(showsThumbnailText: $showsThumbnailText)
                     .navigationTitle("App Settings")
             }
             .frame(width: 900, height: 620)

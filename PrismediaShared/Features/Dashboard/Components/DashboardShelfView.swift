@@ -38,14 +38,11 @@ struct DashboardShelfView: View {
     }
 
     private var railArtworkHeight: CGFloat {
-        CGFloat(260 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio)
+        216
     }
 
     private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
-        CGFloat(
-            EntityThumbnailCardPresentation(item: item, layout: .rail)
-                .width(forCardHeight: Double(railArtworkHeight))
-        )
+        item.thumbnailArtworkPresentation.width(forHeight: railArtworkHeight)
     }
 }
 

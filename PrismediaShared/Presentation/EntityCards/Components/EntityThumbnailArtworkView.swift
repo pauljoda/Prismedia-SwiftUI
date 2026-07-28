@@ -6,6 +6,7 @@ struct EntityThumbnailArtworkView: View {
     let item: EntityThumbnail
     let layout: EntityThumbnailLayout
     let preferredWidth: CGFloat?
+    let artworkPathOverride: String?
     let showsProgress: Bool
     let onPreviewHoldChanged: (Bool) -> Void
 
@@ -13,12 +14,14 @@ struct EntityThumbnailArtworkView: View {
         item: EntityThumbnail,
         layout: EntityThumbnailLayout,
         preferredWidth: CGFloat?,
+        artworkPathOverride: String? = nil,
         showsProgress: Bool = true,
         onPreviewHoldChanged: @escaping (Bool) -> Void
     ) {
         self.item = item
         self.layout = layout
         self.preferredWidth = preferredWidth
+        self.artworkPathOverride = artworkPathOverride
         self.showsProgress = showsProgress
         self.onPreviewHoldChanged = onPreviewHoldChanged
     }
@@ -29,6 +32,7 @@ struct EntityThumbnailArtworkView: View {
                 item: item,
                 systemImage: item.kind.thumbnailFallbackSystemImage,
                 contentMode: artworkPresentation.contentMode,
+                restingArtworkPathOverride: artworkPathOverride,
                 onPreviewHoldChanged: onPreviewHoldChanged
             )
         } decoration: {
@@ -41,7 +45,7 @@ struct EntityThumbnailArtworkView: View {
         .background(PrismediaColor.groupedContentBackground)
         .accessibilityIdentifier("entity.thumbnail.media.\(item.id.uuidString)")
         .prismediaArtworkPalette(
-            for: item.bestCoverPath,
+            for: artworkPathOverride ?? item.bestCoverPath,
             isEnabled: hasVisibleProgress,
             palette: $artworkPalette
         )
@@ -53,10 +57,6 @@ struct EntityThumbnailArtworkView: View {
 
     private var aspectRatio: Double {
         layout.artworkAspectRatio(for: artworkPresentation)
-    }
-
-    private var cardPresentation: EntityThumbnailCardPresentation {
-        EntityThumbnailCardPresentation(item: item, layout: layout)
     }
 
     private var hasVisibleProgress: Bool {
@@ -79,21 +79,21 @@ struct EntityThumbnailArtworkView: View {
                     progressMeter(progress)
                 }
             }
-            .overlay(alignment: .topLeading) {
-                if cardPresentation.showsArtworkBadges {
-                    EntityThumbnailBadgeRow(badges: overlayPolicy.topLeading)
-                        .padding(PrismediaSpacing.small)
-                }
-            }
             .overlay(alignment: .topTrailing) {
-                if cardPresentation.showsArtworkBadges {
+                if layout.showsArtworkBadges, !overlayPolicy.topTrailing.isEmpty {
                     EntityThumbnailBadgeRow(badges: overlayPolicy.topTrailing)
                         .padding(PrismediaSpacing.small)
                         .padding(.trailing, topTrailingActionPadding)
                 }
             }
+            .overlay(alignment: .bottomLeading) {
+                if layout.showsArtworkBadges, !overlayPolicy.bottomLeading.isEmpty {
+                    EntityThumbnailBadgeRow(badges: overlayPolicy.bottomLeading)
+                        .padding(PrismediaSpacing.small)
+                }
+            }
             .overlay(alignment: .bottomTrailing) {
-                if cardPresentation.showsArtworkBadges {
+                if layout.showsArtworkBadges, !overlayPolicy.bottomTrailing.isEmpty {
                     EntityThumbnailBadgeRow(badges: overlayPolicy.bottomTrailing)
                         .padding(PrismediaSpacing.small)
                 }
@@ -118,6 +118,12 @@ struct EntityThumbnailArtworkView: View {
             }
             .frame(height: 3)
         }
+    }
+}
+
+extension EntityThumbnailLayout {
+    fileprivate var showsArtworkBadges: Bool {
+        self != .compact
     }
 }
 

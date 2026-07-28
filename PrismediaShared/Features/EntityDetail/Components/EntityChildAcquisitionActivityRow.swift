@@ -40,7 +40,7 @@ struct EntityChildAcquisitionActivityRow: View {
     }
 
     private var artwork: some View {
-        EntityThumbnailCompactArtworkView(item: item.entity, width: 52)
+        EntityThumbnailCardView(item: item.entity, layout: .compact, preferredWidth: 52)
     }
 
     private var statusMetadata: some View {

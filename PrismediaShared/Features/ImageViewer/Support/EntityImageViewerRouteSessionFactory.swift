@@ -15,6 +15,7 @@ enum EntityImageViewerRouteSessionFactory {
                 id: link.entityID,
                 kind: .image,
                 title: link.thumbnailPreview?.title ?? "Image",
+                subtitle: link.thumbnailPreview?.subtitle,
                 parentEntityID: link.parentEntityID,
                 parentKind: link.parentKind,
                 coverURL: link.thumbnailPreview?.artworkPath

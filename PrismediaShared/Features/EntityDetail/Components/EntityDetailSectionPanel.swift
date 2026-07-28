@@ -227,19 +227,16 @@ struct EntityDetailSectionPanel: View {
         #endif
     }
 
-    private var relationshipCardHeight: Double {
+    private var relationshipCardHeight: CGFloat {
         #if os(tvOS)
-            300 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
+            250
         #else
-            176 / EntityThumbnailCardPresentation.extendedLandscapeAspectRatio
+            147
         #endif
     }
 
     private func relationshipCardWidth(for item: EntityThumbnail) -> CGFloat {
-        CGFloat(
-            EntityThumbnailCardPresentation(item: item, layout: .rail)
-                .width(forCardHeight: relationshipCardHeight)
-        )
+        item.thumbnailArtworkPresentation.width(forHeight: relationshipCardHeight)
     }
 }
 

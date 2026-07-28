@@ -1,19 +1,22 @@
 import Foundation
 
 public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
-    public let topLeading: [EntityThumbnailBadgePresentation]
     public let topTrailing: [EntityThumbnailBadgePresentation]
+    public let bottomLeading: [EntityThumbnailBadgePresentation]
     public let bottomTrailing: [EntityThumbnailBadgePresentation]
 
     public init(item: EntityThumbnail) {
-        topLeading = Self.contextBadge(item).map { [$0] } ?? []
-
         var topTrailing: [EntityThumbnailBadgePresentation] = []
         if item.isWanted {
             topTrailing.append(Self.wantedBadge(status: item.wantedStatus ?? item.latestAcquisitionStatus))
         }
+        self.topTrailing = topTrailing
+
+        bottomLeading = Self.positionBadge(item).map { [$0] } ?? []
+
+        var bottomTrailing: [EntityThumbnailBadgePresentation] = []
         if item.isNsfw {
-            topTrailing.append(
+            bottomTrailing.append(
                 EntityThumbnailBadgePresentation(
                     kind: .nsfw,
                     label: nil,
@@ -22,33 +25,17 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
                 )
             )
         }
-        self.topTrailing = topTrailing
-
-        bottomTrailing =
-            item.rating.flatMap { rating in
-                guard rating > 0 else { return nil }
-                return [
-                    EntityThumbnailBadgePresentation(
-                        kind: .rating,
-                        label: String(rating),
-                        systemImage: "star.fill",
-                        tone: .accent
-                    )
-                ]
-            } ?? []
-    }
-
-    private static func contextBadge(_ item: EntityThumbnail) -> EntityThumbnailBadgePresentation? {
-        if let positionBadge = positionBadge(item) {
-            return positionBadge
+        if let rating = item.rating, rating > 0 {
+            bottomTrailing.append(
+                EntityThumbnailBadgePresentation(
+                    kind: .rating,
+                    label: String(rating),
+                    systemImage: "star.fill",
+                    tone: .accent
+                )
+            )
         }
-        guard item.thumbnailArtworkPresentation.isWide else { return nil }
-        return EntityThumbnailBadgePresentation(
-            kind: .position,
-            label: item.kind.displayLabel,
-            systemImage: item.kind.thumbnailFallbackSystemImage,
-            tone: .muted
-        )
+        self.bottomTrailing = bottomTrailing
     }
 
     private static func positionBadge(_ item: EntityThumbnail) -> EntityThumbnailBadgePresentation? {

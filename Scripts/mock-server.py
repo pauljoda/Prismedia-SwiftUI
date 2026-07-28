@@ -515,6 +515,7 @@ def thumb(id_suffix, kind, title):
         "id": f"{id_suffix * 8}-{id_suffix * 4}-{id_suffix * 4}-{id_suffix * 4}-{id_suffix * 12}",
         "kind": kind,
         "title": title,
+        "subtitle": None,
         "parentEntityId": None,
         "parentKind": None,
         "sortOrder": None,
@@ -907,6 +908,7 @@ for season_index, season in enumerate(SEASONS, start=1):
         {
             "parentEntityId": ENTITIES[SERIES_INDEX]["id"],
             "parentKind": "video-series",
+            "subtitle": ENTITIES[SERIES_INDEX]["title"],
             "sortOrder": season_index,
             "coverUrl": f"{PUBLIC_BANNER_PATH}?season={season_index}",
             "coverThumbUrl": f"{PUBLIC_BANNER_PATH}?season={season_index}",
@@ -944,6 +946,7 @@ def episode_thumbnail(index, season_index=0):
             "summary": long_summary if index % 2 == 1 else short_summary,
             "parentEntityId": SEASONS[season_index]["id"],
             "parentKind": "video-season",
+            "subtitle": SEASONS[season_index]["title"],
             "sortOrder": index,
             "coverUrl": f"{PUBLIC_BANNER_PATH}?episode={season_index + 1}-{index}",
             "coverThumbUrl": f"{PUBLIC_BANNER_PATH}?episode={season_index + 1}-{index}",
@@ -959,6 +962,13 @@ SEASON_EPISODES = {
     SEASONS[0]["id"]: [episode_thumbnail(index) for index in range(1, 21)],
     SEASONS[1]["id"]: [episode_thumbnail(index, season_index=1) for index in range(1, 7)],
 }
+for season in SEASONS:
+    season["meta"] = [
+        {
+            "icon": "video",
+            "label": f"{len(SEASON_EPISODES[season['id']])} episodes",
+        }
+    ]
 EPISODE = SEASON_EPISODES[SEASONS[0]["id"]][0]
 ENTITIES.append(EPISODE)
 DETAIL_ENTITIES = ENTITIES + SEASONS + [

@@ -5,14 +5,14 @@ struct EntityGridDisplayMenu: View {
     let displayMode: EntityGridDisplayMode
     let density: EntityGridDensity
     let pageSize: Int
-    let appDefaultCardStyle: EntityGridCardStyle
-    let cardStyleOverride: EntityGridCardStyle?
+    let appDefaultShowsThumbnailText: Bool
+    let showsThumbnailTextOverride: Bool?
     let presets: [EntityGridPreset]
     let preferencesAreDefault: Bool
     let onSelectDisplayMode: (EntityGridDisplayMode) -> Void
     let onSelectDensity: (EntityGridDensity) -> Void
     let onSelectPageSize: (Int) -> Void
-    let onSelectCardStyle: (EntityGridCardStyle?) -> Void
+    let onSetShowsThumbnailText: (Bool?) -> Void
     let onApplyPreset: (EntityGridPreset) -> Void
     let onRequestSavePreset: () -> Void
     let onDeletePreset: (EntityGridPreset) -> Void
@@ -37,28 +37,12 @@ struct EntityGridDisplayMenu: View {
                 }
             }
 
-            Section("Card Style") {
-                Button {
-                    onSelectCardStyle(nil)
-                } label: {
-                    Label(
-                        "App Default (\(appDefaultCardStyle.label))",
-                        systemImage: cardStyleOverride == nil
-                            ? "checkmark"
-                            : "gearshape"
-                    )
-                }
+            Section("Thumbnail Text") {
+                Toggle("Show Text Below Thumbnails", isOn: showsThumbnailTextBinding)
 
-                ForEach(EntityGridCardStyle.allCases) { option in
-                    Button {
-                        onSelectCardStyle(option)
-                    } label: {
-                        Label(
-                            option.label,
-                            systemImage: cardStyleOverride == option
-                                ? "checkmark"
-                                : option.systemImage
-                        )
+                if showsThumbnailTextOverride != nil {
+                    Button("Use App Default", systemImage: "arrow.uturn.backward") {
+                        onSetShowsThumbnailText(nil)
                     }
                 }
             }
@@ -127,12 +111,21 @@ struct EntityGridDisplayMenu: View {
             Image(systemName: displayMode.systemImage)
         }
         .accessibilityLabel("Display options")
-        .accessibilityValue("\(displayMode.label), \(density.label) size, \(resolvedCardStyle.label)")
+        .accessibilityValue(
+            "\(displayMode.label), \(density.label) size, thumbnail text \(showsThumbnailText ? "shown" : "hidden")"
+        )
         .accessibilityIdentifier("entity.grid.display")
     }
 
-    private var resolvedCardStyle: EntityGridCardStyle {
-        cardStyleOverride ?? appDefaultCardStyle
+    private var showsThumbnailText: Bool {
+        showsThumbnailTextOverride ?? appDefaultShowsThumbnailText
+    }
+
+    private var showsThumbnailTextBinding: Binding<Bool> {
+        Binding(
+            get: { showsThumbnailText },
+            set: { onSetShowsThumbnailText($0) }
+        )
     }
 }
 
@@ -143,14 +136,14 @@ struct EntityGridDisplayMenu: View {
             displayMode: .grid,
             density: .standard,
             pageSize: 48,
-            appDefaultCardStyle: .detailsBelow,
-            cardStyleOverride: nil,
+            appDefaultShowsThumbnailText: true,
+            showsThumbnailTextOverride: nil,
             presets: [],
             preferencesAreDefault: true,
             onSelectDisplayMode: { _ in },
             onSelectDensity: { _ in },
             onSelectPageSize: { _ in },
-            onSelectCardStyle: { _ in },
+            onSetShowsThumbnailText: { _ in },
             onApplyPreset: { _ in },
             onRequestSavePreset: {},
             onDeletePreset: { _ in },
@@ -166,14 +159,14 @@ struct EntityGridDisplayMenu: View {
             displayMode: .list,
             density: .compact,
             pageSize: 24,
-            appDefaultCardStyle: .detailsBelow,
-            cardStyleOverride: .artworkFade,
+            appDefaultShowsThumbnailText: true,
+            showsThumbnailTextOverride: false,
             presets: [EntityGridPreviewFactory.compactListPreset],
             preferencesAreDefault: false,
             onSelectDisplayMode: { _ in },
             onSelectDensity: { _ in },
             onSelectPageSize: { _ in },
-            onSelectCardStyle: { _ in },
+            onSetShowsThumbnailText: { _ in },
             onApplyPreset: { _ in },
             onRequestSavePreset: {},
             onDeletePreset: { _ in },

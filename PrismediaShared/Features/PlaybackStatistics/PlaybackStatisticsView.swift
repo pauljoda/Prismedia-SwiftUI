@@ -225,7 +225,7 @@ struct PlaybackStatisticsView: View {
                 .font(.caption.bold().monospacedDigit())
                 .foregroundStyle(PrismediaColor.accent)
                 .frame(minWidth: 34)
-            EntityThumbnailCompactArtworkView(item: item, width: 52)
+            EntityThumbnailCardView(item: item, layout: .compact, preferredWidth: 52)
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                 Text(item.title).lineLimit(1)
                 Text(trailing).font(.caption).foregroundStyle(.secondary).lineLimit(1)
