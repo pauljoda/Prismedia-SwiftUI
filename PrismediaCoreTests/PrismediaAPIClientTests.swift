@@ -935,6 +935,67 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertTrue(plan.requiresNativePlayabilityCheck)
     }
 
+    func testAutomaticMatroskaPlaybackRemuxesItsBestNativeSurroundTrack() async throws {
+        let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                """
+                {
+                  "PlaySessionId":"direct-session",
+                  "MediaSources":[{
+                    "Id":"source-1","Container":"mkv","RunTimeTicks":900000000,
+                    "SupportsDirectPlay":true,"SupportsDirectStream":true,"SupportsTranscoding":true,
+                    "TranscodingUrl":null,
+                    "MediaStreams":[
+                      {"Index":0,"Type":"Video","Codec":"h264","BitDepth":8,"VideoRangeType":"SDR"},
+                      {"Index":1,"Type":"Audio","Codec":"truehd","Channels":8,"Language":"eng","IsDefault":true},
+                      {"Index":2,"Type":"Audio","Codec":"ac3","Channels":6,"Language":"eng","IsDefault":false},
+                      {"Index":3,"Type":"Audio","Codec":"eac3","Channels":8,"Language":"eng","IsDefault":false}
+                    ],
+                    "TranscodingInfo":null
+                  }]
+                }
+                """),
+            .json(
+                """
+                {
+                  "PlaySessionId":"remux-session",
+                  "MediaSources":[{
+                    "Id":"source-1","Container":"mkv","RunTimeTicks":900000000,
+                    "SupportsDirectPlay":false,"SupportsDirectStream":true,"SupportsTranscoding":true,
+                    "TranscodingUrl":"/Videos/\(videoID)/hls/remux/stream.m3u8?AudioStreamIndex=3",
+                    "MediaStreams":[
+                      {"Index":0,"Type":"Video","Codec":"h264","BitDepth":8,"VideoRangeType":"SDR"},
+                      {"Index":1,"Type":"Audio","Codec":"truehd","Channels":8,"Language":"eng","IsDefault":false},
+                      {"Index":2,"Type":"Audio","Codec":"ac3","Channels":6,"Language":"eng","IsDefault":false},
+                      {"Index":3,"Type":"Audio","Codec":"eac3","Channels":8,"Language":"eng","IsDefault":true}
+                    ],
+                    "TranscodingInfo":{
+                      "Container":"mp4","VideoCodec":"h264","AudioCodec":"eac3",
+                      "Protocol":"hls","IsVideoDirect":true,"IsAudioDirect":true
+                    }
+                  }]
+                }
+                """)
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let plan = try await client.negotiateVideoPlayback(videoID: videoID)
+
+        XCTAssertEqual(loader.requests.count, 2)
+        let replacementBody = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: XCTUnwrap(loader.requests.last?.httpBody))
+                as? [String: Any]
+        )
+        XCTAssertEqual(replacementBody["EnableDirectPlay"] as? Bool, false)
+        XCTAssertEqual(replacementBody["EnableDirectStream"] as? Bool, true)
+        XCTAssertEqual(replacementBody["AudioStreamIndex"] as? Int, 3)
+        XCTAssertEqual(plan.delivery, .remux)
+        XCTAssertEqual(plan.renderer, .native)
+        XCTAssertEqual(plan.diagnostics?.outputAudioCodec, "eac3")
+        XCTAssertEqual(plan.audioStreams.first(where: \.isSelected)?.index, 3)
+    }
+
     func testSelectingAudioStreamIsSentToNegotiationAndDirectStreamURL() async throws {
         let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let loader = MockHTTPDataLoader(responses: [

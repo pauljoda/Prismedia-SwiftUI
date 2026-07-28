@@ -15,6 +15,7 @@
         private var request: VideoCompatibilityPlaybackRequest?
         private var openingState = VideoCompatibilityPlaybackOpeningState()
         private var stateFilter = VideoCompatibilityPlaybackStateFilter()
+        private var audioSelectionState = VideoCompatibilityAudioSelectionState()
 
         init(controller: VideoPlaybackController) {
             self.controller = controller
@@ -24,6 +25,9 @@
             tearDownPlayer()
             self.request = request
             stateFilter = VideoCompatibilityPlaybackStateFilter()
+            audioSelectionState.prepare(
+                initialStreamIndex: request.audioStreams.first(where: \.isSelected)?.index
+            )
 
             let media = VLCMedia(url: request.url)
             media.addOption(":no-spu")
@@ -45,8 +49,10 @@
             player.media = media
             player.rate = request.playbackRate
             #if os(tvOS)
-                // Prefer encoded surround output when the HDMI receiver supports it.
-                player.audio?.passthrough = true
+                // Apple TV cannot bitstream every compatibility codec (notably
+                // TrueHD). Decode through the multichannel audio session so the
+                // system can deliver PCM to HDMI or spatialize it for AirPods.
+                player.audio?.passthrough = false
             #endif
             mediaPlayer = player
 
@@ -137,6 +143,7 @@
                 setRate: { [weak player] rate in player?.rate = rate },
                 selectAudioStream: { [weak self, weak player] streamIndex in
                     guard let self, let player else { return }
+                    audioSelectionState.explicitSelectionWasRequested()
                     selectAudioStream(streamIndex, on: player)
                 }
             )
@@ -165,7 +172,7 @@
         }
 
         private func applyInitialAudioSelection(to player: VLCMediaPlayer) {
-            guard let streamIndex = request?.audioStreams.first(where: \.isSelected)?.index else { return }
+            guard let streamIndex = audioSelectionState.takeInitialStreamIndex() else { return }
             selectAudioStream(streamIndex, on: player)
         }
 
@@ -190,6 +197,7 @@
             mediaPlayer = nil
             openingState = VideoCompatibilityPlaybackOpeningState()
             stateFilter = VideoCompatibilityPlaybackStateFilter()
+            audioSelectionState = VideoCompatibilityAudioSelectionState()
         }
     }
 #endif

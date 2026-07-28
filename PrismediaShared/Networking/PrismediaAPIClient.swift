@@ -568,6 +568,22 @@ public struct PrismediaAPIClient: Sendable {
         let sourceAudioStreams = source.mediaStreams.filter {
             $0.type.caseInsensitiveCompare("Audio") == .orderedSame
         }
+        if mode == .automatic,
+            audioStreamIndex == nil,
+            preferredEngine == .automatic,
+            delivery == .direct,
+            let nativeAudioStreamIndex = VideoNativeAudioStreamPolicy.preferredStreamIndex(
+                container: source.container,
+                streams: sourceAudioStreams
+            )
+        {
+            return try await negotiateVideoPlayback(
+                videoID: videoID,
+                mode: .directStream,
+                audioStreamIndex: nativeAudioStreamIndex,
+                preferredEngine: .native
+            )
+        }
         let sourceAudio = sourceAudioStreams.first(where: { $0.isDefault == true }) ?? sourceAudioStreams.first
         let renderer = source.playbackRenderer(
             delivery: delivery,
