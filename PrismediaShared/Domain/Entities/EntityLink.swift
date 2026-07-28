@@ -9,6 +9,8 @@ public struct EntityLink: Hashable, Sendable {
     public let sourceThumbnail: EntityThumbnail?
     public let thumbnailPreview: EntityLinkPreview?
     public let mediaSequence: EntityMediaSequence?
+    public let playbackStartSeconds: Double?
+    public let playbackRequestID: UUID?
     public var previewSubtitle: String? { thumbnailPreview?.subtitle }
 
     public init(
@@ -19,7 +21,9 @@ public struct EntityLink: Hashable, Sendable {
         intent: EntityNavigationIntent = .detail,
         sourceThumbnail: EntityThumbnail? = nil,
         thumbnailPreview: EntityLinkPreview? = nil,
-        mediaSequence: EntityMediaSequence? = nil
+        mediaSequence: EntityMediaSequence? = nil,
+        playbackStartSeconds: Double? = nil,
+        playbackRequestID: UUID? = nil
     ) {
         self.entityID = entityID
         self.kind = kind
@@ -29,6 +33,8 @@ public struct EntityLink: Hashable, Sendable {
         self.sourceThumbnail = sourceThumbnail
         self.thumbnailPreview = thumbnailPreview
         self.mediaSequence = mediaSequence
+        self.playbackStartSeconds = playbackStartSeconds
+        self.playbackRequestID = playbackRequestID
     }
 
     public init(
@@ -91,6 +97,8 @@ public struct EntityLink: Hashable, Sendable {
         lhs.entityID == rhs.entityID && lhs.kind == rhs.kind && lhs.parentEntityID == rhs.parentEntityID
             && lhs.parentKind == rhs.parentKind && lhs.intent == rhs.intent
             && lhs.playbackSourceID == rhs.playbackSourceID
+            && lhs.playbackStartSeconds == rhs.playbackStartSeconds
+            && lhs.playbackRequestID == rhs.playbackRequestID
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -100,6 +108,8 @@ public struct EntityLink: Hashable, Sendable {
         hasher.combine(parentKind)
         hasher.combine(intent)
         hasher.combine(playbackSourceID)
+        hasher.combine(playbackStartSeconds)
+        hasher.combine(playbackRequestID)
     }
 
     private var playbackSourceID: UUID? {

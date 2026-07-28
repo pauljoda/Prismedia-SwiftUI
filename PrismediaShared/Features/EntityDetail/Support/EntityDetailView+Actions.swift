@@ -121,13 +121,13 @@ extension EntityDetailView {
                 openReader(command: .read)
             }
         case .resume:
-            if currentDetail.map(hasPlayableVideo) == true {
-                beginDetailVideoPlayback()
+            if let currentDetail, hasPlayableVideo(currentDetail) {
+                beginDetailVideoPlayback(startAt: videoResumeSeconds(for: currentDetail))
             } else {
                 openReader(command: .resume)
             }
         case .play:
-            beginDetailVideoPlayback()
+            beginDetailVideoPlayback(startAt: 0)
         case .listen:
             #if os(iOS) || os(macOS)
                 guard case .content(let detail) = state.phase else { return }
@@ -144,7 +144,7 @@ extension EntityDetailView {
                     detail.kind == .collection,
                     dependencies.collectionItemsLoader != nil
                 else { return }
-                advancedEntityLink = EntityLink(
+                let destination = EntityLink(
                     entityID: detail.id,
                     kind: detail.kind,
                     parentEntityID: link.parentEntityID,
@@ -154,6 +154,11 @@ extension EntityDetailView {
                     thumbnailPreview: link.thumbnailPreview,
                     mediaSequence: link.mediaSequence
                 )
+                #if os(iOS)
+                    router.open(link: destination)
+                #else
+                    advancedEntityLink = destination
+                #endif
             #endif
         case .edit:
             guard case .content(let detail) = state.phase,

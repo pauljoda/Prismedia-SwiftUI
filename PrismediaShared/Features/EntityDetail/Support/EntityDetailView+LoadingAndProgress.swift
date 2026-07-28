@@ -108,7 +108,11 @@ extension EntityDetailView {
         if playbackLink.entityID == state.detail?.id {
             beginPlayback(playbackLink)
         } else {
-            advancedEntityLink = playbackLink
+            #if os(iOS)
+                router.open(link: playbackLink)
+            #else
+                advancedEntityLink = playbackLink
+            #endif
         }
     }
 

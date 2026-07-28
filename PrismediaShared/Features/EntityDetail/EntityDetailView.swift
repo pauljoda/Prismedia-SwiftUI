@@ -3,6 +3,7 @@ import SwiftUI
 /// Generic native detail coordinator for every Prismedia entity kind.
 public struct EntityDetailView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(PrismediaAppRouter.self) var router
     @Environment(\.videoPlaybackSession) var videoPlaybackSession
     #if os(iOS) || os(macOS)
         @Environment(MusicPlayerController.self) var musicPlayer
@@ -13,6 +14,7 @@ public struct EntityDetailView: View {
     @State var selectedSection: EntityDetailSectionID = .details
     @State var advancedEntityLink: EntityLink?
     @State var thumbnailPlaybackLink: EntityLink?
+    @State var videoPlaybackStartOverrideSeconds: Double?
     @State var suppressesRoutePlayback = false
     @State var readerPresentation: EntityReaderPresentation?
     @State var readingState = EntityDetailReadingState()
@@ -142,15 +144,22 @@ public struct EntityDetailView: View {
             }
         }
         .onDisappear {
+            if let activePlaybackOwnerLink,
+                VideoPlaybackLaunchPolicy.presentationMode(for: activePlaybackOwnerLink) == .fullscreenOnly
+            {
+                return
+            }
             videoPlaybackPreparation.reset()
             #if !os(tvOS)
                 videoPlaybackSession?.ownerDidDisappear(link)
             #endif
         }
-        .prismediaEntityDestination(
-            item: $advancedEntityLink,
-            dependencies: dependencies
-        )
+        #if !os(iOS)
+            .prismediaEntityDestination(
+                item: $advancedEntityLink,
+                dependencies: dependencies
+            )
+        #endif
         .prismediaReaderCover(item: $readerPresentation) { presentation in
             if let service = dependencies.readerService {
                 EntityReaderView(

@@ -11,6 +11,7 @@ struct VideoEntityPlaybackView: View {
     let tvLayout: TVVideoPlaybackLayout
     let presentsFullscreenOnTV: Bool
     let startsFullscreenPlaybackImmediately: Bool
+    let fullscreenPlaybackStartOverrideSeconds: Double?
     let onFullscreenDismiss: () -> Void
     let onPlaybackPositionChanged: (VideoPlaybackProgressSnapshot) -> Void
     let onPlaybackProgressCommitted: (VideoPlaybackProgressSnapshot) -> Void
@@ -27,6 +28,7 @@ struct VideoEntityPlaybackView: View {
         tvLayout: TVVideoPlaybackLayout = .standard,
         presentsFullscreenOnTV: Bool = false,
         startsFullscreenPlaybackImmediately: Bool = false,
+        fullscreenPlaybackStartOverrideSeconds: Double? = nil,
         onFullscreenDismiss: @escaping () -> Void = {},
         onPlaybackPositionChanged: @escaping (VideoPlaybackProgressSnapshot) -> Void = { _ in },
         onPlaybackProgressCommitted: @escaping (VideoPlaybackProgressSnapshot) -> Void = { _ in },
@@ -42,6 +44,7 @@ struct VideoEntityPlaybackView: View {
         self.tvLayout = tvLayout
         self.presentsFullscreenOnTV = presentsFullscreenOnTV
         self.startsFullscreenPlaybackImmediately = startsFullscreenPlaybackImmediately
+        self.fullscreenPlaybackStartOverrideSeconds = fullscreenPlaybackStartOverrideSeconds
         self.onFullscreenDismiss = onFullscreenDismiss
         self.onPlaybackPositionChanged = onPlaybackPositionChanged
         self.onPlaybackProgressCommitted = onPlaybackProgressCommitted
@@ -392,7 +395,7 @@ struct VideoEntityPlaybackView: View {
                         resumeSeconds: preparation.requestedResumeSeconds
                     )
             else { return }
-            startPlayback()
+            startPlayback(at: fullscreenPlaybackStartOverrideSeconds)
         }
 
         private var presentedVideoDetail: EntityDetail? {

@@ -63,10 +63,14 @@ extension EntityDetailView {
                 presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
                     for: ownerLink.intent
                 ),
-                startsFullscreenPlaybackImmediately: thumbnailPlaybackLink != nil,
+                startsFullscreenPlaybackImmediately: thumbnailPlaybackLink != nil
+                    || ownerLink.playbackRequestID != nil,
+                fullscreenPlaybackStartOverrideSeconds: videoPlaybackStartOverrideSeconds
+                    ?? ownerLink.playbackStartSeconds,
                 onFullscreenDismiss: {
                     suppressesRoutePlayback = true
                     thumbnailPlaybackLink = nil
+                    videoPlaybackStartOverrideSeconds = nil
                 },
                 onPlaybackPositionChanged: { progress in
                     receiveVideoPlaybackProgress(progress)

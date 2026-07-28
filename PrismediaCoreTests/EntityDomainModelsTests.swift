@@ -402,6 +402,30 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertNotEqual(detail, playback)
     }
 
+    func testPlaybackRequestIdentityDistinguishesRepeatedLaunches() {
+        let entityID = UUID()
+        let firstRequestID = UUID()
+        let first = EntityLink(
+            entityID: entityID,
+            kind: .video,
+            intent: .playback,
+            playbackStartSeconds: 42,
+            playbackRequestID: firstRequestID
+        )
+        let repeated = EntityLink(
+            entityID: entityID,
+            kind: .video,
+            intent: .playback,
+            playbackStartSeconds: 42,
+            playbackRequestID: UUID()
+        )
+
+        XCTAssertEqual(first.playbackStartSeconds, 42)
+        XCTAssertEqual(first.playbackRequestID, firstRequestID)
+        XCTAssertNotEqual(first, repeated)
+        XCTAssertEqual(Set([first, repeated]).count, 2)
+    }
+
     func testImageMediaSequencePreservesOrderAndUsesFiniteBoundaries() {
         let first = EntityThumbnail(id: UUID(), kind: .image, title: "First")
         let second = EntityThumbnail(id: UUID(), kind: .image, title: "Second")

@@ -79,12 +79,40 @@ extension EntityDetailView {
         beginPlayback(EntityLink(thumbnail: thumbnail, intent: .playback))
     }
 
-    func beginPlayback(_ playbackLink: EntityLink) {
-        suppressesRoutePlayback = false
-        thumbnailPlaybackLink = playbackLink
+    func beginPlayback(
+        _ playbackLink: EntityLink,
+        startAt startSeconds: Double? = nil
+    ) {
+        #if os(iOS)
+            let requestedStartSeconds =
+                startSeconds
+                ?? playbackLink.thumbnailPreview?.resumeSeconds
+                ?? 0
+            let routedStartSeconds = requestedStartSeconds.isFinite
+                ? max(0, requestedStartSeconds)
+                : 0
+            router.open(
+                link: EntityLink(
+                    entityID: playbackLink.entityID,
+                    kind: playbackLink.kind,
+                    parentEntityID: playbackLink.parentEntityID,
+                    parentKind: playbackLink.parentKind,
+                    intent: .playback,
+                    sourceThumbnail: playbackLink.sourceThumbnail,
+                    thumbnailPreview: playbackLink.thumbnailPreview,
+                    mediaSequence: playbackLink.mediaSequence,
+                    playbackStartSeconds: routedStartSeconds,
+                    playbackRequestID: UUID()
+                )
+            )
+        #else
+            suppressesRoutePlayback = false
+            videoPlaybackStartOverrideSeconds = startSeconds
+            thumbnailPlaybackLink = playbackLink
+        #endif
     }
 
-    func beginDetailVideoPlayback() {
+    func beginDetailVideoPlayback(startAt startSeconds: Double? = nil) {
         beginPlayback(
             EntityLink(
                 entityID: link.entityID,
@@ -95,7 +123,8 @@ extension EntityDetailView {
                 sourceThumbnail: link.sourceThumbnail,
                 thumbnailPreview: link.thumbnailPreview,
                 mediaSequence: link.mediaSequence
-            )
+            ),
+            startAt: startSeconds
         )
     }
 
@@ -106,19 +135,42 @@ extension EntityDetailView {
         ) != nil
     }
 
-    func videoPrimaryAction(for detail: EntityDetail) -> EntityDetailAction? {
-        guard hasPlayableVideo(detail) else { return nil }
+    func videoPrimaryActions(for detail: EntityDetail) -> [EntityDetailAction] {
+        guard hasPlayableVideo(detail) else { return [] }
+        let resumeSeconds = videoResumeSeconds(for: detail)
+        guard resumeSeconds > 0 else {
+            return [
+                EntityDetailAction(
+                    id: .play,
+                    title: "Play",
+                    systemImage: "play.fill",
+                    isSelected: false,
+                    isPrimary: true
+                )
+            ]
+        }
+        return [
+            EntityDetailAction(
+                id: .resume,
+                title: "Resume \(VideoPlaybackPresentation.clockTime(resumeSeconds))",
+                systemImage: "play.fill",
+                isSelected: false,
+                isPrimary: true
+            ),
+            EntityDetailAction(
+                id: .play,
+                title: "Start Over",
+                systemImage: "arrow.counterclockwise",
+                isSelected: false,
+                isPrimary: true
+            ),
+        ]
+    }
+
+    func videoResumeSeconds(for detail: EntityDetail) -> Double {
         let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
-        let resumeSeconds = max(0, liveVideoResumeSeconds ?? savedResume)
-        return EntityDetailAction(
-            id: resumeSeconds > 0 ? .resume : .play,
-            title: resumeSeconds > 0
-                ? "Resume \(VideoPlaybackPresentation.clockTime(resumeSeconds))"
-                : "Play",
-            systemImage: "play.fill",
-            isSelected: false,
-            isPrimary: true
-        )
+        let resumeSeconds = liveVideoResumeSeconds ?? savedResume
+        return resumeSeconds.isFinite ? max(0, resumeSeconds) : 0
     }
 
     func loadResolvedVideoTechnicalDetail(for detail: EntityDetail) async {

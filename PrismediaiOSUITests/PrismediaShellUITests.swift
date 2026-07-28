@@ -274,6 +274,32 @@ final class PrismediaShellUITests: XCTestCase {
     }
 
     @MainActor
+    func testEntityDetailResumeOffersStartOverAndStaysFullscreen() async throws {
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = signedInApplication(
+            initialEntityID: "11111111-1111-1111-1111-111111111111",
+            kind: "video"
+        )
+
+        let resume = element("entity-detail.action.resume", in: app)
+        let startOver = element("entity-detail.action.play", in: app)
+        XCTAssertTrue(resume.waitForExistence(timeout: 10))
+        XCTAssertTrue(startOver.waitForExistence(timeout: 5))
+
+        resume.tap()
+
+        let player = element("video-player.surface", in: app)
+        XCTAssertTrue(player.waitForExistence(timeout: 20))
+        XCTAssertTrue(
+            waitForLandscape(in: app),
+            "Detail-page Resume must use the same landscape fullscreen path as thumbnail playback."
+        )
+        try await Task.sleep(for: .seconds(2))
+        XCTAssertTrue(player.exists, "Fullscreen playback must remain presented after Resume starts.")
+    }
+
+    @MainActor
     func testRapidEpisodeFullscreenDismissRestoresPortraitAndSeason() throws {
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }

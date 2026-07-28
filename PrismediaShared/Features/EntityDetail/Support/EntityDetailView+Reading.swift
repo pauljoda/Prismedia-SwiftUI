@@ -122,9 +122,10 @@ extension EntityDetailView {
             entityKind: detail.kind
         )
 
-        if let videoAction = videoPrimaryAction(for: detail) {
+        let videoActions = videoPrimaryActions(for: detail)
+        if !videoActions.isEmpty {
             actions.removeAll { $0.id == .play || $0.id == .resume }
-            actions.insert(videoAction, at: 0)
+            actions.insert(contentsOf: videoActions, at: 0)
         }
 
         #if os(iOS) || os(macOS)
