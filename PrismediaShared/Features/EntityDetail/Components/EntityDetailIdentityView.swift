@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct EntityDetailIdentityView: View {
+    @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
+
     let presentation: EntityDetailPresentation
     let isMutating: Bool
     let canMutate: Bool
@@ -31,14 +33,16 @@ struct EntityDetailIdentityView: View {
             #endif
 
             if !presentation.flagItems.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: PrismediaSpacing.small) {
-                        ForEach(presentation.flagItems) { flag in
-                            EntityDetailStatusChip(
-                                title: flag.title,
-                                systemImage: flag.systemImage,
-                                tint: tint(for: flag.tone)
-                            )
+                GlassEffectContainer(spacing: PrismediaSpacing.small) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: PrismediaSpacing.small) {
+                            ForEach(presentation.flagItems) { flag in
+                                EntityDetailStatusChip(
+                                    title: flag.title,
+                                    systemImage: flag.systemImage,
+                                    tint: tint(for: flag.tone)
+                                )
+                            }
                         }
                     }
                 }
@@ -68,7 +72,7 @@ struct EntityDetailIdentityView: View {
 
     private func tint(for tone: EntityDetailFlagTone) -> Color {
         switch tone {
-        case .accent: PrismediaColor.textPrimary
+        case .accent: artworkPrimaryAccent
         case .destructive: PrismediaColor.destructive
         case .info: PrismediaColor.info
         case .acquisition(let tone): tone.foregroundStyle

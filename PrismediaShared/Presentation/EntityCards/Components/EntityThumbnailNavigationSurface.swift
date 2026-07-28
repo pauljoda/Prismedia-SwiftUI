@@ -11,6 +11,7 @@ public struct EntityThumbnailNavigationSurface: View {
     private let layout: EntityThumbnailLayout
     private let preferredWidth: CGFloat?
     private let previewSubtitle: String?
+    private let subtitleLineLimit: Int?
     private let intent: EntityNavigationIntent
     private let onPrimaryAction: ((EntityThumbnail) -> Void)?
 
@@ -19,6 +20,7 @@ public struct EntityThumbnailNavigationSurface: View {
         layout: EntityThumbnailLayout = .grid,
         preferredWidth: CGFloat? = nil,
         previewSubtitle: String? = nil,
+        subtitleLineLimit: Int? = 1,
         intent: EntityNavigationIntent = .detail,
         onPrimaryAction: ((EntityThumbnail) -> Void)? = nil
     ) {
@@ -26,6 +28,7 @@ public struct EntityThumbnailNavigationSurface: View {
         self.layout = layout
         self.preferredWidth = preferredWidth
         self.previewSubtitle = previewSubtitle
+        self.subtitleLineLimit = subtitleLineLimit
         self.intent = intent
         self.onPrimaryAction = onPrimaryAction
     }
@@ -54,6 +57,7 @@ public struct EntityThumbnailNavigationSurface: View {
                 layout: layout,
                 preferredWidth: preferredWidth,
                 subtitle: previewSubtitle,
+                subtitleLineLimit: subtitleLineLimit,
                 onPreviewHoldChanged: previewHoldDidChange,
                 onArtworkAction: openPrimaryAction,
                 artworkActionHint: primaryAccessibilityHint
@@ -65,6 +69,7 @@ public struct EntityThumbnailNavigationSurface: View {
                     layout: layout,
                     preferredWidth: preferredWidth,
                     subtitle: previewSubtitle,
+                    subtitleLineLimit: subtitleLineLimit,
                     onPreviewHoldChanged: previewHoldDidChange
                 )
                 .contentShape(Rectangle())

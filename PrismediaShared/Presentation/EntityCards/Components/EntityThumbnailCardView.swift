@@ -8,6 +8,7 @@ public struct EntityThumbnailCardView: View {
     let layout: EntityThumbnailLayout
     let preferredWidth: CGFloat?
     let subtitle: String?
+    let subtitleLineLimit: Int?
     let artworkPathOverride: String?
     let onPreviewHoldChanged: (Bool) -> Void
     let onArtworkAction: (() -> Void)?
@@ -18,6 +19,7 @@ public struct EntityThumbnailCardView: View {
         layout: EntityThumbnailLayout = .grid,
         preferredWidth: CGFloat? = nil,
         subtitle: String? = nil,
+        subtitleLineLimit: Int? = 1,
         artworkPathOverride: String? = nil,
         onPreviewHoldChanged: @escaping (Bool) -> Void = { _ in }
     ) {
@@ -25,6 +27,7 @@ public struct EntityThumbnailCardView: View {
         self.layout = layout
         self.preferredWidth = preferredWidth
         self.subtitle = subtitle
+        self.subtitleLineLimit = subtitleLineLimit
         self.artworkPathOverride = artworkPathOverride
         self.onPreviewHoldChanged = onPreviewHoldChanged
         onArtworkAction = nil
@@ -36,6 +39,7 @@ public struct EntityThumbnailCardView: View {
         layout: EntityThumbnailLayout,
         preferredWidth: CGFloat?,
         subtitle: String? = nil,
+        subtitleLineLimit: Int? = 1,
         artworkPathOverride: String? = nil,
         onPreviewHoldChanged: @escaping (Bool) -> Void,
         onArtworkAction: @escaping () -> Void,
@@ -45,6 +49,7 @@ public struct EntityThumbnailCardView: View {
         self.layout = layout
         self.preferredWidth = preferredWidth
         self.subtitle = subtitle
+        self.subtitleLineLimit = subtitleLineLimit
         self.artworkPathOverride = artworkPathOverride
         self.onPreviewHoldChanged = onPreviewHoldChanged
         self.onArtworkAction = onArtworkAction
@@ -100,7 +105,11 @@ public struct EntityThumbnailCardView: View {
         VStack(alignment: .leading, spacing: artworkCaptionSpacing) {
             artworkSurface
 
-            EntityThumbnailCaptionView(item: item, subtitle: subtitle)
+            EntityThumbnailCaptionView(
+                item: item,
+                subtitle: subtitle,
+                subtitleLineLimit: subtitleLineLimit
+            )
                 .accessibilityHidden(onArtworkAction != nil)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -136,7 +145,11 @@ public struct EntityThumbnailCardView: View {
     private var verticalListCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             artwork
-            EntityThumbnailCaptionView(item: item, subtitle: subtitle)
+            EntityThumbnailCaptionView(
+                item: item,
+                subtitle: subtitle,
+                subtitleLineLimit: subtitleLineLimit
+            )
         }
         .prismediaCard(cornerRadius: PrismediaRadius.badge)
     }
@@ -156,6 +169,7 @@ public struct EntityThumbnailCardView: View {
             EntityThumbnailCaptionView(
                 item: item,
                 subtitle: subtitle,
+                subtitleLineLimit: subtitleLineLimit,
                 horizontalPadding: 0
             )
                 .frame(maxWidth: .infinity, alignment: .leading)

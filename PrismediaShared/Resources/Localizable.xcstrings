@@ -523,9 +523,6 @@
     "Ascending" : {
 
     },
-    "At %@" : {
-
-    },
     "At least one kind must remain included" : {
 
     },
@@ -1849,9 +1846,6 @@
     "NEXT CHAPTER" : {
 
     },
-    "Next frame" : {
-
-    },
     "Next Image" : {
 
     },
@@ -2320,9 +2314,6 @@
 
     },
     "Previous Chapter" : {
-
-    },
-    "Previous frame" : {
 
     },
     "Previous Image" : {
@@ -2879,12 +2870,6 @@
 
     },
     "Seeders —" : {
-
-    },
-    "Seeks playback by one preview frame" : {
-
-    },
-    "Seeks playback to this marker" : {
 
     },
     "Seeks the active video to this cue" : {

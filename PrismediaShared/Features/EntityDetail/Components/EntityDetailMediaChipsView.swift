@@ -4,18 +4,10 @@ struct EntityDetailMediaChipsView: View {
     let badges: [VideoPlaybackBadge]
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: PrismediaSpacing.small) {
-                ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
-                    EntityDetailStatusChip(
-                        title: badge.label,
-                        systemImage: badge.systemImage ?? "info.circle",
-                        tint: PrismediaColor.textSecondary
-                    )
-                    .accessibilityLabel(badge.label)
-                }
-            }
-        }
+        VideoStatusChips(
+            badges: badges,
+            contentHorizontalPadding: 0
+        )
         .accessibilityIdentifier("entity-detail.media-badges")
     }
 }

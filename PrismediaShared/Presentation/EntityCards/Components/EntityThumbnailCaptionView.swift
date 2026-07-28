@@ -3,15 +3,18 @@ import SwiftUI
 struct EntityThumbnailCaptionView: View {
     let item: EntityThumbnail
     let subtitle: String?
+    let subtitleLineLimit: Int?
     let horizontalPadding: CGFloat
 
     init(
         item: EntityThumbnail,
         subtitle: String? = nil,
+        subtitleLineLimit: Int? = 1,
         horizontalPadding: CGFloat = PrismediaSpacing.extraSmall
     ) {
         self.item = item
         self.subtitle = subtitle ?? item.subtitle
+        self.subtitleLineLimit = subtitleLineLimit
         self.horizontalPadding = horizontalPadding
     }
 
@@ -28,8 +31,9 @@ struct EntityThumbnailCaptionView: View {
                 Text(subtitle)
                     .font(PrismediaTypography.compactCaption)
                     .foregroundStyle(PrismediaColor.textMuted)
-                    .lineLimit(1)
+                    .lineLimit(subtitleLineLimit)
                     .truncationMode(.tail)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 

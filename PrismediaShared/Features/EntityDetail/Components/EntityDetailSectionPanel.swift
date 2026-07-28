@@ -117,20 +117,17 @@ struct EntityDetailSectionPanel: View {
                     LazyHStack(alignment: .top, spacing: relationshipCardSpacing) {
                         ForEach(group.entities) { item in
                             let cardWidth = relationshipCardWidth(for: item)
+                            let subtitle = group.kind == .person
+                                ? presentation.creditSubtitle(for: item.id)
+                                : nil
 
-                            VStack(spacing: PrismediaSpacing.small) {
-                                EntityThumbnailNavigationSurface(
-                                    item: item,
-                                    layout: .rail,
-                                    preferredWidth: cardWidth
-                                )
-
-                                if group.kind == .person,
-                                    let subtitle = presentation.creditSubtitle(for: item.id)
-                                {
-                                    EntityDetailCreditSubtitleView(subtitle: subtitle)
-                                }
-                            }
+                            EntityThumbnailNavigationSurface(
+                                item: item,
+                                layout: .rail,
+                                preferredWidth: cardWidth,
+                                previewSubtitle: subtitle,
+                                subtitleLineLimit: subtitle == nil ? 1 : nil
+                            )
                             .frame(width: cardWidth)
                         }
                     }
