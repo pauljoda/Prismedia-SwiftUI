@@ -51,8 +51,8 @@ import SwiftUI
                     trickplayFrameLoader: dependencies.trickplayFrameLoader,
                     fullscreenRequest: snapshot.fullscreenRequest,
                     onFullscreenDismiss: handleFullscreenDismiss,
-                    onPlaybackProgressCommitted: { episodeID in
-                        Task { await refreshPlaybackProgress(for: episodeID) }
+                    onPlaybackProgressCommitted: { progress in
+                        Task { await refreshPlaybackProgress(for: progress.videoID) }
                     },
                     onAdvance: handleAdvancedEpisode
                 )
@@ -154,6 +154,7 @@ import SwiftUI
                 preferredEpisodeID: initialFocusEpisodeID
             )
             applyRouteEpisodeIfNeeded()
+            prewarmSelectedEpisode()
             do {
                 guard let parent = try await useCase.loadParentSeries(), !Task.isCancelled else { return }
                 snapshot.applySeries(parent, preferredSeasonID: useCase.rootDetail.id)
@@ -176,6 +177,7 @@ import SwiftUI
                     cached,
                     preferredEpisodeID: preferredEpisodeID(in: id)
                 )
+                prewarmSelectedEpisode()
                 return
             }
 
@@ -199,6 +201,7 @@ import SwiftUI
                     preferredEpisodeID: preferredEpisodeID(in: id)
                 )
                 applyRouteEpisodeIfNeeded()
+                prewarmSelectedEpisode()
             } catch is CancellationError {
                 return
             } catch {
@@ -319,6 +322,14 @@ import SwiftUI
                     return
                 }
             }
+        }
+
+        private func prewarmSelectedEpisode() {
+            guard let episode = snapshot.selectedEpisode else { return }
+            focusEpisode(
+                episode,
+                shouldPrewarmDetail: episodeCache[episode.id] == nil
+            )
         }
     }
 

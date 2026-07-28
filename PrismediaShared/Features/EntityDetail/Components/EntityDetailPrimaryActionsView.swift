@@ -27,10 +27,12 @@ struct EntityDetailPrimaryActionsView: View {
                     focusedActionID = defaultActionID
                 }
             #else
-                VStack(spacing: PrismediaSpacing.medium) {
-                    actionButtons
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: PrismediaSpacing.medium) {
+                        actionButtons
+                    }
+                    .padding(.horizontal, horizontalPadding)
                 }
-                .padding(.horizontal, horizontalPadding)
             #endif
         }
     }
@@ -43,7 +45,7 @@ struct EntityDetailPrimaryActionsView: View {
                 action.title,
                 systemImage: action.systemImage,
                 variant: isTinted ? .prominent : .standard,
-                form: .fill,
+                form: actionForm,
                 primaryTint: isTinted ? primaryTint : nil
             ) {
                 onAction(action)
@@ -61,6 +63,14 @@ struct EntityDetailPrimaryActionsView: View {
 
     private var primaryTint: Color {
         artworkPalette?.primary.color ?? PrismediaColor.accent
+    }
+
+    private var actionForm: PrismediaButtonForm {
+        #if os(tvOS)
+            .fill
+        #else
+            .automatic
+        #endif
     }
 
     #if os(tvOS)

@@ -108,8 +108,10 @@ struct StaticEntityGridLoader: EntityGridLoading {
         switch sort {
         case .title:
             lhs.title.localizedStandardCompare(rhs.title)
-        case .added:
+        case .index:
             compare(lhs.sortOrder ?? Int.max, rhs.sortOrder ?? Int.max)
+        case .added:
+            compare(lhs.createdAt ?? .distantPast, rhs.createdAt ?? .distantPast)
         case .lastAccessed:
             compare(lhs.createdAt ?? .distantPast, rhs.createdAt ?? .distantPast)
         case .rating:

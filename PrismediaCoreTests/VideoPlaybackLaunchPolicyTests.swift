@@ -28,7 +28,7 @@ final class VideoPlaybackLaunchPolicyTests: XCTestCase {
         XCTAssertTrue(VideoPlaybackLaunchPolicy.shouldOfferResumeChoice(resumeSeconds: 84))
     }
 
-    func testSeasonEpisodePlaybackTransfersToFullscreenWithoutChangingOtherOwnership() {
+    func testEveryExplicitPlaybackIntentTransfersToFullscreen() {
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episode = EntityThumbnail(
             id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
@@ -48,6 +48,6 @@ final class VideoPlaybackLaunchPolicyTests: XCTestCase {
 
         XCTAssertEqual(VideoPlaybackLaunchPolicy.presentationMode(for: playback), .fullscreenOnly)
         XCTAssertEqual(VideoPlaybackLaunchPolicy.presentationMode(for: detail), .inline)
-        XCTAssertEqual(VideoPlaybackLaunchPolicy.presentationMode(for: standalone), .inline)
+        XCTAssertEqual(VideoPlaybackLaunchPolicy.presentationMode(for: standalone), .fullscreenOnly)
     }
 }

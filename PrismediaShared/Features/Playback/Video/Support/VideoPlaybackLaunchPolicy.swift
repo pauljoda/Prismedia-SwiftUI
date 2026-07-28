@@ -27,10 +27,6 @@ public enum VideoPlaybackLaunchPolicy {
     public static func presentationMode(
         for ownerLink: EntityLink
     ) -> VideoPlaybackPresentationMode {
-        guard ownerLink.intent == .playback,
-            ownerLink.kind == .videoSeason,
-            ownerLink.sourceThumbnail?.kind == .video
-        else { return .inline }
-        return .fullscreenOnly
+        ownerLink.intent == .playback ? .fullscreenOnly : .inline
     }
 }

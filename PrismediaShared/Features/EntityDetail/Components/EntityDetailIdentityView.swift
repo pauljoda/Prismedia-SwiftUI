@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct EntityDetailIdentityView: View {
-    @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
-    @Environment(\.artworkSecondaryText) private var artworkSecondaryText
     let presentation: EntityDetailPresentation
     let isMutating: Bool
     let canMutate: Bool
@@ -14,11 +12,11 @@ struct EntityDetailIdentityView: View {
             Text(presentation.detail.kind.displayLabel.uppercased())
                 .font(.caption.weight(.bold))
                 .tracking(1.4)
-                .foregroundStyle(artworkPrimaryAccent)
+                .foregroundStyle(PrismediaColor.textMuted)
 
             Text(presentation.detail.title)
                 .font(titleFont)
-                .foregroundStyle(artworkPrimaryAccent)
+                .foregroundStyle(PrismediaColor.textPrimary)
                 .prismediaTextSelection()
 
             #if !os(tvOS)
@@ -46,6 +44,10 @@ struct EntityDetailIdentityView: View {
                 }
             }
 
+            if !presentation.mediaBadges.isEmpty {
+                EntityDetailMediaChipsView(badges: presentation.mediaBadges)
+            }
+
             if let description = presentation.description {
                 EntityDetailExpandableDescriptionView(
                     description: description,
@@ -66,7 +68,7 @@ struct EntityDetailIdentityView: View {
 
     private func tint(for tone: EntityDetailFlagTone) -> Color {
         switch tone {
-        case .accent: artworkPrimaryAccent
+        case .accent: PrismediaColor.textPrimary
         case .destructive: PrismediaColor.destructive
         case .info: PrismediaColor.info
         case .acquisition(let tone): tone.foregroundStyle

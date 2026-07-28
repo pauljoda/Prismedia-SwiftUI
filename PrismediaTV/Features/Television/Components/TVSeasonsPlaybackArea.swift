@@ -11,7 +11,7 @@ import SwiftUI
         let trickplayFrameLoader: (any TrickplayFrameLoading)?
         let fullscreenRequest: TVEpisodePlaybackRequest?
         let onFullscreenDismiss: (TVEpisodePlaybackRequest?, UUID) -> Void
-        let onPlaybackProgressCommitted: (UUID) -> Void
+        let onPlaybackProgressCommitted: (VideoPlaybackProgressSnapshot) -> Void
         let onAdvance: (EntityLink) -> Void
 
         @ViewBuilder
@@ -29,9 +29,7 @@ import SwiftUI
                     onFullscreenDismiss: {
                         onFullscreenDismiss(fullscreenRequest, episodeDetail.id)
                     },
-                    onPlaybackProgressCommitted: {
-                        onPlaybackProgressCommitted(episodeDetail.id)
-                    },
+                    onPlaybackProgressCommitted: onPlaybackProgressCommitted,
                     onAdvance: onAdvance
                 )
                 .id(episodeDetail.id.uuidString + "-" + (fullscreenRequest?.id.uuidString ?? "manual"))

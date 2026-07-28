@@ -3,7 +3,6 @@ import SwiftUI
 #if os(tvOS)
 
     struct TVSeasonPicker: View {
-        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         let seasons: [EntityThumbnail]
         let selectedSeasonID: UUID?
         let onSelect: (EntityThumbnail) -> Void
@@ -19,15 +18,14 @@ import SwiftUI
                         Button {
                             onSelect(season)
                         } label: {
-                            Text(season.title)
+                            Label(
+                                season.title,
+                                systemImage: isSelected ? "checkmark.circle.fill" : "circle"
+                            )
                         }
                         .font(.system(size: 20, weight: .semibold))
                         .controlSize(.small)
                         .buttonStyle(.glass)
-                        .tvSeasonSelectionTint(
-                            isSelected,
-                            tint: artworkPrimaryAccent
-                        )
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
                         .accessibilityValue(isSelected ? "Selected" : "")
                         .accessibilityIdentifier("tv.seasons-detail.season.\(season.id.uuidString)")
@@ -40,19 +38,6 @@ import SwiftUI
         }
     }
 
-    extension View {
-        @ViewBuilder
-        fileprivate func tvSeasonSelectionTint(
-            _ isSelected: Bool,
-            tint: Color
-        ) -> some View {
-            if isSelected {
-                self.tint(tint)
-            } else {
-                self
-            }
-        }
-    }
 #endif
 #if os(tvOS) && DEBUG
     #Preview("TV Season Picker · Selected · Accessibility Type") {

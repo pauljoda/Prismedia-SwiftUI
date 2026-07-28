@@ -2,9 +2,6 @@
     import SwiftUI
 
     struct EntityDetailPlatformOverviewView<DefaultOverview: View>: View {
-        @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
-        @Environment(\.artworkSecondaryText) private var artworkSecondaryText
-
         let presentation: EntityDetailPresentation
         let previewPath: String?
         let showsArtwork: Bool
@@ -37,17 +34,21 @@
                     Text(presentation.detail.kind.displayLabel.uppercased())
                         .font(.caption.weight(.bold))
                         .tracking(1.4)
-                        .foregroundStyle(artworkPrimaryAccent)
+                        .foregroundStyle(PrismediaColor.onMedia.opacity(0.72))
 
                     Text(presentation.detail.title)
                         .font(.system(size: 54, weight: .bold))
                         .foregroundStyle(PrismediaColor.textPrimary)
                         .lineLimit(2)
 
+                    if !presentation.mediaBadges.isEmpty {
+                        EntityDetailMediaChipsView(badges: presentation.mediaBadges)
+                    }
+
                     if let description = presentation.description {
                         Text(description)
                             .font(.title3)
-                            .foregroundStyle(artworkSecondaryText)
+                            .foregroundStyle(PrismediaColor.onMedia.opacity(0.88))
                             .lineSpacing(6)
                             .lineLimit(6)
                             .fixedSize(horizontal: false, vertical: true)

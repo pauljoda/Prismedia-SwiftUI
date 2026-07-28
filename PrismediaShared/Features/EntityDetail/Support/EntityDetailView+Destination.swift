@@ -43,7 +43,9 @@ extension EntityDetailView {
         let presentation = EntityDetailPresentation(
             detail: detail,
             canEditMetadata: dependencies.metadataMutator != nil,
-            acquisitionStatus: acquisitionStatus
+            acquisitionStatus: acquisitionStatus,
+            mediaDetail: resolvedVideoTechnicalDetail,
+            mediaThumbnail: link.sourceThumbnail
         )
 
         return EntityDetailPlatformSurface(

@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct EntityDetailExpandableDescriptionView: View {
-    @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
-    @Environment(\.artworkSecondaryText) private var artworkSecondaryText
     @State private var isExpanded = false
     @State private var collapsedHeight: CGFloat = 0
     @State private var expandedHeight: CGFloat = 0
@@ -22,7 +20,7 @@ struct EntityDetailExpandableDescriptionView: View {
                     isExpanded.toggle()
                 }
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(artworkPrimaryAccent)
+                .foregroundStyle(PrismediaColor.textPrimary)
                 .buttonStyle(.plain)
                 .accessibilityHint(
                     isExpanded ? "Collapses the description" : "Shows the full description"
@@ -35,7 +33,7 @@ struct EntityDetailExpandableDescriptionView: View {
     private var descriptionText: some View {
         Text(description)
             .font(PrismediaTypography.body)
-            .foregroundStyle(artworkSecondaryText)
+            .foregroundStyle(PrismediaColor.textSecondary)
             .lineSpacing(4)
             .fixedSize(horizontal: false, vertical: true)
             .prismediaTextSelection()

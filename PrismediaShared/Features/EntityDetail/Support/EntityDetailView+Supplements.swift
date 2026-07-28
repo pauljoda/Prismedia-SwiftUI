@@ -83,4 +83,60 @@ extension EntityDetailView {
         suppressesRoutePlayback = false
         thumbnailPlaybackLink = playbackLink
     }
+
+    func beginDetailVideoPlayback() {
+        beginPlayback(
+            EntityLink(
+                entityID: link.entityID,
+                kind: link.kind,
+                parentEntityID: link.parentEntityID,
+                parentKind: link.parentKind,
+                intent: .playback,
+                sourceThumbnail: link.sourceThumbnail,
+                thumbnailPreview: link.thumbnailPreview,
+                mediaSequence: link.mediaSequence
+            )
+        )
+    }
+
+    func hasPlayableVideo(_ detail: EntityDetail) -> Bool {
+        PlayableVideoResolver.videoID(
+            in: detail,
+            sourceThumbnail: link.sourceThumbnail
+        ) != nil
+    }
+
+    func videoPrimaryAction(for detail: EntityDetail) -> EntityDetailAction? {
+        guard hasPlayableVideo(detail) else { return nil }
+        let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+        let resumeSeconds = max(0, liveVideoResumeSeconds ?? savedResume)
+        return EntityDetailAction(
+            id: resumeSeconds > 0 ? .resume : .play,
+            title: resumeSeconds > 0
+                ? "Resume \(VideoPlaybackPresentation.clockTime(resumeSeconds))"
+                : "Play",
+            systemImage: "play.fill",
+            isSelected: false,
+            isPrimary: true
+        )
+    }
+
+    func loadResolvedVideoTechnicalDetail(for detail: EntityDetail) async {
+        resolvedVideoTechnicalDetail = nil
+        guard let videoID = PlayableVideoResolver.videoID(
+            in: detail,
+            sourceThumbnail: link.sourceThumbnail
+        ), videoID != detail.id else { return }
+
+        do {
+            let resolved = try await dependencies.detailLoader.loadEntity(
+                id: videoID,
+                kind: .video
+            )
+            guard !Task.isCancelled, currentDetail?.id == detail.id else { return }
+            resolvedVideoTechnicalDetail = resolved
+        } catch {
+            // Thumbnail media facts remain available when the technical detail cannot load.
+        }
+    }
 }

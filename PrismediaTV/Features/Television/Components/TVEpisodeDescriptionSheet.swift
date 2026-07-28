@@ -10,10 +10,13 @@ import SwiftUI
             NavigationStack {
                 ScrollView {
                     Text(text)
-                        .font(.title2)
+                        .font(.system(size: 24))
+                        .lineSpacing(7)
                         .foregroundStyle(PrismediaColor.textPrimary)
                         .frame(maxWidth: PrismediaLayout.readableContentWidth, alignment: .leading)
-                        .padding(PrismediaSpacing.section)
+                        .padding(.horizontal, PrismediaLayout.televisionContentInset)
+                        .padding(.vertical, PrismediaSpacing.section)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .prismediaScreenBackground()
                 .navigationTitle(title)
@@ -24,7 +27,6 @@ import SwiftUI
                 }
             }
             .preferredColorScheme(.dark)
-            .presentationSizing(.page)
         }
     }
 #endif

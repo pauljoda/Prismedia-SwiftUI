@@ -9,6 +9,9 @@ public struct EntityGridControlCatalog: Hashable, Sendable {
 
     public var sortOptions: [EntityGridSort] {
         var options: [EntityGridSort] = [.title, .added, .lastAccessed, .rating, .random]
+        if query.sort == EntityGridSort.index.rawValue {
+            options.insert(.index, at: 0)
+        }
         if supportsTaxonomyFilters { options.append(.references) }
         return options
     }

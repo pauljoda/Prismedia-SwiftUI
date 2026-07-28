@@ -89,12 +89,12 @@
         }
       }
     },
-    "%@, %@ size, %@" : {
+    "%@, %@ size, thumbnail text %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@, %2$@ size, %3$@"
+            "value" : "%1$@, %2$@ size, thumbnail text %3$@"
           }
         }
       }
@@ -490,9 +490,6 @@
     "API" : {
 
     },
-    "App Default (%@)" : {
-
-    },
     "App Settings" : {
 
     },
@@ -662,12 +659,6 @@
 
     },
     "Capabilities" : {
-
-    },
-    "Card Presentation" : {
-
-    },
-    "Card Style" : {
 
     },
     "Change Password" : {
@@ -3032,6 +3023,9 @@
     "Show Queue" : {
 
     },
+    "Show Text Below Thumbnails" : {
+
+    },
     "Show wanted entities" : {
 
     },
@@ -3042,6 +3036,9 @@
 
     },
     "Shows collection and library navigation actions" : {
+
+    },
+    "Shows each entity’s title, subtitle, and metadata below its artwork." : {
 
     },
     "Shows file details and actions" : {
@@ -3281,6 +3278,9 @@
     "Through" : {
 
     },
+    "Thumbnail Text" : {
+
+    },
     "Timeframe" : {
 
     },
@@ -3457,6 +3457,9 @@
       }
     },
     "Use a downloaded .torrent when a release page cannot hand the release to Prismedia directly." : {
+
+    },
+    "Use App Default" : {
 
     },
     "Use as Toggle bookmark" : {

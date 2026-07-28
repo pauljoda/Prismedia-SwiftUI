@@ -10,8 +10,10 @@ struct VideoEntityPlaybackView: View {
     let presentationMode: VideoPlaybackPresentationMode
     let tvLayout: TVVideoPlaybackLayout
     let presentsFullscreenOnTV: Bool
+    let startsFullscreenPlaybackImmediately: Bool
     let onFullscreenDismiss: () -> Void
-    let onPlaybackProgressCommitted: () -> Void
+    let onPlaybackPositionChanged: (VideoPlaybackProgressSnapshot) -> Void
+    let onPlaybackProgressCommitted: (VideoPlaybackProgressSnapshot) -> Void
     let onAdvance: (EntityLink) -> Void
 
     init(
@@ -24,8 +26,10 @@ struct VideoEntityPlaybackView: View {
         presentationMode: VideoPlaybackPresentationMode = .inline,
         tvLayout: TVVideoPlaybackLayout = .standard,
         presentsFullscreenOnTV: Bool = false,
+        startsFullscreenPlaybackImmediately: Bool = false,
         onFullscreenDismiss: @escaping () -> Void = {},
-        onPlaybackProgressCommitted: @escaping () -> Void = {},
+        onPlaybackPositionChanged: @escaping (VideoPlaybackProgressSnapshot) -> Void = { _ in },
+        onPlaybackProgressCommitted: @escaping (VideoPlaybackProgressSnapshot) -> Void = { _ in },
         onAdvance: @escaping (EntityLink) -> Void
     ) {
         self.detail = detail
@@ -37,7 +41,9 @@ struct VideoEntityPlaybackView: View {
         self.presentationMode = presentationMode
         self.tvLayout = tvLayout
         self.presentsFullscreenOnTV = presentsFullscreenOnTV
+        self.startsFullscreenPlaybackImmediately = startsFullscreenPlaybackImmediately
         self.onFullscreenDismiss = onFullscreenDismiss
+        self.onPlaybackPositionChanged = onPlaybackPositionChanged
         self.onPlaybackProgressCommitted = onPlaybackProgressCommitted
         self.onAdvance = onAdvance
     }
@@ -72,6 +78,8 @@ struct VideoEntityPlaybackView: View {
                                 preparationPhase: preparation.phase,
                                 playRequested: preparation.playRequested,
                                 resumeSeconds: preparation.requestedResumeSeconds,
+                                trickplayPlaylistPath: trickplayPlaylistPath,
+                                trickplayFrameLoader: trickplayFrameLoader,
                                 onResume: { startPlayback() },
                                 onRestart: { startPlayback(at: 0) },
                                 onDismiss: { fullscreenPresentationDidChange(false) }
@@ -87,9 +95,10 @@ struct VideoEntityPlaybackView: View {
                 {
                     ResolvedVideoPlaybackView(
                         detail: videoDetail,
-                        service: playbackService,
                         controller: playbackController,
                         presentationMode: presentationMode,
+                        trickplayPlaylistPath: trickplayPlaylistPath,
+                        trickplayFrameLoader: trickplayFrameLoader,
                         onFullscreenChange: fullscreenPresentationDidChange
                     )
                 } else {
@@ -248,12 +257,16 @@ struct VideoEntityPlaybackView: View {
         private func finishTVFullscreenPlayback() {
             isFullscreenPresented = false
             let controller = stopTVPlayback()
+            let progress = controller.map { playbackProgressSnapshot(for: $0) }
+            if let progress {
+                onPlaybackPositionChanged(progress)
+            }
             _ = advanceNavigation.fullscreenDidDismiss()
             onFullscreenDismiss()
             Task {
                 await controller?.waitForPendingPlaybackReports()
-                guard !Task.isCancelled else { return }
-                onPlaybackProgressCommitted()
+                guard !Task.isCancelled, let progress else { return }
+                onPlaybackProgressCommitted(progress)
                 await refreshResolvedVideo()
             }
         }
@@ -364,7 +377,8 @@ struct VideoEntityPlaybackView: View {
         }
 
         private var fullscreenRequiresResumeChoice: Bool {
-            presentationMode == .fullscreenOnly
+            !startsFullscreenPlaybackImmediately
+                && presentationMode == .fullscreenOnly
                 && VideoPlaybackLaunchPolicy.shouldOfferResumeChoice(
                     resumeSeconds: preparation.requestedResumeSeconds
                 )
@@ -373,9 +387,10 @@ struct VideoEntityPlaybackView: View {
         private func startFullscreenPlaybackIfAppropriate() {
             guard presentationMode == .fullscreenOnly,
                 !preparation.playRequested,
-                VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(
-                    resumeSeconds: preparation.requestedResumeSeconds
-                )
+                startsFullscreenPlaybackImmediately
+                    || VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(
+                        resumeSeconds: preparation.requestedResumeSeconds
+                    )
             else { return }
             startPlayback()
         }
@@ -485,12 +500,22 @@ struct VideoEntityPlaybackView: View {
         guard !isPresented else { return }
         let advancedWhileFullscreen = advanceNavigation.fullscreenDidDismiss()
         guard presentationMode == .fullscreenOnly || advancedWhileFullscreen else { return }
-        presentedPlaybackController?.stop()
+        let controller = presentedPlaybackController
+        let progress = controller.map { playbackProgressSnapshot(for: $0) }
+        if let progress {
+            onPlaybackPositionChanged(progress)
+        }
+        controller?.stop()
         playbackSession?.reset()
         preparation.reset()
         videoDetail = nil
         playbackController = nil
         onFullscreenDismiss()
+        Task {
+            await controller?.waitForPendingPlaybackReports()
+            guard !Task.isCancelled, let progress else { return }
+            onPlaybackProgressCommitted(progress)
+        }
     }
 
     #if !os(tvOS)
@@ -562,6 +587,16 @@ struct VideoEntityPlaybackView: View {
             guard case .files(let files) = capability else { return nil }
             return files.items.first(where: { $0.role == "trickplay" })?.path
         }.first
+    }
+
+    private func playbackProgressSnapshot(
+        for controller: VideoPlaybackController
+    ) -> VideoPlaybackProgressSnapshot {
+        VideoPlaybackProgressSnapshot(
+            videoID: presentedVideoDetail?.id ?? detail.id,
+            positionSeconds: controller.currentTime,
+            durationSeconds: controller.duration
+        )
     }
 }
 

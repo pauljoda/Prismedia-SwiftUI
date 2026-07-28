@@ -90,7 +90,7 @@ final class StaticEntityGridLoaderTests: XCTestCase {
         let loader = StaticEntityGridLoader(items: [tenth, first])
 
         let response = try await loader.load(
-            query: EntityListQuery(kind: .video, sort: "added"),
+            query: EntityListQuery(kind: .video, sort: EntityGridSort.index.rawValue),
             limit: 48,
             search: nil,
             cursor: nil

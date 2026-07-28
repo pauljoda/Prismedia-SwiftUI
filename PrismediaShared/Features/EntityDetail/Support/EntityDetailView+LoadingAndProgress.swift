@@ -40,54 +40,6 @@ extension EntityDetailView {
         #endif
     }
 
-    func refreshPlaybackState() async {
-        let outcome = await service.load(id: link.entityID, kind: link.kind)
-        guard !Task.isCancelled else { return }
-        let detailChanged = state.finishPlaybackRefresh(outcome)
-        guard case .content(let detail) = state.phase else { return }
-        await loadVideoProgress(for: detail)
-        if detailChanged {
-            dependencies.onEntityMutated()
-        }
-    }
-
-    var livePlaybackRefreshTaskID: String {
-        [
-            currentDetail?.id.uuidString ?? "none",
-            pageIsActive ? "page-active" : "page-inactive",
-            scenePhase == .active ? "scene-active" : "scene-inactive",
-        ].joined(separator: "|")
-    }
-
-    var livePlaybackRefreshIsActive: Bool {
-        guard pageIsActive,
-            scenePhase == .active,
-            dependencies.videoPlaybackService != nil,
-            let detail = currentDetail
-        else { return false }
-
-        return detail.kind == .videoSeries
-            || detail.kind == .videoSeason
-            || PlayableVideoResolver.videoID(
-                in: detail,
-                sourceThumbnail: link.sourceThumbnail
-            ) != nil
-    }
-
-    func pollPlaybackStateWhileVisible() async {
-        guard livePlaybackRefreshIsActive else { return }
-
-        while livePlaybackRefreshIsActive {
-            do {
-                try await Task.sleep(for: .seconds(12))
-            } catch {
-                return
-            }
-            guard !Task.isCancelled, livePlaybackRefreshIsActive else { return }
-            await refreshPlaybackState()
-        }
-    }
-
     func refreshDetailContent() async {
         await loadDetail()
         #if os(iOS) || os(macOS)

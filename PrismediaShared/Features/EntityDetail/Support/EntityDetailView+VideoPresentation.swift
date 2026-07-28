@@ -2,46 +2,41 @@ import SwiftUI
 
 extension EntityDetailView {
     @ViewBuilder
-    func inlineVideoPlaybackView(
+    func televisionVideoPlaybackActions(
         _ detail: EntityDetail,
         ownerLink: EntityLink?
     ) -> some View {
-        if let ownerLink,
-            VideoPlaybackLaunchPolicy.presentationMode(for: ownerLink) == .inline,
-            PlayableVideoResolver.videoID(
-                in: detail,
-                sourceThumbnail: ownerLink.sourceThumbnail
-            ) != nil,
-            let playbackService = dependencies.videoPlaybackService
-        {
-            VideoEntityPlaybackView(
-                detail: detail,
-                ownerLink: ownerLink,
-                detailLoader: dependencies.detailLoader,
-                playbackService: playbackService,
-                trickplayFrameLoader: dependencies.trickplayFrameLoader,
-                preparation: videoPlaybackPreparation,
-                presentationMode: VideoPlaybackLaunchPolicy.presentationMode(for: ownerLink),
-                presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
-                    for: ownerLink.intent
-                ),
-                onFullscreenDismiss: {
-                    guard VideoPlaybackLaunchPolicy.presentationMode(for: ownerLink) == .fullscreenOnly else {
-                        return
+        #if os(tvOS)
+            if let ownerLink,
+                PlayableVideoResolver.videoID(
+                    in: detail,
+                    sourceThumbnail: ownerLink.sourceThumbnail
+                ) != nil,
+                let playbackService = dependencies.videoPlaybackService
+            {
+                VideoEntityPlaybackView(
+                    detail: detail,
+                    ownerLink: ownerLink,
+                    detailLoader: dependencies.detailLoader,
+                    playbackService: playbackService,
+                    trickplayFrameLoader: dependencies.trickplayFrameLoader,
+                    preparation: videoPlaybackPreparation,
+                    presentationMode: .inline,
+                    onPlaybackPositionChanged: receiveVideoPlaybackProgress,
+                    onPlaybackProgressCommitted: { _ in
+                        dependencies.onEntityMutated()
+                        Task { await refreshContainerProgressIfNeeded(detail) }
+                    },
+                    onAdvance: { destination in
+                        guard ownerLink.kind != .videoSeason else { return }
+                        advancedEntityLink = destination
                     }
-                    suppressesRoutePlayback = true
-                    thumbnailPlaybackLink = nil
-                },
-                onPlaybackProgressCommitted: {
-                    Task { await refreshPlaybackState() }
-                },
-                onAdvance: { destination in
-                    guard ownerLink.kind != .videoSeason else { return }
-                    advancedEntityLink = destination
-                }
-            )
-            .id(ownerLink)
-        }
+                )
+                .id(ownerLink)
+            }
+        #else
+            EmptyView()
+        #endif
     }
 
     @ViewBuilder
@@ -68,16 +63,38 @@ extension EntityDetailView {
                 presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
                     for: ownerLink.intent
                 ),
+                startsFullscreenPlaybackImmediately: thumbnailPlaybackLink != nil,
                 onFullscreenDismiss: {
                     suppressesRoutePlayback = true
                     thumbnailPlaybackLink = nil
                 },
-                onPlaybackProgressCommitted: {
-                    Task { await refreshPlaybackState() }
+                onPlaybackPositionChanged: { progress in
+                    receiveVideoPlaybackProgress(progress)
+                },
+                onPlaybackProgressCommitted: { _ in
+                    dependencies.onEntityMutated()
+                    Task { await refreshContainerProgressIfNeeded(detail) }
                 },
                 onAdvance: { _ in }
             )
             .id(ownerLink)
         }
+    }
+
+    func receiveVideoPlaybackProgress(
+        _ progress: VideoPlaybackProgressSnapshot
+    ) {
+        if progress.durationSeconds > 0,
+            progress.positionSeconds >= progress.durationSeconds - 1
+        {
+            liveVideoResumeSeconds = 0
+        } else {
+            liveVideoResumeSeconds = progress.positionSeconds
+        }
+    }
+
+    func refreshContainerProgressIfNeeded(_ detail: EntityDetail) async {
+        guard detail.kind == .videoSeries || detail.kind == .videoSeason else { return }
+        await loadVideoProgress(for: detail)
     }
 }

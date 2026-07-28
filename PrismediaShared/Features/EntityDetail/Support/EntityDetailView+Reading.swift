@@ -122,6 +122,11 @@ extension EntityDetailView {
             entityKind: detail.kind
         )
 
+        if let videoAction = videoPrimaryAction(for: detail) {
+            actions.removeAll { $0.id == .play || $0.id == .resume }
+            actions.insert(videoAction, at: 0)
+        }
+
         #if os(iOS) || os(macOS)
             if detail.kind == .collection,
                 dependencies.collectionItemsLoader != nil

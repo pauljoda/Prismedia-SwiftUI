@@ -48,7 +48,7 @@ import SwiftUI
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .sheet(isPresented: $showsFullDescription) {
+            .fullScreenCover(isPresented: $showsFullDescription) {
                 TVEpisodeDescriptionSheet(title: title, text: text)
             }
             .onChange(of: text) {

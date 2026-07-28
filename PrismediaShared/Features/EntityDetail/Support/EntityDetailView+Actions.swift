@@ -42,6 +42,10 @@ extension EntityDetailView {
                 return false
             #endif
         }
+        if action.id == .play || (action.id == .resume && currentDetail.map(hasPlayableVideo) == true) {
+            return dependencies.videoPlaybackService != nil
+                && videoPlaybackPreparation.phase != .loading
+        }
         if action.id == .read || action.id == .resume {
             #if os(tvOS)
                 return false
@@ -83,6 +87,9 @@ extension EntityDetailView {
                 return false
             #endif
         }
+        if action.id == .play || (action.id == .resume && currentDetail.map(hasPlayableVideo) == true) {
+            return dependencies.videoPlaybackService != nil
+        }
         if action.id == .read || action.id == .resume {
             #if os(tvOS)
                 return false
@@ -114,7 +121,13 @@ extension EntityDetailView {
                 openReader(command: .read)
             }
         case .resume:
-            openReader(command: .resume)
+            if currentDetail.map(hasPlayableVideo) == true {
+                beginDetailVideoPlayback()
+            } else {
+                openReader(command: .resume)
+            }
+        case .play:
+            beginDetailVideoPlayback()
         case .listen:
             #if os(iOS) || os(macOS)
                 guard case .content(let detail) = state.phase else { return }
@@ -197,6 +210,11 @@ extension EntityDetailView {
             return isEnabled(action)
                 ? "Plays this audiobook in the native audio player"
                 : "This audiobook is still preparing"
+        }
+        if action.id == .play || (action.id == .resume && currentDetail.map(hasPlayableVideo) == true) {
+            return isEnabled(action)
+                ? "Opens this video in the full-screen player"
+                : "Video playback is unavailable"
         }
         if action.id == .read || action.id == .resume {
             return isEnabled(action)

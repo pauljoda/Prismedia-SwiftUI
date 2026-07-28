@@ -56,8 +56,8 @@ struct EntityDetailChildGroupsView: View {
         }
         let query =
             itemKinds.count == 1
-            ? EntityListQuery(kind: itemKinds.first, sort: "added")
-            : EntityListQuery(kinds: itemKinds, sort: "added")
+            ? EntityListQuery(kind: itemKinds.first, sort: EntityGridSort.index.rawValue)
+            : EntityListQuery(kinds: itemKinds, sort: EntityGridSort.index.rawValue)
 
         return EntityGridConfiguration(
             title: group.label,
@@ -65,7 +65,8 @@ struct EntityDetailChildGroupsView: View {
             pageSize: 48,
             minimumColumnWidth: minimumColumnWidth,
             defaultDisplayMode: presentation.defaultMode,
-            availableDisplayModes: presentation.availableModes
+            availableDisplayModes: presentation.availableModes,
+            preferencesID: "entity-detail-child-v2:\(group.kind.rawValue):\(group.code ?? group.label)"
         )
     }
 
@@ -74,7 +75,11 @@ struct EntityDetailChildGroupsView: View {
     ) -> (defaultMode: EntityGridDisplayMode, availableModes: [EntityGridDisplayMode]) {
         switch kind {
         case .video:
-            return (.list, [.list])
+            #if os(tvOS)
+                return (.list, [.list])
+            #else
+                return (.grid, [.grid, .list])
+            #endif
         case .image:
             return (.wall, [.wall, .grid])
         case .gallery:

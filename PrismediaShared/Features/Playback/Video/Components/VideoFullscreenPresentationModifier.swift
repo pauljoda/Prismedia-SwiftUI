@@ -9,6 +9,8 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     var preparationPhase: VideoPlaybackPreparationPhase = .idle
     var playRequested = false
     var resumeSeconds: Double? = nil
+    var trickplayPlaylistPath: String? = nil
+    var trickplayFrameLoader: (any TrickplayFrameLoading)? = nil
     var onResume: () -> Void = {}
     var onRestart: () -> Void = {}
     var onDismiss: () -> Void = {}
@@ -119,6 +121,8 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                     isInteractive: isInteractive,
                     isExpanded: true,
                     badges: controller.badges,
+                    trickplayPlaylistPath: trickplayPlaylistPath,
+                    trickplayFrameLoader: trickplayFrameLoader,
                     onFullscreen: requestDismissal,
                     onDismiss: requestDismissal
                 )

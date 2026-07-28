@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct EntityDetailHeroView: View {
-    @Environment(\.artworkPalette) private var artworkPalette
     let heroPath: String
     let posterPath: String?
     let title: String
@@ -21,14 +20,21 @@ struct EntityDetailHeroView: View {
             .frame(maxWidth: .infinity)
             .frame(height: backdropHeight)
             .overlay {
-                LinearGradient(
-                    colors: [
-                        PrismediaColor.background.opacity(0.05),
-                        (artworkPalette?.background.color ?? PrismediaColor.background).opacity(0.96),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            PrismediaColor.background.opacity(0.16),
+                            PrismediaColor.background.opacity(0.98),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    LinearGradient(
+                        colors: [PrismediaColor.background.opacity(0.5), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                }
             }
             .mask {
                 LinearGradient(

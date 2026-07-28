@@ -8,6 +8,8 @@ struct PrismediaVideoPlayerView: View {
     let isInteractive: Bool
     let isExpanded: Bool
     var badges: [VideoPlaybackBadge] = []
+    var trickplayPlaylistPath: String? = nil
+    var trickplayFrameLoader: (any TrickplayFrameLoading)? = nil
     let onFullscreen: () -> Void
     var onDismiss: (() -> Void)?
 

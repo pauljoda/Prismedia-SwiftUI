@@ -128,17 +128,6 @@ struct EntityDetailState: Sendable {
         phase = .content(detail)
     }
 
-    @discardableResult
-    mutating func finishPlaybackRefresh(
-        _ outcome: EntityDetailLoadOutcome
-    ) -> Bool {
-        guard case .content(let detail) = outcome,
-            detail != self.detail
-        else { return false }
-        replaceContent(with: detail)
-        return true
-    }
-
     var favoriteToggleMutation: EntityDetailMutation? {
         guard let flags = currentFlags else { return nil }
         return .favorite(!(flags.isFavorite ?? false))

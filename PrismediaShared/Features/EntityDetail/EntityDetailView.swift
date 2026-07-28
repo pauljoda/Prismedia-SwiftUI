@@ -3,8 +3,6 @@ import SwiftUI
 /// Generic native detail coordinator for every Prismedia entity kind.
 public struct EntityDetailView: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.prismediaPageIsActive) var pageIsActive
-    @Environment(\.scenePhase) var scenePhase
     @Environment(\.videoPlaybackSession) var videoPlaybackSession
     #if os(iOS) || os(macOS)
         @Environment(MusicPlayerController.self) var musicPlayer
@@ -29,6 +27,8 @@ public struct EntityDetailView: View {
     @State var bookChaptersErrorMessage: String?
     @State var mappedBookChapters: [BookChapterMapping] = []
     @State var videoProgressEpisode: EntityDetail?
+    @State var liveVideoResumeSeconds: Double?
+    @State var resolvedVideoTechnicalDetail: EntityDetail?
     @State var isVideoProgressMutating = false
     @State var videoProgressErrorMessage: String?
     @State var artworkPalette: ArtworkPalette?
@@ -141,9 +141,6 @@ public struct EntityDetailView: View {
                 presentReleaseDateEditor()
             }
         }
-        .task(id: livePlaybackRefreshTaskID) {
-            await pollPlaybackStateWhileVisible()
-        }
         .onDisappear {
             videoPlaybackPreparation.reset()
             #if !os(tvOS)
@@ -234,7 +231,9 @@ public struct EntityDetailView: View {
                 canEditMetadata: dependencies.metadataMutator != nil,
                 identifyActionLabel: identifyActionLabel,
                 identifyActionSystemImage: identifyActionSystemImage,
-                acquisitionStatus: acquisitionStatus
+                acquisitionStatus: acquisitionStatus,
+                mediaDetail: resolvedVideoTechnicalDetail,
+                mediaThumbnail: link.sourceThumbnail
             )
         }
     }

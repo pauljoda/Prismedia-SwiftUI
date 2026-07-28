@@ -52,7 +52,7 @@ extension EntityDetailView {
                                     }
                                 },
                                 playback: {
-                                    inlineVideoPlaybackView(
+                                    televisionVideoPlaybackActions(
                                         detail,
                                         ownerLink: playbackOwnerLink
                                     )
@@ -189,6 +189,7 @@ extension EntityDetailView {
                     }
                 }
                 .task(id: detail.id) {
+                    await loadResolvedVideoTechnicalDetail(for: detail)
                     await loadVideoProgress(for: detail)
                     await loadReadingState(for: detail)
                     await loadCollectionMembers(for: detail)

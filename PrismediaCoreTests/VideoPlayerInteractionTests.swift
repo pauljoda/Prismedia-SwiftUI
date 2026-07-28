@@ -48,54 +48,16 @@ final class VideoPlayerInteractionTests: XCTestCase {
         )
     }
 
-    func testFilmstripLowerFrameLookupPreservesBoundarySemantics() {
-        let frameStartTimes = [10.0, 20.0, 30.0]
-
-        XCTAssertNil(
-            VideoFilmstripLayout.lowerFrameIndex(
-                at: 9,
-                frames: frameStartTimes,
-                startTime: { $0 }
-            )
-        )
-        XCTAssertEqual(
-            VideoFilmstripLayout.lowerFrameIndex(
-                at: 20,
-                frames: frameStartTimes,
-                startTime: { $0 }
-            ),
-            1
-        )
-        XCTAssertEqual(
-            VideoFilmstripLayout.lowerFrameIndex(
-                at: 31,
-                frames: frameStartTimes,
-                startTime: { $0 }
-            ),
-            2
-        )
-        XCTAssertEqual(
-            VideoFilmstripLayout.lowerFrameIndex(
-                at: 20,
-                frames: [10.0, 20.0, 20.0, 30.0],
-                startTime: { $0 }
-            ),
-            2
-        )
-    }
-
-    func testPlayerDoesNotUnlockBeforeCachedOptionsAndFilmstripAreReady() {
+    func testPlayerDoesNotUnlockBeforeCachedOptionsAreReady() {
         XCTAssertFalse(
             VideoPlaybackReadiness.isInteractive(
                 playerReady: true,
-                optionsReady: false,
-                filmstripReady: true
+                optionsReady: false
             ))
         XCTAssertTrue(
             VideoPlaybackReadiness.isInteractive(
                 playerReady: true,
-                optionsReady: true,
-                filmstripReady: true
+                optionsReady: true
             ))
     }
 

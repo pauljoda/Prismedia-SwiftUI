@@ -8,6 +8,8 @@ import SwiftUI
         let isInteractive: Bool
         let isExpanded: Bool
         var badges: [VideoPlaybackBadge] = []
+        var trickplayPlaylistPath: String?
+        var trickplayFrameLoader: (any TrickplayFrameLoading)?
         let onFullscreen: () -> Void
         var onDismiss: (() -> Void)?
 
@@ -190,7 +192,11 @@ import SwiftUI
                 if showsExpandedChrome, !badges.isEmpty {
                     VideoStatusChips(badges: badges, overlaysVideo: true)
                 }
-                VideoPlaybackTimeline(controller: controller)
+                VideoPlaybackTimeline(
+                    controller: controller,
+                    trickplayPlaylistPath: trickplayPlaylistPath,
+                    trickplayFrameLoader: trickplayFrameLoader
+                )
                 HStack {
                     Text(VideoPlaybackPresentation.clockTime(controller.currentTime))
                     Spacer()
@@ -390,6 +396,8 @@ import SwiftUI
                 title: "Signal in the Static",
                 isInteractive: true,
                 isExpanded: false,
+                trickplayPlaylistPath: nil,
+                trickplayFrameLoader: nil,
                 onFullscreen: {}
             )
             .aspectRatio(16 / 9, contentMode: .fit)

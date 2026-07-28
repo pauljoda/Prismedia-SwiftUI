@@ -20,11 +20,12 @@ import SwiftUI
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                 Text(series.title)
                     .font(.system(size: 42, weight: .bold))
-                    .foregroundStyle(PrismediaColor.accent)
+                    .foregroundStyle(PrismediaColor.onMedia)
                     .lineLimit(1, reservesSpace: true)
 
                 Text(selectedEpisode.map(episodeSubtitle) ?? " ")
                     .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(PrismediaColor.onMedia.opacity(0.92))
                     .lineLimit(2, reservesSpace: true)
 
                 if let description {
@@ -35,6 +36,17 @@ import SwiftUI
                     .containerRelativeFrame(.horizontal) { length, _ in
                         length / 3
                     }
+                }
+
+                let badges = EntityDetailPresentation(
+                    detail: selectedEpisodeDetail ?? series,
+                    mediaThumbnail: selectedEpisode
+                ).mediaBadges
+                if !badges.isEmpty {
+                    EntityDetailMediaChipsView(badges: badges)
+                        .containerRelativeFrame(.horizontal) { length, _ in
+                            length / 3
+                        }
                 }
             }
             .padding(.horizontal, PrismediaLayout.televisionContentInset)

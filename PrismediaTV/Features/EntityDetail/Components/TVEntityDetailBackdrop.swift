@@ -60,8 +60,8 @@ import SwiftUI
                 LinearGradient(
                     colors: [
                         PrismediaColor.background.opacity(0.82),
-                        PrismediaColor.background.opacity(0.16),
-                        .clear,
+                        PrismediaColor.background.opacity(0.34),
+                        PrismediaColor.background.opacity(0.12),
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
@@ -69,8 +69,8 @@ import SwiftUI
                 LinearGradient(
                     colors: [
                         .clear,
-                        PrismediaColor.background.opacity(0.2),
-                        PrismediaColor.background.opacity(0.92),
+                        PrismediaColor.background.opacity(0.36),
+                        PrismediaColor.background.opacity(0.98),
                     ],
                     startPoint: .top,
                     endPoint: .bottom
