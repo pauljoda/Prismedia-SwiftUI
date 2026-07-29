@@ -18,7 +18,21 @@ extension EntityDetailView {
         guard case .content(let detail) = state.phase,
             dependencies.readerService != nil
         else { return }
-        readerPresentation = .init(detail: detail, command: command)
+        #if os(iOS) || os(macOS)
+            let unifiedTarget = command == .resume
+                ? unifiedBookReadingTarget(for: detail)
+                : nil
+        #else
+            let unifiedTarget: BookReaderLocationTarget? = nil
+        #endif
+        let progress: EntityProgressCapability? = detail.capability()
+        readerPresentation = .init(
+            detail: detail,
+            command: command,
+            initialEPUBLocation: unifiedTarget?.location
+                ?? (command == .resume ? progress?.location : nil),
+            initialEPUBProgression: unifiedTarget?.progression
+        )
     }
 
     func loadReadingState(for detail: EntityDetail) async {
@@ -196,6 +210,9 @@ extension EntityDetailView {
                 let reader = dependencies.readerService
             else {
                 readableBookChapters = []
+                if bookResumeChapterSelection?.bookID == detail.id {
+                    bookResumeChapterSelection = nil
+                }
                 areBookChaptersLoading = false
                 bookChaptersErrorMessage = nil
                 refreshBookChapterMappings(for: detail)
@@ -214,17 +231,28 @@ extension EntityDetailView {
                     currentDetail.id == detail.id
                 else { return }
                 readableBookChapters = contents.chapters
+                bookResumeChapterSelection = contents.currentChapterID.map {
+                    BookResumeChapterSelection(
+                        bookID: detail.id,
+                        chapterID: $0,
+                        readingTarget: contents.resumeTarget
+                    )
+                }
                 refreshBookChapterMappings(for: currentDetail)
             } catch is CancellationError {
                 return
             } catch {
                 readableBookChapters = []
+                if bookResumeChapterSelection?.bookID == detail.id {
+                    bookResumeChapterSelection = nil
+                }
                 bookChaptersErrorMessage = error.localizedDescription
                 refreshBookChapterMappings(for: detail)
             }
         #else
             readableBookChapters = []
             mappedBookChapters = []
+            bookResumeChapterSelection = nil
             areBookChaptersLoading = false
             bookChaptersErrorMessage = nil
         #endif

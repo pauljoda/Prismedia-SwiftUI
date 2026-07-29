@@ -76,6 +76,9 @@
     "%@ times" : {
 
     },
+    "%@ total activity" : {
+
+    },
     "%@ will not be downloaded now or offered by future searches. You can allow it again from Blocklist settings." : {
 
     },
@@ -326,6 +329,9 @@
 
     },
     "2×" : {
+
+    },
+    "100%" : {
 
     },
     "Accept" : {
@@ -610,7 +616,13 @@
     "Blocklist Release" : {
 
     },
+    "Book activity" : {
+
+    },
     "Book Format" : {
+
+    },
+    "Book progress" : {
 
     },
     "Book Type" : {
@@ -824,9 +836,6 @@
     "Comic page, %@" : {
 
     },
-    "Completed and skipped media will appear here." : {
-
-    },
     "Completed backup" : {
 
     },
@@ -960,6 +969,9 @@
 
     },
     "Current password" : {
+
+    },
+    "Current position" : {
 
     },
     "Current position, %@" : {
@@ -1528,6 +1540,9 @@
     "Loading acquisition…" : {
 
     },
+    "Loading book progress" : {
+
+    },
     "Loading child activity…" : {
 
     },
@@ -1612,6 +1627,9 @@
     "Loading profiles…" : {
 
     },
+    "Loading progress" : {
+
+    },
     "Loading reading progress…" : {
 
     },
@@ -1670,6 +1688,12 @@
 
     },
     "Margins" : {
+
+    },
+    "Mark Complete" : {
+
+    },
+    "Mark Incomplete" : {
 
     },
     "Mark Listened" : {
@@ -1876,6 +1900,9 @@
     "No Active Sessions" : {
 
     },
+    "No Activity Yet" : {
+
+    },
     "No Backups" : {
 
     },
@@ -1949,9 +1976,6 @@
 
     },
     "No Playable Audio" : {
-
-    },
-    "No Playback History Yet" : {
 
     },
     "No Plugins" : {
@@ -2120,7 +2144,7 @@
     "Opens the full-screen image viewer" : {
 
     },
-    "Opens the reader and starts the audiobook near the furthest saved position" : {
+    "Opens the reader and starts the audiobook near the saved Book position" : {
 
     },
     "Opens the table of contents" : {
@@ -2136,6 +2160,9 @@
 
     },
     "Organized" : {
+
+    },
+    "Overall" : {
 
     },
     "Page %lld of %lld" : {
@@ -2371,6 +2398,9 @@
     "Progress" : {
 
     },
+    "Progress · %@" : {
+
+    },
     "Progress Options" : {
 
     },
@@ -2453,6 +2483,9 @@
 
     },
     "Reading the EPUB contents…" : {
+
+    },
+    "Reading, listening, completed, and skipped media will appear here." : {
 
     },
     "Rebuild every generated preview?" : {
@@ -3095,16 +3128,10 @@
     "Speed" : {
 
     },
-    "Start Listening Over" : {
-
-    },
     "Start over" : {
 
     },
     "Start Over" : {
-
-    },
-    "Start Reading Over" : {
 
     },
     "Start this acquisition over?" : {

@@ -18,7 +18,10 @@ extension EntityDetailView {
             bookID: detail.id,
             chapters: chapters,
             mappings: mappings,
-            progress: detail.capability()
+            progress: detail.capability(),
+            resolvedReadingChapterID: bookResumeChapterSelection?.bookID == detail.id
+                ? bookResumeChapterSelection?.chapterID
+                : nil
         )
         if let index = chapters.firstIndex(where: { $0.id == currentChapterID }) {
             chapters[index].isCurrentProgress = true
@@ -53,9 +56,11 @@ extension EntityDetailView {
             AudiobookPlaybackProjection(detail: detail) != nil
         else { return nil }
         let mappingsAreReady = !bookProgressMappings(for: detail).isEmpty
+        let currentChapter = mappedBookChapters.first(where: \.isCurrentProgress)
         return BookCombinedProgressPresentation(
             progress: detail.capability(),
             reading: readingState.progressPresentation,
+            chapterLabel: currentChapter?.title,
             activitySeconds: detail.capability(EntityPlaybackCapability.self)?.playDurationSeconds,
             isLoading: !hasLoadedBookProgressData,
             isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
@@ -66,11 +71,43 @@ extension EntityDetailView {
     func combinedResumeTarget(
         for detail: EntityDetail
     ) -> BookCombinedResumeTarget? {
-        BookCombinedResumeResolver().resolveContinuation(
+        if let selection = bookResumeChapterSelection,
+            selection.bookID == detail.id,
+            let readingTarget = selection.readingTarget,
+            let chapter = mappedBookChapters.first(where: {
+                $0.id == selection.chapterID && $0.isCurrentProgress
+            })
+        {
+            return BookCombinedResumeResolver().resolveChapter(
+                chapter,
+                readingTarget: readingTarget
+            )
+        }
+        return BookCombinedResumeResolver().resolveContinuation(
             chapters: mappedBookChapters,
             mappings: bookProgressMappings(for: detail),
             progress: detail.capability()
         )
+    }
+
+    func unifiedBookReadingTarget(
+        for detail: EntityDetail
+    ) -> BookReaderLocationTarget? {
+        guard let target = combinedResumeTarget(for: detail) else { return nil }
+        switch target.readingTarget {
+        case .savedLocation(let location):
+            return EPUBReaderResumeSourceResolver().locationTarget(
+                location: location,
+                progression: nil
+            )
+        case .chapter(let location, let progression):
+            return BookReaderLocationTarget(
+                location: location,
+                progression: progression
+            )
+        case .entityChapter:
+            return nil
+        }
     }
 
     func promoteLegacyAudiobookProgressIfNeeded(for detail: EntityDetail) async {

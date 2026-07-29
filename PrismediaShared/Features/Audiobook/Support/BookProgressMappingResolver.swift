@@ -62,9 +62,42 @@ struct BookProgressMappingResolver: Sendable {
         bookID: UUID,
         chapters: [BookChapterMapping],
         mappings: [BookProgressTrackMapping],
-        progress: EntityProgressCapability?
+        progress: EntityProgressCapability?,
+        resolvedReadingChapterID: String? = nil
     ) -> String? {
-        guard let progress, progress.completedAt == nil else { return nil }
+        guard progress?.completedAt == nil else { return nil }
+        let canonicalChapter = progress.flatMap {
+            canonicalChapterID(
+                bookID: bookID,
+                chapters: chapters,
+                mappings: mappings,
+                progress: $0
+            )
+        }.flatMap { chapterID in
+            chapters.first(where: { $0.id == chapterID })
+        }
+        let resolvedReadingChapter = resolvedReadingChapterID.flatMap { chapterID in
+            chapters.first(where: { $0.id == chapterID })
+        }
+
+        switch (canonicalChapter, resolvedReadingChapter) {
+        case (.some(let canonical), .some(let resolved)):
+            return resolved.order >= canonical.order ? resolved.id : canonical.id
+        case (.some(let canonical), nil):
+            return canonical.id
+        case (nil, .some(let resolved)):
+            return resolved.id
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    private func canonicalChapterID(
+        bookID: UUID,
+        chapters: [BookChapterMapping],
+        mappings: [BookProgressTrackMapping],
+        progress: EntityProgressCapability
+    ) -> String? {
 
         if progress.currentEntityID == bookID,
             progress.unit == .cfi,

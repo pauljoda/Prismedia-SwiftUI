@@ -3,6 +3,7 @@ import Foundation
 struct BookCombinedProgressPresentation: Equatable, Sendable {
     let percent: Int
     let positionLabel: String?
+    let chapterLabel: String?
     let status: MediaProgressStatus
     let activitySeconds: Double?
     let isLoading: Bool
@@ -11,6 +12,7 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
     init(
         progress: EntityProgressCapability?,
         reading: ReadingProgressPresentation?,
+        chapterLabel: String? = nil,
         activitySeconds: Double?,
         isLoading: Bool,
         isBusy: Bool
@@ -44,6 +46,7 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         } else {
             positionLabel = nil
         }
+        self.chapterLabel = chapterLabel
         self.activitySeconds = activitySeconds.flatMap {
             $0.isFinite && $0 > 0 ? $0 : nil
         }

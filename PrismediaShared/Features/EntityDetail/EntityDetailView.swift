@@ -26,6 +26,7 @@ public struct EntityDetailView: View {
     @State var isListeningMutating = false
     @State var audiobookErrorMessage: String?
     @State var readableBookChapters: [ReadableBookChapter] = []
+    @State var bookResumeChapterSelection: BookResumeChapterSelection?
     @State var areBookChaptersLoading = false
     @State var bookChaptersErrorMessage: String?
     @State var mappedBookChapters: [BookChapterMapping] = []

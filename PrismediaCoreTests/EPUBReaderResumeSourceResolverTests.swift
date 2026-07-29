@@ -57,4 +57,28 @@ final class EPUBReaderResumeSourceResolverTests: XCTestCase {
             )
         )
     }
+
+    func testOpaqueServerCFIFallsBackToTheReadableDeviceLocator() {
+        let deviceLocation = """
+            {
+              "href": "Text/catelyn.xhtml",
+              "locations": { "progression": 0.25 }
+            }
+            """
+
+        let source = EPUBReaderResumeSourceResolver().resolve(
+            explicitLocation: "epubcfi(/6/144!/4/2/2:10)",
+            explicitProgression: nil,
+            deviceLocation: deviceLocation
+        )
+
+        XCTAssertEqual(source, .device(deviceLocation))
+        XCTAssertEqual(
+            source?.fallbackTarget,
+            BookReaderLocationTarget(
+                location: "Text/catelyn.xhtml",
+                progression: 0.25
+            )
+        )
+    }
 }

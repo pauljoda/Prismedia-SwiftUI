@@ -82,6 +82,18 @@ struct BookCombinedProgressCard: View {
                 .redacted(reason: presentation.isLoading ? .placeholder : [])
                 .accessibilityHidden(presentation.positionLabel == nil)
             Label(
+                presentation.chapterLabel ?? "Current chapter",
+                systemImage: "bookmark.fill"
+            )
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(PrismediaColor.textSecondary)
+            .lineLimit(2)
+            .opacity(
+                presentation.chapterLabel == nil && !presentation.isLoading ? 0 : 1
+            )
+            .redacted(reason: presentation.isLoading ? .placeholder : [])
+            .accessibilityHidden(presentation.chapterLabel == nil)
+            Label(
                 presentation.activitySeconds.map {
                     "\(MusicPresentation.clockTime($0)) total activity"
                 } ?? "Book activity",
@@ -99,7 +111,11 @@ struct BookCombinedProgressCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Book progress")
         .accessibilityValue(
-            presentation.isLoading ? "Loading book progress" : "\(presentation.percent) percent"
+            presentation.isLoading
+                ? "Loading book progress"
+                : presentation.chapterLabel.map {
+                    "\(presentation.percent) percent, current chapter \($0)"
+                } ?? "\(presentation.percent) percent"
         )
     }
 
@@ -169,6 +185,7 @@ struct BookCombinedProgressCard: View {
                         workTotal: nil, location: "Text/chapter-5.xhtml"
                     ),
                     reading: nil,
+                    chapterLabel: "Chapter 5: The Long Way Home",
                     activitySeconds: 7_420,
                     isLoading: false,
                     isBusy: false

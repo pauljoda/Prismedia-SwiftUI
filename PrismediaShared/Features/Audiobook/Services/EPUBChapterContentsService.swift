@@ -29,14 +29,21 @@ struct EPUBChapterContentsService: Sendable {
         }.value
         let chapters = readableChapters(in: publication)
         let progress: EntityProgressCapability? = book.capability()
+        let resumeSource = progress?.completedAt == nil
+            ? EPUBReaderResumeSourceResolver().resolve(
+                explicitLocation: progress?.location,
+                explicitProgression: nil,
+                deviceLocation: storedLocation
+            )
+            : nil
+        let resumeTarget = resumeSource?.fallbackTarget
         return EPUBChapterContents(
             chapters: chapters,
             currentChapterID: currentChapterID(
-                progressLocation: progress?.completedAt == nil
-                    ? (storedLocation ?? progress?.location)
-                    : nil,
+                progressLocation: resumeTarget?.location,
                 chapters: chapters
-            ) ?? currentChapterID(progress: progress, chapters: chapters)
+            ) ?? currentChapterID(progress: progress, chapters: chapters),
+            resumeTarget: resumeTarget
         )
     }
 

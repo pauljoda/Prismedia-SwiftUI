@@ -11,6 +11,22 @@ extension EntityDetailView {
             play(projection, startingAt: track.id, startSeconds: 0)
         }
 
+        func unifiedAudiobookResume(for detail: EntityDetail) -> AudiobookResumePoint? {
+            if detail.bookFormat != .audio,
+                let target = combinedResumeTarget(for: detail)
+            {
+                return AudiobookResumePoint(
+                    trackID: target.audioTrackID,
+                    trackOffsetSeconds: target.audioStartSeconds
+                )
+            }
+            return BookCombinedResumeResolver().resolveAudioResume(
+                chapters: mappedBookChapters,
+                mappings: bookProgressMappings(for: detail),
+                progress: detail.capability()
+            )
+        }
+
         func audiobookPresentation(for detail: EntityDetail) -> AudiobookPlaybackPresentation? {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id
@@ -26,12 +42,7 @@ extension EntityDetailView {
                     trackOffsetSeconds: musicPlayer.elapsedTime
                 )
             } else {
-                let resume = BookCombinedResumeResolver().resolveAudioResume(
-                    chapters: mappedBookChapters,
-                    mappings: bookProgressMappings(for: detail),
-                    progress: progress
-                )
-                currentResume = resume.map {
+                currentResume = unifiedAudiobookResume(for: detail).map {
                     projection.absoluteTime(
                         trackID: $0.trackID,
                         trackOffsetSeconds: $0.trackOffsetSeconds
@@ -66,12 +77,7 @@ extension EntityDetailView {
                 Task { await startListeningOver(detail) }
                 return
             }
-            let resume = BookCombinedResumeResolver().resolveAudioResume(
-                chapters: mappedBookChapters,
-                mappings: bookProgressMappings(for: detail),
-                progress: progress
-            )
-            if let resume {
+            if let resume = unifiedAudiobookResume(for: detail) {
                 play(
                     projection,
                     startingAt: resume.trackID,
