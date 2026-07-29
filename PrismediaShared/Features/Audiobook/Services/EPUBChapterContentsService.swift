@@ -212,13 +212,13 @@ struct EPUBChapterContentsService: Sendable {
         }?.id
     }
 
-    private func currentChapterID(
+    func currentChapterID(
         progress: EntityProgressCapability?,
         chapters: [ReadableBookChapter]
     ) -> String? {
         guard let progress, progress.completedAt == nil, progress.total > 0 else { return nil }
         let fraction = min(max(0, Double(progress.index) / Double(progress.total)), 1)
-        return chapters.first {
+        return chapters.last {
             guard let start = $0.startFraction, let end = $0.endFraction else { return false }
             return fraction >= start && fraction <= end
         }?.id

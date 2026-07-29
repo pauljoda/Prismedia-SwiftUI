@@ -73,6 +73,58 @@ extension EntityDetailView {
         )
     }
 
+    func promoteLegacyAudiobookProgressIfNeeded(for detail: EntityDetail) async {
+        guard detail.kind == .book,
+            let projection = audiobookProjection,
+            projection.bookID == detail.id,
+            let legacyPlayback: EntityPlaybackCapability = detail.capability(),
+            legacyPlayback.resumeSeconds > 0
+        else { return }
+
+        let mappings = bookProgressMappings(for: detail)
+        guard let request = BookProgressMappingResolver().legacyProgressPromotionRequest(
+            tracks: projection.tracks,
+            mappings: mappings,
+            legacyResumeSeconds: legacyPlayback.resumeSeconds,
+            progress: detail.capability()
+        ) else { return }
+
+        let promotedMapping = mappings.last {
+            $0.currentEntityID == request.currentEntityID
+                && $0.unit == request.unit
+                && request.index >= $0.startIndex
+                && request.index <= $0.endIndex
+        }
+        do {
+            if let playbackService = dependencies.audioPlaybackService {
+                try await playbackService.updateEntityProgress(id: detail.id, request: request)
+            } else if let readerService = dependencies.readerService {
+                try await readerService.updateReadingProgress(id: detail.id, request: request)
+            } else {
+                return
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            // A later refresh can retry the idempotent, forward-only promotion.
+            return
+        }
+
+        await loadDetail()
+        guard !Task.isCancelled,
+            case .content(let refreshedDetail) = state.phase,
+            refreshedDetail.id == detail.id
+        else { return }
+        await loadReadingState(for: refreshedDetail)
+        if let trackID = promotedMapping?.trackID,
+            let chapter = mappedBookChapters.first(where: { $0.audioTrack?.id == trackID })
+        {
+            currentReadableChapterID = chapter.id
+        }
+        refreshBookChapterMappings(for: refreshedDetail)
+        dependencies.onEntityMutated()
+    }
+
     func currentAudiobookReadingTarget(
         for detail: EntityDetail
     ) -> BookReaderLocationTarget? {
@@ -135,10 +187,11 @@ extension EntityDetailView {
         target: BookCombinedResumeTarget
     ) {
         switch target.readingTarget {
-        case .savedLocation:
+        case .savedLocation(let location):
             readerPresentation = .init(
                 detail: detail,
                 command: .resume,
+                initialEPUBLocation: location,
                 companionAudiobookBookID: detail.id,
                 companionAudiobookTrackID: target.audioTrackID,
                 companionAudiobookStartSeconds: target.audioStartSeconds

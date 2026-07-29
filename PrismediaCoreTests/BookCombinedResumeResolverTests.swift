@@ -46,16 +46,51 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             hasReadableRendition: true
         )
 
+        let savedLocation = """
+            {
+              "href": "Text/chapter-1.xhtml",
+              "locations": { "progression": 0.5 }
+            }
+            """
         let target = try XCTUnwrap(
             BookCombinedResumeResolver().resolveContinuation(
                 chapters: [chapter],
                 mappings: mappings,
-                progress: canonicalProgress(index: 5_000, location: "{\"href\":\"chapter-1\"}")
+                progress: canonicalProgress(index: 5_000, location: savedLocation)
             )
         )
 
-        XCTAssertEqual(target.readingTarget, .savedLocation)
+        XCTAssertEqual(target.readingTarget, .savedLocation(savedLocation))
         XCTAssertEqual(target.audioStartSeconds, 295, accuracy: 0.001)
+    }
+
+    func testOpaqueFoliateCFIFallsBackToMappedChapterProgression() throws {
+        let chapters = [
+            mappedChapter(order: 0, duration: 300, startFraction: 0, endFraction: 0.5),
+            mappedChapter(order: 1, duration: 400, startFraction: 0.5, endFraction: 1),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+
+        let target = try XCTUnwrap(
+            BookCombinedResumeResolver().resolveContinuation(
+                chapters: chapters,
+                mappings: mappings,
+                progress: canonicalProgress(
+                    index: 6_250,
+                    location: "epubcfi(/6/4!/4/2/2:14)"
+                )
+            )
+        )
+
+        XCTAssertEqual(
+            target.readingTarget,
+            .chapter(location: "Text/chapter-2.xhtml", progression: 0.25)
+        )
     }
 
     func testUnstartedBookBeginsBothRenditionsAtTheFirstChapter() throws {
@@ -161,7 +196,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(target.readingTarget, .savedLocation)
+        XCTAssertEqual(target.readingTarget, .savedLocation(nil))
         XCTAssertEqual(target.audioStartSeconds, 100.263, accuracy: 0.001)
     }
 

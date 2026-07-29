@@ -53,9 +53,53 @@ struct BookProgressMappingResolver: Sendable {
         let candidates = mappings.filter {
             $0.currentEntityID == progress.currentEntityID && $0.unit == progress.unit
         }
-        return candidates.first {
+        return candidates.last {
             progress.index >= $0.startIndex && progress.index <= $0.endIndex
-        } ?? candidates.last
+        }
+    }
+
+    func legacyProgressPromotionRequest(
+        tracks: [MusicTrack],
+        mappings: [BookProgressTrackMapping],
+        legacyResumeSeconds: Double,
+        progress: EntityProgressCapability?
+    ) -> EntityProgressUpdateRequest? {
+        guard legacyResumeSeconds.isFinite,
+            legacyResumeSeconds > 0,
+            progress?.completedAt == nil,
+            let firstMapping = mappings.first,
+            let resume = AudiobookPlaybackProjection(
+                bookID: firstMapping.currentEntityID,
+                title: "",
+                tracks: tracks
+            ).resumePoint(at: legacyResumeSeconds),
+            let candidateOrder = mappings.firstIndex(where: { $0.trackID == resume.trackID }),
+            let duration = tracks.first(where: { $0.id == resume.trackID })?.duration,
+            duration.isFinite,
+            duration > 0
+        else { return nil }
+
+        let candidateMapping = mappings[candidateOrder]
+        let candidate = progressRequest(
+            mapping: candidateMapping,
+            offsetSeconds: resume.trackOffsetSeconds,
+            durationSeconds: duration,
+            activitySeconds: nil,
+            completed: false
+        )
+
+        guard let progress else { return candidate }
+        guard let currentMapping = mapping(for: progress, in: mappings),
+            let currentOrder = mappings.firstIndex(of: currentMapping)
+        else {
+            // An unresolvable readable cursor remains authoritative.
+            return nil
+        }
+
+        if candidateOrder != currentOrder {
+            return candidateOrder > currentOrder ? candidate : nil
+        }
+        return candidate.index > progress.index ? candidate : nil
     }
 
     func audioResume(

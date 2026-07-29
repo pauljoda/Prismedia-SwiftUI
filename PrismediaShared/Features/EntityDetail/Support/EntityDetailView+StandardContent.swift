@@ -204,6 +204,9 @@ extension EntityDetailView {
                     await loadCollectionMembers(for: detail)
                     await loadAudiobook(for: detail)
                     await loadBookChapters(for: detail)
+                    #if os(iOS) || os(macOS)
+                        await promoteLegacyAudiobookProgressIfNeeded(for: detail)
+                    #endif
                     guard currentDetail?.id == detail.id else { return }
                     hasLoadedBookProgressData = true
                 }

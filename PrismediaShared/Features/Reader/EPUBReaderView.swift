@@ -294,22 +294,20 @@
                 }.value
                 guard !Task.isCancelled else { return }
                 let locations = loaded.chapters.map(\.location)
-                if let initialLocation,
+                let resumeSource = EPUBReaderResumeSourceResolver().resolve(
+                    explicitLocation: initialLocation,
+                    explicitProgression: initialProgression,
+                    deviceLocation: command == .resume
+                        ? locatorStore.load(bookID: useCase.book.id)
+                        : nil
+                )
+                if let target = resumeSource?.fallbackTarget,
                     let initialIndex = locations.firstIndex(where: {
-                        documentResource($0) == documentResource(initialLocation)
+                        documentResource($0) == documentResource(target.location)
                     })
                 {
                     currentChapter = initialIndex
-                    currentChapterProgress = min(max(0, initialProgression ?? 0), 1)
-                } else if command == .resume,
-                    let savedLocation = locatorStore.load(bookID: useCase.book.id),
-                    let savedIndex = locations.firstIndex(where: {
-                        documentResource($0) == documentResource(savedLocation)
-                    })
-                {
-                    currentChapter = savedIndex
-                    currentChapterProgress =
-                        DocumentReaderProgressMapper.epubProgress(from: savedLocation) ?? 0
+                    currentChapterProgress = target.progression
                 } else {
                     currentChapter = 0
                     currentChapterProgress = 0

@@ -57,6 +57,47 @@ final class EPUBChapterContentsServiceTests: XCTestCase {
         XCTAssertEqual(currentChapterID, chapter.id)
     }
 
+    func testSharedProgressBoundarySelectsTheLaterReadableChapter() {
+        let service = EPUBChapterContentsService(reader: UnusedChapterReader())
+        let chapters = [
+            ReadableBookChapter(
+                id: "chapter-one",
+                title: "Chapter One",
+                order: 0,
+                depth: 0,
+                target: .epub(location: "Text/chapter-1.xhtml"),
+                startFraction: 0,
+                endFraction: 0.5
+            ),
+            ReadableBookChapter(
+                id: "chapter-two",
+                title: "Chapter Two",
+                order: 1,
+                depth: 0,
+                target: .epub(location: "Text/chapter-2.xhtml"),
+                startFraction: 0.5,
+                endFraction: 1
+            ),
+        ]
+        let progress = EntityProgressCapability(
+            currentEntityID: UUID(),
+            unit: .cfi,
+            index: 5_000,
+            total: 10_000,
+            mode: .paged,
+            completedAt: nil,
+            updatedAt: nil,
+            workIndex: 5_000,
+            workTotal: 10_000,
+            location: nil
+        )
+
+        XCTAssertEqual(
+            service.currentChapterID(progress: progress, chapters: chapters),
+            chapters[1].id
+        )
+    }
+
     func testImageArchiveChaptersExposePageCountsAndCanonicalCurrentChapter() async throws {
         let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
         let chapterID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!

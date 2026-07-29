@@ -321,26 +321,31 @@
             in publication: Publication,
             tableOfContentsLinks: [Link]
         ) async -> Locator? {
-            if let initialLocation,
-                let link = findLink(
-                    initialLocation,
-                    in: tableOfContentsLinks + publication.readingOrder
-                )
-            {
-                guard let locator = await publication.locate(link) else { return nil }
-                guard let initialProgression else { return locator }
+            let source = EPUBReaderResumeSourceResolver().resolve(
+                explicitLocation: initialLocation,
+                explicitProgression: initialProgression,
+                deviceLocation: command == .resume
+                    ? locatorStore.load(bookID: book.id)
+                    : nil
+            )
+            switch source {
+            case .explicit(let target):
+                guard
+                    let link = findLink(
+                        target.location,
+                        in: tableOfContentsLinks + publication.readingOrder
+                    ),
+                    let locator = await publication.locate(link)
+                else { return nil }
                 return locator.copy(locations: {
-                    $0.progression = min(max(0, initialProgression), 1)
+                    $0.progression = target.progression
                 })
+            case .device(let location):
+                guard let locator = try? Locator(jsonString: location) else { return nil }
+                return await publication.locate(locator)
+            case nil:
+                return nil
             }
-            guard command == .resume else { return nil }
-            if let location = locatorStore.load(bookID: book.id),
-                let locator = try? Locator(jsonString: location),
-                let normalized = await publication.locate(locator)
-            {
-                return normalized
-            }
-            return nil
         }
 
         private func readiumPreferences(useDarkSystemTheme: Bool) -> EPUBPreferences {

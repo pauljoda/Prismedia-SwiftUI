@@ -51,6 +51,9 @@ extension EntityDetailView {
         await loadCollectionMembers(for: refreshedDetail, force: true)
         await loadAudiobook(for: refreshedDetail)
         await loadBookChapters(for: refreshedDetail)
+        #if os(iOS) || os(macOS)
+            await promoteLegacyAudiobookProgressIfNeeded(for: refreshedDetail)
+        #endif
     }
 
     func loadVideoProgress(for detail: EntityDetail) async {

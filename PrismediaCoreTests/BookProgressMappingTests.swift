@@ -148,6 +148,134 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(resume.trackOffsetSeconds, 95, accuracy: 0.001)
     }
 
+    func testSharedEPUBBoundaryBelongsToTheLaterChapter() throws {
+        let chapters = [
+            epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
+            epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+        let progress = canonicalProgress(index: 5_000, location: nil)
+
+        let mapping = try XCTUnwrap(
+            BookProgressMappingResolver().mapping(for: progress, in: mappings)
+        )
+
+        XCTAssertEqual(mapping.trackID, chapters[1].audioTrack?.id)
+    }
+
+    func testSameBookCursorOutsideMappedRangesDoesNotInventAnAudioChapter() {
+        let track = musicTrack(number: 1, duration: 100)
+        let mapping = BookProgressTrackMapping(
+            trackID: track.id,
+            currentEntityID: bookID,
+            unit: .cfi,
+            startIndex: 2_000,
+            endIndex: 4_000,
+            total: 10_000,
+            mode: .paged
+        )
+        let progress = canonicalProgress(index: 9_000, location: "authoritative-text-position")
+
+        XCTAssertNil(
+            BookProgressMappingResolver().mapping(for: progress, in: [mapping])
+        )
+        XCTAssertNil(
+            BookProgressMappingResolver().legacyProgressPromotionRequest(
+                tracks: [track],
+                mappings: [mapping],
+                legacyResumeSeconds: 50,
+                progress: progress
+            )
+        )
+    }
+
+    func testLegacyAbsoluteResumePromotesAFartherCanonicalPosition() throws {
+        let chapters = [
+            epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
+            epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+
+        let request = try XCTUnwrap(
+            BookProgressMappingResolver().legacyProgressPromotionRequest(
+                tracks: chapters.compactMap(\.audioTrack),
+                mappings: mappings,
+                legacyResumeSeconds: 175,
+                progress: canonicalProgress(index: 4_000, location: "exact-text-position")
+            )
+        )
+
+        XCTAssertEqual(request.currentEntityID, bookID)
+        XCTAssertEqual(request.index, 8_750)
+        XCTAssertNil(request.location)
+    }
+
+    func testLegacyResumeDoesNotMoveAFartherReadablePositionBackward() {
+        let chapters = [
+            epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
+            epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+
+        XCTAssertNil(
+            BookProgressMappingResolver().legacyProgressPromotionRequest(
+                tracks: chapters.compactMap(\.audioTrack),
+                mappings: mappings,
+                legacyResumeSeconds: 175,
+                progress: canonicalProgress(index: 9_000, location: "farther-text-position")
+            )
+        )
+    }
+
+    func testLegacyResumePreservesAnUnmatchedReadableCursor() {
+        let chapters = [
+            epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
+            epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+        let unmatched = EntityProgressCapability(
+            currentEntityID: UUID(uuidString: "00000000-0000-0000-0000-000000000077"),
+            unit: .page,
+            index: 8,
+            total: 20,
+            mode: .paged,
+            completedAt: nil,
+            updatedAt: nil,
+            workIndex: 8,
+            workTotal: 20,
+            location: "unmatched-readable-position"
+        )
+
+        XCTAssertNil(
+            BookProgressMappingResolver().legacyProgressPromotionRequest(
+                tracks: chapters.compactMap(\.audioTrack),
+                mappings: mappings,
+                legacyResumeSeconds: 175,
+                progress: unmatched
+            )
+        )
+    }
+
     func testTrackMappingsRoundTripWithStableContractKeys() throws {
         let mapping = BookProgressTrackMapping(
             trackID: musicTrack(number: 1, duration: 100).id,
@@ -171,6 +299,21 @@ final class BookProgressMappingTests: XCTestCase {
     }
 
     private let bookID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
+    private func canonicalProgress(index: Int, location: String?) -> EntityProgressCapability {
+        EntityProgressCapability(
+            currentEntityID: bookID,
+            unit: .cfi,
+            index: index,
+            total: 10_000,
+            mode: .paged,
+            completedAt: nil,
+            updatedAt: nil,
+            workIndex: index,
+            workTotal: 10_000,
+            location: location
+        )
+    }
 
     private func epubChapter(
         number: Int,

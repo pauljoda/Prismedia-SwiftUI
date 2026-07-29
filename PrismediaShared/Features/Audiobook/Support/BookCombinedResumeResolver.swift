@@ -85,11 +85,17 @@ struct BookCombinedResumeResolver: Sendable {
         let readingTarget: BookCombinedReadingTarget
         switch readTarget {
         case .epub(let location):
-            readingTarget = progress?.location == nil
-                ? .chapter(location: location, progression: fraction)
-                : .savedLocation
+            if let savedLocation = progress?.location,
+                EPUBProgressLocation(serialized: savedLocation) != nil
+            {
+                readingTarget = .savedLocation(savedLocation)
+            } else {
+                readingTarget = .chapter(location: location, progression: fraction)
+            }
         case .entityChapter(let chapterID):
-            readingTarget = progress == nil ? .entityChapter(id: chapterID) : .savedLocation
+            readingTarget = progress == nil
+                ? .entityChapter(id: chapterID)
+                : .savedLocation(nil)
         }
 
         let estimatedOffset = fraction * duration
