@@ -196,7 +196,6 @@ extension EntityDetailView {
                 let reader = dependencies.readerService
             else {
                 readableBookChapters = []
-                currentReadableChapterID = nil
                 areBookChaptersLoading = false
                 bookChaptersErrorMessage = nil
                 refreshBookChapterMappings(for: detail)
@@ -215,26 +214,17 @@ extension EntityDetailView {
                     currentDetail.id == detail.id
                 else { return }
                 readableBookChapters = contents.chapters
-                if detail.capability(EntityProgressCapability.self)?.completedAt != nil {
-                    currentReadableChapterID = nil
-                } else if let currentChapterID = contents.currentChapterID {
-                    currentReadableChapterID = currentChapterID
-                } else if !contents.chapters.contains(where: { $0.id == currentReadableChapterID }) {
-                    currentReadableChapterID = nil
-                }
                 refreshBookChapterMappings(for: currentDetail)
             } catch is CancellationError {
                 return
             } catch {
                 readableBookChapters = []
-                currentReadableChapterID = nil
                 bookChaptersErrorMessage = error.localizedDescription
                 refreshBookChapterMappings(for: detail)
             }
         #else
             readableBookChapters = []
             mappedBookChapters = []
-            currentReadableChapterID = nil
             areBookChaptersLoading = false
             bookChaptersErrorMessage = nil
         #endif

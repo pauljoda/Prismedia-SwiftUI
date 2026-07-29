@@ -165,9 +165,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             depth: 0,
             readTarget: .entityChapter(id: chapterID),
             readPageCount: 20,
-            audioTrack: track(number: 1, duration: 200),
-            isCurrentReading: false,
-            isCurrentAudio: false
+            audioTrack: track(number: 1, duration: 200)
         )
         let mappings = BookProgressMappingBuilder().build(
             bookID: bookID,
@@ -232,9 +230,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             readTarget: .epub(location: "Text/chapter-\(number).xhtml"),
             readStartFraction: startFraction,
             readEndFraction: endFraction,
-            audioTrack: track(number: number, duration: duration),
-            isCurrentReading: false,
-            isCurrentAudio: false
+            audioTrack: track(number: number, duration: duration)
         )
     }
 

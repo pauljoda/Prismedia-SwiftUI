@@ -26,7 +26,6 @@ public struct EntityDetailView: View {
     @State var isListeningMutating = false
     @State var audiobookErrorMessage: String?
     @State var readableBookChapters: [ReadableBookChapter] = []
-    @State var currentReadableChapterID: String?
     @State var areBookChaptersLoading = false
     @State var bookChaptersErrorMessage: String?
     @State var mappedBookChapters: [BookChapterMapping] = []
@@ -232,12 +231,6 @@ public struct EntityDetailView: View {
                 }
             }
         }
-        #if os(iOS) || os(macOS)
-            .onChange(of: musicPlayer.currentTrack?.id) {
-                guard case .content(let detail) = state.phase else { return }
-                refreshBookChapterMappings(for: detail)
-            }
-        #endif
         .alert("Couldn’t Update Details", isPresented: mutationErrorPresented) {
             Button("OK") { state.dismissMutationError() }
         } message: {

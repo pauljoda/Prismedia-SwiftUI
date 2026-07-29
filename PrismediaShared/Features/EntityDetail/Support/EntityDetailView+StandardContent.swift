@@ -99,9 +99,7 @@ extension EntityDetailView {
                                                 chapters: mappedBookChapters,
                                                 chaptersAreLoading: areBookChaptersLoading,
                                                 chaptersErrorMessage: bookChaptersErrorMessage,
-                                                readingChapterProgressLabel: readingChapterProgressLabel,
-                                                listeningChapterProgressLabel: listeningChapterProgressLabel(
-                                                    for: detail),
+                                                chapterProgressLabel: bookChapterProgressLabel(for: detail),
                                                 horizontalPadding: detailHorizontalPadding,
                                                 onContinueReading: {
                                                     if readingState.requiresResetBeforeReading {

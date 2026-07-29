@@ -3,12 +3,27 @@ import Foundation
 
 extension EntityDetailView {
     func refreshBookChapterMappings(for detail: EntityDetail) {
-        mappedBookChapters = BookChapterMappingBuilder().build(
+        var chapters = BookChapterMappingBuilder().build(
             readableChapters: readableBookChapters,
-            audioTracks: audiobookProjection?.tracks ?? [],
-            currentReadableID: currentReadableChapterID,
-            currentAudioTrackID: currentAudiobookTrackID(for: detail)
+            audioTracks: audiobookProjection?.tracks ?? []
         )
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: detail.id,
+            chapters: chapters,
+            readerMode: readingState.manifest?.readerMode
+                ?? detail.capability(EntityProgressCapability.self)?.mode,
+            hasReadableRendition: detail.bookFormat != .audio
+        )
+        let currentChapterID = BookProgressMappingResolver().currentChapterID(
+            bookID: detail.id,
+            chapters: chapters,
+            mappings: mappings,
+            progress: detail.capability()
+        )
+        if let index = chapters.firstIndex(where: { $0.id == currentChapterID }) {
+            chapters[index].isCurrentProgress = true
+        }
+        mappedBookChapters = chapters
     }
 
     func bookProgressMappings(for detail: EntityDetail) -> [BookProgressTrackMapping] {
@@ -21,28 +36,13 @@ extension EntityDetailView {
         )
     }
 
-    func currentAudiobookTrackID(for detail: EntityDetail) -> UUID? {
-        guard audiobookProjection != nil else { return nil }
-        let isCurrent =
-            musicPlayer.context?.playbackOwnerEntityID == detail.id
-            && musicPlayer.context?.playbackOwnerEntityKind == .book
-        if isCurrent { return musicPlayer.currentTrack?.id }
-        return BookCombinedResumeResolver().resolveAudioResume(
-            chapters: mappedBookChapters,
-            mappings: bookProgressMappings(for: detail),
-            progress: detail.capability()
-        )?.trackID
-    }
-
-    var readingChapterProgressLabel: String? {
-        guard let progress = readingState.progressPresentation else { return nil }
-        if let positionLabel = progress.positionLabel { return positionLabel }
-        return progress.status == .completed ? "Complete" : "\(progress.percent)% read"
-    }
-
-    func listeningChapterProgressLabel(for detail: EntityDetail) -> String? {
-        readingChapterProgressLabel
-            ?? audiobookPresentation(for: detail)?.progress.positionLabel
+    func bookChapterProgressLabel(for detail: EntityDetail) -> String? {
+        if let progress = readingState.progressPresentation {
+            if let positionLabel = progress.positionLabel { return positionLabel }
+            if progress.status == .completed { return "Complete" }
+            return "\(progress.percent)% read"
+        }
+        return audiobookPresentation(for: detail)?.progress.positionLabel
     }
 
     func combinedProgressPresentation(
@@ -89,12 +89,6 @@ extension EntityDetailView {
             progress: detail.capability()
         ) else { return }
 
-        let promotedMapping = mappings.last {
-            $0.currentEntityID == request.currentEntityID
-                && $0.unit == request.unit
-                && request.index >= $0.startIndex
-                && request.index <= $0.endIndex
-        }
         do {
             if let playbackService = dependencies.audioPlaybackService {
                 try await playbackService.updateEntityProgress(id: detail.id, request: request)
@@ -116,11 +110,6 @@ extension EntityDetailView {
             refreshedDetail.id == detail.id
         else { return }
         await loadReadingState(for: refreshedDetail)
-        if let trackID = promotedMapping?.trackID,
-            let chapter = mappedBookChapters.first(where: { $0.audioTrack?.id == trackID })
-        {
-            currentReadableChapterID = chapter.id
-        }
         refreshBookChapterMappings(for: refreshedDetail)
         dependencies.onEntityMutated()
     }
@@ -140,9 +129,6 @@ extension EntityDetailView {
         guard case .content(let detail) = state.phase,
             let readTarget = chapter.readTarget
         else { return }
-
-        currentReadableChapterID = chapter.id
-        refreshBookChapterMappings(for: detail)
 
         if combined {
             guard

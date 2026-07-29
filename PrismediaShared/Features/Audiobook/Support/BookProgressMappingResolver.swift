@@ -58,6 +58,52 @@ struct BookProgressMappingResolver: Sendable {
         }
     }
 
+    func currentChapterID(
+        bookID: UUID,
+        chapters: [BookChapterMapping],
+        mappings: [BookProgressTrackMapping],
+        progress: EntityProgressCapability?
+    ) -> String? {
+        guard let progress, progress.completedAt == nil else { return nil }
+
+        if progress.currentEntityID == bookID,
+            progress.unit == .cfi,
+            let location = progress.location.flatMap(EPUBProgressLocation.init(serialized:)),
+            let chapterID = epubChapterID(for: location.href, in: chapters)
+        {
+            return chapterID
+        }
+
+        if let mapping = mapping(for: progress, in: mappings),
+            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.trackID })
+        {
+            return chapter.id
+        }
+
+        if progress.unit == .page,
+            let currentEntityID = progress.currentEntityID
+        {
+            return chapters.first { chapter in
+                guard case .some(.entityChapter(let chapterID)) = chapter.readTarget else {
+                    return false
+                }
+                return chapterID == currentEntityID
+            }?.id
+        }
+
+        guard progress.currentEntityID == bookID,
+            progress.unit == .cfi,
+            progress.total > 0
+        else { return nil }
+        let fraction = bounded(Double(progress.index) / Double(progress.total))
+        return chapters.last { chapter in
+            guard let start = chapter.readStartFraction,
+                let end = chapter.readEndFraction
+            else { return false }
+            return fraction >= start && fraction <= end
+        }?.id
+    }
+
     func legacyProgressPromotionRequest(
         tracks: [MusicTrack],
         mappings: [BookProgressTrackMapping],
@@ -135,6 +181,24 @@ struct BookProgressMappingResolver: Sendable {
 
     private func runwayStart(_ seconds: Double) -> Double {
         seconds <= audioRunwaySeconds ? 0 : seconds - audioRunwaySeconds
+    }
+
+    private func epubChapterID(
+        for href: String,
+        in chapters: [BookChapterMapping]
+    ) -> String? {
+        let locations = chapters.compactMap { chapter -> String? in
+            guard case .some(.epub(let location)) = chapter.readTarget else { return nil }
+            return location
+        }
+        guard let match = EPUBResourceLocationMatcher().bestMatch(
+            for: href,
+            candidates: locations
+        ) else { return nil }
+        return chapters.first { chapter in
+            guard case .some(.epub(let location)) = chapter.readTarget else { return false }
+            return location == match
+        }?.id
     }
 
     private func bounded(_ value: Double) -> Double {

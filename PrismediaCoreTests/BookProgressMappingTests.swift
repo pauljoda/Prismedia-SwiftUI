@@ -43,9 +43,7 @@ final class BookProgressMappingTests: XCTestCase {
             depth: 0,
             readTarget: .entityChapter(id: chapterID),
             readPageCount: 20,
-            audioTrack: track,
-            isCurrentReading: false,
-            isCurrentAudio: false
+            audioTrack: track
         )
         let mapping = try XCTUnwrap(
             BookProgressMappingBuilder().build(
@@ -97,9 +95,7 @@ final class BookProgressMappingTests: XCTestCase {
             order: 0,
             depth: 0,
             readTarget: nil,
-            audioTrack: musicTrack(number: 1, duration: 100),
-            isCurrentReading: false,
-            isCurrentAudio: false
+            audioTrack: musicTrack(number: 1, duration: 100)
         )
 
         XCTAssertTrue(
@@ -168,8 +164,68 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(mapping.trackID, chapters[1].audioTrack?.id)
     }
 
+    func testOpaqueCFICanonicalCursorSelectsOneUnifiedChapter() {
+        let chapters = [
+            epubChapter(number: 1, start: 0.8, end: 0.96, duration: 100),
+            epubChapter(number: 2, start: 0.96, end: 1, duration: 100),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+
+        let chapterID = BookProgressMappingResolver().currentChapterID(
+            bookID: bookID,
+            chapters: chapters,
+            mappings: mappings,
+            progress: canonicalProgress(
+                index: 9_500,
+                location: "epubcfi(/6/144!/4/2/2:10)"
+            )
+        )
+
+        XCTAssertEqual(chapterID, chapters[0].id)
+    }
+
+    func testNativeExactLocationIsTheUnifiedChapterAuthority() {
+        let chapters = [
+            epubChapter(number: 1, start: 0, end: 0.96, duration: 100),
+            epubChapter(number: 2, start: 0.96, end: 1, duration: 100),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+        let location = """
+            {"href":"Text/chapter-2.xhtml","locations":{"progression":0.1}}
+            """
+
+        let chapterID = BookProgressMappingResolver().currentChapterID(
+            bookID: bookID,
+            chapters: chapters,
+            mappings: mappings,
+            progress: canonicalProgress(index: 9_500, location: location)
+        )
+
+        XCTAssertEqual(chapterID, chapters[1].id)
+    }
+
     func testSameBookCursorOutsideMappedRangesDoesNotInventAnAudioChapter() {
         let track = musicTrack(number: 1, duration: 100)
+        let chapter = BookChapterMapping(
+            id: "chapter-1",
+            title: "Chapter 1",
+            order: 0,
+            depth: 0,
+            readTarget: .epub(location: "Text/chapter-1.xhtml"),
+            readStartFraction: 0.2,
+            readEndFraction: 0.4,
+            audioTrack: track
+        )
         let mapping = BookProgressTrackMapping(
             trackID: track.id,
             currentEntityID: bookID,
@@ -183,6 +239,14 @@ final class BookProgressMappingTests: XCTestCase {
 
         XCTAssertNil(
             BookProgressMappingResolver().mapping(for: progress, in: [mapping])
+        )
+        XCTAssertNil(
+            BookProgressMappingResolver().currentChapterID(
+                bookID: bookID,
+                chapters: [chapter],
+                mappings: [mapping],
+                progress: progress
+            )
         )
         XCTAssertNil(
             BookProgressMappingResolver().legacyProgressPromotionRequest(
@@ -329,9 +393,7 @@ final class BookProgressMappingTests: XCTestCase {
             readTarget: .epub(location: "Text/chapter-\(number).xhtml"),
             readStartFraction: start,
             readEndFraction: end,
-            audioTrack: musicTrack(number: number, duration: duration),
-            isCurrentReading: false,
-            isCurrentAudio: false
+            audioTrack: musicTrack(number: number, duration: duration)
         )
     }
 
@@ -342,9 +404,7 @@ final class BookProgressMappingTests: XCTestCase {
             order: number - 1,
             depth: 0,
             readTarget: nil,
-            audioTrack: musicTrack(number: number, duration: duration),
-            isCurrentReading: false,
-            isCurrentAudio: false
+            audioTrack: musicTrack(number: number, duration: duration)
         )
     }
 

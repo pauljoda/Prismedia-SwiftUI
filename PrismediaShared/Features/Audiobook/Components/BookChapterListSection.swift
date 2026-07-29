@@ -7,8 +7,7 @@ struct BookChapterListSection: View {
     let chapters: [BookChapterMapping]
     let isLoading: Bool
     let errorMessage: String?
-    let readingProgressLabel: String?
-    let listeningProgressLabel: String?
+    let progressLabel: String?
     let horizontalPadding: CGFloat
     let onRead: (BookChapterMapping) -> Void
     let onListen: (BookChapterMapping) -> Void
@@ -97,8 +96,7 @@ struct BookChapterListSection: View {
                     BookChapterRow(
                         chapter: chapter,
                         number: chapter.order + 1,
-                        readingProgressLabel: readingProgressLabel,
-                        listeningProgressLabel: listeningProgressLabel,
+                        progressLabel: progressLabel,
                         onRead: { onRead(chapter) },
                         onListen: { onListen(chapter) },
                         onCombined: { onCombined(chapter) }
@@ -131,8 +129,7 @@ struct BookChapterListSection: View {
                             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
                             title: "Chapter 1"
                         ),
-                        isCurrentReading: true,
-                        isCurrentAudio: true
+                        isCurrentProgress: true
                     ),
                     BookChapterMapping(
                         id: "chapter-2",
@@ -144,14 +141,12 @@ struct BookChapterListSection: View {
                             id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
                             title: "Chapter 2"
                         ),
-                        isCurrentReading: false,
-                        isCurrentAudio: false
+                        isCurrentProgress: false
                     ),
                 ],
                 isLoading: false,
                 errorMessage: nil,
-                readingProgressLabel: "42% read",
-                listeningProgressLabel: "1:12:08 of 8:43:19",
+                progressLabel: "42% read",
                 horizontalPadding: PrismediaSpacing.large,
                 onRead: { _ in },
                 onListen: { _ in },

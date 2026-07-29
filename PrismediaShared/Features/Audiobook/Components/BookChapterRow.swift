@@ -6,8 +6,7 @@ struct BookChapterRow: View {
 
     let chapter: BookChapterMapping
     let number: Int
-    let readingProgressLabel: String?
-    let listeningProgressLabel: String?
+    let progressLabel: String?
     let onRead: () -> Void
     let onListen: () -> Void
     let onCombined: () -> Void
@@ -40,7 +39,7 @@ struct BookChapterRow: View {
         .padding(.leading, CGFloat(min(chapter.depth, 3)) * PrismediaSpacing.medium)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            if chapter.isCurrentReading || chapter.isCurrentAudio {
+            if chapter.isCurrentProgress {
                 artworkPrimaryAccent.opacity(PrismediaOpacity.backdropSpectrum)
             }
         }
@@ -50,38 +49,15 @@ struct BookChapterRow: View {
 
     @ViewBuilder
     private var currentProgress: some View {
-        if chapter.isCurrentReading || chapter.isCurrentAudio {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                if chapter.isCurrentReading {
-                    progressLabel(
-                        title: "Reading",
-                        detail: readingProgressLabel ?? "Here",
-                        systemImage: "book.pages.fill",
-                        color: artworkPrimaryAccent
-                    )
-                }
-                if chapter.isCurrentAudio {
-                    progressLabel(
-                        title: "Listening",
-                        detail: listeningProgressLabel ?? "Here",
-                        systemImage: "waveform",
-                        color: PrismediaColor.spectrumOrange
-                    )
-                }
-            }
-        }
-    }
-
-    private func progressLabel(
-        title: String,
-        detail: String,
-        systemImage: String,
-        color: Color
-    ) -> some View {
-        Label("\(title) · \(detail)", systemImage: systemImage)
+        if chapter.isCurrentProgress {
+            Label(
+                progressLabel.map { "Progress · \($0)" } ?? "Current position",
+                systemImage: "bookmark.fill"
+            )
             .font(.caption.weight(.semibold))
-            .foregroundStyle(color)
+            .foregroundStyle(artworkPrimaryAccent)
             .lineLimit(1)
+        }
     }
 
     private var actionButtons: some View {
@@ -97,7 +73,7 @@ struct BookChapterRow: View {
             if chapter.audioTrack != nil {
                 actionButton(
                     title: "Listen",
-                    systemImage: chapter.isCurrentAudio ? "headphones.circle.fill" : "headphones",
+                    systemImage: "headphones",
                     hint: "Plays this audiobook chapter",
                     action: onListen
                 )
@@ -147,12 +123,10 @@ struct BookChapterRow: View {
                     id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
                     title: "Chapter 7"
                 ),
-                isCurrentReading: true,
-                isCurrentAudio: true
+                isCurrentProgress: true
             ),
             number: 7,
-            readingProgressLabel: "42% read",
-            listeningProgressLabel: "1:12:08 of 8:43:19",
+            progressLabel: "42% read",
             onRead: {},
             onListen: {},
             onCombined: {}

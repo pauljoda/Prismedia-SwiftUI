@@ -8,8 +8,7 @@ struct EntityDetailBookProgressView: Equatable, View {
     let chapters: [BookChapterMapping]
     let chaptersAreLoading: Bool
     let chaptersErrorMessage: String?
-    let readingChapterProgressLabel: String?
-    let listeningChapterProgressLabel: String?
+    let chapterProgressLabel: String?
     let horizontalPadding: CGFloat
     let onContinueReading: () -> Void
     let onResumeReading: () -> Void
@@ -35,8 +34,7 @@ struct EntityDetailBookProgressView: Equatable, View {
             && lhs.chapters == rhs.chapters
             && lhs.chaptersAreLoading == rhs.chaptersAreLoading
             && lhs.chaptersErrorMessage == rhs.chaptersErrorMessage
-            && lhs.readingChapterProgressLabel == rhs.readingChapterProgressLabel
-            && lhs.listeningChapterProgressLabel == rhs.listeningChapterProgressLabel
+            && lhs.chapterProgressLabel == rhs.chapterProgressLabel
             && lhs.horizontalPadding == rhs.horizontalPadding
     }
 
@@ -82,8 +80,7 @@ struct EntityDetailBookProgressView: Equatable, View {
                 chapters: chapters,
                 isLoading: chaptersAreLoading,
                 errorMessage: chaptersErrorMessage,
-                readingProgressLabel: readingChapterProgressLabel,
-                listeningProgressLabel: listeningChapterProgressLabel,
+                progressLabel: chapterProgressLabel,
                 horizontalPadding: horizontalPadding,
                 onRead: onReadChapter,
                 onListen: onListenToChapter,
@@ -120,14 +117,12 @@ struct EntityDetailBookProgressView: Equatable, View {
                             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
                             title: "Chapter 1"
                         ),
-                        isCurrentReading: true,
-                        isCurrentAudio: true
+                        isCurrentProgress: true
                     )
                 ],
                 chaptersAreLoading: false,
                 chaptersErrorMessage: nil,
-                readingChapterProgressLabel: "42% read",
-                listeningChapterProgressLabel: "1:12:08 of 8:43:19",
+                chapterProgressLabel: "42% read",
                 horizontalPadding: PrismediaSpacing.extraLarge,
                 onContinueReading: {},
                 onResumeReading: {},

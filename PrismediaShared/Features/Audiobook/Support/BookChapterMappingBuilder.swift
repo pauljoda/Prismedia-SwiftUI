@@ -3,9 +3,7 @@ import Foundation
 struct BookChapterMappingBuilder: Sendable {
     func build(
         readableChapters: [ReadableBookChapter],
-        audioTracks: [MusicTrack],
-        currentReadableID: String? = nil,
-        currentAudioTrackID: UUID? = nil
+        audioTracks: [MusicTrack]
     ) -> [BookChapterMapping] {
         let readable = readableChapters.sorted(by: readableChapterSort)
         let tracks = audioTracks.sorted(by: audioTrackSort)
@@ -57,9 +55,7 @@ struct BookChapterMappingBuilder: Sendable {
                 readStartFraction: chapter.startFraction,
                 readEndFraction: chapter.endFraction,
                 readPageCount: chapter.pageCount,
-                audioTrack: track,
-                isCurrentReading: chapter.id == currentReadableID,
-                isCurrentAudio: currentAudioTrackID.map { track?.id == $0 } ?? false
+                audioTrack: track
             )
         }
 
@@ -76,9 +72,7 @@ struct BookChapterMappingBuilder: Sendable {
                     readStartFraction: nil,
                     readEndFraction: nil,
                     readPageCount: nil,
-                    audioTrack: track,
-                    isCurrentReading: false,
-                    isCurrentAudio: track.id == currentAudioTrackID
+                    audioTrack: track
                 )
             )
             nextOrder += 1
