@@ -30,7 +30,7 @@ public struct PlaybackStatisticsService {
                 thumbnailsByID: Dictionary(
                     uniqueKeysWithValues: thumbnails.map { ($0.id, $0) }
                 ),
-                state: response.totalEvents == 0 ? .empty : .content
+                state: response.totalEvents == 0 && response.watchSeconds <= 0 ? .empty : .content
             )
         } catch is CancellationError {
             return PlaybackStatisticsSnapshot(state: .idle)

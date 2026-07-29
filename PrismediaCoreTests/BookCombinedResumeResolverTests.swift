@@ -3,80 +3,24 @@ import XCTest
 @testable import PrismediaCore
 
 final class BookCombinedResumeResolverTests: XCTestCase {
-    func testCurrentListeningPositionMapsToTheMatchingReaderChapterProgression() throws {
-        let first = mappedChapter(order: 0, duration: 300)
-        let second = mappedChapter(order: 1, duration: 400)
-
-        let target = BookCombinedResumeResolver().resolveReadingTarget(
-            chapters: [first, second],
-            listening: BookListeningCheckpoint(
-                trackID: try XCTUnwrap(second.audioTrack?.id),
-                trackOffsetSeconds: 100,
-                publicationProgression: 0.6
-            )
+    func testCanonicalCursorResumesBothRenditionsInTheSameChapter() throws {
+        let chapters = [
+            mappedChapter(order: 0, duration: 300, startFraction: 0, endFraction: 0.5),
+            mappedChapter(order: 1, duration: 400, startFraction: 0.5, endFraction: 1),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: chapters,
+            readerMode: .paged,
+            hasReadableRendition: true
         )
+        let progress = canonicalProgress(index: 6_250, location: nil)
 
-        XCTAssertEqual(
-            target,
-            BookReaderLocationTarget(
-                location: "Text/chapter-2.xhtml",
-                progression: 0.25
-            )
-        )
-    }
-
-    func testTenOfTwentyReadingPagesStartsFiveSecondsBeforeTheAudioMidpoint() throws {
-        let chapter = mappedChapter(order: 0, duration: 600)
-        let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                reading: BookReadingCheckpoint(
-                    chapterLocation: "Text/chapter-1.xhtml",
-                    chapterProgression: 10.0 / 20.0,
-                    publicationProgression: 0.25
-                ),
-                listening: nil
-            )
-        )
-
-        XCTAssertEqual(target.readingTarget, .savedLocation)
-        XCTAssertEqual(target.audioTrackID, chapter.audioTrack?.id)
-        XCTAssertEqual(target.audioStartSeconds, 295, accuracy: 0.001)
-    }
-
-    func testReadingEstimateInsideTheFirstFiveSecondsStartsAudioAtTheBeginning() throws {
-        let chapter = mappedChapter(order: 0, duration: 100)
-        let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                reading: BookReadingCheckpoint(
-                    chapterLocation: "Text/chapter-1.xhtml",
-                    chapterProgression: 0.04,
-                    publicationProgression: 0.01
-                ),
-                listening: nil
-            )
-        )
-
-        XCTAssertEqual(target.audioStartSeconds, 0, accuracy: 0.001)
-    }
-
-    func testLaterListeningChapterDrivesContinuationAndEstimatesTheReaderPage() throws {
-        let first = mappedChapter(order: 0, duration: 300)
-        let second = mappedChapter(order: 1, duration: 400)
         let target = try XCTUnwrap(
             BookCombinedResumeResolver().resolveContinuation(
-                chapters: [first, second],
-                reading: BookReadingCheckpoint(
-                    chapterLocation: "Text/chapter-1.xhtml",
-                    chapterProgression: 0.9,
-                    publicationProgression: 0.45
-                ),
-                listening: BookListeningCheckpoint(
-                    trackID: try XCTUnwrap(second.audioTrack?.id),
-                    trackOffsetSeconds: 100,
-                    publicationProgression: 0.6
-                )
+                chapters: chapters,
+                mappings: mappings,
+                progress: progress
             )
         )
 
@@ -84,66 +28,55 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             target.readingTarget,
             .chapter(location: "Text/chapter-2.xhtml", progression: 0.25)
         )
-        XCTAssertEqual(target.audioTrackID, second.audioTrack?.id)
-        XCTAssertEqual(target.audioStartSeconds, 100, accuracy: 0.001)
+        XCTAssertEqual(target.audioTrackID, chapters[1].audioTrack?.id)
+        XCTAssertEqual(target.audioStartSeconds, 95, accuracy: 0.001)
     }
 
-    func testLaterReadingChapterWinsEvenWhenListeningHasMoreLocalProgress() throws {
-        let first = mappedChapter(order: 0, duration: 300)
-        let second = mappedChapter(order: 1, duration: 400)
+    func testExactReadableLocationIsPreservedWhileAudioUsesItsMappedRunway() throws {
+        let chapter = mappedChapter(
+            order: 0,
+            duration: 600,
+            startFraction: 0,
+            endFraction: 1
+        )
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: [chapter],
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+
         let target = try XCTUnwrap(
             BookCombinedResumeResolver().resolveContinuation(
-                chapters: [first, second],
-                reading: BookReadingCheckpoint(
-                    chapterLocation: "Text/chapter-2.xhtml",
-                    chapterProgression: 0.1,
-                    publicationProgression: 0.55
-                ),
-                listening: BookListeningCheckpoint(
-                    trackID: try XCTUnwrap(first.audioTrack?.id),
-                    trackOffsetSeconds: 270,
-                    publicationProgression: 0.45
-                )
+                chapters: [chapter],
+                mappings: mappings,
+                progress: canonicalProgress(index: 5_000, location: "{\"href\":\"chapter-1\"}")
             )
         )
 
         XCTAssertEqual(target.readingTarget, .savedLocation)
-        XCTAssertEqual(target.audioTrackID, second.audioTrack?.id)
-        XCTAssertEqual(target.audioStartSeconds, 35, accuracy: 0.001)
+        XCTAssertEqual(target.audioStartSeconds, 295, accuracy: 0.001)
     }
 
-    func testChapterCombinedUsesListeningWhenItIsFartherWithinThatChapter() throws {
-        let chapter = mappedChapter(order: 0, duration: 200)
-        let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                reading: BookReadingCheckpoint(
-                    chapterLocation: "Text/chapter-1.xhtml",
-                    chapterProgression: 0.25,
-                    publicationProgression: 0.1
-                ),
-                listening: BookListeningCheckpoint(
-                    trackID: try XCTUnwrap(chapter.audioTrack?.id),
-                    trackOffsetSeconds: 100,
-                    publicationProgression: 0.2
-                )
-            )
+    func testUnstartedBookBeginsBothRenditionsAtTheFirstChapter() throws {
+        let chapter = mappedChapter(
+            order: 0,
+            duration: 200,
+            startFraction: 0,
+            endFraction: 1
+        )
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: [chapter],
+            readerMode: .paged,
+            hasReadableRendition: true
         )
 
-        XCTAssertEqual(
-            target.readingTarget,
-            .chapter(location: "Text/chapter-1.xhtml", progression: 0.5)
-        )
-        XCTAssertEqual(target.audioStartSeconds, 100, accuracy: 0.001)
-    }
-
-    func testUnstartedChapterCombinedBeginsBothRenditionsAtTheChapterStart() throws {
-        let chapter = mappedChapter(order: 0, duration: 200)
         let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                reading: nil,
-                listening: nil
+            BookCombinedResumeResolver().resolveContinuation(
+                chapters: [chapter],
+                mappings: mappings,
+                progress: nil
             )
         )
 
@@ -154,40 +87,107 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         XCTAssertEqual(target.audioStartSeconds, 0, accuracy: 0.001)
     }
 
-    func testUnmappedSavedProgressDoesNotSilentlyResetContinuationToTheFirstChapter() {
-        let chapter = mappedChapter(order: 0, duration: 200)
+    func testDifferentChapterCursorDoesNotInventAnAudioPosition() {
+        let chapter = mappedChapter(
+            order: 0,
+            duration: 200,
+            startFraction: 0,
+            endFraction: 0.5
+        )
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: [chapter],
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
 
         XCTAssertNil(
             BookCombinedResumeResolver().resolveContinuation(
                 chapters: [chapter],
-                reading: BookReadingCheckpoint(
-                    chapterLocation: "Text/unmapped.xhtml",
-                    chapterProgression: 0.5,
-                    publicationProgression: 0.5
-                ),
-                listening: nil
-            )
-        )
-    }
-
-    func testListeningCheckpointInsideFirstFiveSecondsRestartsTheChapterAudio() throws {
-        let chapter = mappedChapter(order: 0, duration: 200)
-        let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                reading: nil,
-                listening: BookListeningCheckpoint(
-                    trackID: try XCTUnwrap(chapter.audioTrack?.id),
-                    trackOffsetSeconds: 4,
-                    publicationProgression: 0.01
+                mappings: mappings,
+                progress: EntityProgressCapability(
+                    currentEntityID: UUID(uuidString: "00000000-0000-0000-0000-000000000077"),
+                    unit: .page,
+                    index: 8,
+                    total: 20,
+                    mode: .paged,
+                    completedAt: nil,
+                    updatedAt: nil,
+                    workIndex: 8,
+                    workTotal: 20,
+                    location: nil
                 )
             )
         )
-
-        XCTAssertEqual(target.audioStartSeconds, 0, accuracy: 0.001)
     }
 
-    private func mappedChapter(order: Int, duration: Double) -> BookChapterMapping {
+    func testEntityChapterProgressResumesTheSavedReaderAndMatchingAudio() throws {
+        let chapterID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
+        let chapter = BookChapterMapping(
+            id: "chapter-1",
+            title: "Chapter 1",
+            order: 0,
+            depth: 0,
+            readTarget: .entityChapter(id: chapterID),
+            readPageCount: 20,
+            audioTrack: track(number: 1, duration: 200),
+            isCurrentReading: false,
+            isCurrentAudio: false
+        )
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: [chapter],
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+        let progress = EntityProgressCapability(
+            currentEntityID: chapterID,
+            unit: .page,
+            index: 10,
+            total: 20,
+            mode: .paged,
+            completedAt: nil,
+            updatedAt: nil,
+            workIndex: 10,
+            workTotal: 20,
+            location: nil
+        )
+
+        let target = try XCTUnwrap(
+            BookCombinedResumeResolver().resolveContinuation(
+                chapters: [chapter],
+                mappings: mappings,
+                progress: progress
+            )
+        )
+
+        XCTAssertEqual(target.readingTarget, .savedLocation)
+        XCTAssertEqual(target.audioStartSeconds, 100.263, accuracy: 0.001)
+    }
+
+    private let bookID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
+    private func canonicalProgress(index: Int, location: String?) -> EntityProgressCapability {
+        EntityProgressCapability(
+            currentEntityID: bookID,
+            unit: .cfi,
+            index: index,
+            total: 10_000,
+            mode: .paged,
+            completedAt: nil,
+            updatedAt: nil,
+            workIndex: index,
+            workTotal: 10_000,
+            location: location
+        )
+    }
+
+    private func mappedChapter(
+        order: Int,
+        duration: Double,
+        startFraction: Double,
+        endFraction: Double
+    ) -> BookChapterMapping {
         let number = order + 1
         return BookChapterMapping(
             id: "chapter-\(number)",
@@ -195,14 +195,20 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             order: order,
             depth: 0,
             readTarget: .epub(location: "Text/chapter-\(number).xhtml"),
-            audioTrack: MusicTrack(
-                id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", number))!,
-                title: "Chapter \(number)",
-                duration: duration,
-                sortOrder: order
-            ),
+            readStartFraction: startFraction,
+            readEndFraction: endFraction,
+            audioTrack: track(number: number, duration: duration),
             isCurrentReading: false,
             isCurrentAudio: false
+        )
+    }
+
+    private func track(number: Int, duration: Double) -> MusicTrack {
+        MusicTrack(
+            id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", number))!,
+            title: "Chapter \(number)",
+            duration: duration,
+            sortOrder: number - 1
         )
     }
 }

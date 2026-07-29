@@ -4,6 +4,7 @@
     public struct EPUBReaderView: View {
         @Environment(\.dismiss) private var dismiss
         @Environment(\.artworkPalette) private var artworkPalette
+        @Environment(\.scenePhase) private var scenePhase
         @State private var publication: EPUBPublication?
         @State private var currentChapter = 0
         @State private var currentChapterProgress = 0.0
@@ -71,10 +72,23 @@
                     .sheet(item: $presentedSheet) { sheet in
                         fallbackSheet(sheet)
                     }
-                    .task { await load() }
+                    .task {
+                        await load()
+                        guard publication != nil else { return }
+                        progressWriter.beginActivity()
+                        await runActivityHeartbeats()
+                    }
+                    .onChange(of: scenePhase) { _, phase in
+                        if phase == .active {
+                            progressWriter.beginActivity()
+                        } else {
+                            saveProgress(stoppingActivity: true)
+                            Task { await progressWriter.flush() }
+                        }
+                    }
                     .onDisappear {
                         progressSaveTask?.cancel()
-                        saveProgress()
+                        saveProgress(stoppingActivity: true)
                         Task { await progressWriter.flush() }
                     }
                     .accessibilityIdentifier("epub-reader.content")
@@ -358,7 +372,7 @@
             onReady()
         }
 
-        private func saveProgress() {
+        private func saveProgress(stoppingActivity: Bool = false) {
             guard let publication,
                 publication.chapters.indices.contains(currentChapter)
             else { return }
@@ -374,17 +388,29 @@
             )
             let bookProgression = DocumentReaderProgressMapper.epubBookProgression(
                 chapterIndex: currentChapter,
-                chapterCount: publication.chapters.count,
+                chapterContentSizes: publication.chapters.map(\.contentSize),
                 chapterProgression: currentChapterProgress
             )
             let request = DocumentReaderProgressMapper.epubRequest(
                 bookID: useCase.book.id,
                 progression: bookProgression,
                 mode: .scrolled,
-                location: nil,
+                location: location,
                 closing: false
             )
-            progressWriter.queue(bookID: useCase.book.id, request: request)
+            progressWriter.queue(
+                bookID: useCase.book.id,
+                request: request,
+                stoppingActivity: stoppingActivity
+            )
+        }
+
+        private func runActivityHeartbeats() async {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                saveProgress()
+            }
         }
 
         private func selectChapter(_ index: Int) {
@@ -417,7 +443,7 @@
         private func close() {
             Task {
                 progressSaveTask?.cancel()
-                saveProgress()
+                saveProgress(stoppingActivity: true)
                 await progressWriter.flush()
                 dismiss()
             }

@@ -4,6 +4,7 @@
     struct ReadiumEPUBReaderView: View {
         @Environment(\.colorScheme) private var colorScheme
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.scenePhase) private var scenePhase
         @State private var session: ReadiumEPUBReaderSession
         @State private var preferences: EPUBReaderPreferences
         @State private var presentedSheet: EPUBReaderSheet?
@@ -111,6 +112,9 @@
                 session.onContentTap = { contentTapped() }
                 await load()
                 scheduleChromeHide()
+                guard !isLoading, errorMessage == nil else { return }
+                session.beginActivity()
+                await runActivityHeartbeats()
             }
             .onChange(of: preferences) { _, value in
                 session.apply(value, useDarkSystemTheme: colorScheme == .dark)
@@ -131,6 +135,13 @@
             .onChange(of: bookmarksState.toggleBookmarkID) {
                 session.resetToggleBookmarkNavigation()
                 isToggleReturnAvailable = false
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    session.beginActivity()
+                } else {
+                    Task { await session.pauseActivity() }
+                }
             }
             .onDisappear {
                 chromeTask?.cancel()
@@ -375,6 +386,14 @@
                     chrome.hide()
                 }
                 chromeTask = nil
+            }
+        }
+
+        private func runActivityHeartbeats() async {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                session.heartbeat()
             }
         }
     }

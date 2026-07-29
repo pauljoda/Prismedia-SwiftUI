@@ -51,10 +51,8 @@ struct EntityDetailBookProgressView: Equatable, View {
                     onContinueReading: onContinueReading,
                     onContinueListening: onContinueListening,
                     onContinueCombined: onContinueCombined,
-                    onStartReadingOver: onStartReadingOver,
-                    onStartListeningOver: onStartListeningOver,
-                    onToggleReadingCompletion: onToggleReadingCompletion,
-                    onToggleListeningCompletion: onToggleListeningCompletion,
+                    onStartOver: onStartReadingOver,
+                    onToggleCompletion: onToggleReadingCompletion,
                     onDismissReadingError: onDismissReadingError,
                     onDismissListeningError: onDismissListeningError
                 )

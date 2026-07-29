@@ -4,7 +4,7 @@ struct PlaybackStatisticsView: View {
     @Binding private var navigationPath: [EntityLink]
     @State private var snapshot = PlaybackStatisticsSnapshot()
     @State private var timeframe = StatisticsTimeframe.year
-    @State private var eventFilter = StatisticsEventFilter.completed
+    @State private var eventFilter = StatisticsEventFilter.all
     @State private var kindFilter: EntityKind?
     @State private var loadedFilterKey: String?
 
@@ -93,6 +93,13 @@ struct PlaybackStatisticsView: View {
             spacing: PrismediaSpacing.medium
         ) {
             metric("Total", value: response?.totalEvents, systemImage: "waveform.path.ecg")
+            durationMetric("Activity", seconds: response?.watchSeconds, systemImage: "timer")
+            if let readingSeconds = response?.readingSeconds, readingSeconds > 0 {
+                durationMetric("Reading", seconds: readingSeconds, systemImage: "book.fill")
+            }
+            if let listeningSeconds = response?.listeningSeconds, listeningSeconds > 0 {
+                durationMetric("Audiobooks", seconds: listeningSeconds, systemImage: "headphones")
+            }
             metric("Plays", value: response?.completedCount, systemImage: "play.fill")
             metric("Skips", value: response?.skippedCount, systemImage: "forward.end.fill")
             metric("Items", value: response?.distinctEntityCount, systemImage: "trophy.fill")
@@ -106,9 +113,9 @@ struct PlaybackStatisticsView: View {
             PrismediaLoadingView("Loading playback history…")
         case .empty:
             ContentUnavailableView(
-                "No Playback History Yet",
+                "No Activity Yet",
                 systemImage: "clock.arrow.circlepath",
-                description: Text("Completed and skipped media will appear here.")
+                description: Text("Reading, listening, completed, and skipped media will appear here.")
             )
             .frame(maxWidth: .infinity, minHeight: 260)
         case .failed:
@@ -142,6 +149,26 @@ struct PlaybackStatisticsView: View {
         .padding(PrismediaSpacing.large)
         .background(
             PrismediaColor.elevatedContentBackground, in: RoundedRectangle(cornerRadius: PrismediaRadius.control))
+    }
+
+    private func durationMetric(
+        _ title: String,
+        seconds: Double?,
+        systemImage: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(seconds.map(MusicPresentation.clockTime) ?? "—")
+                .font(.title.bold().monospacedDigit())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(PrismediaSpacing.large)
+        .background(
+            PrismediaColor.elevatedContentBackground,
+            in: RoundedRectangle(cornerRadius: PrismediaRadius.control)
+        )
     }
 
     private func dailyActivity(_ buckets: [PlaybackStatisticsBucket]) -> some View {

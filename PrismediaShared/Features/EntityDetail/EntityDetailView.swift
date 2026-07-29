@@ -30,6 +30,7 @@ public struct EntityDetailView: View {
     @State var areBookChaptersLoading = false
     @State var bookChaptersErrorMessage: String?
     @State var mappedBookChapters: [BookChapterMapping] = []
+    @State var hasLoadedBookProgressData = false
     @State var videoProgressEpisode: EntityDetail?
     @State var liveVideoResumeSeconds: Double?
     @State var resolvedVideoTechnicalDetail: EntityDetail?

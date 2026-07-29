@@ -3,6 +3,7 @@
 
     public struct ComicReaderView: View {
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.scenePhase) private var scenePhase
 
         @State private var screenState: BookReaderScreenState = .loading
         @State private var currentIndex = 0
@@ -40,6 +41,9 @@
                 .task {
                     await load()
                     scheduleChromeHide()
+                    guard manifest != nil else { return }
+                    progressWriter.beginActivity()
+                    await runActivityHeartbeats()
                 }
                 .onChange(of: chrome.isVisible) {
                     scheduleChromeHide()
@@ -50,8 +54,23 @@
                 .onChange(of: presentedSheet) {
                     updateChromePin()
                 }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active {
+                        progressWriter.beginActivity()
+                    } else {
+                        queueProgressSave(
+                            allowAutomaticCompletion: false,
+                            stoppingActivity: true
+                        )
+                        Task { await progressWriter.flush() }
+                    }
+                }
                 .onDisappear {
                     chromeTask?.cancel()
+                    queueProgressSave(
+                        allowAutomaticCompletion: false,
+                        stoppingActivity: true
+                    )
                     Task { await progressWriter.flush() }
                 }
         }
@@ -324,7 +343,8 @@
         private func queueProgressSave(
             completed: Bool? = nil,
             reset: Bool = false,
-            allowAutomaticCompletion: Bool = true
+            allowAutomaticCompletion: Bool = true,
+            stoppingActivity: Bool = false
         ) {
             guard let manifest,
                 let request = useCase.progressRequest(
@@ -337,7 +357,19 @@
                 )
             else { return }
 
-            progressWriter.queue(bookID: manifest.bookID, request: request)
+            progressWriter.queue(
+                bookID: manifest.bookID,
+                request: request,
+                stoppingActivity: stoppingActivity
+            )
+        }
+
+        private func runActivityHeartbeats() async {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                queueProgressSave(allowAutomaticCompletion: false)
+            }
         }
 
         private func handleEndAction(for manifest: BookReaderManifest) {
@@ -457,7 +489,7 @@
 
         private func close() {
             Task {
-                queueProgressSave()
+                queueProgressSave(stoppingActivity: true)
                 await progressWriter.flush()
                 onDismiss()
                 dismiss()

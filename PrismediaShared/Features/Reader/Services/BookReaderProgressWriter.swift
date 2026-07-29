@@ -9,13 +9,33 @@ final class BookReaderProgressWriter {
     private let service: any BookReaderServicing
     private var queuedWrite: (bookID: UUID, request: EntityProgressUpdateRequest)?
     private var drainTask: Task<Void, Never>?
+    private var activityClock = BookActivityClock()
 
     init(service: any BookReaderServicing) {
         self.service = service
     }
 
-    func queue(bookID: UUID, request: EntityProgressUpdateRequest) {
-        queuedWrite = (bookID, request)
+    func beginActivity() {
+        activityClock.start()
+    }
+
+    func queue(
+        bookID: UUID,
+        request: EntityProgressUpdateRequest,
+        stoppingActivity: Bool = false
+    ) {
+        let activitySeconds = stoppingActivity
+            ? activityClock.stop()
+            : activityClock.take()
+        let accumulatedActivity =
+            (queuedWrite?.request.activitySeconds ?? 0) + (activitySeconds ?? 0)
+        queuedWrite = (
+            bookID,
+            request.recordingActivity(
+                seconds: accumulatedActivity > 0 ? accumulatedActivity : nil,
+                kind: .reading
+            )
+        )
         guard drainTask == nil else { return }
         drainTask = Task { await drain() }
     }

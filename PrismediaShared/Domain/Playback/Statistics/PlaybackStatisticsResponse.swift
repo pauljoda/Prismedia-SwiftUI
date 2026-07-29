@@ -7,6 +7,9 @@ public struct PlaybackStatisticsResponse: Decodable, Equatable, Sendable {
     public let completedCount: Int
     public let skippedCount: Int
     public let distinctEntityCount: Int
+    public let watchSeconds: Double
+    public let readingSeconds: Double
+    public let listeningSeconds: Double
     public let topEntities: [PlaybackStatisticsEntity]
     public let recentEvents: [PlaybackStatisticsEvent]
     public let dailyEvents: [PlaybackStatisticsBucket]

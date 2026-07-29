@@ -144,17 +144,12 @@ extension EntityDetailView {
             }
         #endif
 
-        if readingState.progressPresentation?.canResume == true {
-            actions.removeAll { $0.id == .read || $0.id == .resume }
-        }
         if detail.bookFormat == .audio {
             actions.removeAll { $0.id == .read || $0.id == .resume }
         }
 
         #if os(iOS) || os(macOS)
-            if let presentation = audiobookPresentation(for: detail),
-                presentation.actionTitle != "Continue Listening"
-            {
+            if let presentation = audiobookPresentation(for: detail) {
                 actions.append(
                     EntityDetailAction(
                         id: .listen,
@@ -201,10 +196,10 @@ extension EntityDetailView {
                 let reader = dependencies.readerService
             else {
                 readableBookChapters = []
-                mappedBookChapters = []
                 currentReadableChapterID = nil
                 areBookChaptersLoading = false
                 bookChaptersErrorMessage = nil
+                refreshBookChapterMappings(for: detail)
                 return
             }
 
@@ -232,9 +227,9 @@ extension EntityDetailView {
                 return
             } catch {
                 readableBookChapters = []
-                mappedBookChapters = []
                 currentReadableChapterID = nil
                 bookChaptersErrorMessage = error.localizedDescription
+                refreshBookChapterMappings(for: detail)
             }
         #else
             readableBookChapters = []

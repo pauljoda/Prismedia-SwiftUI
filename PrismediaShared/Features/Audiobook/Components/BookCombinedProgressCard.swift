@@ -7,24 +7,19 @@ struct BookCombinedProgressCard: View {
     let onContinueReading: () -> Void
     let onContinueListening: () -> Void
     let onContinueCombined: () -> Void
-    let onStartReadingOver: () -> Void
-    let onStartListeningOver: () -> Void
-    let onToggleReadingCompletion: () -> Void
-    let onToggleListeningCompletion: () -> Void
+    let onStartOver: () -> Void
+    let onToggleCompletion: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
             header
-            progressRows
-            Text(presentation.combinedContextLabel)
-                .font(.footnote)
-                .foregroundStyle(PrismediaColor.textSecondary)
+            progress
             actions
         }
         .padding(PrismediaSpacing.extraLarge)
         .frame(maxWidth: .infinity, alignment: .leading)
         .prismediaPanel()
-        .disabled(presentation.isBusy)
+        .disabled(presentation.isBusy || presentation.isLoading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("combined-book-progress")
     }
@@ -35,7 +30,6 @@ struct BookCombinedProgressCard: View {
                 Text("Your progress")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PrismediaColor.textSecondary)
-                    .textCase(.uppercase)
                 Text("Read & Listen")
                     .font(.title3.bold())
                     .foregroundStyle(PrismediaColor.textPrimary)
@@ -46,57 +40,67 @@ struct BookCombinedProgressCard: View {
                 ProgressView()
                     .controlSize(.small)
                     .tint(artworkPrimaryAccent)
-                    .accessibilityLabel("Updating progress")
+                    .accessibilityLabel(
+                        presentation.isLoading ? "Loading progress" : "Updating progress"
+                    )
             }
             progressOptions
         }
     }
 
-    private var progressRows: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-            progressRow(
-                title: "Reading",
-                systemImage: "book.fill",
-                percent: presentation.readingPercent,
-                position: presentation.readingPositionLabel
-            )
-            progressRow(
-                title: "Listening",
-                systemImage: "headphones",
-                percent: presentation.listeningPercent,
-                position: presentation.listeningPositionLabel
-            )
-        }
-    }
-
-    private func progressRow(
-        title: String,
-        systemImage: String,
-        percent: Int,
-        position: String?
-    ) -> some View {
+    private var progress: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
             HStack {
-                Label(title, systemImage: systemImage)
+                Label("Overall", systemImage: "book.pages")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PrismediaColor.textPrimary)
                 Spacer(minLength: PrismediaSpacing.large)
-                Text("\(percent)%")
+                Text(presentation.isLoading ? "100%" : "\(presentation.percent)%")
                     .font(.headline.monospacedDigit())
                     .foregroundStyle(PrismediaColor.textPrimary)
+                    .redacted(reason: presentation.isLoading ? .placeholder : [])
+                    .frame(minWidth: 48, alignment: .trailing)
             }
-            ProgressView(value: Double(percent), total: 100)
+            ProgressView(value: Double(presentation.percent), total: 100)
                 .tint(artworkPrimaryAccent)
-            if let position {
-                Text(position)
-                    .font(.caption)
-                    .foregroundStyle(PrismediaColor.textSecondary)
-                    .lineLimit(2)
-            }
+                .opacity(presentation.isLoading ? 0 : 1)
+                .overlay {
+                    if presentation.isLoading {
+                        Capsule()
+                            .fill(PrismediaColor.controlFill)
+                            .redacted(reason: .placeholder)
+                    }
+                }
+                .frame(height: 4)
+            Text(presentation.positionLabel ?? "Book position")
+                .font(.caption)
+                .foregroundStyle(PrismediaColor.textSecondary)
+                .lineLimit(2)
+                .opacity(
+                    presentation.positionLabel == nil && !presentation.isLoading ? 0 : 1
+                )
+                .redacted(reason: presentation.isLoading ? .placeholder : [])
+                .accessibilityHidden(presentation.positionLabel == nil)
+            Label(
+                presentation.activitySeconds.map {
+                    "\(MusicPresentation.clockTime($0)) total activity"
+                } ?? "Book activity",
+                systemImage: "timer"
+            )
+            .font(.caption)
+            .foregroundStyle(PrismediaColor.textSecondary)
+            .opacity(
+                presentation.activitySeconds == nil && !presentation.isLoading ? 0 : 1
+            )
+            .redacted(reason: presentation.isLoading ? .placeholder : [])
+            .accessibilityHidden(presentation.activitySeconds == nil)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityValue("\(percent) percent")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Book progress")
+        .accessibilityValue(
+            presentation.isLoading ? "Loading book progress" : "\(presentation.percent) percent"
+        )
     }
 
     private var actions: some View {
@@ -128,7 +132,7 @@ struct BookCombinedProgressCard: View {
                 action: onContinueCombined
             )
             .accessibilityHint(
-                "Opens the reader and starts the audiobook near the furthest saved position"
+                "Opens the reader and starts the audiobook near the saved Book position"
             )
             .accessibilityIdentifier("combined-book-progress.continue-combined")
         }
@@ -137,22 +141,12 @@ struct BookCombinedProgressCard: View {
 
     private var progressOptions: some View {
         Menu {
-            Section("Reading") {
-                Button("Start Reading Over", systemImage: "arrow.counterclockwise", action: onStartReadingOver)
-                Button(
-                    presentation.readingStatus == .completed ? "Mark Unread" : "Mark Read",
-                    systemImage: presentation.readingStatus == .completed ? "circle" : "checkmark.circle",
-                    action: onToggleReadingCompletion
-                )
-            }
-            Section("Listening") {
-                Button("Start Listening Over", systemImage: "arrow.counterclockwise", action: onStartListeningOver)
-                Button(
-                    presentation.listeningStatus == .completed ? "Mark Unlistened" : "Mark Listened",
-                    systemImage: presentation.listeningStatus == .completed ? "circle" : "checkmark.circle",
-                    action: onToggleListeningCompletion
-                )
-            }
+            Button("Start Over", systemImage: "arrow.counterclockwise", action: onStartOver)
+            Button(
+                presentation.status == .completed ? "Mark Incomplete" : "Mark Complete",
+                systemImage: presentation.status == .completed ? "circle" : "checkmark.circle",
+                action: onToggleCompletion
+            )
         } label: {
             Label("Progress Options", systemImage: "ellipsis")
                 .labelStyle(.iconOnly)
@@ -169,23 +163,35 @@ struct BookCombinedProgressCard: View {
         PreviewShell {
             BookCombinedProgressCard(
                 presentation: BookCombinedProgressPresentation(
-                    reading: ReadingProgressPresentation(
-                        singleFileProgress: EntityProgressCapability(
-                            currentEntityID: UUID(), unit: .cfi, index: 5_000, total: 10_000,
-                            mode: .paged, completedAt: nil, updatedAt: nil, workIndex: nil,
-                            workTotal: nil, location: "Text/chapter-5.xhtml"
-                        )
+                    progress: EntityProgressCapability(
+                        currentEntityID: UUID(), unit: .cfi, index: 5_000, total: 10_000,
+                        mode: .paged, completedAt: nil, updatedAt: nil, workIndex: nil,
+                        workTotal: nil, location: "Text/chapter-5.xhtml"
                     ),
-                    listening: AudiobookPlaybackPresentation(
-                        totalDuration: 36_000, partCount: 12, resumeSeconds: 12_400,
-                        isCompleted: false, isCurrentAudiobook: false, isPlaying: false
-                    ),
-                    combinedUsesReadingPosition: true,
+                    reading: nil,
+                    activitySeconds: 7_420,
+                    isLoading: false,
                     isBusy: false
                 ),
                 onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
-                onStartReadingOver: {}, onStartListeningOver: {},
-                onToggleReadingCompletion: {}, onToggleListeningCompletion: {}
+                onStartOver: {}, onToggleCompletion: {}
+            )
+            .padding(PrismediaSpacing.extraLarge)
+        }
+    }
+
+    #Preview("Combined Book Progress · Loading") {
+        PreviewShell {
+            BookCombinedProgressCard(
+                presentation: BookCombinedProgressPresentation(
+                    progress: nil,
+                    reading: nil,
+                    activitySeconds: nil,
+                    isLoading: true,
+                    isBusy: true
+                ),
+                onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
+                onStartOver: {}, onToggleCompletion: {}
             )
             .padding(PrismediaSpacing.extraLarge)
         }

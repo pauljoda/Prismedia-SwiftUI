@@ -56,6 +56,104 @@ final class EPUBChapterContentsServiceTests: XCTestCase {
 
         XCTAssertEqual(currentChapterID, chapter.id)
     }
+
+    func testImageArchiveChaptersExposePageCountsAndCanonicalCurrentChapter() async throws {
+        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let chapterID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!
+        let pages = (0..<3).map { index in
+            EntityThumbnail(
+                id: UUID(),
+                kind: .bookPage,
+                title: "Page \(index + 1)",
+                parentEntityID: chapterID,
+                sortOrder: index
+            )
+        }
+        let chapterThumbnail = EntityThumbnail(
+            id: chapterID,
+            kind: .bookChapter,
+            title: "Chapter One",
+            parentEntityID: bookID,
+            sortOrder: 0
+        )
+        let book = EntityDetail(
+            id: bookID,
+            kind: .book,
+            title: "Comic",
+            parentEntityID: nil,
+            sortOrder: nil,
+            bookFormat: .imageArchive,
+            hasSourceMedia: false,
+            capabilities: [
+                .progress(
+                    EntityProgressCapability(
+                        currentEntityID: chapterID,
+                        unit: .page,
+                        index: 1,
+                        total: 3,
+                        mode: .paged,
+                        completedAt: nil,
+                        updatedAt: nil,
+                        workIndex: 1,
+                        workTotal: 3,
+                        location: nil
+                    )
+                )
+            ],
+            childrenByKind: [
+                EntityGroup(
+                    kind: .bookChapter,
+                    label: "Chapters",
+                    entities: [chapterThumbnail],
+                    code: nil
+                )
+            ],
+            relationships: []
+        )
+        let chapter = EntityDetail(
+            id: chapterID,
+            kind: .bookChapter,
+            title: "Chapter One",
+            parentEntityID: bookID,
+            sortOrder: 0,
+            hasSourceMedia: false,
+            capabilities: [],
+            childrenByKind: [
+                EntityGroup(kind: .bookPage, label: "Pages", entities: pages, code: nil)
+            ],
+            relationships: []
+        )
+        let service = EPUBChapterContentsService(
+            reader: ImageChapterReader(values: [chapterID: chapter])
+        )
+
+        let contents = try await service.load(book: book)
+
+        XCTAssertEqual(contents.currentChapterID, chapterID.uuidString.lowercased())
+        XCTAssertEqual(contents.chapters.count, 1)
+        XCTAssertEqual(contents.chapters[0].target, .entityChapter(id: chapterID))
+        XCTAssertEqual(contents.chapters[0].pageCount, 3)
+    }
+}
+
+private struct ImageChapterReader: BookReaderServicing {
+    let values: [UUID: EntityDetail]
+
+    func loadEntity(id: UUID) async throws -> EntityDetail {
+        guard let value = values[id] else { throw UnusedChapterReaderError.unexpectedCall }
+        return value
+    }
+
+    func loadPageData(id: UUID) async throws -> Data {
+        throw UnusedChapterReaderError.unexpectedCall
+    }
+
+    func updateReadingProgress(
+        id: UUID,
+        request: EntityProgressUpdateRequest
+    ) async throws {
+        throw UnusedChapterReaderError.unexpectedCall
+    }
 }
 
 private struct UnusedChapterReader: BookReaderServicing {

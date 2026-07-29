@@ -12,6 +12,25 @@ public struct DocumentReaderProgressMapper: Sendable {
         return (Double(boundedIndex) + boundedChapterProgression) / Double(boundedCount)
     }
 
+    public static func epubBookProgression(
+        chapterIndex: Int,
+        chapterContentSizes: [Int],
+        chapterProgression: Double
+    ) -> Double {
+        let sizes = chapterContentSizes.map { max(0, $0) }
+        let total = sizes.reduce(0, +)
+        guard total > 0, sizes.indices.contains(chapterIndex) else {
+            return epubBookProgression(
+                chapterIndex: chapterIndex,
+                chapterCount: sizes.count,
+                chapterProgression: chapterProgression
+            )
+        }
+        let elapsed = sizes.prefix(chapterIndex).reduce(0, +)
+        let local = Double(sizes[chapterIndex]) * min(max(chapterProgression, 0), 1)
+        return min(max(0, (Double(elapsed) + local) / Double(total)), 1)
+    }
+
     public static func epubRequest(
         bookID: UUID,
         progression: Double,

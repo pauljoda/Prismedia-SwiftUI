@@ -282,7 +282,23 @@
 
         func flush(closing: Bool) async {
             if shouldPersistReadingLocation {
-                saveProgress(closing: closing)
+                saveProgress(closing: closing, stoppingActivity: closing)
+            }
+            await progressWriter.flush()
+        }
+
+        func beginActivity() {
+            progressWriter.beginActivity()
+        }
+
+        func heartbeat() {
+            guard shouldPersistReadingLocation else { return }
+            saveProgress(closing: false)
+        }
+
+        func pauseActivity() async {
+            if shouldPersistReadingLocation {
+                saveProgress(closing: false, stoppingActivity: true)
             }
             await progressWriter.flush()
         }
@@ -515,15 +531,20 @@
             onToggleReturnAvailabilityChange?(toggleNavigation.isReturnAvailable)
         }
 
-        private func saveProgress(closing: Bool) {
+        private func saveProgress(closing: Bool, stoppingActivity: Bool = false) {
+            let location = navigator?.currentLocation.flatMap { try? $0.jsonString() }
             let request = DocumentReaderProgressMapper.epubRequest(
                 bookID: book.id,
                 progression: progression,
                 mode: preferences.flow,
-                location: nil,
+                location: location,
                 closing: closing
             )
-            progressWriter.queue(bookID: book.id, request: request)
+            progressWriter.queue(
+                bookID: book.id,
+                request: request,
+                stoppingActivity: stoppingActivity
+            )
         }
 
         private func updateProgression(_ progression: Double) {

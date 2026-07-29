@@ -5,6 +5,7 @@
     public struct PDFReaderView: View {
         @Environment(\.dismiss) private var dismiss
         @Environment(\.artworkPalette) private var artworkPalette
+        @Environment(\.scenePhase) private var scenePhase
         @State private var document: PDFDocument?
         @State private var currentPage = 0
         @State private var layoutMode: PDFReaderLayoutMode
@@ -46,7 +47,12 @@
                 .sheet(item: $presentedSheet) { sheet in
                     readerSheet(sheet)
                 }
-                .task { await load() }
+                .task {
+                    await load()
+                    guard document != nil else { return }
+                    progressWriter.beginActivity()
+                    await runActivityHeartbeats()
+                }
                 .onChange(of: currentPage) { _, _ in saveProgress() }
                 .onChange(of: layoutMode) { _, _ in saveProgress() }
                 .onChange(of: searchQuery) { _, query in
@@ -54,9 +60,17 @@
                     searchMatches = []
                     selectedSearchResult = nil
                 }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active {
+                        progressWriter.beginActivity()
+                    } else {
+                        saveProgress(stoppingActivity: true)
+                        Task { await progressWriter.flush() }
+                    }
+                }
                 .onDisappear {
                     searchTask?.cancel()
-                    saveProgress()
+                    saveProgress(stoppingActivity: true)
                     Task { await progressWriter.flush() }
                 }
                 .accessibilityIdentifier("pdf-reader.content")
@@ -153,7 +167,7 @@
             }
         }
 
-        private func saveProgress() {
+        private func saveProgress(stoppingActivity: Bool = false) {
             guard let document else { return }
             let request = DocumentReaderProgressMapper.request(
                 bookID: useCase.book.id,
@@ -163,7 +177,19 @@
                 mode: layoutMode.readerMode,
                 location: nil
             )
-            progressWriter.queue(bookID: useCase.book.id, request: request)
+            progressWriter.queue(
+                bookID: useCase.book.id,
+                request: request,
+                stoppingActivity: stoppingActivity
+            )
+        }
+
+        private func runActivityHeartbeats() async {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                saveProgress()
+            }
         }
 
         private var tableOfContentsButton: some View {
@@ -316,7 +342,7 @@
 
         private func close() {
             Task {
-                saveProgress()
+                saveProgress(stoppingActivity: true)
                 await progressWriter.flush()
                 dismiss()
             }

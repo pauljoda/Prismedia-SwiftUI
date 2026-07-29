@@ -15,7 +15,7 @@ extension EntityDetailView {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id
             else { return nil }
-            let playback = detail.capability(EntityPlaybackCapability.self)
+            let progress: EntityProgressCapability? = detail.capability()
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
@@ -26,13 +26,23 @@ extension EntityDetailView {
                     trackOffsetSeconds: musicPlayer.elapsedTime
                 )
             } else {
-                currentResume = playback?.resumeSeconds ?? 0
+                let resume = BookCombinedResumeResolver().resolveAudioResume(
+                    chapters: mappedBookChapters,
+                    mappings: bookProgressMappings(for: detail),
+                    progress: progress
+                )
+                currentResume = resume.map {
+                    projection.absoluteTime(
+                        trackID: $0.trackID,
+                        trackOffsetSeconds: $0.trackOffsetSeconds
+                    )
+                } ?? 0
             }
             return AudiobookPlaybackPresentation(
                 totalDuration: projection.totalDuration,
                 partCount: projection.tracks.count,
                 resumeSeconds: currentResume,
-                isCompleted: playback?.completedAt != nil,
+                isCompleted: progress?.completedAt != nil,
                 isCurrentAudiobook: isCurrent,
                 isPlaying: musicPlayer.isPlaying,
                 isBusy: isListeningMutating || isAudiobookLoading
@@ -43,7 +53,8 @@ extension EntityDetailView {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id
             else { return }
-            let completed = detail.capability(EntityPlaybackCapability.self)?.completedAt != nil
+            let progress: EntityProgressCapability? = detail.capability()
+            let completed = progress?.completedAt != nil
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
@@ -55,8 +66,20 @@ extension EntityDetailView {
                 Task { await startListeningOver(detail) }
                 return
             }
-            let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
-            play(projection, resumeSeconds: savedResume)
+            let resume = BookCombinedResumeResolver().resolveAudioResume(
+                chapters: mappedBookChapters,
+                mappings: bookProgressMappings(for: detail),
+                progress: progress
+            )
+            if let resume {
+                play(
+                    projection,
+                    startingAt: resume.trackID,
+                    startSeconds: resume.trackOffsetSeconds
+                )
+            } else {
+                play(projection, resumeSeconds: 0)
+            }
         }
 
         func play(_ projection: AudiobookPlaybackProjection, resumeSeconds: Double) {
@@ -80,7 +103,8 @@ extension EntityDetailView {
                 context: MusicPlaybackContext(
                     playbackOwnerEntityID: projection.bookID,
                     playbackOwnerTitle: projection.title,
-                    playbackOwnerEntityKind: .book
+                    playbackOwnerEntityKind: .book,
+                    bookProgressMappings: currentDetail.map { bookProgressMappings(for: $0) }
                 ),
                 startSeconds: startSeconds
             )
@@ -90,6 +114,7 @@ extension EntityDetailView {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id,
                 let playbackService = dependencies.audioPlaybackService,
+                let mapping = bookProgressMappings(for: detail).first,
                 !isListeningMutating
             else { return }
             isListeningMutating = true
@@ -97,12 +122,20 @@ extension EntityDetailView {
             do {
                 await musicPlayer.flushPendingPlaybackReports()
                 musicPlayer.setAudiobookCompletionState(false)
-                try await playbackService.updateEntityPlayback(
+                try await playbackService.updateEntityProgress(
                     id: detail.id,
-                    resumeSeconds: 0,
-                    completed: false
+                    request: EntityProgressUpdateRequest(
+                        currentEntityID: mapping.currentEntityID,
+                        unit: mapping.unit,
+                        index: mapping.startIndex,
+                        total: mapping.total,
+                        mode: mapping.mode,
+                        completed: false,
+                        reset: true,
+                        location: nil
+                    )
                 )
-                play(projection, resumeSeconds: 0)
+                play(projection, startingAt: mapping.trackID, startSeconds: 0)
                 await refreshAudiobookDetail()
             } catch {
                 audiobookErrorMessage = error.localizedDescription
@@ -111,25 +144,30 @@ extension EntityDetailView {
         }
 
         func toggleListeningCompletion(_ detail: EntityDetail) async {
-            guard let presentation = audiobookPresentation(for: detail),
+            guard let progress: EntityProgressCapability = detail.capability(),
                 let playbackService = dependencies.audioPlaybackService,
                 !isListeningMutating
             else { return }
             isListeningMutating = true
             audiobookErrorMessage = nil
-            let marksCompleted = presentation.progress.status != .completed
+            let marksCompleted = progress.completedAt == nil
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
             do {
                 await musicPlayer.flushPendingPlaybackReports()
                 if isCurrent { musicPlayer.setAudiobookCompletionState(marksCompleted) }
-                try await playbackService.updateEntityPlayback(
+                try await playbackService.updateEntityProgress(
                     id: detail.id,
-                    resumeSeconds: presentation.progress.status == .completed
-                        ? 0
-                        : currentAudiobookResume(for: detail),
-                    completed: marksCompleted
+                    request: EntityProgressUpdateRequest(
+                        currentEntityID: progress.currentEntityID ?? detail.id,
+                        unit: progress.unit,
+                        index: progress.index,
+                        total: progress.total,
+                        mode: progress.mode,
+                        completed: marksCompleted,
+                        location: progress.location
+                    )
                 )
                 await refreshAudiobookDetail()
             } catch {
@@ -150,7 +188,18 @@ extension EntityDetailView {
                     trackOffsetSeconds: musicPlayer.elapsedTime
                 )
             }
-            return detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+            let progress: EntityProgressCapability? = detail.capability()
+            let resume = BookCombinedResumeResolver().resolveAudioResume(
+                chapters: mappedBookChapters,
+                mappings: bookProgressMappings(for: detail),
+                progress: progress
+            )
+            return resume.map {
+                projection.absoluteTime(
+                    trackID: $0.trackID,
+                    trackOffsetSeconds: $0.trackOffsetSeconds
+                )
+            } ?? 0
         }
 
         func refreshAudiobookDetail() async {

@@ -13,6 +13,7 @@ public protocol MusicPlaybackServicing: Sendable {
         durationSeconds: Double?
     ) async throws
     func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws
+    func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws
 }
 
 extension MusicPlaybackServicing {
@@ -24,4 +25,5 @@ extension MusicPlaybackServicing {
         positionSeconds: Double?,
         durationSeconds: Double?
     ) async throws {}
+    public func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {}
 }

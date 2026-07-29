@@ -54,6 +54,9 @@ struct BookChapterMappingBuilder: Sendable {
                 order: chapter.order,
                 depth: chapter.depth,
                 readTarget: chapter.target,
+                readStartFraction: chapter.startFraction,
+                readEndFraction: chapter.endFraction,
+                readPageCount: chapter.pageCount,
                 audioTrack: track,
                 isCurrentReading: chapter.id == currentReadableID,
                 isCurrentAudio: currentAudioTrackID.map { track?.id == $0 } ?? false
@@ -70,6 +73,9 @@ struct BookChapterMappingBuilder: Sendable {
                     order: nextOrder,
                     depth: 0,
                     readTarget: nil,
+                    readStartFraction: nil,
+                    readEndFraction: nil,
+                    readPageCount: nil,
                     audioTrack: track,
                     isCurrentReading: false,
                     isCurrentAudio: track.id == currentAudioTrackID

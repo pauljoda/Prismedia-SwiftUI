@@ -326,7 +326,9 @@ final class PrismediaAPIClientTests: XCTestCase {
                 mode: .webtoon,
                 completed: nil,
                 reset: false,
-                location: nil
+                location: nil,
+                activitySeconds: 17.5,
+                activityKind: .reading
             )
         )
 
@@ -343,6 +345,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertTrue(body["completed"] is NSNull)
         XCTAssertEqual(body["reset"] as? Bool, false)
         XCTAssertTrue(body["location"] is NSNull)
+        XCTAssertEqual(body["activitySeconds"] as? Double, 17.5)
+        XCTAssertEqual(body["activityKind"] as? String, "reading")
     }
 
     func testVideoPlaybackReportsUseRootJellyfinSessionEndpointsAndExactIdentifiers() async throws {
@@ -591,6 +595,9 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "completedCount": 0,
                   "skippedCount": 0,
                   "distinctEntityCount": 0,
+                  "watchSeconds": 0,
+                  "readingSeconds": 0,
+                  "listeningSeconds": 0,
                   "topEntities": [],
                   "recentEvents": [],
                   "dailyEvents": []
@@ -1127,6 +1134,9 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "completedCount": 2,
                   "skippedCount": 1,
                   "distinctEntityCount": 1,
+                  "watchSeconds": 7200,
+                  "readingSeconds": 5400,
+                  "listeningSeconds": 1800,
                   "topEntities": [{
                     "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                     "kind": "audio-track",
@@ -1165,6 +1175,9 @@ final class PrismediaAPIClientTests: XCTestCase {
         )
 
         XCTAssertEqual(response.totalEvents, 3)
+        XCTAssertEqual(response.watchSeconds, 7_200)
+        XCTAssertEqual(response.readingSeconds, 5_400)
+        XCTAssertEqual(response.listeningSeconds, 1_800)
         XCTAssertEqual(response.dailyEvents.first?.totalCount, 3)
         XCTAssertEqual(response.recentEvents.first?.positionSeconds, 180.5)
         let request = try XCTUnwrap(loader.requests.first)

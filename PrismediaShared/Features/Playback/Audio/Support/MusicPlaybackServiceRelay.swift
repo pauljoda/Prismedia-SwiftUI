@@ -48,5 +48,9 @@
                 completed: completed
             )
         }
+
+        func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
+            try await service?.updateEntityProgress(id: id, request: request)
+        }
     }
 #endif

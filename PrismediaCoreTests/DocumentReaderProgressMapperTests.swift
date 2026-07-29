@@ -25,6 +25,16 @@ final class DocumentReaderProgressMapperTests: XCTestCase {
         XCTAssertEqual(progression, 0.625)
     }
 
+    func testEPUBBookProgressUsesContentWeightedChapterRanges() {
+        let progression = DocumentReaderProgressMapper.epubBookProgression(
+            chapterIndex: 1,
+            chapterContentSizes: [100, 300],
+            chapterProgression: 0.5
+        )
+
+        XCTAssertEqual(progression, 0.625)
+    }
+
     func testEPUBRestoresByLocationBeforeStaleNumericIndex() {
         let progress = EntityProgressCapability(
             currentEntityID: bookID,

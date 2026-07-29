@@ -3,14 +3,6 @@ import Foundation
 
 extension EntityDetailView {
     func refreshBookChapterMappings(for detail: EntityDetail) {
-        guard BookChapterContentsLoadPolicy.canLoad(detail) else {
-            mappedBookChapters = []
-            return
-        }
-        guard !readableBookChapters.isEmpty else {
-            mappedBookChapters = []
-            return
-        }
         mappedBookChapters = BookChapterMappingBuilder().build(
             readableChapters: readableBookChapters,
             audioTracks: audiobookProjection?.tracks ?? [],
@@ -19,17 +11,27 @@ extension EntityDetailView {
         )
     }
 
+    func bookProgressMappings(for detail: EntityDetail) -> [BookProgressTrackMapping] {
+        BookProgressMappingBuilder().build(
+            bookID: detail.id,
+            chapters: mappedBookChapters,
+            readerMode: readingState.manifest?.readerMode
+                ?? detail.capability(EntityProgressCapability.self)?.mode,
+            hasReadableRendition: detail.bookFormat != .audio
+        )
+    }
+
     func currentAudiobookTrackID(for detail: EntityDetail) -> UUID? {
-        guard let projection = audiobookProjection else { return nil }
+        guard audiobookProjection != nil else { return nil }
         let isCurrent =
             musicPlayer.context?.playbackOwnerEntityID == detail.id
             && musicPlayer.context?.playbackOwnerEntityKind == .book
         if isCurrent { return musicPlayer.currentTrack?.id }
-        let playback = detail.capability(EntityPlaybackCapability.self)
-        guard playback?.completedAt == nil else { return nil }
-        let savedResume = playback?.resumeSeconds ?? 0
-        guard savedResume > 0 else { return nil }
-        return projection.resumePoint(at: savedResume)?.trackID
+        return BookCombinedResumeResolver().resolveAudioResume(
+            chapters: mappedBookChapters,
+            mappings: bookProgressMappings(for: detail),
+            progress: detail.capability()
+        )?.trackID
     }
 
     var readingChapterProgressLabel: String? {
@@ -39,25 +41,25 @@ extension EntityDetailView {
     }
 
     func listeningChapterProgressLabel(for detail: EntityDetail) -> String? {
-        guard let progress = audiobookPresentation(for: detail)?.progress else { return nil }
-        if let positionLabel = progress.positionLabel { return positionLabel }
-        return progress.status == .completed ? "Complete" : "\(progress.percent)% listened"
+        readingChapterProgressLabel
+            ?? audiobookPresentation(for: detail)?.progress.positionLabel
     }
 
     func combinedProgressPresentation(
         for detail: EntityDetail
     ) -> BookCombinedProgressPresentation? {
         guard detail.kind == .book,
-            detail.bookFormat == .epub,
-            audiobookProjection?.bookID == detail.id,
-            let target = combinedResumeTarget(for: detail),
-            readingCheckpoint(for: detail) != nil || listeningCheckpoint(for: detail) != nil
+            detail.bookFormat != .audio,
+            AudiobookPlaybackProjection(detail: detail) != nil
         else { return nil }
+        let mappingsAreReady = !bookProgressMappings(for: detail).isEmpty
         return BookCombinedProgressPresentation(
+            progress: detail.capability(),
             reading: readingState.progressPresentation,
-            listening: audiobookPresentation(for: detail),
-            combinedUsesReadingPosition: target.readingTarget == .savedLocation,
+            activitySeconds: detail.capability(EntityPlaybackCapability.self)?.playDurationSeconds,
+            isLoading: !hasLoadedBookProgressData,
             isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
+                || !hasLoadedBookProgressData || !mappingsAreReady
         )
     }
 
@@ -66,96 +68,36 @@ extension EntityDetailView {
     ) -> BookCombinedResumeTarget? {
         BookCombinedResumeResolver().resolveContinuation(
             chapters: mappedBookChapters,
-            reading: readingCheckpoint(for: detail),
-            listening: listeningCheckpoint(for: detail)
+            mappings: bookProgressMappings(for: detail),
+            progress: detail.capability()
         )
     }
 
     func currentAudiobookReadingTarget(
         for detail: EntityDetail
     ) -> BookReaderLocationTarget? {
-        guard let listening = listeningCheckpoint(for: detail) else { return nil }
+        guard let track = musicPlayer.currentTrack else { return nil }
         return BookCombinedResumeResolver().resolveReadingTarget(
             chapters: mappedBookChapters,
-            listening: listening
-        )
-    }
-
-    func readingCheckpoint(for detail: EntityDetail) -> BookReadingCheckpoint? {
-        let progress: EntityProgressCapability? =
-            readingState.manifest?.progress
-            ?? detail.capability()
-        guard progress?.completedAt == nil else { return nil }
-        let serialized =
-            dependencies.readerLocatorStore.load(bookID: detail.id)
-            ?? progress?.location
-        guard let serialized,
-            let location = EPUBProgressLocation(serialized: serialized)
-        else { return nil }
-        let publicationProgression =
-            location.totalProgression
-            ?? {
-                guard let progress else { return 0 }
-                return Double(max(0, progress.index)) / Double(max(1, progress.total))
-            }()
-        return BookReadingCheckpoint(
-            chapterLocation: location.href,
-            chapterProgression: location.resourceProgression,
-            publicationProgression: publicationProgression
-        )
-    }
-
-    func listeningCheckpoint(for detail: EntityDetail) -> BookListeningCheckpoint? {
-        guard let projection = audiobookProjection,
-            projection.bookID == detail.id,
-            detail.capability(EntityPlaybackCapability.self)?.completedAt == nil
-        else { return nil }
-        let isCurrent =
-            musicPlayer.context?.playbackOwnerEntityID == detail.id
-            && musicPlayer.context?.playbackOwnerEntityKind == .book
-        let resume: AudiobookResumePoint?
-        if isCurrent, let track = musicPlayer.currentTrack {
-            resume = AudiobookResumePoint(
-                trackID: track.id,
-                trackOffsetSeconds: musicPlayer.elapsedTime
-            )
-        } else {
-            let saved = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
-            guard saved > 0 else { return nil }
-            resume = projection.resumePoint(at: saved)
-        }
-        guard let resume else { return nil }
-        let absolute = projection.absoluteTime(
-            trackID: resume.trackID,
-            trackOffsetSeconds: resume.trackOffsetSeconds
-        )
-        return BookListeningCheckpoint(
-            trackID: resume.trackID,
-            trackOffsetSeconds: resume.trackOffsetSeconds,
-            publicationProgression: projection.totalDuration > 0
-                ? absolute / projection.totalDuration
-                : 0
+            trackID: track.id,
+            trackOffsetSeconds: musicPlayer.elapsedTime
         )
     }
 
     func openBookChapter(_ chapter: BookChapterMapping, combined: Bool) {
         guard case .content(let detail) = state.phase,
-            case .some(.epub(let location)) = chapter.readTarget
+            let readTarget = chapter.readTarget
         else { return }
 
-        currentReadableChapterID =
-            readableBookChapters.first {
-                guard case .epub(let candidateLocation) = $0.target else { return false }
-                return candidateLocation == location
-            }?.id
+        currentReadableChapterID = chapter.id
         refreshBookChapterMappings(for: detail)
 
         if combined {
             guard
                 let target = BookCombinedResumeResolver().resolveChapter(
                     chapter,
-                    reading: readingCheckpoint(for: detail),
-                    listening: listeningCheckpoint(for: detail)
+                    mappings: bookProgressMappings(for: detail),
+                    progress: detail.capability()
                 )
             else { return }
             let isCurrentBook =
@@ -166,12 +108,17 @@ extension EntityDetailView {
             return
         }
 
-        presentReader(
-            detail: detail,
-            location: location,
-            companionAudiobookBookID: nil,
-            companionAudiobookTrackID: nil
-        )
+        switch readTarget {
+        case .epub(let location):
+            presentReader(
+                detail: detail,
+                location: location,
+                companionAudiobookBookID: nil,
+                companionAudiobookTrackID: nil
+            )
+        case .entityChapter(let chapterID):
+            Task { await presentEntityChapterReader(chapterID: chapterID, command: .read) }
+        }
     }
 
     func openCombinedReader(for detail: EntityDetail) {
@@ -205,7 +152,30 @@ extension EntityDetailView {
                 companionAudiobookTrackID: target.audioTrackID,
                 companionAudiobookStartSeconds: target.audioStartSeconds
             )
+        case .entityChapter(let chapterID):
+            Task {
+                guard let chapter = try? await dependencies.detailLoader.loadEntity(id: chapterID) else {
+                    return
+                }
+                readerPresentation = .init(
+                    detail: chapter,
+                    command: .read,
+                    companionAudiobookBookID: detail.id,
+                    companionAudiobookTrackID: target.audioTrackID,
+                    companionAudiobookStartSeconds: target.audioStartSeconds
+                )
+            }
         }
+    }
+
+    func presentEntityChapterReader(
+        chapterID: UUID,
+        command: BookReaderCommand
+    ) async {
+        guard let chapter = try? await dependencies.detailLoader.loadEntity(id: chapterID) else {
+            return
+        }
+        presentReader(detail: chapter, command: command)
     }
 
     func beginCombinedPlayback(for presentation: EntityReaderPresentation) {

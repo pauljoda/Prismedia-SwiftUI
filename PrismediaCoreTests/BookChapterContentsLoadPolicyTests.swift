@@ -21,6 +21,23 @@ final class BookChapterContentsLoadPolicyTests: XCTestCase {
         XCTAssertFalse(BookChapterContentsLoadPolicy.canLoad(book))
     }
 
+    func testImageArchiveCanLoadChapterMetadataWithoutABookSourceFile() {
+        let book = EntityDetail(
+            id: UUID(),
+            kind: .book,
+            title: "Comic",
+            parentEntityID: nil,
+            sortOrder: nil,
+            bookFormat: .imageArchive,
+            hasSourceMedia: false,
+            capabilities: [],
+            childrenByKind: [],
+            relationships: []
+        )
+
+        XCTAssertTrue(BookChapterContentsLoadPolicy.canLoad(book))
+    }
+
     private func makeBook(
         hasSourceMedia: Bool,
         isWanted: Bool

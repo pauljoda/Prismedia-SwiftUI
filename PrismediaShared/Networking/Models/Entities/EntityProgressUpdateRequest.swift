@@ -9,10 +9,12 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
     public let completed: Bool?
     public let reset: Bool
     public let location: String?
+    public let activitySeconds: Double?
+    public let activityKind: BookActivityKind?
 
     private enum CodingKeys: String, CodingKey {
         case currentEntityID = "currentEntityId"
-        case unit, index, total, mode, completed, reset, location
+        case unit, index, total, mode, completed, reset, location, activitySeconds, activityKind
     }
 
     public init(
@@ -23,7 +25,9 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         mode: ReaderMode?,
         completed: Bool?,
         reset: Bool = false,
-        location: String? = nil
+        location: String? = nil,
+        activitySeconds: Double? = nil,
+        activityKind: BookActivityKind? = nil
     ) {
         self.currentEntityID = currentEntityID
         self.unit = unit
@@ -33,6 +37,10 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         self.completed = completed
         self.reset = reset
         self.location = location
+        self.activitySeconds = activitySeconds.flatMap {
+            $0.isFinite && $0 > 0 ? min($0, 60) : nil
+        }
+        self.activityKind = self.activitySeconds == nil ? nil : activityKind
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -48,5 +56,25 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         try container.encode(reset, forKey: .reset)
         try container.encodeIfPresent(location, forKey: .location)
         if location == nil { try container.encodeNil(forKey: .location) }
+        try container.encodeIfPresent(activitySeconds, forKey: .activitySeconds)
+        try container.encodeIfPresent(activityKind, forKey: .activityKind)
+    }
+
+    func recordingActivity(
+        seconds: Double?,
+        kind: BookActivityKind
+    ) -> Self {
+        Self(
+            currentEntityID: currentEntityID,
+            unit: unit,
+            index: index,
+            total: total,
+            mode: mode,
+            completed: completed,
+            reset: reset,
+            location: location,
+            activitySeconds: seconds,
+            activityKind: kind
+        )
     }
 }

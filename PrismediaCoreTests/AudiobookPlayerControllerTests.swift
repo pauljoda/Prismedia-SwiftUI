@@ -5,16 +5,22 @@ import XCTest
 
 @MainActor
 final class AudiobookPlayerControllerTests: XCTestCase {
-    func testAudiobookQueueStartsAtSavedPartAndReportsBookAbsoluteProgress() async {
+    func testAudiobookQueueStartsAtSavedPartAndReportsCanonicalBookProgress() async {
         let bookID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let tracks = [makeTrack(idSuffix: 1, duration: 100), makeTrack(idSuffix: 2, duration: 200)]
         let engine = AudiobookAudioEngineSpy()
         let service = AudiobookPlaybackServiceSpy()
-        let controller = MusicPlayerController(engine: engine, service: service)
+        let clock = AudiobookTestClock()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: service,
+            playbackClock: clock
+        )
         let context = MusicPlaybackContext(
             playbackOwnerEntityID: bookID,
             playbackOwnerTitle: "The Long Voyage",
-            playbackOwnerEntityKind: .book
+            playbackOwnerEntityKind: .book,
+            bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks)
         )
 
         controller.play(
@@ -24,22 +30,32 @@ final class AudiobookPlayerControllerTests: XCTestCase {
             context: context,
             startSeconds: 45
         )
+        clock.advance(by: 15)
         controller.updateElapsedTime(51)
         await controller.flushPendingPlaybackReports()
 
         XCTAssertEqual(controller.context, context)
         XCTAssertEqual(engine.seekPositions, [45])
-        XCTAssertEqual(
-            service.playbackUpdates,
-            [EntityPlaybackProgressUpdate(entityID: bookID, resumeSeconds: 151, completed: false)]
-        )
+        XCTAssertEqual(service.progressUpdates.count, 1)
+        XCTAssertEqual(service.progressUpdates[0].entityID, bookID)
+        XCTAssertEqual(service.progressUpdates[0].request.currentEntityID, bookID)
+        XCTAssertEqual(service.progressUpdates[0].request.unit, .cfi)
+        XCTAssertEqual(service.progressUpdates[0].request.index, 6_275)
+        XCTAssertEqual(service.progressUpdates[0].request.total, 10_000)
+        XCTAssertEqual(service.progressUpdates[0].request.activitySeconds, 15)
+        XCTAssertEqual(service.progressUpdates[0].request.activityKind, .listening)
     }
 
     func testAudiobookFinalPartCompletionMarksBookCompleteAndClearsResumeCursor() async {
         let bookID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let tracks = [makeTrack(idSuffix: 1, duration: 100), makeTrack(idSuffix: 2, duration: 200)]
         let service = AudiobookPlaybackServiceSpy()
-        let controller = MusicPlayerController(engine: AudiobookAudioEngineSpy(), service: service)
+        let clock = AudiobookTestClock()
+        let controller = MusicPlayerController(
+            engine: AudiobookAudioEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
 
         controller.play(
             tracks: tracks,
@@ -47,21 +63,24 @@ final class AudiobookPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: bookID,
                 playbackOwnerTitle: "The Long Voyage",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks)
             )
         )
 
+        clock.advance(by: 12)
         await controller.handlePlaybackEnded()
         await controller.flushPendingPlaybackReports()
         await controller.flushAudiobookProgress()
 
-        XCTAssertEqual(
-            service.playbackUpdates.last,
-            EntityPlaybackProgressUpdate(entityID: bookID, resumeSeconds: 0, completed: true)
-        )
+        XCTAssertEqual(service.progressUpdates.count, 1)
+        XCTAssertEqual(service.progressUpdates[0].entityID, bookID)
+        XCTAssertEqual(service.progressUpdates[0].request.index, 10_000)
+        XCTAssertEqual(service.progressUpdates[0].request.completed, true)
+        XCTAssertEqual(service.progressUpdates[0].request.activitySeconds, 12)
+        XCTAssertEqual(service.progressUpdates[0].request.activityKind, .listening)
         XCTAssertTrue(service.recordedTrackIDs.isEmpty)
         XCTAssertFalse(controller.isPlaying)
-        XCTAssertEqual(service.playbackUpdates.count, 1)
     }
 
     func testAudiobookRestorationKeepsOwnerAndSourceOrderWithoutShuffle() {
@@ -103,6 +122,23 @@ final class AudiobookPlayerControllerTests: XCTestCase {
             sortOrder: idSuffix - 1
         )
     }
+
+    private func epubMappings(
+        bookID: UUID,
+        tracks: [MusicTrack]
+    ) -> [BookProgressTrackMapping] {
+        tracks.enumerated().map { index, track in
+            BookProgressTrackMapping(
+                trackID: track.id,
+                currentEntityID: bookID,
+                unit: .cfi,
+                startIndex: index * 5_000,
+                endIndex: (index + 1) * 5_000,
+                total: 10_000,
+                mode: .paged
+            )
+        }
+    }
 }
 
 @MainActor
@@ -118,8 +154,13 @@ private final class AudiobookAudioEngineSpy: AudioPlaybackEngine {
 
 @MainActor
 private final class AudiobookPlaybackServiceSpy: MusicPlaybackServicing {
+    struct ProgressUpdate: Equatable {
+        let entityID: UUID
+        let request: EntityProgressUpdateRequest
+    }
+
     private(set) var recordedTrackIDs: [UUID] = []
-    private(set) var playbackUpdates: [EntityPlaybackProgressUpdate] = []
+    private(set) var progressUpdates: [ProgressUpdate] = []
 
     func audioStreamURL(for trackID: UUID) -> URL? {
         URL(string: "https://example.com/audio/\(trackID)")
@@ -130,13 +171,21 @@ private final class AudiobookPlaybackServiceSpy: MusicPlaybackServicing {
     }
 
     func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
-        playbackUpdates.append(
-            EntityPlaybackProgressUpdate(
-                entityID: id,
-                resumeSeconds: resumeSeconds,
-                completed: completed
-            )
-        )
+    }
+
+    func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
+        progressUpdates.append(.init(entityID: id, request: request))
+    }
+}
+
+private final class AudiobookTestClock: MusicPlaybackClock, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedNow: TimeInterval = 0
+
+    var now: TimeInterval { lock.withLock { storedNow } }
+
+    func advance(by interval: TimeInterval) {
+        lock.withLock { storedNow += interval }
     }
 }
 

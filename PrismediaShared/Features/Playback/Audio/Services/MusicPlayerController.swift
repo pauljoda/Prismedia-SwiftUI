@@ -29,6 +29,7 @@ public final class MusicPlayerController {
     private var resumesWhenPlaybackBecomesAvailable = false
     private var activeQueueID = UUID()
     private var currentTrackRequestedAt: TimeInterval?
+    private var audiobookActivityClock = BookActivityClock()
 
     private static let quickSkipThreshold: TimeInterval = 10
 
@@ -102,7 +103,7 @@ public final class MusicPlayerController {
     ) -> UUID {
         let tracks = tracks.filter(\.isPlayable)
         guard !tracks.isEmpty else { return activeQueueID }
-        reportAudiobookProgress(completed: false)
+        reportAudiobookProgress(completed: false, stopsActivity: true)
         if currentTrack != nil { engine.pause() }
         var previousQueue = queue
         if previousQueue.currentTrack != nil {
@@ -172,6 +173,9 @@ public final class MusicPlayerController {
         errorMessage = nil
         engine.play()
         isPlaying = true
+        if context?.isAudiobook == true {
+            audiobookActivityClock.start(at: playbackClock.now)
+        }
         publishNowPlayingState()
         persistProgress()
     }
@@ -180,13 +184,13 @@ public final class MusicPlayerController {
         resumesWhenPlaybackBecomesAvailable = false
         engine.pause()
         isPlaying = false
-        reportAudiobookProgress(completed: false)
+        reportAudiobookProgress(completed: false, stopsActivity: true)
         publishNowPlayingState()
         persistProgress()
     }
 
     public func clearPlayback() {
-        reportAudiobookProgress(completed: false)
+        reportAudiobookProgress(completed: false, stopsActivity: true)
         resetPlaybackState()
     }
 
@@ -210,6 +214,7 @@ public final class MusicPlayerController {
         loadedTrackID = nil
         currentTrackRequestedAt = nil
         resumesWhenPlaybackBecomesAvailable = false
+        audiobookActivityClock = BookActivityClock()
         engine.setPlaybackRate(playbackRate)
         stateStore?.clear()
         publishNowPlayingState()
@@ -319,7 +324,8 @@ public final class MusicPlayerController {
             let finishedPosition = completedTrack.duration ?? elapsedTime
             reportAudiobookProgress(
                 completed: completedAudiobook,
-                trackOffsetSeconds: finishedPosition
+                trackOffsetSeconds: finishedPosition,
+                stopsActivity: completedAudiobook
             )
         }
 
@@ -366,6 +372,9 @@ public final class MusicPlayerController {
         if shouldResume {
             engine.play()
             isPlaying = true
+            if context?.isAudiobook == true {
+                audiobookActivityClock.start(at: playbackClock.now)
+            }
         }
         publishNowPlayingState()
     }
@@ -390,13 +399,21 @@ public final class MusicPlayerController {
     }
 
     public func flushAudiobookProgress() async {
-        reportAudiobookProgress(completed: false)
+        reportAudiobookProgress(completed: false, stopsActivity: true)
         persistProgress()
         await flushPendingPlaybackReports()
     }
 
+    public func resumeAudiobookActivity() {
+        guard isPlaying, context?.isAudiobook == true else { return }
+        audiobookActivityClock.start(at: playbackClock.now)
+    }
+
     public func setAudiobookCompletionState(_ completed: Bool) {
         guard context?.isAudiobook == true else { return }
+        if completed {
+            reportAudiobookProgress(completed: false, stopsActivity: true)
+        }
         audiobookCompleted = completed
         if completed {
             engine.pause()
@@ -425,6 +442,9 @@ public final class MusicPlayerController {
         errorMessage = nil
         engine.play()
         isPlaying = true
+        if context?.isAudiobook == true {
+            audiobookActivityClock.start(at: playbackClock.now)
+        }
         publishNowPlayingState()
     }
 
@@ -503,7 +523,8 @@ public final class MusicPlayerController {
 
     private func reportAudiobookProgress(
         completed: Bool,
-        trackOffsetSeconds: Double? = nil
+        trackOffsetSeconds: Double? = nil,
+        stopsActivity: Bool = false
     ) {
         guard let context,
             context.isAudiobook,
@@ -512,19 +533,29 @@ public final class MusicPlayerController {
             completed || !audiobookCompleted
         else { return }
 
-        let resumeSeconds =
-            completed
-            ? 0
-            : AudiobookPlaybackProjection.absoluteTime(
-                in: queue.tracks,
-                trackID: currentTrack.id,
-                trackOffsetSeconds: trackOffsetSeconds ?? elapsedTime
-            )
+        let activitySeconds = stopsActivity
+            ? audiobookActivityClock.stop(at: playbackClock.now)
+            : isPlaying
+                ? audiobookActivityClock.take(at: playbackClock.now)
+                : nil
+        guard let mapping = context.bookProgressMappings?.first(where: {
+            $0.trackID == currentTrack.id
+        }),
+            let duration = currentTrack.duration,
+            duration.isFinite,
+            duration > 0
+        else { return }
+        let request = BookProgressMappingResolver().progressRequest(
+            mapping: mapping,
+            offsetSeconds: trackOffsetSeconds ?? elapsedTime,
+            durationSeconds: duration,
+            activitySeconds: activitySeconds,
+            completed: completed
+        )
         enqueuePlaybackReport { service in
-            try? await service.updateEntityPlayback(
+            try? await service.updateEntityProgress(
                 id: ownerID,
-                resumeSeconds: resumeSeconds,
-                completed: completed
+                request: request
             )
         }
     }

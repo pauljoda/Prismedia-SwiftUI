@@ -197,12 +197,15 @@ extension EntityDetailView {
                     }
                 }
                 .task(id: detail.id) {
+                    hasLoadedBookProgressData = false
                     await loadResolvedVideoTechnicalDetail(for: detail)
                     await loadVideoProgress(for: detail)
                     await loadReadingState(for: detail)
                     await loadCollectionMembers(for: detail)
                     await loadAudiobook(for: detail)
                     await loadBookChapters(for: detail)
+                    guard currentDetail?.id == detail.id else { return }
+                    hasLoadedBookProgressData = true
                 }
                 #if DEBUG
                     .task(id: detail.id) {

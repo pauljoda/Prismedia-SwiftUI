@@ -5,172 +5,105 @@ struct BookCombinedResumeResolver: Sendable {
 
     func resolveReadingTarget(
         chapters: [BookChapterMapping],
-        listening: BookListeningCheckpoint
+        trackID: UUID,
+        trackOffsetSeconds: Double
     ) -> BookReaderLocationTarget? {
-        guard let chapter = chapters.first(where: { $0.audioTrack?.id == listening.trackID }) else {
-            return nil
-        }
-        guard
-            case .chapter(let location, let progression) =
-                resolveChapter(chapter, reading: nil, listening: listening)?.readingTarget
+        guard let chapter = chapters.first(where: { $0.audioTrack?.id == trackID }),
+            case .epub(let location) = chapter.readTarget,
+            let duration = chapter.audioTrack?.duration,
+            duration.isFinite,
+            duration > 0
         else { return nil }
-        return BookReaderLocationTarget(location: location, progression: progression)
+        return BookReaderLocationTarget(
+            location: location,
+            progression: bounded(trackOffsetSeconds / duration)
+        )
     }
 
     func resolveContinuation(
         chapters: [BookChapterMapping],
-        reading: BookReadingCheckpoint?,
-        listening: BookListeningCheckpoint?
+        mappings: [BookProgressTrackMapping],
+        progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
-        let available = chapters.filter { $0.readLocation != nil && $0.audioTrack != nil }
-        guard !available.isEmpty else { return nil }
-
-        let readingPosition = reading.flatMap { checkpoint in
-            available.firstIndex { chapter in
-                chapter.readLocation.map {
-                    EPUBResourceLocationMatcher().bestMatch(
-                        for: checkpoint.chapterLocation,
-                        candidates: [$0]
-                    ) != nil
-                } ?? false
-            }.map { (index: $0, fraction: checkpoint.chapterProgression) }
-        }
-        let listeningPosition = listening.flatMap { checkpoint in
-            available.firstIndex { $0.audioTrack?.id == checkpoint.trackID }.flatMap { index in
-                localAudioProgress(checkpoint, chapter: available[index]).map {
-                    (index: index, fraction: $0)
-                }
+        if let progress, progress.completedAt == nil {
+            guard let mapping = BookProgressMappingResolver().mapping(for: progress, in: mappings),
+                let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.trackID })
+            else {
+                // The readable cursor is authoritative when no audio part maps to it.
+                return nil
             }
+            return target(chapter: chapter, mapping: mapping, progress: progress)
         }
 
-        switch preferredPosition(reading: readingPosition, listening: listeningPosition) {
-        case .reading(let index, let fraction):
-            return targetFromReading(chapter: available[index], fraction: fraction)
-        case .listening(let index, let fraction):
-            return targetFromListening(
-                chapter: available[index],
-                fraction: fraction,
-                offset: listening?.trackOffsetSeconds ?? 0
-            )
-        case nil:
-            guard reading == nil, listening == nil else { return nil }
-            return resolveChapter(available[0], reading: nil, listening: nil)
-        }
+        guard let mapping = mappings.first,
+            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.trackID })
+        else { return nil }
+        return target(chapter: chapter, mapping: mapping, progress: nil)
     }
 
     func resolveChapter(
         _ chapter: BookChapterMapping,
-        reading: BookReadingCheckpoint?,
-        listening: BookListeningCheckpoint?
+        mappings: [BookProgressTrackMapping],
+        progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
-        guard chapter.readLocation != nil, chapter.audioTrack != nil else { return nil }
-
-        let readingFraction = reading.flatMap { checkpoint -> Double? in
-            guard let location = chapter.readLocation,
-                EPUBResourceLocationMatcher().bestMatch(
-                    for: checkpoint.chapterLocation,
-                    candidates: [location]
-                ) != nil
-            else { return nil }
-            return checkpoint.chapterProgression
-        }
-        let listeningFraction = listening.flatMap { checkpoint -> Double? in
-            guard checkpoint.trackID == chapter.audioTrack?.id else { return nil }
-            return localAudioProgress(checkpoint, chapter: chapter)
-        }
-
-        if let listeningFraction,
-            listeningFraction > (readingFraction ?? -1)
-        {
-            return targetFromListening(
-                chapter: chapter,
-                fraction: listeningFraction,
-                offset: listening?.trackOffsetSeconds ?? 0
-            )
-        }
-        if let readingFraction {
-            return targetFromReading(chapter: chapter, fraction: readingFraction)
-        }
-        return targetFromListening(chapter: chapter, fraction: 0, offset: 0)
-    }
-
-    private func preferredPosition(
-        reading: (index: Int, fraction: Double)?,
-        listening: (index: Int, fraction: Double)?
-    ) -> BookCombinedPreferredPosition? {
-        switch (reading, listening) {
-        case (.some(let reading), .some(let listening)):
-            if reading.index != listening.index {
-                return reading.index > listening.index
-                    ? .reading(index: reading.index, fraction: reading.fraction)
-                    : .listening(index: listening.index, fraction: listening.fraction)
-            }
-            return listening.fraction > reading.fraction
-                ? .listening(index: listening.index, fraction: listening.fraction)
-                : .reading(index: reading.index, fraction: reading.fraction)
-        case (.some(let reading), nil):
-            return .reading(index: reading.index, fraction: reading.fraction)
-        case (nil, .some(let listening)):
-            return .listening(index: listening.index, fraction: listening.fraction)
-        case (nil, nil):
-            return nil
-        }
-    }
-
-    private func localAudioProgress(
-        _ checkpoint: BookListeningCheckpoint,
-        chapter: BookChapterMapping
-    ) -> Double? {
-        guard let duration = chapter.audioTrack?.duration,
-            duration.isFinite,
-            duration > 0
+        guard let trackID = chapter.audioTrack?.id,
+            let mapping = mappings.first(where: { $0.trackID == trackID })
         else { return nil }
-        return min(max(0, checkpoint.trackOffsetSeconds / duration), 1)
+        let matchingProgress = progress.flatMap {
+            BookProgressMappingResolver().mapping(for: $0, in: [mapping]) == nil ? nil : $0
+        }
+        return target(chapter: chapter, mapping: mapping, progress: matchingProgress)
     }
 
-    private func targetFromReading(
+    func resolveAudioResume(
+        chapters: [BookChapterMapping],
+        mappings: [BookProgressTrackMapping],
+        progress: EntityProgressCapability?
+    ) -> AudiobookResumePoint? {
+        BookProgressMappingResolver().audioResume(
+            tracks: chapters.compactMap(\.audioTrack),
+            mappings: mappings,
+            progress: progress
+        )
+    }
+
+    private func target(
         chapter: BookChapterMapping,
-        fraction: Double
+        mapping: BookProgressTrackMapping,
+        progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
         guard let track = chapter.audioTrack,
             let duration = track.duration,
             duration.isFinite,
-            duration > 0
+            duration > 0,
+            let readTarget = chapter.readTarget
         else { return nil }
-        let estimatedOffset = min(max(0, fraction), 1) * duration
-        let audioStart =
-            estimatedOffset <= audioRunwaySeconds
-            ? 0
-            : estimatedOffset - audioRunwaySeconds
+
+        let fraction = progress.map {
+            BookProgressMappingResolver().fraction(for: $0, mapping: mapping)
+        } ?? 0
+        let readingTarget: BookCombinedReadingTarget
+        switch readTarget {
+        case .epub(let location):
+            readingTarget = progress?.location == nil
+                ? .chapter(location: location, progression: fraction)
+                : .savedLocation
+        case .entityChapter(let chapterID):
+            readingTarget = progress == nil ? .entityChapter(id: chapterID) : .savedLocation
+        }
+
+        let estimatedOffset = fraction * duration
         return BookCombinedResumeTarget(
-            readingTarget: .savedLocation,
+            readingTarget: readingTarget,
             audioTrackID: track.id,
-            audioStartSeconds: audioStart
+            audioStartSeconds: estimatedOffset <= audioRunwaySeconds
+                ? 0
+                : estimatedOffset - audioRunwaySeconds
         )
     }
 
-    private func targetFromListening(
-        chapter: BookChapterMapping,
-        fraction: Double,
-        offset: Double
-    ) -> BookCombinedResumeTarget? {
-        guard let location = chapter.readLocation,
-            let trackID = chapter.audioTrack?.id
-        else { return nil }
-        return BookCombinedResumeTarget(
-            readingTarget: .chapter(
-                location: location,
-                progression: min(max(0, fraction), 1)
-            ),
-            audioTrackID: trackID,
-            audioStartSeconds: offset < audioRunwaySeconds ? 0 : offset
-        )
-    }
-}
-
-extension BookChapterMapping {
-    fileprivate var readLocation: String? {
-        guard case .epub(let location) = readTarget else { return nil }
-        return location
+    private func bounded(_ value: Double) -> Double {
+        guard value.isFinite else { return 0 }
+        return min(max(0, value), 1)
     }
 }

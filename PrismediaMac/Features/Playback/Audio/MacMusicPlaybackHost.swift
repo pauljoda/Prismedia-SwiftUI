@@ -42,8 +42,11 @@
                     await loadWaveform()
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    guard phase != .active else { return }
-                    Task { await controller.flushAudiobookProgress() }
+                    if phase == .active {
+                        controller.resumeAudiobookActivity()
+                    } else {
+                        Task { await controller.flushAudiobookProgress() }
+                    }
                 }
                 .onChange(of: controller.currentQueueID) {
                     miniPlayerVisibility.revealForPlaybackActivity()

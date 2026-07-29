@@ -43,7 +43,8 @@ public struct EPUBPublicationLoader: Sendable {
                 EPUBChapter(
                     id: item.id,
                     location: relativePath(location, from: packageDirectory),
-                    fileURL: destination.appending(path: location)
+                    fileURL: destination.appending(path: location),
+                    contentSize: entries[location]?.count ?? 0
                 )
             },
             tableOfContents: tableOfContents,

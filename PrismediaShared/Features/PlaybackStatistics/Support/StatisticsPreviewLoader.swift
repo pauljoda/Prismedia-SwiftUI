@@ -12,6 +12,9 @@ import SwiftUI
                 completedCount: 15,
                 skippedCount: 3,
                 distinctEntityCount: 1,
+                watchSeconds: 42_300,
+                readingSeconds: 7_200,
+                listeningSeconds: 10_800,
                 topEntities: [
                     PlaybackStatisticsEntity(
                         id: item.id,

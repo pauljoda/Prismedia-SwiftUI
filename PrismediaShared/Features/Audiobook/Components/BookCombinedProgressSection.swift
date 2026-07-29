@@ -8,15 +8,21 @@ struct BookCombinedProgressSection: View {
     let onContinueReading: () -> Void
     let onContinueListening: () -> Void
     let onContinueCombined: () -> Void
-    let onStartReadingOver: () -> Void
-    let onStartListeningOver: () -> Void
-    let onToggleReadingCompletion: () -> Void
-    let onToggleListeningCompletion: () -> Void
+    let onStartOver: () -> Void
+    let onToggleCompletion: () -> Void
     let onDismissReadingError: () -> Void
     let onDismissListeningError: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+            BookCombinedProgressCard(
+                presentation: presentation,
+                onContinueReading: onContinueReading,
+                onContinueListening: onContinueListening,
+                onContinueCombined: onContinueCombined,
+                onStartOver: onStartOver,
+                onToggleCompletion: onToggleCompletion
+            )
             if let readingErrorMessage {
                 MediaProgressErrorBanner(
                     message: readingErrorMessage,
@@ -33,16 +39,6 @@ struct BookCombinedProgressSection: View {
                     onDismiss: onDismissListeningError
                 )
             }
-            BookCombinedProgressCard(
-                presentation: presentation,
-                onContinueReading: onContinueReading,
-                onContinueListening: onContinueListening,
-                onContinueCombined: onContinueCombined,
-                onStartReadingOver: onStartReadingOver,
-                onStartListeningOver: onStartListeningOver,
-                onToggleReadingCompletion: onToggleReadingCompletion,
-                onToggleListeningCompletion: onToggleListeningCompletion
-            )
         }
         .padding(.horizontal, horizontalPadding)
     }
@@ -53,26 +49,21 @@ struct BookCombinedProgressSection: View {
         PreviewShell {
             BookCombinedProgressSection(
                 presentation: BookCombinedProgressPresentation(
-                    reading: ReadingProgressPresentation(
-                        singleFileProgress: EntityProgressCapability(
-                            currentEntityID: UUID(), unit: .cfi, index: 5_000, total: 10_000,
-                            mode: .paged, completedAt: nil, updatedAt: nil, workIndex: nil,
-                            workTotal: nil, location: "Text/chapter-5.xhtml"
-                        )
+                    progress: EntityProgressCapability(
+                        currentEntityID: UUID(), unit: .cfi, index: 5_000, total: 10_000,
+                        mode: .paged, completedAt: nil, updatedAt: nil, workIndex: nil,
+                        workTotal: nil, location: "Text/chapter-5.xhtml"
                     ),
-                    listening: AudiobookPlaybackPresentation(
-                        totalDuration: 36_000, partCount: 12, resumeSeconds: 12_400,
-                        isCompleted: false, isCurrentAudiobook: false, isPlaying: false
-                    ),
-                    combinedUsesReadingPosition: true,
+                    reading: nil,
+                    activitySeconds: 7_420,
+                    isLoading: false,
                     isBusy: false
                 ),
                 readingErrorMessage: "Reading progress could not be updated.",
                 listeningErrorMessage: nil,
                 horizontalPadding: PrismediaSpacing.extraLarge,
                 onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
-                onStartReadingOver: {}, onStartListeningOver: {},
-                onToggleReadingCompletion: {}, onToggleListeningCompletion: {},
+                onStartOver: {}, onToggleCompletion: {},
                 onDismissReadingError: {}, onDismissListeningError: {}
             )
         }
