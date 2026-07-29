@@ -44,6 +44,11 @@ struct VideoPlaybackHost<Content: View>: View {
             }
             .onDisappear {
                 #if !os(tvOS)
+                    // Presenting fullscreen video removes the presenting
+                    // hierarchy, so this host "disappears" while its own player
+                    // is on screen. Resetting here cancels the in-flight load
+                    // the fullscreen player is waiting on.
+                    guard !session.isFullscreenPresented else { return }
                     session.reset()
                 #endif
             }

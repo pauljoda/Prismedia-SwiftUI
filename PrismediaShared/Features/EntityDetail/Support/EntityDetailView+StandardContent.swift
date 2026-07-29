@@ -43,6 +43,7 @@ extension EntityDetailView {
                                                 fallback: presentation.primaryActions
                                             ),
                                             isMutating: state.isMutating,
+                                            loadingActionID: pendingVideoPlaybackActionID,
                                             canMutate: service.canMutate,
                                             isActionEnabled: isEnabled,
                                             actionHint: accessibilityHint,
@@ -52,10 +53,17 @@ extension EntityDetailView {
                                     }
                                 },
                                 playback: {
-                                    televisionVideoPlaybackActions(
-                                        detail,
-                                        ownerLink: playbackOwnerLink
-                                    )
+                                    #if os(macOS)
+                                        inlineVideoPlaybackView(
+                                            detail,
+                                            ownerLink: playbackOwnerLink
+                                        )
+                                    #else
+                                        televisionVideoPlaybackActions(
+                                            detail,
+                                            ownerLink: playbackOwnerLink
+                                        )
+                                    #endif
                                 }
                             )
                         }

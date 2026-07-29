@@ -2,6 +2,45 @@ import SwiftUI
 
 extension EntityDetailView {
     @ViewBuilder
+    func inlineVideoPlaybackView(
+        _ detail: EntityDetail,
+        ownerLink: EntityLink?
+    ) -> some View {
+        #if os(macOS)
+            if let ownerLink,
+                PlayableVideoResolver.videoID(
+                    in: detail,
+                    sourceThumbnail: ownerLink.sourceThumbnail
+                ) != nil,
+                let playbackService = dependencies.videoPlaybackService
+            {
+                VideoEntityPlaybackView(
+                    detail: detail,
+                    ownerLink: ownerLink,
+                    detailLoader: dependencies.detailLoader,
+                    playbackService: playbackService,
+                    trickplayFrameLoader: dependencies.trickplayFrameLoader,
+                    preparation: videoPlaybackPreparation,
+                    presentationMode: .inline,
+                    fullscreenPlaybackStartOverrideSeconds: videoPlaybackStartOverrideSeconds,
+                    onPlaybackPositionChanged: receiveVideoPlaybackProgress,
+                    onPlaybackProgressCommitted: { _ in
+                        dependencies.onEntityMutated()
+                        Task { await refreshContainerProgressIfNeeded(detail) }
+                    },
+                    onAdvance: { destination in
+                        guard ownerLink.kind != .videoSeason else { return }
+                        advancedEntityLink = destination
+                    }
+                )
+                .id(ownerLink)
+            }
+        #else
+            EmptyView()
+        #endif
+    }
+
+    @ViewBuilder
     func televisionVideoPlaybackActions(
         _ detail: EntityDetail,
         ownerLink: EntityLink?
@@ -44,45 +83,48 @@ extension EntityDetailView {
         _ detail: EntityDetail,
         ownerLink: EntityLink?
     ) -> some View {
-        if let ownerLink,
-            VideoPlaybackLaunchPolicy.presentationMode(for: ownerLink) == .fullscreenOnly,
-            PlayableVideoResolver.videoID(
-                in: detail,
-                sourceThumbnail: ownerLink.sourceThumbnail
-            ) != nil,
-            let playbackService = dependencies.videoPlaybackService
-        {
-            VideoEntityPlaybackView(
-                detail: detail,
-                ownerLink: ownerLink,
-                detailLoader: dependencies.detailLoader,
-                playbackService: playbackService,
-                trickplayFrameLoader: dependencies.trickplayFrameLoader,
-                preparation: videoPlaybackPreparation,
-                presentationMode: .fullscreenOnly,
-                presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
-                    for: ownerLink.intent
-                ),
-                startsFullscreenPlaybackImmediately: thumbnailPlaybackLink != nil
-                    || ownerLink.playbackRequestID != nil,
-                fullscreenPlaybackStartOverrideSeconds: videoPlaybackStartOverrideSeconds
-                    ?? ownerLink.playbackStartSeconds,
-                onFullscreenDismiss: {
-                    suppressesRoutePlayback = true
-                    thumbnailPlaybackLink = nil
-                    videoPlaybackStartOverrideSeconds = nil
-                },
-                onPlaybackPositionChanged: { progress in
-                    receiveVideoPlaybackProgress(progress)
-                },
-                onPlaybackProgressCommitted: { _ in
-                    dependencies.onEntityMutated()
-                    Task { await refreshContainerProgressIfNeeded(detail) }
-                },
-                onAdvance: { _ in }
-            )
-            .id(ownerLink)
-        }
+        #if os(macOS)
+            EmptyView()
+        #else
+            if let ownerLink,
+                VideoPlaybackLaunchPolicy.presentationMode(for: ownerLink) == .fullscreenOnly,
+                PlayableVideoResolver.videoID(
+                    in: detail,
+                    sourceThumbnail: ownerLink.sourceThumbnail
+                ) != nil,
+                let playbackService = dependencies.videoPlaybackService
+            {
+                VideoEntityPlaybackView(
+                    detail: detail,
+                    ownerLink: ownerLink,
+                    detailLoader: dependencies.detailLoader,
+                    playbackService: playbackService,
+                    trickplayFrameLoader: dependencies.trickplayFrameLoader,
+                    preparation: videoPlaybackPreparation,
+                    presentationMode: .fullscreenOnly,
+                    presentsFullscreenOnTV: VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
+                        for: ownerLink.intent
+                    ),
+                    fullscreenPlaybackStartOverrideSeconds: videoPlaybackStartOverrideSeconds,
+                    onFullscreenDismiss: {
+                        isVideoFullscreenLaunchActive = false
+                        pendingVideoPlaybackActionID = nil
+                        suppressesRoutePlayback = true
+                        thumbnailPlaybackLink = nil
+                        videoPlaybackStartOverrideSeconds = nil
+                    },
+                    onPlaybackPositionChanged: { progress in
+                        receiveVideoPlaybackProgress(progress)
+                    },
+                    onPlaybackProgressCommitted: { _ in
+                        dependencies.onEntityMutated()
+                        Task { await refreshContainerProgressIfNeeded(detail) }
+                    },
+                    onAdvance: { _ in }
+                )
+                .id(ownerLink)
+            }
+        #endif
     }
 
     func receiveVideoPlaybackProgress(

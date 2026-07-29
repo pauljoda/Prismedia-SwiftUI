@@ -32,7 +32,6 @@ import SwiftUI
             let view = SceneCaptureView()
             let fallback = $usesRotatedFallback
             controller.onFallbackChanged = { fallback.wrappedValue = $0 }
-            view.onDismantle = { controller.sceneCaptureDidDismantle() }
             if requestsFullscreen {
                 view.onWindowScene = { scene in controller.enterFullscreen(in: scene) }
             }
@@ -45,9 +44,7 @@ import SwiftUI
             _ view: SceneCaptureView,
             coordinator: Void
         ) {
-            view.onDismantle?()
             view.onWindowScene = nil
-            view.onDismantle = nil
         }
     }
 

@@ -175,6 +175,11 @@ public final class VideoPlaybackController {
             #endif
         } catch is CancellationError {
             return
+        } catch let error as URLError where error.code == .cancelled {
+            // Task cancellation surfaces from URLSession as URLError(.cancelled),
+            // not CancellationError. A superseded load is not a failure; recording
+            // it as one aborts the preparation that superseded it.
+            return
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -320,6 +325,10 @@ public final class VideoPlaybackController {
             await install(plan, resumeAt: resumeAt, mode: .directStream)
             selectedAudioChoiceID = id
             if shouldResume { play() }
+        } catch is CancellationError {
+            return
+        } catch let error as URLError where error.code == .cancelled {
+            return
         } catch {
             errorMessage = "The selected audio track could not be loaded."
         }
@@ -402,6 +411,11 @@ public final class VideoPlaybackController {
                 )
             }
         } catch is CancellationError {
+            return
+        } catch let error as URLError where error.code == .cancelled {
+            // Task cancellation surfaces from URLSession as URLError(.cancelled),
+            // not CancellationError. A superseded subtitle load is not a failure;
+            // reporting it as one poisons the controller and aborts preparation.
             return
         } catch {
             guard isCurrentTVSubtitleSelection(tvGeneration) else { return }

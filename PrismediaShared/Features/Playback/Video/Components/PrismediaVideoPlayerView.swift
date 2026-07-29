@@ -17,7 +17,7 @@ import SwiftUI
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @State private var controlsVisible = true
         #if os(macOS)
-            @State private var pointerIsInside = false
+            @State private var chromeActivityGeneration = 0
             @FocusState private var hasKeyboardFocus: Bool
         #endif
 
@@ -55,7 +55,10 @@ import SwiftUI
                 .focusable(interactions: .edit)
                 .focused($hasKeyboardFocus)
                 .onAppear { hasKeyboardFocus = true }
-                .onHover(perform: pointerHoverDidChange)
+                .onContinuousHover { phase in
+                    guard case .active = phase else { return }
+                    pointerMovedOverPlayer()
+                }
                 .onKeyPress(.space, action: togglePlaybackFromKeyboard)
                 .onKeyPress(.leftArrow) { skipFromKeyboard(by: -10) }
                 .onKeyPress(.rightArrow) { skipFromKeyboard(by: 10) }
@@ -64,7 +67,11 @@ import SwiftUI
         }
 
         private var autoHideTaskIdentity: String {
-            "\(ObjectIdentifier(controller))-\(controller.isPlaying)"
+            #if os(macOS)
+                "\(ObjectIdentifier(controller))-\(controller.isPlaying)-\(chromeActivityGeneration)"
+            #else
+                "\(ObjectIdentifier(controller))-\(controller.isPlaying)"
+            #endif
         }
 
         private var gestureLayer: some View {
@@ -320,18 +327,18 @@ import SwiftUI
         private func revealOrToggleChrome() {
             guard isInteractive else { return }
             controlsVisible.toggle()
-            if controlsVisible, controller.isPlaying {
-                Task { await scheduleAutoHide() }
-            }
+            #if os(macOS)
+                if controlsVisible {
+                    chromeActivityGeneration &+= 1
+                }
+            #else
+                if controlsVisible, controller.isPlaying {
+                    Task { await scheduleAutoHide() }
+                }
+            #endif
         }
 
         private func scheduleAutoHide() async {
-            #if os(macOS)
-                guard !pointerIsInside else {
-                    controlsVisible = true
-                    return
-                }
-            #endif
             guard
                 VideoPlayerChromePolicy.shouldAutoHide(
                     isPlaying: controller.isPlaying,
@@ -341,28 +348,25 @@ import SwiftUI
                 controlsVisible = true
                 return
             }
-            try? await Task.sleep(for: .seconds(2.4))
+            #if os(macOS)
+                try? await Task.sleep(for: .seconds(3))
+            #else
+                try? await Task.sleep(for: .seconds(2.4))
+            #endif
             guard !Task.isCancelled,
                 VideoPlayerChromePolicy.shouldAutoHide(
                     isPlaying: controller.isPlaying,
                     optionsPresented: false
-                )
+            )
             else { return }
-            #if os(macOS)
-                guard !pointerIsInside else { return }
-            #endif
             controlsVisible = false
         }
 
         #if os(macOS)
-            private func pointerHoverDidChange(_ isInside: Bool) {
-                pointerIsInside = isInside
-                if isInside {
-                    hasKeyboardFocus = true
-                    controlsVisible = true
-                } else if controller.isPlaying {
-                    Task { await scheduleAutoHide() }
-                }
+            private func pointerMovedOverPlayer() {
+                hasKeyboardFocus = true
+                controlsVisible = true
+                chromeActivityGeneration &+= 1
             }
 
             private func togglePlaybackFromKeyboard() -> KeyPress.Result {

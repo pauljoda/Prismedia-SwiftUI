@@ -10,7 +10,6 @@ struct VideoEntityPlaybackView: View {
     let presentationMode: VideoPlaybackPresentationMode
     let tvLayout: TVVideoPlaybackLayout
     let presentsFullscreenOnTV: Bool
-    let startsFullscreenPlaybackImmediately: Bool
     let fullscreenPlaybackStartOverrideSeconds: Double?
     let onFullscreenDismiss: () -> Void
     let onPlaybackPositionChanged: (VideoPlaybackProgressSnapshot) -> Void
@@ -27,7 +26,6 @@ struct VideoEntityPlaybackView: View {
         presentationMode: VideoPlaybackPresentationMode = .inline,
         tvLayout: TVVideoPlaybackLayout = .standard,
         presentsFullscreenOnTV: Bool = false,
-        startsFullscreenPlaybackImmediately: Bool = false,
         fullscreenPlaybackStartOverrideSeconds: Double? = nil,
         onFullscreenDismiss: @escaping () -> Void = {},
         onPlaybackPositionChanged: @escaping (VideoPlaybackProgressSnapshot) -> Void = { _ in },
@@ -43,7 +41,6 @@ struct VideoEntityPlaybackView: View {
         self.presentationMode = presentationMode
         self.tvLayout = tvLayout
         self.presentsFullscreenOnTV = presentsFullscreenOnTV
-        self.startsFullscreenPlaybackImmediately = startsFullscreenPlaybackImmediately
         self.fullscreenPlaybackStartOverrideSeconds = fullscreenPlaybackStartOverrideSeconds
         self.onFullscreenDismiss = onFullscreenDismiss
         self.onPlaybackPositionChanged = onPlaybackPositionChanged
@@ -68,6 +65,11 @@ struct VideoEntityPlaybackView: View {
         #else
             Group {
                 if presentationMode == .fullscreenOnly {
+                    // The anchor that owns the fullscreen modal must outlive every
+                    // preparation-phase change. Hanging it off the resolved player
+                    // ties the presentation to `phase == .ready`, and any flicker
+                    // of that state while the modal is mid-transition reads as the
+                    // viewer closing the player.
                     Color.clear
                         .frame(width: 1, height: 1)
                         .accessibilityHidden(true)
@@ -77,7 +79,6 @@ struct VideoEntityPlaybackView: View {
                                 controller: presentedPlaybackController,
                                 title: presentedVideoDetail?.title ?? playbackTitle,
                                 isInteractive: fullscreenPlayerIsInteractive,
-                                requiresExplicitPlay: fullscreenRequiresResumeChoice,
                                 preparationPhase: preparation.phase,
                                 playRequested: preparation.playRequested,
                                 resumeSeconds: preparation.requestedResumeSeconds,
@@ -85,13 +86,10 @@ struct VideoEntityPlaybackView: View {
                                 trickplayFrameLoader: trickplayFrameLoader,
                                 onResume: { startPlayback() },
                                 onRestart: { startPlayback(at: 0) },
-                                onDismiss: { fullscreenPresentationDidChange(false) }
+                                onDismiss: { fullscreenPresentationDidChange(false) },
+                                preparationCoordinator: preparation
                             )
                         )
-                        .onChange(of: isFullscreenPresented) { _, isPresented in
-                            guard isPresented else { return }
-                            fullscreenPresentationDidChange(true)
-                        }
                 } else if preparation.phase == .ready,
                     let videoDetail = presentedVideoDetail,
                     let playbackController = presentedPlaybackController
@@ -102,7 +100,8 @@ struct VideoEntityPlaybackView: View {
                         presentationMode: presentationMode,
                         trickplayPlaylistPath: trickplayPlaylistPath,
                         trickplayFrameLoader: trickplayFrameLoader,
-                        onFullscreenChange: fullscreenPresentationDidChange
+                        onFullscreenChange: fullscreenPresentationDidChange,
+                        isFullScreen: $isFullscreenPresented
                     )
                 } else {
                     VideoPlaybackPosterView(
@@ -122,18 +121,20 @@ struct VideoEntityPlaybackView: View {
                 )
                 if presentationMode == .fullscreenOnly {
                     isFullscreenPresented = true
+                    preparation.isFullscreenPresented = true
+                    playbackSession?.isFullscreenPresented = true
                 }
                 #if DEBUG
                     if PrismediaUITestBootstrap.startsVideoAutomatically() {
-                        startPlayback()
+                        startPlayback(at: fullscreenPlaybackStartOverrideSeconds)
                     } else if VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(
                         for: ownerLink.intent
                     ) {
-                        warmPlayback()
+                        startPlayback(at: fullscreenPlaybackStartOverrideSeconds)
                     }
                 #else
                     if VideoPlaybackLaunchPolicy.shouldPrepareAutomatically(for: ownerLink.intent) {
-                        warmPlayback()
+                        startPlayback(at: fullscreenPlaybackStartOverrideSeconds)
                     }
                 #endif
             }
@@ -141,13 +142,11 @@ struct VideoEntityPlaybackView: View {
                 if preparation.phase == .idle {
                     videoDetail = nil
                     playbackController = nil
-                } else if preparation.phase == .ready {
-                    startFullscreenPlaybackIfAppropriate()
                 }
             }
             .alert("Couldn’t Play Video", isPresented: fullscreenPreparationErrorPresented) {
                 Button("Try Again") { warmPlayback() }
-                Button("Cancel", role: .cancel) { preparation.reset() }
+                Button("Cancel", role: .cancel) { cancelFullscreenPreparation() }
             } message: {
                 Text(fullscreenPreparationErrorMessage ?? "Please try again.")
             }
@@ -379,23 +378,12 @@ struct VideoEntityPlaybackView: View {
             return controller.isReadyToPlay
         }
 
-        private var fullscreenRequiresResumeChoice: Bool {
-            !startsFullscreenPlaybackImmediately
-                && presentationMode == .fullscreenOnly
-                && VideoPlaybackLaunchPolicy.shouldOfferResumeChoice(
-                    resumeSeconds: preparation.requestedResumeSeconds
-                )
-        }
-
-        private func startFullscreenPlaybackIfAppropriate() {
-            guard presentationMode == .fullscreenOnly,
-                !preparation.playRequested,
-                startsFullscreenPlaybackImmediately
-                    || VideoPlaybackLaunchPolicy.shouldAutoStartFullscreen(
-                        resumeSeconds: preparation.requestedResumeSeconds
-                    )
-            else { return }
-            startPlayback(at: fullscreenPlaybackStartOverrideSeconds)
+        private func cancelFullscreenPreparation() {
+            preparation.reset()
+            if presentationMode == .fullscreenOnly {
+                isFullscreenPresented = false
+                onFullscreenDismiss()
+            }
         }
 
         private var presentedVideoDetail: EntityDetail? {
@@ -499,7 +487,9 @@ struct VideoEntityPlaybackView: View {
     }
 
     private func fullscreenPresentationDidChange(_ isPresented: Bool) {
-        isFullscreenPresented = isPresented
+        // `isFullscreenPresented` is the binding that drove this change already.
+        preparation.isFullscreenPresented = isPresented
+        playbackSession?.isFullscreenPresented = isPresented
         guard !isPresented else { return }
         let advancedWhileFullscreen = advanceNavigation.fullscreenDidDismiss()
         guard presentationMode == .fullscreenOnly || advancedWhileFullscreen else { return }
@@ -570,6 +560,9 @@ struct VideoEntityPlaybackView: View {
 
     private func adoptPlaybackController(_ controller: VideoPlaybackController) {
         playbackController = controller
+        if let advancedDetail = videoDetail {
+            preparation.adopt(controller: controller, videoDetail: advancedDetail)
+        }
         #if os(tvOS)
             tvFullscreenPresentation?.updateController(controller)
         #endif

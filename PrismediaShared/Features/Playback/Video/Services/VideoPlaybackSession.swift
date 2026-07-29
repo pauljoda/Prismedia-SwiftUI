@@ -72,6 +72,9 @@ final class VideoPlaybackSession {
         }
 
         loadTask?.cancel()
+        #if DEBUG
+            NSLog("VFS3 session activate fresh (cancelled prior load=\(loadTask != nil))")
+        #endif
         if let activeController { systemPlayback.deactivate(activeController) }
         activeController?.stopPictureInPicture()
         activeController?.stop()
@@ -180,7 +183,16 @@ final class VideoPlaybackSession {
         )
     }
 
+    /// True while a fullscreen player driven by this session is on screen.
+    /// Presenting fullscreen removes the presenting hierarchy on iOS, which
+    /// fires `onDisappear` on the session's host — tearing the session down
+    /// there would cancel the very playback the fullscreen player is showing.
+    var isFullscreenPresented = false
+
     func ownerDidDisappear(_ ownerLink: EntityLink) {
+        #if DEBUG
+            NSLog("VFS3 session ownerDidDisappear matches=\(ownerLink == activeOwnerLink)")
+        #endif
         guard ownerLink == activeOwnerLink else { return }
         ownerIsVisible = false
         inlinePlaybackWillNavigate()
@@ -207,6 +219,9 @@ final class VideoPlaybackSession {
     }
 
     func reset() {
+        #if DEBUG
+            NSLog("VFS3 session reset (loadTask=\(loadTask != nil))")
+        #endif
         loadTask?.cancel()
         restoreTask?.cancel()
         restoreTask = nil
@@ -219,6 +234,7 @@ final class VideoPlaybackSession {
         activeRestoreLink = nil
         activeVideoID = nil
         ownerIsVisible = false
+        isFullscreenPresented = false
     }
 
     private static func subtitles(in detail: EntityDetail) -> [EntitySubtitle] {

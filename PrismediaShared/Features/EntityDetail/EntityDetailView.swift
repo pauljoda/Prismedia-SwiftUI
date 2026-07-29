@@ -16,6 +16,8 @@ public struct EntityDetailView: View {
     @State var thumbnailPlaybackLink: EntityLink?
     @State var videoPlaybackStartOverrideSeconds: Double?
     @State var suppressesRoutePlayback = false
+    @State var isVideoFullscreenLaunchActive: Bool
+    @State var pendingVideoPlaybackActionID: EntityDetailActionID?
     @State var readerPresentation: EntityReaderPresentation?
     @State var readingState = EntityDetailReadingState()
     @State var collectionMembersState = CollectionMembersState()
@@ -59,6 +61,12 @@ public struct EntityDetailView: View {
         self.link = link
         self.dependencies = dependencies
         self.imageViewerSession = imageViewerSession
+        #if os(iOS)
+            _isVideoFullscreenLaunchActive = State(initialValue: link.intent == .playback)
+        #else
+            _isVideoFullscreenLaunchActive = State(initialValue: false)
+        #endif
+        _pendingVideoPlaybackActionID = State(initialValue: nil)
         #if os(iOS) || os(macOS)
             _acquisitionStatus = State(
                 initialValue: link.sourceThumbnail?.wantedStatus
@@ -144,15 +152,27 @@ public struct EntityDetailView: View {
             }
         }
         .onDisappear {
-            if let activePlaybackOwnerLink,
-                VideoPlaybackLaunchPolicy.presentationMode(for: activePlaybackOwnerLink) == .fullscreenOnly
-            {
-                return
-            }
+            // Presenting this page's own fullscreen player removes the presenting
+            // hierarchy on iOS, so this fires while the player is up. Tearing
+            // playback down here would collapse the view that owns the fullscreen
+            // presentation and dismiss the player one frame after it opened.
+            #if os(iOS)
+                guard !isVideoFullscreenLaunchActive,
+                    !videoPlaybackPreparation.isFullscreenPresented
+                else { return }
+            #endif
             videoPlaybackPreparation.reset()
             #if !os(tvOS)
                 videoPlaybackSession?.ownerDidDisappear(link)
             #endif
+        }
+        .onChange(of: videoPlaybackPreparation.phase) { _, phase in
+            switch phase {
+            case .ready, .failure:
+                pendingVideoPlaybackActionID = nil
+            case .idle, .loading:
+                break
+            }
         }
         #if !os(iOS)
             .prismediaEntityDestination(

@@ -81,38 +81,24 @@ extension EntityDetailView {
 
     func beginPlayback(
         _ playbackLink: EntityLink,
-        startAt startSeconds: Double? = nil
+        startAt startSeconds: Double? = nil,
+        pendingActionID: EntityDetailActionID? = nil
     ) {
+        suppressesRoutePlayback = false
         #if os(iOS)
-            let requestedStartSeconds =
-                startSeconds
-                ?? playbackLink.thumbnailPreview?.resumeSeconds
-                ?? 0
-            let routedStartSeconds = requestedStartSeconds.isFinite
-                ? max(0, requestedStartSeconds)
-                : 0
-            router.open(
-                link: EntityLink(
-                    entityID: playbackLink.entityID,
-                    kind: playbackLink.kind,
-                    parentEntityID: playbackLink.parentEntityID,
-                    parentKind: playbackLink.parentKind,
-                    intent: .playback,
-                    sourceThumbnail: playbackLink.sourceThumbnail,
-                    thumbnailPreview: playbackLink.thumbnailPreview,
-                    mediaSequence: playbackLink.mediaSequence,
-                    playbackStartSeconds: routedStartSeconds,
-                    playbackRequestID: UUID()
-                )
-            )
-        #else
-            suppressesRoutePlayback = false
-            videoPlaybackStartOverrideSeconds = startSeconds
-            thumbnailPlaybackLink = playbackLink
+            isVideoFullscreenLaunchActive = true
         #endif
+        #if !os(tvOS)
+            pendingVideoPlaybackActionID = pendingActionID
+        #endif
+        videoPlaybackStartOverrideSeconds = startSeconds
+        thumbnailPlaybackLink = playbackLink
     }
 
-    func beginDetailVideoPlayback(startAt startSeconds: Double? = nil) {
+    func beginDetailVideoPlayback(
+        startAt startSeconds: Double? = nil,
+        pendingActionID: EntityDetailActionID
+    ) {
         beginPlayback(
             EntityLink(
                 entityID: link.entityID,
@@ -124,7 +110,8 @@ extension EntityDetailView {
                 thumbnailPreview: link.thumbnailPreview,
                 mediaSequence: link.mediaSequence
             ),
-            startAt: startSeconds
+            startAt: startSeconds,
+            pendingActionID: pendingActionID
         )
     }
 

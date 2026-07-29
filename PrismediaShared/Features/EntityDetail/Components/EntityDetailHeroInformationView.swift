@@ -6,6 +6,7 @@ struct EntityDetailHeroInformationView: View {
     let showsArtwork: Bool
     let actions: [EntityDetailAction]
     let isMutating: Bool
+    let loadingActionID: EntityDetailActionID?
     let canMutate: Bool
     let isActionEnabled: (EntityDetailAction) -> Bool
     let actionHint: (EntityDetailAction) -> String
@@ -26,6 +27,7 @@ struct EntityDetailHeroInformationView: View {
             EntityDetailPrimaryActionsView(
                 actions: actions,
                 horizontalPadding: horizontalPadding,
+                loadingActionID: loadingActionID,
                 isEnabled: isActionEnabled,
                 accessibilityHint: actionHint,
                 onAction: onAction
@@ -55,6 +57,7 @@ struct EntityDetailHeroInformationView: View {
                     showsArtwork: true,
                     actions: presentation.primaryActions,
                     isMutating: false,
+                    loadingActionID: nil,
                     canMutate: true,
                     isActionEnabled: { _ in true },
                     actionHint: { _ in "Opens this item" },

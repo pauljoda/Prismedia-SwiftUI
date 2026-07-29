@@ -16,11 +16,21 @@
         func beginDismissal() {
             isDismissalPending = true
             isFullscreenActive = false
-        }
-
-        func sceneCaptureDidDismantle() {
-            guard !isDismissalPending else { return }
-            exitFullscreen()
+            guard let restorationOrientations else { return }
+            PrismediaAppDelegate.supportedInterfaceOrientations = restorationOrientations
+            guard let windowScene else { return }
+            Self.invalidateSupportedOrientations(in: windowScene)
+            // Rotate the scene back while the player still covers the page so
+            // the underlying shell never appears mid-rotation. Waiting for
+            // dismissal to finish makes the page flash through empty
+            // intermediate layouts before settling.
+            windowScene.requestGeometryUpdate(
+                .iOS(interfaceOrientations: restorationOrientations)
+            ) { error in
+                #if DEBUG
+                    print("Pre-dismissal orientation restore was denied: \(error)")
+                #endif
+            }
         }
 
         func enterFullscreen(in scene: UIWindowScene) {
@@ -35,8 +45,14 @@
             }
 
             windowScene = scene
-            restorationOrientations = PrismediaAppDelegate.supportedInterfaceOrientations
+            if restorationOrientations == nil {
+                restorationOrientations = PrismediaAppDelegate.supportedInterfaceOrientations
+            }
             isFullscreenActive = true
+            // The mask must exclude portrait entirely. If portrait remains a valid
+            // resolution the scene declines the landscape geometry request, the
+            // window and scene disagree about orientation, and UIKit resolves the
+            // conflict by dismissing the fullscreen presentation outright.
             PrismediaAppDelegate.supportedInterfaceOrientations = .landscape
             Self.invalidateSupportedOrientations(in: scene)
             requestLandscape(in: scene)
@@ -107,7 +123,6 @@
     final class VideoFullscreenOrientationController {
         func prepareForPresentation() {}
         func beginDismissal() {}
-        func sceneCaptureDidDismantle() {}
         func exitFullscreen() {}
     }
 #endif

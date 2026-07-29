@@ -5,7 +5,6 @@
     @MainActor
     final class SceneCaptureView: UIView {
         var onWindowScene: ((UIWindowScene) -> Void)?
-        var onDismantle: (() -> Void)?
 
         override func didMoveToWindow() {
             super.didMoveToWindow()

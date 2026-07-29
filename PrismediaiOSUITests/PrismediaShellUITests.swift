@@ -264,12 +264,7 @@ final class PrismediaShellUITests: XCTestCase {
         commentary.tap()
         XCTAssertTrue(player.waitForExistence(timeout: 10))
 
-        let exitFullscreen = app.buttons["Exit Full Screen"].firstMatch
-        if !exitFullscreen.isHittable {
-            revealPlaybackChrome(in: app)
-        }
-        XCTAssertTrue(exitFullscreen.waitForExistence(timeout: 5))
-        exitFullscreen.tap()
+        tapFullscreenDismiss(in: app)
         XCTAssertTrue(waitForPortrait(in: app))
     }
 
@@ -295,7 +290,7 @@ final class PrismediaShellUITests: XCTestCase {
             waitForLandscape(in: app),
             "Detail-page Resume must use the same landscape fullscreen path as thumbnail playback."
         )
-        try await Task.sleep(for: .seconds(2))
+        try await Task.sleep(for: .seconds(5))
         XCTAssertTrue(player.exists, "Fullscreen playback must remain presented after Resume starts.")
     }
 
@@ -458,6 +453,22 @@ final class PrismediaShellUITests: XCTestCase {
     @MainActor
     private func revealPlaybackChrome(in app: XCUIApplication) {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.72, dy: 0.5)).tap()
+    }
+
+    @MainActor
+    private func tapFullscreenDismiss(in app: XCUIApplication) {
+        revealPlaybackChrome(in: app)
+        let buttons = app.buttons.matching(
+            NSPredicate(format: "label == %@", "Exit Full Screen")
+        )
+        for _ in 0..<10 {
+            if let button = buttons.allElementsBoundByIndex.first(where: \.isHittable) {
+                button.tap()
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTFail("Fullscreen playback must expose a hittable dismiss control.")
     }
 
     @MainActor

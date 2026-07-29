@@ -13,6 +13,11 @@ final class VideoPlaybackPreparationCoordinator {
         var errorDescription: String? { if case .failed(let message) = self { message } else { nil } }
     }
     private(set) var phase: VideoPlaybackPreparationPhase = .idle
+    /// True while a fullscreen presentation driven by this coordinator's owner
+    /// is on screen. The owning page checks it before tearing playback down in
+    /// `onDisappear`: presenting a fullscreen cover removes the presenting
+    /// hierarchy on iOS, so the page "disappears" while its own player is up.
+    var isFullscreenPresented = false
     private(set) var videoDetail: EntityDetail?
     private(set) var controller: VideoPlaybackController?
     private(set) var requestedResumeSeconds: Double?
@@ -42,6 +47,9 @@ final class VideoPlaybackPreparationCoordinator {
     }
 
     func start(_ request: VideoPlaybackPreparationRequest) {
+        #if DEBUG
+            NSLog("VFS3 start requested phase=\(phase) coord=\(ObjectIdentifier(self))")
+        #endif
         guard phase != .loading, phase != .ready else { return }
         let generation = beginLoading()
         preparationTask = Task { [weak self] in
@@ -69,6 +77,9 @@ final class VideoPlaybackPreparationCoordinator {
         guard phase != .ready || controller !== active.controller else { return }
         guard phase != .loading else { return }
 
+        #if DEBUG
+            NSLog("VFS3 restoreActivePlayback beginLoading coord=\(ObjectIdentifier(self))")
+        #endif
         let generation = beginLoading()
         preparationTask = Task { [weak self] in
             guard let self else { return }
@@ -85,6 +96,16 @@ final class VideoPlaybackPreparationCoordinator {
         await preparationTask?.value
     }
 
+    /// Adopts an already-loaded controller, e.g. when playback auto-advances to
+    /// the next episode. The fullscreen player observes this coordinator, so the
+    /// handoff must land here — swapping only view-local state leaves the player
+    /// watching the stopped predecessor.
+    func adopt(controller: VideoPlaybackController, videoDetail: EntityDetail) {
+        self.controller = controller
+        self.videoDetail = videoDetail
+        phase = .ready
+    }
+
     func lifecycleToken() -> VideoPlaybackLifecycleToken {
         VideoPlaybackLifecycleToken(generation: preparationGeneration)
     }
@@ -94,6 +115,9 @@ final class VideoPlaybackPreparationCoordinator {
     }
 
     func reset() {
+        #if DEBUG
+            NSLog("VFS3 reset gen=\(preparationGeneration + 1) coord=\(ObjectIdentifier(self))")
+        #endif
         preparationGeneration += 1
         preparationTask?.cancel()
         preparationTask = nil
@@ -103,6 +127,7 @@ final class VideoPlaybackPreparationCoordinator {
         requestedResumeSeconds = nil
         playRequested = false
         playbackStartOverrideSeconds = nil
+        isFullscreenPresented = false
     }
 
     private func beginLoading() -> Int {
@@ -121,6 +146,9 @@ final class VideoPlaybackPreparationCoordinator {
         generation: Int
     ) async {
         do {
+            #if DEBUG
+                NSLog("VFS3 prepare begin gen=\(generation)")
+            #endif
             let resolved = try await VideoEntityPlaybackStartup.resolve(
                 detail: request.detail,
                 sourceThumbnail: request.ownerLink.sourceThumbnail,
@@ -133,11 +161,17 @@ final class VideoPlaybackPreparationCoordinator {
                 ownerLink: request.ownerLink
             )
             requestedResumeSeconds = resumeAt
+            #if DEBUG
+                NSLog("VFS3 resolved id=\(resolved.id)")
+            #endif
             let controller = await prepareController(
                 resolved: resolved,
                 resumeAt: resumeAt,
                 request: request
             )
+            #if DEBUG
+                NSLog("VFS3 controller prepared error=\(controller.errorMessage ?? "nil")")
+            #endif
             try Task.checkCancellation()
             if let message = controller.errorMessage {
                 throw PreparationError.failed(message)
@@ -153,6 +187,7 @@ final class VideoPlaybackPreparationCoordinator {
             phase = .idle
         } catch {
             guard generation == preparationGeneration else { return }
+            NSLog("VFS3 prepare failure: \(error.localizedDescription)")
             phase = .failure(error.localizedDescription)
         }
     }
@@ -187,7 +222,9 @@ final class VideoPlaybackPreparationCoordinator {
         generation: Int
     ) async {
         do {
+            NSLog("VFS3 settle waiting readiness")
             try await readinessWaiter(controller)
+            NSLog("VFS3 settle readiness done")
             try Task.checkCancellation()
             guard generation == preparationGeneration else { return }
             if let message = controller.errorMessage {
@@ -199,6 +236,7 @@ final class VideoPlaybackPreparationCoordinator {
             videoDetail = detail
             self.controller = controller
             phase = .ready
+            NSLog("VFS3 phase ready")
             if playRequested { beginRequestedPlayback(with: controller) }
         } catch is CancellationError {
             guard generation == preparationGeneration else { return }

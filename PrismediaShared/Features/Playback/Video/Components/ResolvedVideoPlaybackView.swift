@@ -7,7 +7,9 @@ struct ResolvedVideoPlaybackView: View {
     let trickplayPlaylistPath: String?
     let trickplayFrameLoader: (any TrickplayFrameLoading)?
     let onFullscreenChange: (Bool) -> Void
-    @State private var isFullScreen = false
+    /// Owned by the launching view so that re-creating this one cannot silently
+    /// reset an active presentation back to windowed.
+    @Binding var isFullScreen: Bool
 
     var body: some View {
         Group {
@@ -106,7 +108,8 @@ struct ResolvedVideoPlaybackView: View {
             presentationMode: .inline,
             trickplayPlaylistPath: nil,
             trickplayFrameLoader: nil,
-            onFullscreenChange: { _ in }
+            onFullscreenChange: { _ in },
+            isFullScreen: .constant(false)
         )
         .background(Color.black)
     }

@@ -44,6 +44,7 @@ extension EntityDetailView {
         }
         if action.id == .play || (action.id == .resume && currentDetail.map(hasPlayableVideo) == true) {
             return dependencies.videoPlaybackService != nil
+                && pendingVideoPlaybackActionID == nil
                 && videoPlaybackPreparation.phase != .loading
         }
         if action.id == .read || action.id == .resume {
@@ -122,12 +123,15 @@ extension EntityDetailView {
             }
         case .resume:
             if let currentDetail, hasPlayableVideo(currentDetail) {
-                beginDetailVideoPlayback(startAt: videoResumeSeconds(for: currentDetail))
+                beginDetailVideoPlayback(
+                    startAt: videoResumeSeconds(for: currentDetail),
+                    pendingActionID: .resume
+                )
             } else {
                 openReader(command: .resume)
             }
         case .play:
-            beginDetailVideoPlayback(startAt: 0)
+            beginDetailVideoPlayback(startAt: 0, pendingActionID: .play)
         case .listen:
             #if os(iOS) || os(macOS)
                 guard case .content(let detail) = state.phase else { return }

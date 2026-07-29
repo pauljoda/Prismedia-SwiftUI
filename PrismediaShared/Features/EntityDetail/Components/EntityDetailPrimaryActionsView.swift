@@ -7,6 +7,7 @@ struct EntityDetailPrimaryActionsView: View {
     #endif
     let actions: [EntityDetailAction]
     let horizontalPadding: CGFloat
+    let loadingActionID: EntityDetailActionID?
     let isEnabled: (EntityDetailAction) -> Bool
     let accessibilityHint: (EntityDetailAction) -> String
     let onAction: (EntityDetailAction) -> Void
@@ -46,7 +47,8 @@ struct EntityDetailPrimaryActionsView: View {
                 systemImage: action.systemImage,
                 variant: isTinted ? .prominent : .standard,
                 form: actionForm,
-                primaryTint: isTinted ? primaryTint : nil
+                primaryTint: isTinted ? primaryTint : nil,
+                isLoading: action.id == loadingActionID
             ) {
                 onAction(action)
             }
@@ -95,6 +97,7 @@ struct EntityDetailPrimaryActionsView: View {
                 )
             ],
             horizontalPadding: PrismediaSpacing.extraLarge,
+            loadingActionID: .resume,
             isEnabled: { _ in true },
             accessibilityHint: { _ in "Resumes playback" },
             onAction: { _ in }
