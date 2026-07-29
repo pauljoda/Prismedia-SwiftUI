@@ -164,7 +164,7 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(mapping.trackID, chapters[1].audioTrack?.id)
     }
 
-    func testFartherResolvedReaderChapterWinsOverEstimatedCanonicalChapter() {
+    func testOpaqueCFICanonicalCursorSelectsOneUnifiedChapter() {
         let chapters = [
             epubChapter(number: 1, start: 0.8, end: 0.96, duration: 100),
             epubChapter(number: 2, start: 0.96, end: 1, duration: 100),
@@ -183,34 +183,10 @@ final class BookProgressMappingTests: XCTestCase {
             progress: canonicalProgress(
                 index: 9_500,
                 location: "epubcfi(/6/144!/4/2/2:10)"
-            ),
-            resolvedReadingChapterID: chapters[1].id
+            )
         )
 
-        XCTAssertEqual(chapterID, chapters[1].id)
-    }
-
-    func testFartherCanonicalChapterDoesNotMoveBackToAnOlderDeviceChapter() {
-        let chapters = [
-            epubChapter(number: 1, start: 0.8, end: 0.96, duration: 100),
-            epubChapter(number: 2, start: 0.96, end: 1, duration: 100),
-        ]
-        let mappings = BookProgressMappingBuilder().build(
-            bookID: bookID,
-            chapters: chapters,
-            readerMode: .paged,
-            hasReadableRendition: true
-        )
-
-        let chapterID = BookProgressMappingResolver().currentChapterID(
-            bookID: bookID,
-            chapters: chapters,
-            mappings: mappings,
-            progress: canonicalProgress(index: 9_700, location: nil),
-            resolvedReadingChapterID: chapters[0].id
-        )
-
-        XCTAssertEqual(chapterID, chapters[1].id)
+        XCTAssertEqual(chapterID, chapters[0].id)
     }
 
     func testNativeExactLocationIsTheUnifiedChapterAuthority() {

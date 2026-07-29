@@ -41,6 +41,8 @@ extension EntityDetailView {
     }
 
     func refreshDetailContent() async {
+        let progressLoad = bookProgressLoadingState.begin()
+        defer { bookProgressLoadingState.finish(progressLoad) }
         await loadDetail()
         #if os(iOS) || os(macOS)
             await refreshAcquisitionStatus()
@@ -52,8 +54,23 @@ extension EntityDetailView {
         await loadAudiobook(for: refreshedDetail)
         await loadBookChapters(for: refreshedDetail)
         #if os(iOS) || os(macOS)
-            await promoteLegacyAudiobookProgressIfNeeded(for: refreshedDetail)
+            if let currentDetail, currentDetail.id == refreshedDetail.id {
+                await promoteLegacyAudiobookProgressIfNeeded(for: currentDetail)
+            }
         #endif
+    }
+
+    func refreshBookProgressAfterReader() async {
+        guard case .content(let detail) = state.phase else { return }
+        let progressLoad = bookProgressLoadingState.begin()
+        defer { bookProgressLoadingState.finish(progressLoad) }
+
+        await loadDetail()
+        guard case .content(let refreshedDetail) = state.phase,
+            refreshedDetail.id == detail.id
+        else { return }
+        await loadReadingState(for: refreshedDetail)
+        await loadBookChapters(for: refreshedDetail)
     }
 
     func loadVideoProgress(for detail: EntityDetail) async {

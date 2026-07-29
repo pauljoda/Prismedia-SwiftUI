@@ -210,9 +210,7 @@ extension EntityDetailView {
                 let reader = dependencies.readerService
             else {
                 readableBookChapters = []
-                if bookResumeChapterSelection?.bookID == detail.id {
-                    bookResumeChapterSelection = nil
-                }
+                epubReadingProgressRanges = []
                 areBookChaptersLoading = false
                 bookChaptersErrorMessage = nil
                 refreshBookChapterMappings(for: detail)
@@ -223,38 +221,69 @@ extension EntityDetailView {
             bookChaptersErrorMessage = nil
             defer { areBookChaptersLoading = false }
             do {
-                let contents = try await EPUBChapterContentsService(reader: reader).load(
-                    book: detail,
-                    storedLocation: dependencies.readerLocatorStore.load(bookID: detail.id)
-                )
+                let storedLocation = dependencies.readerLocatorStore.load(bookID: detail.id)
+                let contents = try await EPUBChapterContentsService(reader: reader).load(book: detail)
                 guard case .content(let currentDetail) = state.phase,
                     currentDetail.id == detail.id
                 else { return }
                 readableBookChapters = contents.chapters
-                bookResumeChapterSelection = contents.currentChapterID.map {
-                    BookResumeChapterSelection(
-                        bookID: detail.id,
-                        chapterID: $0,
-                        readingTarget: contents.resumeTarget
-                    )
-                }
+                epubReadingProgressRanges = contents.progressRanges
                 refreshBookChapterMappings(for: currentDetail)
+                await promoteStoredEPUBProgressIfNeeded(
+                    for: currentDetail,
+                    storedLocation: storedLocation
+                )
             } catch is CancellationError {
                 return
             } catch {
                 readableBookChapters = []
-                if bookResumeChapterSelection?.bookID == detail.id {
-                    bookResumeChapterSelection = nil
-                }
+                epubReadingProgressRanges = []
                 bookChaptersErrorMessage = error.localizedDescription
                 refreshBookChapterMappings(for: detail)
             }
         #else
             readableBookChapters = []
             mappedBookChapters = []
-            bookResumeChapterSelection = nil
+            epubReadingProgressRanges = []
             areBookChaptersLoading = false
             bookChaptersErrorMessage = nil
         #endif
     }
+
+    #if os(iOS) || os(macOS)
+        func promoteStoredEPUBProgressIfNeeded(
+            for detail: EntityDetail,
+            storedLocation: String?
+        ) async {
+            guard detail.bookFormat == .epub,
+                let reader = dependencies.readerService,
+                let request = EPUBStoredProgressPromotionResolver().request(
+                    bookID: detail.id,
+                    storedLocation: storedLocation,
+                    ranges: epubReadingProgressRanges,
+                    mode: readingState.manifest?.readerMode
+                        ?? detail.capability(EntityProgressCapability.self)?.mode
+                        ?? .paged,
+                    progress: detail.capability()
+                )
+            else { return }
+
+            do {
+                try await reader.updateReadingProgress(id: detail.id, request: request)
+            } catch is CancellationError {
+                return
+            } catch {
+                return
+            }
+
+            await loadDetail()
+            guard !Task.isCancelled,
+                case .content(let refreshedDetail) = state.phase,
+                refreshedDetail.id == detail.id
+            else { return }
+            await loadReadingState(for: refreshedDetail)
+            refreshBookChapterMappings(for: refreshedDetail)
+            dependencies.onEntityMutated()
+        }
+    #endif
 }

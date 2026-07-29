@@ -22,6 +22,7 @@
         private let locatorStore: EPUBLocatorStore
         private let initialLocation: String?
         private let initialProgression: Double?
+        private let progressRanges: [EPUBReadingProgressRange]
         private let companionPlayer: MusicPlayerController?
         private let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
         private let onReady: () -> Void
@@ -34,6 +35,7 @@
             locatorStore: EPUBLocatorStore = .disabled,
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
+            progressRanges: [EPUBReadingProgressRange] = [],
             companionPlayer: MusicPlayerController? = nil,
             findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
             onReady: @escaping () -> Void = {}
@@ -44,6 +46,7 @@
             self.locatorStore = locatorStore
             self.initialLocation = initialLocation
             self.initialProgression = initialProgression
+            self.progressRanges = progressRanges
             self.companionPlayer = companionPlayer
             self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
             self.onReady = onReady
@@ -62,6 +65,7 @@
                     bookmarkStore: bookmarkStore,
                     initialLocation: initialLocation,
                     initialProgression: initialProgression,
+                    progressRanges: progressRanges,
                     companionPlayer: companionPlayer,
                     findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
                     onReady: onReady
@@ -385,6 +389,10 @@
                 chapterLocation: chapter.location
             )
             let bookProgression = DocumentReaderProgressMapper.epubBookProgression(
+                resourceLocation: chapter.location,
+                ranges: progressRanges,
+                resourceProgression: currentChapterProgress
+            ) ?? DocumentReaderProgressMapper.epubBookProgression(
                 chapterIndex: currentChapter,
                 chapterContentSizes: publication.chapters.map(\.contentSize),
                 chapterProgression: currentChapterProgress

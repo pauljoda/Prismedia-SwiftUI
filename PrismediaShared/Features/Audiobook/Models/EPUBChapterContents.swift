@@ -3,15 +3,15 @@ import Foundation
 struct EPUBChapterContents: Equatable, Sendable {
     let chapters: [ReadableBookChapter]
     let currentChapterID: String?
-    let resumeTarget: BookReaderLocationTarget?
+    let progressRanges: [EPUBReadingProgressRange]
 
     init(
         chapters: [ReadableBookChapter],
         currentChapterID: String?,
-        resumeTarget: BookReaderLocationTarget? = nil
+        progressRanges: [EPUBReadingProgressRange] = []
     ) {
         self.chapters = chapters
         self.currentChapterID = currentChapterID
-        self.resumeTarget = resumeTarget
+        self.progressRanges = progressRanges
     }
 }

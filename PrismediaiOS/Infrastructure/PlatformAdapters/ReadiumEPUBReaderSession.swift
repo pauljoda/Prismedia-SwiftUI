@@ -23,6 +23,7 @@
         private let locatorStore: EPUBLocatorStore
         private let initialLocation: String?
         private let initialProgression: Double?
+        private let progressRanges: [EPUBReadingProgressRange]
         private let progressWriter: BookReaderProgressWriter
         private var publication: Publication?
         private var navigator: EPUBNavigatorViewController?
@@ -32,6 +33,7 @@
         private var searchLocators: [String: Locator] = [:]
         private var searchGeneration = 0
         private var progression = 0.0
+        private var resourceProgression = 0.0
         private var activeResourceKey: String?
         private var pendingChapterRestoreResourceKey: String?
         private var explicitNavigationResourceKey: String?
@@ -48,7 +50,8 @@
             preferencesStore: ReaderPreferencesStore,
             locatorStore: EPUBLocatorStore,
             initialLocation: String? = nil,
-            initialProgression: Double? = nil
+            initialProgression: Double? = nil,
+            progressRanges: [EPUBReadingProgressRange] = []
         ) {
             self.book = book
             self.command = command
@@ -57,6 +60,7 @@
             self.locatorStore = locatorStore
             self.initialLocation = initialLocation
             self.initialProgression = initialProgression
+            self.progressRanges = progressRanges
             progressWriter = BookReaderProgressWriter(service: service)
             preferences = preferencesStore.loadEPUB()
         }
@@ -537,10 +541,18 @@
         }
 
         private func saveProgress(closing: Bool, stoppingActivity: Bool = false) {
-            let location = navigator?.currentLocation.flatMap { try? $0.jsonString() }
+            let currentLocation = navigator?.currentLocation
+            let location = currentLocation.flatMap { try? $0.jsonString() }
+            let mappedProgression = currentLocation.flatMap {
+                DocumentReaderProgressMapper.epubBookProgression(
+                    resourceLocation: $0.href.string,
+                    ranges: progressRanges,
+                    resourceProgression: resourceProgression
+                )
+            }
             let request = DocumentReaderProgressMapper.epubRequest(
                 bookID: book.id,
-                progression: progression,
+                progression: mappedProgression ?? progression,
                 mode: preferences.flow,
                 location: location,
                 closing: closing
@@ -562,16 +574,24 @@
             viewport: NavigatorViewport? = nil
         ) {
             let resourceKey = resourceKey(locator.href)
+            let currentViewport = viewport ?? navigator?.viewport
             if resourceKey != scrollFocusResourceKey {
                 scrollFocusResourceKey = resourceKey
                 Task { await applyScrollFocus() }
+            }
+            if let visibleResource = currentViewport?.resources.first(where: {
+                self.resourceKey($0.href) == resourceKey
+            }) {
+                resourceProgression = min(max(visibleResource.progression.lowerBound, 0), 1)
+            } else if let locatorProgression = locator.locations.progression {
+                resourceProgression = min(max(locatorProgression, 0), 1)
             }
             if let totalProgression = locator.locations.totalProgression {
                 updateProgression(totalProgression)
             }
             if let chapterProgress = chapterProgress(
                 for: locator,
-                viewport: viewport ?? navigator?.viewport
+                viewport: currentViewport
             ) {
                 onChapterProgressChange?(chapterProgress)
                 if let resourceIndex = resourceIndex(for: locator.href) {

@@ -38,6 +38,7 @@
             bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
+            progressRanges: [EPUBReadingProgressRange] = [],
             companionPlayer: MusicPlayerController? = nil,
             findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
             onReady: @escaping () -> Void = {}
@@ -49,7 +50,8 @@
                 preferencesStore: preferencesStore,
                 locatorStore: locatorStore,
                 initialLocation: initialLocation,
-                initialProgression: initialProgression
+                initialProgression: initialProgression,
+                progressRanges: progressRanges
             )
             _session = State(initialValue: session)
             _preferences = State(initialValue: session.preferences)

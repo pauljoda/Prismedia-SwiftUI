@@ -26,11 +26,11 @@ public struct EntityDetailView: View {
     @State var isListeningMutating = false
     @State var audiobookErrorMessage: String?
     @State var readableBookChapters: [ReadableBookChapter] = []
-    @State var bookResumeChapterSelection: BookResumeChapterSelection?
+    @State var epubReadingProgressRanges: [EPUBReadingProgressRange] = []
     @State var areBookChaptersLoading = false
     @State var bookChaptersErrorMessage: String?
     @State var mappedBookChapters: [BookChapterMapping] = []
-    @State var hasLoadedBookProgressData = false
+    @State var bookProgressLoadingState = BookProgressLoadingState()
     @State var videoProgressEpisode: EntityDetail?
     @State var liveVideoResumeSeconds: Double?
     @State var resolvedVideoTechnicalDetail: EntityDetail?
@@ -191,6 +191,7 @@ public struct EntityDetailView: View {
                     locatorStore: dependencies.readerLocatorStore,
                     initialEPUBLocation: presentation.initialEPUBLocation,
                     initialEPUBProgression: presentation.initialEPUBProgression,
+                    epubProgressRanges: epubReadingProgressRanges,
                     companionPlayer: companionPlayer(for: presentation),
                     findCurrentAudiobookReadingTarget: {
                         #if os(iOS) || os(macOS)
@@ -226,10 +227,7 @@ public struct EntityDetailView: View {
             guard previous != nil, current == nil else { return }
             pauseCompanionAudiobook(for: previous)
             Task {
-                await reloadReadingState()
-                if case .singleFile(let refreshedDetail) = readingState.phase {
-                    await loadBookChapters(for: refreshedDetail)
-                }
+                await refreshBookProgressAfterReader()
             }
         }
         .alert("Couldn’t Update Details", isPresented: mutationErrorPresented) {

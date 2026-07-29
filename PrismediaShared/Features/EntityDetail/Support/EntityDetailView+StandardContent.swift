@@ -195,7 +195,8 @@ extension EntityDetailView {
                     }
                 }
                 .task(id: detail.id) {
-                    hasLoadedBookProgressData = false
+                    let progressLoad = bookProgressLoadingState.begin()
+                    defer { bookProgressLoadingState.finish(progressLoad) }
                     await loadResolvedVideoTechnicalDetail(for: detail)
                     await loadVideoProgress(for: detail)
                     await loadReadingState(for: detail)
@@ -203,10 +204,10 @@ extension EntityDetailView {
                     await loadAudiobook(for: detail)
                     await loadBookChapters(for: detail)
                     #if os(iOS) || os(macOS)
-                        await promoteLegacyAudiobookProgressIfNeeded(for: detail)
+                        if let currentDetail, currentDetail.id == detail.id {
+                            await promoteLegacyAudiobookProgressIfNeeded(for: currentDetail)
+                        }
                     #endif
-                    guard currentDetail?.id == detail.id else { return }
-                    hasLoadedBookProgressData = true
                 }
                 #if DEBUG
                     .task(id: detail.id) {

@@ -35,6 +35,41 @@ final class DocumentReaderProgressMapperTests: XCTestCase {
         XCTAssertEqual(progression, 0.625)
     }
 
+    func testEPUBResourceProgressMapsIntoTheCanonicalChapterRange() throws {
+        let ranges = [
+            EPUBReadingProgressRange(
+                location: "Text/Jon.xhtml",
+                startFraction: 0.8,
+                endFraction: 0.96
+            ),
+            EPUBReadingProgressRange(
+                location: "Text/Catelyn.xhtml",
+                startFraction: 0.96,
+                endFraction: 1
+            ),
+        ]
+
+        let progression = try XCTUnwrap(
+            DocumentReaderProgressMapper.epubBookProgression(
+                resourceLocation: "/OEBPS/Text/Catelyn.xhtml",
+                ranges: ranges,
+                resourceProgression: 0.25
+            )
+        )
+        let request = DocumentReaderProgressMapper.epubRequest(
+            bookID: bookID,
+            progression: progression,
+            mode: .paged,
+            location: #"{"href":"Text/Catelyn.xhtml","locations":{"progression":0.25}}"#,
+            closing: false
+        )
+
+        XCTAssertEqual(progression, 0.97, accuracy: 0.000_001)
+        XCTAssertEqual(request.index, 9_700)
+        XCTAssertEqual(request.currentEntityID, bookID)
+        XCTAssertEqual(request.location, #"{"href":"Text/Catelyn.xhtml","locations":{"progression":0.25}}"#)
+    }
+
     func testEPUBRestoresByLocationBeforeStaleNumericIndex() {
         let progress = EntityProgressCapability(
             currentEntityID: bookID,

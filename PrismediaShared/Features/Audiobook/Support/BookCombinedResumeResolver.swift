@@ -55,34 +55,6 @@ struct BookCombinedResumeResolver: Sendable {
         return target(chapter: chapter, mapping: mapping, progress: matchingProgress)
     }
 
-    func resolveChapter(
-        _ chapter: BookChapterMapping,
-        readingTarget: BookReaderLocationTarget
-    ) -> BookCombinedResumeTarget? {
-        guard case .some(.epub(let chapterLocation)) = chapter.readTarget,
-            EPUBResourceLocationMatcher().bestMatch(
-                for: readingTarget.location,
-                candidates: [chapterLocation]
-            ) != nil,
-            let track = chapter.audioTrack,
-            let duration = track.duration,
-            duration.isFinite,
-            duration > 0
-        else { return nil }
-
-        let estimatedOffset = readingTarget.progression * duration
-        return BookCombinedResumeTarget(
-            readingTarget: .chapter(
-                location: readingTarget.location,
-                progression: readingTarget.progression
-            ),
-            audioTrackID: track.id,
-            audioStartSeconds: estimatedOffset <= audioRunwaySeconds
-                ? 0
-                : estimatedOffset - audioRunwaySeconds
-        )
-    }
-
     func resolveAudioResume(
         chapters: [BookChapterMapping],
         mappings: [BookProgressTrackMapping],

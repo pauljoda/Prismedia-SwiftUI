@@ -7,7 +7,7 @@ struct EPUBChapterContentsService: Sendable {
         self.reader = reader
     }
 
-    func load(book: EntityDetail, storedLocation: String? = nil) async throws -> EPUBChapterContents {
+    func load(book: EntityDetail) async throws -> EPUBChapterContents {
         guard BookChapterContentsLoadPolicy.canLoad(book) else {
             return EPUBChapterContents(chapters: [], currentChapterID: nil)
         }
@@ -29,21 +29,13 @@ struct EPUBChapterContentsService: Sendable {
         }.value
         let chapters = readableChapters(in: publication)
         let progress: EntityProgressCapability? = book.capability()
-        let resumeSource = progress?.completedAt == nil
-            ? EPUBReaderResumeSourceResolver().resolve(
-                explicitLocation: progress?.location,
-                explicitProgression: nil,
-                deviceLocation: storedLocation
-            )
-            : nil
-        let resumeTarget = resumeSource?.fallbackTarget
         return EPUBChapterContents(
             chapters: chapters,
             currentChapterID: currentChapterID(
-                progressLocation: resumeTarget?.location,
+                progressLocation: progress?.completedAt == nil ? progress?.location : nil,
                 chapters: chapters
             ) ?? currentChapterID(progress: progress, chapters: chapters),
-            resumeTarget: resumeTarget
+            progressRanges: progressRanges(in: publication)
         )
     }
 
@@ -92,6 +84,9 @@ struct EPUBChapterContentsService: Sendable {
     }
 
     private func chapterRanges(in publication: EPUBPublication) -> [(start: Double, end: Double)] {
+        // Foliate uses each linear spine item's uncompressed source size for its whole-book
+        // fraction. Using the same stable source measure keeps web and native pagination settings
+        // presentation-only while both clients share the canonical 0...10_000 Book cursor.
         let sizes = publication.chapters.map { max(0, $0.contentSize) }
         let total = sizes.reduce(0, +)
         guard total > 0 else { return [] }
@@ -100,6 +95,18 @@ struct EPUBChapterContentsService: Sendable {
             let start = Double(accumulated) / Double(total)
             accumulated += size
             return (start, Double(accumulated) / Double(total))
+        }
+    }
+
+    private func progressRanges(in publication: EPUBPublication) -> [EPUBReadingProgressRange] {
+        let ranges = chapterRanges(in: publication)
+        return publication.chapters.enumerated().compactMap { index, chapter in
+            guard ranges.indices.contains(index) else { return nil }
+            return EPUBReadingProgressRange(
+                location: chapter.location,
+                startFraction: ranges[index].start,
+                endFraction: ranges[index].end
+            )
         }
     }
 

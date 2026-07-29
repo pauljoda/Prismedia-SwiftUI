@@ -31,6 +31,23 @@ public struct DocumentReaderProgressMapper: Sendable {
         return min(max(0, (Double(elapsed) + local) / Double(total)), 1)
     }
 
+    public static func epubBookProgression(
+        resourceLocation: String,
+        ranges: [EPUBReadingProgressRange],
+        resourceProgression: Double
+    ) -> Double? {
+        guard let matchedLocation = EPUBResourceLocationMatcher().bestMatch(
+            for: resourceLocation,
+            candidates: ranges.map(\.location)
+        ),
+            let range = ranges.last(where: { $0.location == matchedLocation }),
+            range.endFraction > range.startFraction
+        else { return nil }
+        let localProgression = min(max(resourceProgression, 0), 1)
+        return range.startFraction
+            + localProgression * (range.endFraction - range.startFraction)
+    }
+
     public static func epubRequest(
         bookID: UUID,
         progression: Double,

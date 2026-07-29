@@ -64,51 +64,6 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         XCTAssertEqual(target.audioStartSeconds, 295, accuracy: 0.001)
     }
 
-    func testResolvedReaderChapterDrivesBothRenditionsAtTheExactProgression() throws {
-        let chapter = mappedChapter(
-            order: 0,
-            duration: 200,
-            startFraction: 0,
-            endFraction: 1
-        )
-
-        let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                readingTarget: BookReaderLocationTarget(
-                    location: "Text/chapter-1.xhtml",
-                    progression: 0.75
-                )
-            )
-        )
-
-        XCTAssertEqual(
-            target.readingTarget,
-            .chapter(location: "Text/chapter-1.xhtml", progression: 0.75)
-        )
-        XCTAssertEqual(target.audioTrackID, chapter.audioTrack?.id)
-        XCTAssertEqual(target.audioStartSeconds, 145, accuracy: 0.001)
-    }
-
-    func testResolvedReaderTargetDoesNotInventAudioForADifferentChapter() {
-        let chapter = mappedChapter(
-            order: 0,
-            duration: 200,
-            startFraction: 0,
-            endFraction: 1
-        )
-
-        XCTAssertNil(
-            BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                readingTarget: BookReaderLocationTarget(
-                    location: "Text/chapter-2.xhtml",
-                    progression: 0.75
-                )
-            )
-        )
-    }
-
     func testOpaqueFoliateCFIFallsBackToMappedChapterProgression() throws {
         let chapters = [
             mappedChapter(order: 0, duration: 300, startFraction: 0, endFraction: 0.5),

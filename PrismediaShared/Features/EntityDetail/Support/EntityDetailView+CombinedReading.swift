@@ -18,10 +18,7 @@ extension EntityDetailView {
             bookID: detail.id,
             chapters: chapters,
             mappings: mappings,
-            progress: detail.capability(),
-            resolvedReadingChapterID: bookResumeChapterSelection?.bookID == detail.id
-                ? bookResumeChapterSelection?.chapterID
-                : nil
+            progress: detail.capability()
         )
         if let index = chapters.firstIndex(where: { $0.id == currentChapterID }) {
             chapters[index].isCurrentProgress = true
@@ -62,27 +59,15 @@ extension EntityDetailView {
             reading: readingState.progressPresentation,
             chapterLabel: currentChapter?.title,
             activitySeconds: detail.capability(EntityPlaybackCapability.self)?.playDurationSeconds,
-            isLoading: !hasLoadedBookProgressData,
+            isLoading: bookProgressLoadingState.isLoading,
             isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
-                || !hasLoadedBookProgressData || !mappingsAreReady
+                || bookProgressLoadingState.isLoading || !mappingsAreReady
         )
     }
 
     func combinedResumeTarget(
         for detail: EntityDetail
     ) -> BookCombinedResumeTarget? {
-        if let selection = bookResumeChapterSelection,
-            selection.bookID == detail.id,
-            let readingTarget = selection.readingTarget,
-            let chapter = mappedBookChapters.first(where: {
-                $0.id == selection.chapterID && $0.isCurrentProgress
-            })
-        {
-            return BookCombinedResumeResolver().resolveChapter(
-                chapter,
-                readingTarget: readingTarget
-            )
-        }
         return BookCombinedResumeResolver().resolveContinuation(
             chapters: mappedBookChapters,
             mappings: bookProgressMappings(for: detail),
