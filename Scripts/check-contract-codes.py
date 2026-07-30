@@ -18,6 +18,9 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from entity_kind_definition_codegen import OUTPUT as ENTITY_KIND_DEFINITIONS_PATH
+from entity_kind_definition_codegen import render_manifest as render_entity_kind_definitions
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CODES_URL = "http://127.0.0.1:8008/api/_codegen/codes.json"
@@ -26,7 +29,6 @@ STATIC_CODE_PATTERN = re.compile(
 )
 ENUM_CASE_CODE_PATTERN = re.compile(r'case \w+ = "([^"]+)"')
 FAMILIES = {
-    "EntityKind": ("PrismediaShared/Domain/Entities/EntityKind.swift", STATIC_CODE_PATTERN),
     "AutoIdentifySelectorKind": (
         "PrismediaShared/Features/Administration/Models/AutoIdentifySelectorKind.swift",
         ENUM_CASE_CODE_PATTERN,
@@ -88,6 +90,14 @@ def main() -> int:
         manifest = load_manifest(arguments)
         manifest_enums = manifest["enums"]
         failures: list[str] = []
+
+        expected_definitions = render_entity_kind_definitions(manifest)
+        actual_definitions = ENTITY_KIND_DEFINITIONS_PATH.read_text(encoding="utf-8")
+        if actual_definitions != expected_definitions:
+            failures.append(
+                "Generated EntityKind definitions differ; run "
+                "`python3 Scripts/generate-entity-kind-definitions.py`"
+            )
 
         for family, (relative_path, pattern) in FAMILIES.items():
             expected = {entry["code"] for entry in manifest_enums[family]}

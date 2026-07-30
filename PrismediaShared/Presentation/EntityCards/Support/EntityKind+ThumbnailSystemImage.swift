@@ -1,24 +1,28 @@
 extension EntityKind {
     var thumbnailFallbackSystemImage: String {
-        switch self {
-        case .audio: "waveform"
-        case .video: "film"
-        case .movie: "movieclapper"
-        case .videoSeries, .videoSeason: "rectangle.stack"
-        case .gallery: "photo.stack"
-        case .image: "photo"
-        case .book, .bookVolume: "book.closed"
-        case .bookChapter: "text.book.closed"
-        case .bookPage: "doc.richtext"
-        case .person: "person.crop.rectangle"
-        case .studio: "building.2"
-        case .tag: "tag"
-        case .collection: "square.stack.3d.up"
-        case .audioLibrary: "square.stack"
-        case .audioTrack: "music.note"
-        case .musicArtist: "music.mic"
-        case .bookAuthor: "signature"
-        default: "photo"
-        }
+        guard let icon = definition?.presentation.icon else { return "photo" }
+        return Self.thumbnailSystemImages[icon] ?? "photo"
     }
+
+    private static let thumbnailSystemImages: [EntityKindIcon: String] = [
+        .album: "square.stack",
+        .artist: "music.mic",
+        .audio: "waveform",
+        .author: "signature",
+        .book: "book.closed",
+        .chapter: "text.book.closed",
+        .collection: "square.stack.3d.up",
+        .gallery: "photo.stack",
+        .image: "photo",
+        .movie: "movieclapper",
+        .page: "doc.richtext",
+        .person: "person.crop.rectangle",
+        .season: "rectangle.stack",
+        .series: "rectangle.stack",
+        .studio: "building.2",
+        .tag: "tag",
+        .track: "music.note",
+        .video: "film",
+        .volume: "book.closed",
+    ]
 }

@@ -102,6 +102,7 @@ When the Prismedia API is running locally, validate the native code families aga
 backend's canonical code manifest:
 
 ```sh
+python3 Scripts/generate-entity-kind-definitions.py
 python3 Scripts/check-contract-codes.py
 ```
 

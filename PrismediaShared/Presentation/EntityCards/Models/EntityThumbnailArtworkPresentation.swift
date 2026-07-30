@@ -14,6 +14,6 @@ public struct EntityThumbnailArtworkPresentation: Hashable, Sendable {
 
     public init(kind: EntityKind) {
         aspectRatio = kind.thumbnailAspectRatio
-        contentMode = kind == .studio ? .fit : .fill
+        contentMode = kind.definition?.presentation.artworkFit == .contain ? .fit : .fill
     }
 }

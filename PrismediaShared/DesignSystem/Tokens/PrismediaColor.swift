@@ -65,11 +65,15 @@ public enum PrismediaColor {
     /// The stable material-spectrum accent assigned to an entity family across
     /// browse, search, request, and identify surfaces.
     public static func entityAccent(for kind: EntityKind) -> Color {
-        materialSpectrumColor(at: entityMaterialSpectrumIndex(for: kind))
+        materialSpectrumColor(at: entityMaterialSpectrumIndexes(for: kind).primary)
     }
 
     public static func entityAccentPair(for kind: EntityKind) -> [Color] {
-        materialSpectrumPair(at: entityMaterialSpectrumIndex(for: kind))
+        let indexes = entityMaterialSpectrumIndexes(for: kind)
+        return [
+            materialSpectrumColor(at: indexes.primary),
+            materialSpectrumColor(at: indexes.secondary),
+        ]
     }
 
     public static let destructive = Color.red
@@ -131,22 +135,14 @@ public enum PrismediaColor {
         return remainder >= 0 ? remainder : remainder + materialSpectrum.count
     }
 
-    private static func entityMaterialSpectrumIndex(for kind: EntityKind) -> Int {
-        switch kind {
-        case .video: 0
-        case .movie, .studio: 1
-        case .videoSeries, .videoSeason: 2
-        case .gallery, .tag: 3
-        case .book, .bookVolume, .bookChapter, .bookPage, .bookAuthor: 4
-        case .image: 5
-        case .audio, .audioLibrary, .audioTrack, .musicArtist: 6
-        case .collection: 7
-        case .person: 0
-        default:
-            StableStringHash.paletteIndex(
-                for: kind.rawValue,
-                paletteCount: materialSpectrum.count
-            )
+    private static func entityMaterialSpectrumIndexes(for kind: EntityKind) -> (primary: Int, secondary: Int) {
+        if let presentation = kind.definition?.presentation {
+            return (presentation.primaryAccentIndex, presentation.secondaryAccentIndex)
         }
+        let primary = StableStringHash.paletteIndex(
+            for: kind.rawValue,
+            paletteCount: materialSpectrum.count
+        )
+        return (primary, primary + 1)
     }
 }
