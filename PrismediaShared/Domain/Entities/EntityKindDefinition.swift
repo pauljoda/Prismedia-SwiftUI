@@ -12,6 +12,16 @@ public struct EntityKindDefinition: Hashable, Sendable {
     public let search: EntityKindSearch?
     public let supportsFileDeletion: Bool
     public let supportsRequests: Bool
+    /// Server selector used by automatic metadata identification, when this kind can be identified.
+    public let autoIdentifySelector: String?
+    /// Entity kinds that this kind may directly contain, when it owns a collection relationship.
+    public let containableKinds: [EntityKind]?
+    /// Whether users may create and manage instances of this kind without imported media.
+    public let supportsManualManagement: Bool
+    /// Media quality family used by acquisition upgrade policy.
+    public let mediaQualityFamily: EntityMediaQualityFamily
+    /// Whether acquisition may replace this kind's media atomically during an upgrade.
+    public let supportsAtomicMediaUpgrade: Bool
     public let enumeratesIdentifyChildren: Bool
 
     public init(
@@ -25,6 +35,11 @@ public struct EntityKindDefinition: Hashable, Sendable {
         search: EntityKindSearch?,
         supportsFileDeletion: Bool,
         supportsRequests: Bool,
+        autoIdentifySelector: String?,
+        containableKinds: [EntityKind]?,
+        supportsManualManagement: Bool,
+        mediaQualityFamily: EntityMediaQualityFamily,
+        supportsAtomicMediaUpgrade: Bool,
         enumeratesIdentifyChildren: Bool
     ) {
         self.kind = kind
@@ -37,6 +52,11 @@ public struct EntityKindDefinition: Hashable, Sendable {
         self.search = search
         self.supportsFileDeletion = supportsFileDeletion
         self.supportsRequests = supportsRequests
+        self.autoIdentifySelector = autoIdentifySelector
+        self.containableKinds = containableKinds
+        self.supportsManualManagement = supportsManualManagement
+        self.mediaQualityFamily = mediaQualityFamily
+        self.supportsAtomicMediaUpgrade = supportsAtomicMediaUpgrade
         self.enumeratesIdentifyChildren = enumeratesIdentifyChildren
     }
 }

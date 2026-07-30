@@ -64,6 +64,24 @@ def render_manifest(manifest: dict) -> str:
         "",
         render_extension("EntityArtworkFit", enums["EntityArtworkFit"]),
         "",
+        *(
+            [
+                render_extension(
+                    "EntityMediaQualityFamily",
+                    enums["EntityMediaQualityFamily"],
+                ),
+                "",
+            ]
+            if "EntityMediaQualityFamily" in enums
+            else []
+        ),
+        "let generatedAutoIdentifySelectorCodes: [String] = [",
+        *[
+            f"    {swift_literal(entry['code'])},"
+            for entry in enums["AutoIdentifySelectorKind"]
+        ],
+        "]",
+        "",
         "let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [",
     ]
 
@@ -130,6 +148,15 @@ def render_manifest(manifest: dict) -> str:
             )
         )
 
+        containable_kinds = kind["containableKinds"]
+        containable_kinds_line = (
+            "        containableKinds: nil,"
+            if containable_kinds is None
+            else "        containableKinds: ["
+            + ", ".join(f".{entity_kind_members[contained_kind]}" for contained_kind in containable_kinds)
+            + "],"
+        )
+
         sections.extend([
             f"    .{kind_member}: EntityKindDefinition(",
             f"        kind: .{kind_member},",
@@ -152,6 +179,15 @@ def render_manifest(manifest: dict) -> str:
             search_line,
             f"        supportsFileDeletion: {swift_bool(kind['supportsFileDeletion'])},",
             f"        supportsRequests: {swift_bool(kind['supportsRequests'])},",
+            "        autoIdentifySelector: "
+            f"{swift_optional_literal(kind['autoIdentifySelector'])},",
+            containable_kinds_line,
+            "        supportsManualManagement: "
+            f"{swift_bool(kind['supportsManualManagement'])},",
+            "        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "
+            f"{swift_literal(kind.get('mediaQualityFamily', 'none'))}),",
+            "        supportsAtomicMediaUpgrade: "
+            f"{swift_bool(kind.get('supportsAtomicMediaUpgrade', False))},",
             f"        enumeratesIdentifyChildren: {swift_bool(kind['enumeratesIdentifyChildren'])}",
             "    ),",
         ])

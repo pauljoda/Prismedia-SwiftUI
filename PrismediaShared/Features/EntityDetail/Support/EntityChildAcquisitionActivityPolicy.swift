@@ -8,7 +8,7 @@ enum EntityChildAcquisitionActivityPolicy {
         var seenIDs = Set<UUID>()
         return groups.flatMap(\.entities).filter { entity in
             entity.parentEntityID == parentID
-                && requestableKinds.contains(entity.kind)
+                && entity.kind.definition?.supportsRequests == true
                 && seenIDs.insert(entity.id).inserted
         }
     }
@@ -56,16 +56,4 @@ enum EntityChildAcquisitionActivityPolicy {
         }
         return 2
     }
-
-    private static let requestableKinds: Set<EntityKind> = [
-        .audioLibrary,
-        .audioTrack,
-        .book,
-        .musicArtist,
-        .bookAuthor,
-        .movie,
-        .video,
-        .videoSeries,
-        .videoSeason,
-    ]
 }

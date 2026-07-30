@@ -63,6 +63,20 @@ public extension EntityArtworkFit {
     static let contain = Self(rawValue: "contain")
 }
 
+public extension EntityMediaQualityFamily {
+    static let none = Self(rawValue: "none")
+    static let video = Self(rawValue: "video")
+    static let audio = Self(rawValue: "audio")
+}
+
+let generatedAutoIdentifySelectorCodes: [String] = [
+    "video",
+    "gallery",
+    "image",
+    "audio",
+    "book",
+]
+
 let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
     .audio: EntityKindDefinition(
         kind: .audio,
@@ -85,6 +99,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: nil,
         supportsFileDeletion: true,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .audioLibrary: EntityKindDefinition(
@@ -115,6 +134,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 10, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: "audio",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
     ),
     .audioTrack: EntityKindDefinition(
@@ -145,6 +169,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 11, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: "audio",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .book: EntityKindDefinition(
@@ -175,6 +204,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 7, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: "book",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
     ),
     .bookVolume: EntityKindDefinition(
@@ -205,6 +239,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: nil,
         supportsFileDeletion: true,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
     ),
     .bookChapter: EntityKindDefinition(
@@ -235,6 +274,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: nil,
         supportsFileDeletion: false,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .bookPage: EntityKindDefinition(
@@ -265,6 +309,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: nil,
         supportsFileDeletion: false,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .collection: EntityKindDefinition(
@@ -295,6 +344,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 9, expandsRelationshipResults: false),
         supportsFileDeletion: false,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: [.video, .movie, .videoSeries, .gallery, .image, .book, .musicArtist, .audioLibrary, .audioTrack],
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .gallery: EntityKindDefinition(
@@ -325,6 +379,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 6, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: false,
+        autoIdentifySelector: "gallery",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .image: EntityKindDefinition(
@@ -355,6 +414,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 8, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: false,
+        autoIdentifySelector: "image",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .musicArtist: EntityKindDefinition(
@@ -385,6 +449,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: nil,
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: "audio",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
     ),
     .bookAuthor: EntityKindDefinition(
@@ -415,6 +484,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: nil,
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
     ),
     .person: EntityKindDefinition(
@@ -445,6 +519,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 3, expandsRelationshipResults: true),
         supportsFileDeletion: false,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: true,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .movie: EntityKindDefinition(
@@ -475,6 +554,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 0, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: "video",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
+        supportsAtomicMediaUpgrade: true,
         enumeratesIdentifyChildren: false
     ),
     .studio: EntityKindDefinition(
@@ -505,6 +589,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 4, expandsRelationshipResults: true),
         supportsFileDeletion: false,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: true,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .tag: EntityKindDefinition(
@@ -535,6 +624,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 5, expandsRelationshipResults: true),
         supportsFileDeletion: false,
         supportsRequests: false,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: true,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
     ),
     .video: EntityKindDefinition(
@@ -565,6 +659,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 2, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: "video",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
+        supportsAtomicMediaUpgrade: true,
         enumeratesIdentifyChildren: false
     ),
     .videoSeries: EntityKindDefinition(
@@ -595,6 +694,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: EntityKindSearch(order: 1, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: "video",
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
     ),
     .videoSeason: EntityKindDefinition(
@@ -625,6 +729,11 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         search: nil,
         supportsFileDeletion: true,
         supportsRequests: true,
+        autoIdentifySelector: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
+        supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
     ),
 ]

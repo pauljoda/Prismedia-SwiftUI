@@ -51,7 +51,7 @@ public struct EntityGridActionPolicy: Sendable {
     ) -> [CollectionEntityReference] {
         guard builtInActions.contains(.addToCollection) else { return [] }
         return selectedItems.compactMap { item in
-            guard Self.collectionEntityKinds.contains(item.kind) else { return nil }
+            guard Self.collectionContainableKinds.contains(item.kind) else { return nil }
             return CollectionEntityReference(entityType: item.kind, entityID: item.id)
         }
     }
@@ -67,15 +67,7 @@ public struct EntityGridActionPolicy: Sendable {
         return customActions.filter { $0.isAvailable(for: selectedItems) }
     }
 
-    private static let collectionEntityKinds: Set<EntityKind> = [
-        .video,
-        .movie,
-        .videoSeries,
-        .gallery,
-        .image,
-        .book,
-        .musicArtist,
-        .audioLibrary,
-        .audioTrack,
-    ]
+    private static let collectionContainableKinds = Set(
+        EntityKind.collection.definition?.containableKinds ?? []
+    )
 }
