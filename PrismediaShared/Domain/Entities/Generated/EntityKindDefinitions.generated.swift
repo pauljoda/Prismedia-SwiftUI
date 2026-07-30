@@ -81,6 +81,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 7,
             artworkFit: .cover
         ),
+        navigation: nil,
+        search: nil,
         supportsFileDeletion: true,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -102,6 +104,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 7,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .audioLibrary,
+            destinationID: "albums",
+            browsePath: "/audio",
+            detailPathTemplate: "/audio/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 10, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: true
@@ -123,6 +134,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 7,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .audioTrack,
+            destinationID: "tracks",
+            browsePath: "/tracks",
+            detailPathTemplate: "/audio/tracks/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 11, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: false
@@ -144,6 +164,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 5,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .book,
+            destinationID: "books",
+            browsePath: "/books",
+            detailPathTemplate: "/books/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 7, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: true
@@ -165,6 +194,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 5,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .book,
+            destinationID: "books",
+            browsePath: "/books",
+            detailPathTemplate: "/books/{parentId}/volumes/{id}",
+            requiredAncestorKind: .book,
+            isTopLevel: false
+        ),
+        search: nil,
         supportsFileDeletion: true,
         supportsRequests: false,
         enumeratesIdentifyChildren: true
@@ -186,6 +224,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 5,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .book,
+            destinationID: "books",
+            browsePath: "/books",
+            detailPathTemplate: "/books/{parentId}/chapters/{id}",
+            requiredAncestorKind: .book,
+            isTopLevel: false
+        ),
+        search: nil,
         supportsFileDeletion: false,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -207,6 +254,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 5,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .book,
+            destinationID: "books",
+            browsePath: "/books",
+            detailPathTemplate: nil,
+            requiredAncestorKind: nil,
+            isTopLevel: false
+        ),
+        search: nil,
         supportsFileDeletion: false,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -228,6 +284,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 0,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .collection,
+            destinationID: "collections",
+            browsePath: "/collections",
+            detailPathTemplate: "/collections/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 9, expandsRelationshipResults: false),
         supportsFileDeletion: false,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -249,6 +314,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 4,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .gallery,
+            destinationID: "galleries",
+            browsePath: "/galleries",
+            detailPathTemplate: "/galleries/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 6, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -270,6 +344,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 6,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .image,
+            destinationID: "images",
+            browsePath: "/images",
+            detailPathTemplate: "/images/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 8, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -291,6 +374,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 7,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .musicArtist,
+            destinationID: "artists",
+            browsePath: "/artists",
+            detailPathTemplate: "/artists/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: nil,
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: true
@@ -312,6 +404,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 5,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .bookAuthor,
+            destinationID: "authors",
+            browsePath: "/authors",
+            detailPathTemplate: "/authors/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: nil,
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: true
@@ -333,6 +434,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 6,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .person,
+            destinationID: "people",
+            browsePath: "/people",
+            detailPathTemplate: "/people/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 3, expandsRelationshipResults: true),
         supportsFileDeletion: false,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -354,6 +464,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 2,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .movie,
+            destinationID: "movies",
+            browsePath: "/movies",
+            detailPathTemplate: "/movies/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 0, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: false
@@ -375,6 +494,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 7,
             artworkFit: .contain
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .studio,
+            destinationID: "studios",
+            browsePath: "/studios",
+            detailPathTemplate: "/studios/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 4, expandsRelationshipResults: true),
         supportsFileDeletion: false,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -396,6 +524,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 2,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .tag,
+            destinationID: "tags",
+            browsePath: "/tags",
+            detailPathTemplate: "/tags/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 5, expandsRelationshipResults: true),
         supportsFileDeletion: false,
         supportsRequests: false,
         enumeratesIdentifyChildren: false
@@ -417,6 +554,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 1,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .video,
+            destinationID: "videos",
+            browsePath: "/videos",
+            detailPathTemplate: "/videos/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 2, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: false
@@ -438,6 +584,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 3,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .videoSeries,
+            destinationID: "series",
+            browsePath: "/series",
+            detailPathTemplate: "/series/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 1, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: true
@@ -459,6 +614,15 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccentIndex: 3,
             artworkFit: .cover
         ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .videoSeries,
+            destinationID: "series",
+            browsePath: "/series",
+            detailPathTemplate: "/series/{parentId}/seasons/{id}",
+            requiredAncestorKind: .videoSeries,
+            isTopLevel: false
+        ),
+        search: nil,
         supportsFileDeletion: true,
         supportsRequests: true,
         enumeratesIdentifyChildren: true

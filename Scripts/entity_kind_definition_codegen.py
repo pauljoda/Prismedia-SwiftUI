@@ -26,6 +26,10 @@ def swift_bool(value: bool) -> str:
     return "true" if value else "false"
 
 
+def swift_optional_literal(value: str | None) -> str:
+    return "nil" if value is None else swift_literal(value)
+
+
 def render_extension(type_name: str, entries: list[dict]) -> str:
     declarations = "\n".join(
         f"    static let {swift_member(entry['name'])} = Self(rawValue: {swift_literal(entry['code'])})"
@@ -37,6 +41,10 @@ def render_extension(type_name: str, entries: list[dict]) -> str:
 def render_manifest(manifest: dict) -> str:
     enums = manifest["enums"]
     entity_kinds = manifest["entityKinds"]
+    entity_kind_members = {
+        entry["code"]: swift_member(entry["name"])
+        for entry in enums["EntityKind"]
+    }
     accent_indexes = {
         entry["code"]: index
         for index, entry in enumerate(enums["EntityAccentHue"])
@@ -60,11 +68,7 @@ def render_manifest(manifest: dict) -> str:
     ]
 
     for kind in entity_kinds:
-        kind_member = swift_member(next(
-            entry["name"]
-            for entry in enums["EntityKind"]
-            if entry["code"] == kind["code"]
-        ))
+        kind_member = entity_kind_members[kind["code"]]
         icon_member = swift_member(next(
             entry["name"]
             for entry in enums["EntityKindIcon"]
@@ -91,6 +95,41 @@ def render_manifest(manifest: dict) -> str:
             if entry["code"] == kind["secondaryAccent"]
         ))
 
+        navigation = kind["navigation"]
+        if navigation is None:
+            navigation_lines = ["        navigation: nil,"]
+        else:
+            required_ancestor = navigation["requiredAncestorKind"]
+            required_ancestor_value = (
+                f".{entity_kind_members[required_ancestor]}"
+                if required_ancestor is not None
+                else "nil"
+            )
+            navigation_lines = [
+                "        navigation: EntityKindNavigation(",
+                "            canonicalBrowseKind: "
+                f".{entity_kind_members[navigation['canonicalBrowseKind']]},",
+                f"            destinationID: {swift_literal(navigation['destinationId'])},",
+                f"            browsePath: {swift_literal(navigation['browsePath'])},",
+                "            detailPathTemplate: "
+                f"{swift_optional_literal(navigation['detailPathTemplate'])},",
+                f"            requiredAncestorKind: {required_ancestor_value},",
+                f"            isTopLevel: {swift_bool(navigation['isTopLevel'])}",
+                "        ),",
+            ]
+
+        search = kind["search"]
+        search_line = (
+            "        search: nil,"
+            if search is None
+            else (
+                "        search: EntityKindSearch("
+                f"order: {search['order']}, "
+                "expandsRelationshipResults: "
+                f"{swift_bool(search['expandsRelationshipResults'])}),"
+            )
+        )
+
         sections.extend([
             f"    .{kind_member}: EntityKindDefinition(",
             f"        kind: .{kind_member},",
@@ -109,6 +148,8 @@ def render_manifest(manifest: dict) -> str:
             f"            secondaryAccentIndex: {accent_indexes[kind['secondaryAccent']]},",
             f"            artworkFit: .{fit_member}",
             "        ),",
+            *navigation_lines,
+            search_line,
             f"        supportsFileDeletion: {swift_bool(kind['supportsFileDeletion'])},",
             f"        supportsRequests: {swift_bool(kind['supportsRequests'])},",
             f"        enumeratesIdentifyChildren: {swift_bool(kind['enumeratesIdentifyChildren'])}",

@@ -8,6 +8,8 @@ public struct EntityKindDefinition: Hashable, Sendable {
     public let category: String
     public let storageShape: String
     public let presentation: EntityKindPresentation
+    public let navigation: EntityKindNavigation?
+    public let search: EntityKindSearch?
     public let supportsFileDeletion: Bool
     public let supportsRequests: Bool
     public let enumeratesIdentifyChildren: Bool
@@ -19,6 +21,8 @@ public struct EntityKindDefinition: Hashable, Sendable {
         category: String,
         storageShape: String,
         presentation: EntityKindPresentation,
+        navigation: EntityKindNavigation?,
+        search: EntityKindSearch?,
         supportsFileDeletion: Bool,
         supportsRequests: Bool,
         enumeratesIdentifyChildren: Bool
@@ -29,6 +33,8 @@ public struct EntityKindDefinition: Hashable, Sendable {
         self.category = category
         self.storageShape = storageShape
         self.presentation = presentation
+        self.navigation = navigation
+        self.search = search
         self.supportsFileDeletion = supportsFileDeletion
         self.supportsRequests = supportsRequests
         self.enumeratesIdentifyChildren = enumeratesIdentifyChildren

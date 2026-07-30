@@ -1,20 +1,12 @@
 import Foundation
 
 public enum SearchHubKindCatalog {
-    public static let kinds: [EntityKind] = [
-        .movie,
-        .videoSeries,
-        .video,
-        .person,
-        .studio,
-        .tag,
-        .gallery,
-        .book,
-        .image,
-        .collection,
-        .audioLibrary,
-        .audioTrack,
-    ]
+    public static let kinds: [EntityKind] = generatedEntityKindDefinitions.values
+        .compactMap { definition in
+            definition.search.map { (order: $0.order, kind: definition.kind) }
+        }
+        .sorted { $0.order < $1.order }
+        .map(\.kind)
 
     public static var allKinds: Set<EntityKind> {
         Set(kinds)
