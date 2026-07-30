@@ -339,21 +339,81 @@ final class AppShellNavigationTests: XCTestCase {
         XCTAssertEqual(session.currentItem, third)
     }
 
-    func testEntityDeepLinksParseCustomAndWebRoutesIntoTypedStackValues() throws {
+    func testEntityDeepLinksParseEveryGeneratedDetailTemplate() throws {
+        let entityID = UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!
+        let parentID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let definitions = generatedEntityKindDefinitions.values
+            .filter { $0.navigation?.detailPathTemplate != nil }
+
+        for definition in definitions {
+            let navigation = try XCTUnwrap(definition.navigation)
+            let template = try XCTUnwrap(navigation.detailPathTemplate)
+            let path = template
+                .replacingOccurrences(of: "{parentId}", with: parentID.uuidString)
+                .replacingOccurrences(of: "{id}", with: entityID.uuidString)
+            let link = try XCTUnwrap(
+                PrismediaEntityDeepLink.link(from: URL(string: "https://media.example\(path)")!)
+            )
+
+            XCTAssertEqual(link.entityID, entityID, "\(definition.kind.rawValue) child id")
+            XCTAssertEqual(link.kind, definition.kind)
+            XCTAssertEqual(link.parentEntityID, template.contains("{parentId}") ? parentID : nil)
+            XCTAssertEqual(
+                link.parentKind,
+                template.contains("{parentId}") ? navigation.requiredAncestorKind : nil
+            )
+        }
+    }
+
+    func testEntityDeepLinksKeepCanonicalAndLegacyFormsDistinct() throws {
         let id = UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!
+        let parentID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let custom = try XCTUnwrap(
             PrismediaEntityDeepLink.link(
                 from: URL(string: "prismedia://entity/image/\(id.uuidString)")!
             )
         )
-        let web = try XCTUnwrap(
+        let audio = try XCTUnwrap(
+            PrismediaEntityDeepLink.link(
+                from: URL(string: "https://media.example/audio/\(id.uuidString)")!
+            )
+        )
+        let season = try XCTUnwrap(
+            PrismediaEntityDeepLink.link(
+                from: URL(string: "https://media.example/series/\(parentID.uuidString)/seasons/\(id.uuidString)")!
+            )
+        )
+        let volume = try XCTUnwrap(
+            PrismediaEntityDeepLink.link(
+                from: URL(string: "https://media.example/books/\(parentID.uuidString)/volumes/\(id.uuidString)")!
+            )
+        )
+        let chapter = try XCTUnwrap(
+            PrismediaEntityDeepLink.link(
+                from: URL(string: "https://media.example/books/\(parentID.uuidString)/chapters/\(id.uuidString)")!
+            )
+        )
+        let legacyAlbum = try XCTUnwrap(
             PrismediaEntityDeepLink.link(
                 from: URL(string: "https://media.example/albums/\(id.uuidString)?intent=play")!
             )
         )
 
         XCTAssertEqual(custom, EntityLink(entityID: id, kind: .image))
-        XCTAssertEqual(web, EntityLink(entityID: id, kind: .audioLibrary, intent: .playback))
+        XCTAssertEqual(audio, EntityLink(entityID: id, kind: .audioLibrary))
+        XCTAssertEqual(
+            season,
+            EntityLink(entityID: id, kind: .videoSeason, parentEntityID: parentID, parentKind: .videoSeries)
+        )
+        XCTAssertEqual(
+            volume,
+            EntityLink(entityID: id, kind: .bookVolume, parentEntityID: parentID, parentKind: .book)
+        )
+        XCTAssertEqual(
+            chapter,
+            EntityLink(entityID: id, kind: .bookChapter, parentEntityID: parentID, parentKind: .book)
+        )
+        XCTAssertEqual(legacyAlbum, EntityLink(entityID: id, kind: .audioLibrary, intent: .playback))
         XCTAssertNil(PrismediaEntityDeepLink.link(from: URL(string: "javascript:alert(1)")!))
     }
 }
