@@ -30,6 +30,11 @@ final class AudiobookPlayerControllerTests: XCTestCase {
             context: context,
             startSeconds: 45
         )
+        controller.updatePlaybackProgress(
+            elapsedTime: 45,
+            duration: tracks[1].duration,
+            isAdvancing: true
+        )
         clock.advance(by: 15)
         controller.updateElapsedTime(51)
         await controller.flushPendingPlaybackReports()
@@ -66,6 +71,11 @@ final class AudiobookPlayerControllerTests: XCTestCase {
                 playbackOwnerEntityKind: .book,
                 bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks)
             )
+        )
+        controller.updatePlaybackProgress(
+            elapsedTime: 0,
+            duration: tracks[1].duration,
+            isAdvancing: true
         )
 
         clock.advance(by: 12)

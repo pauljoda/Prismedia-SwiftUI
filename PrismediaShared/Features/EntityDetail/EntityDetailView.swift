@@ -225,8 +225,8 @@ public struct EntityDetailView: View {
                 }
             #endif
             guard previous != nil, current == nil else { return }
-            pauseCompanionAudiobook(for: previous)
             Task {
+                await finishCompanionAudiobookPlayback(for: previous)
                 await refreshBookProgressAfterReader()
             }
         }

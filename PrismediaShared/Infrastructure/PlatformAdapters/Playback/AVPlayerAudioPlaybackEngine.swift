@@ -94,7 +94,11 @@
                 options: [.initial, .new]
             ) { [weak self] player, _ in
                 Task { @MainActor [weak self] in
-                    self?.isPlaybackAdvancing = player.timeControlStatus == .playing
+                    guard let self else { return }
+                    let isAdvancing = player.timeControlStatus == .playing
+                    guard self.isPlaybackAdvancing != isAdvancing else { return }
+                    self.isPlaybackAdvancing = isAdvancing
+                    self.onNowPlayingProgressChanged?()
                 }
             }
         }

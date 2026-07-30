@@ -228,16 +228,16 @@ extension EntityDetailView {
         #endif
     }
 
-    func pauseCompanionAudiobook(
+    func finishCompanionAudiobookPlayback(
         for presentation: EntityReaderPresentation?
-    ) {
+    ) async {
         #if os(iOS) || os(macOS)
             guard let bookID = presentation?.companionAudiobookBookID,
                 musicPlayer.context?.playbackOwnerEntityID == bookID,
-                musicPlayer.context?.playbackOwnerEntityKind == .book,
-                musicPlayer.isPlaying
+                musicPlayer.context?.playbackOwnerEntityKind == .book
             else { return }
-            musicPlayer.pause()
+            if musicPlayer.isPlaying { musicPlayer.pause() }
+            await musicPlayer.flushPendingPlaybackReports()
         #endif
     }
 }

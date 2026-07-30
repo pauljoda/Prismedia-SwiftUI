@@ -32,7 +32,7 @@
                             VStack(spacing: PrismediaSpacing.extraExtraLarge) {
                                 artwork(track)
                                 metadata(track)
-                                timeline(track)
+                                timeline
                                 transport
                                 partNavigation
                                 if onFindReadingPosition != nil {
@@ -116,10 +116,10 @@
             .accessibilityElement(children: .combine)
         }
 
-        private func timeline(_ track: MusicTrack) -> some View {
+        private var timeline: some View {
             MusicPlaybackTimeline(
                 position: $scrubPosition,
-                duration: max(track.duration ?? 0, controller.elapsedTime, 1),
+                duration: controller.currentTrackDuration,
                 onEditingChanged: scrubDidChange
             )
         }
@@ -245,13 +245,9 @@
         }
 
         private func seek(by seconds: Double) {
-            guard let track = controller.currentTrack else { return }
+            guard controller.currentTrack != nil else { return }
             let destination = max(0, controller.elapsedTime + seconds)
-            guard let duration = track.duration, duration > 0 else {
-                controller.seek(to: destination)
-                return
-            }
-            controller.seek(to: min(destination, duration))
+            controller.seek(to: min(destination, controller.currentTrackDuration))
         }
 
         private func togglePlayback() {

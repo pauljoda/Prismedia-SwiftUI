@@ -109,7 +109,11 @@
             }
             engine.onNowPlayingProgressChanged = { [weak self] in
                 guard let self else { return }
-                self.controller.updateElapsedTime(self.engine.elapsedTime)
+                self.controller.updatePlaybackProgress(
+                    elapsedTime: self.engine.elapsedTime,
+                    duration: self.engine.duration,
+                    isAdvancing: self.engine.isPlaybackAdvancing
+                )
                 self.publishProgressIfNeeded()
             }
 

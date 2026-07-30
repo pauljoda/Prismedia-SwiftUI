@@ -11,10 +11,9 @@ struct AudiobookQueueLoader: Sendable {
 
     func load(detail: EntityDetail) async -> AudiobookPlaybackProjection? {
         guard let projection = AudiobookPlaybackProjection(detail: detail) else { return nil }
-        let tracksToHydrate = projection.tracks.filter { !Self.hasValidDuration($0.duration) }
-        guard !tracksToHydrate.isEmpty else { return projection }
-
-        let durations = await hydratedDurations(for: tracksToHydrate)
+        // Thumbnail duration labels are presentation summaries and may omit an hour component.
+        // Track technical metadata is the durable source for timeline and progress mapping.
+        let durations = await hydratedDurations(for: projection.tracks)
         let hydratedTracks = projection.tracks.map { replacingDuration(in: $0, with: durations[$0.id]) }
         return AudiobookPlaybackProjection(
             bookID: projection.bookID,

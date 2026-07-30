@@ -4,23 +4,28 @@ import XCTest
 @testable import PrismediaCore
 
 final class AudiobookQueueLoaderTests: XCTestCase {
-    func testCompleteThumbnailDurationsDoNotLoadTrackDetails() async throws {
+    func testTrackDetailsAuthoritativelyReplaceThumbnailDurations() async throws {
         let parts = [
             makePart(idSuffix: 2, title: "Part Two", duration: "2:00", sortOrder: 1),
             makePart(idSuffix: 1, title: "Part One", duration: "1:00", sortOrder: 0),
         ]
-        let detailLoader = AudiobookQueueDetailLoaderSpy(detailsByID: [:])
+        let detailLoader = AudiobookQueueDetailLoaderSpy(
+            detailsByID: [
+                parts[0].id: try makeTrackDetail(id: parts[0].id, duration: "02:00:00"),
+                parts[1].id: try makeTrackDetail(id: parts[1].id, duration: "01:00:00"),
+            ]
+        )
 
         let projection = await AudiobookQueueLoader(detailLoader: detailLoader).load(
             detail: makeBook(parts: parts)
         )
 
         let metrics = await detailLoader.metrics()
-        XCTAssertEqual(metrics.requestedIDs, [])
-        XCTAssertEqual(projection?.tracks.map(\.duration), [60, 120])
+        XCTAssertEqual(Set(metrics.requestedIDs), Set(parts.map(\.id)))
+        XCTAssertEqual(projection?.tracks.map(\.duration), [3_600, 7_200])
     }
 
-    func testOnlyInvalidDurationsLoadDetailsWithoutReorderingOrDiscardingFallbacks() async throws {
+    func testMissingDetailDurationsPreserveThumbnailFallbacksWithoutReordering() async throws {
         let valid = makePart(idSuffix: 1, title: "Part One", duration: "1:00", sortOrder: 0)
         let missing = makePart(idSuffix: 2, title: "Part Two", duration: nil, sortOrder: 1)
         let zero = makePart(idSuffix: 3, title: "Part Three", duration: "0:00", sortOrder: 2)
@@ -33,7 +38,7 @@ final class AudiobookQueueLoaderTests: XCTestCase {
         )
 
         let metrics = await detailLoader.metrics()
-        XCTAssertEqual(Set(metrics.requestedIDs), Set([missing.id, zero.id]))
+        XCTAssertEqual(Set(metrics.requestedIDs), Set([valid.id, missing.id, zero.id]))
         XCTAssertEqual(projection?.tracks.map(\.id), [valid.id, missing.id, zero.id])
         XCTAssertEqual(projection?.tracks.map(\.duration), [60, 120, 0])
     }

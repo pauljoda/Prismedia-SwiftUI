@@ -491,6 +491,153 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(store.savedProgress.last?.elapsedTime, 18)
     }
 
+    func testActiveAudiobookPlaybackReportsListeningTimeAndCanonicalProgress() async throws {
+        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let track = makeTrack(idSuffix: 1, duration: 60)
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(
+            tracks: [track],
+            context: audiobookContext(bookID: bookID, track: track)
+        )
+
+        controller.updatePlaybackProgress(
+            elapsedTime: 0,
+            duration: 3_600,
+            isAdvancing: true
+        )
+        clock.advance(by: 12)
+        controller.updatePlaybackProgress(
+            elapsedTime: 12,
+            duration: 3_600,
+            isAdvancing: true
+        )
+        await controller.flushPendingPlaybackReports()
+
+        let update = try XCTUnwrap(service.entityProgressUpdates.last)
+        XCTAssertEqual(update.id, bookID)
+        XCTAssertEqual(update.request.index, 33)
+        XCTAssertEqual(update.request.activitySeconds, 12)
+        XCTAssertEqual(update.request.activityKind, .listening)
+        XCTAssertEqual(controller.currentTrackDuration, 3_600)
+    }
+
+    func testActiveAudiobookRestartsActivityAfterLifecycleFlush() async throws {
+        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let track = makeTrack(idSuffix: 1, duration: 3_600)
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(
+            tracks: [track],
+            context: audiobookContext(bookID: bookID, track: track)
+        )
+        controller.updatePlaybackProgress(
+            elapsedTime: 0,
+            duration: 3_600,
+            isAdvancing: true
+        )
+
+        clock.advance(by: 5)
+        await controller.flushAudiobookProgress()
+        controller.updatePlaybackProgress(
+            elapsedTime: 1,
+            duration: 3_600,
+            isAdvancing: true
+        )
+        clock.advance(by: 10)
+        controller.updatePlaybackProgress(
+            elapsedTime: 11,
+            duration: 3_600,
+            isAdvancing: true
+        )
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(
+            service.entityProgressUpdates.compactMap(\.request.activitySeconds),
+            [5, 10]
+        )
+    }
+
+    func testPausingAudiobookFlushesTheLatestSubHeartbeatPosition() async throws {
+        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let track = makeTrack(idSuffix: 1, duration: 3_600)
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(
+            tracks: [track],
+            context: audiobookContext(bookID: bookID, track: track)
+        )
+        controller.updatePlaybackProgress(
+            elapsedTime: 4,
+            duration: 3_600,
+            isAdvancing: true
+        )
+        clock.advance(by: 7)
+
+        controller.pause()
+        await controller.flushPendingPlaybackReports()
+
+        let update = try XCTUnwrap(service.entityProgressUpdates.last)
+        XCTAssertEqual(update.request.index, 11)
+        XCTAssertEqual(update.request.activitySeconds, 7)
+        XCTAssertFalse(controller.isPlaying)
+    }
+
+    func testAudiobookBufferingTimeIsNotCountedAsListeningActivity() async {
+        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let track = makeTrack(idSuffix: 1, duration: 3_600)
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(
+            tracks: [track],
+            context: audiobookContext(bookID: bookID, track: track)
+        )
+        controller.updatePlaybackProgress(
+            elapsedTime: 0,
+            duration: 3_600,
+            isAdvancing: true
+        )
+
+        clock.advance(by: 5)
+        controller.updatePlaybackProgress(
+            elapsedTime: 5,
+            duration: 3_600,
+            isAdvancing: false
+        )
+        clock.advance(by: 20)
+        controller.updatePlaybackProgress(
+            elapsedTime: 5,
+            duration: 3_600,
+            isAdvancing: false
+        )
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(
+            service.entityProgressUpdates.compactMap(\.request.activitySeconds),
+            [5]
+        )
+    }
+
     func testTrackTapUsesPersistedGlobalShuffleAndRepeatModes() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2), makeTrack(idSuffix: 3)]
         let store = MusicPlaybackStateStoreSpy(
@@ -649,6 +796,28 @@ final class MusicPlayerControllerTests: XCTestCase {
             isWanted: isWanted
         )
     }
+
+    private func audiobookContext(
+        bookID: UUID,
+        track: MusicTrack
+    ) -> MusicPlaybackContext {
+        MusicPlaybackContext(
+            playbackOwnerEntityID: bookID,
+            playbackOwnerTitle: "Book",
+            playbackOwnerEntityKind: .book,
+            bookProgressMappings: [
+                BookProgressTrackMapping(
+                    trackID: track.id,
+                    currentEntityID: bookID,
+                    unit: .cfi,
+                    startIndex: 0,
+                    endIndex: 10_000,
+                    total: 10_000,
+                    mode: .paged
+                )
+            ]
+        )
+    }
 }
 
 @MainActor
@@ -719,6 +888,7 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private(set) var skippedPositions: [Double?] = []
     private(set) var skippedDurations: [Double?] = []
     private(set) var playbackUpdates: [(id: UUID, resumeSeconds: Double, completed: Bool)] = []
+    private(set) var entityProgressUpdates: [(id: UUID, request: EntityProgressUpdateRequest)] = []
 
     init(missingStreamIDs: Set<UUID> = []) {
         self.missingStreamIDs = missingStreamIDs
@@ -748,6 +918,10 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
 
     func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
         playbackUpdates.append((id, resumeSeconds, completed))
+    }
+
+    func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
+        entityProgressUpdates.append((id, request))
     }
 }
 
