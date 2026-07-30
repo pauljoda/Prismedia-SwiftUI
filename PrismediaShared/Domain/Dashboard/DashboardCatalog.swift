@@ -14,28 +14,24 @@ public enum DashboardCatalog {
     )
 
     public static let sections: [DashboardSectionDefinition] = [
-        definition(.video, colorRole: .video),
-        definition(.movie, colorRole: .movie),
-        definition(.videoSeries, colorRole: .series),
-        definition(.gallery, colorRole: .gallery),
-        definition(.book, colorRole: .book),
-        definition(.image, colorRole: .image),
-        definition(.audioLibrary, systemImage: "waveform", colorRole: .audio),
-        definition(.collection, colorRole: .collection),
-        definition(.person, colorRole: .people),
-        definition(.studio, colorRole: .studios),
-        definition(.tag, colorRole: .tags),
+        definition(.video),
+        definition(.movie),
+        definition(.videoSeries),
+        definition(.gallery),
+        definition(.book),
+        definition(.image),
+        definition(.audioLibrary),
+        definition(.collection),
+        definition(.person),
+        definition(.studio),
+        definition(.tag),
     ]
 
     public static func section(for kind: EntityKind) -> DashboardSectionDefinition? {
         sections.first { $0.kind == kind }
     }
 
-    private static func definition(
-        _ kind: EntityKind,
-        systemImage: String? = nil,
-        colorRole: DashboardSectionColorRole
-    ) -> DashboardSectionDefinition {
+    private static func definition(_ kind: EntityKind) -> DashboardSectionDefinition {
         guard
             let target = ModeCatalog.canonicalDestination(for: kind),
             case .entityList(let entityList) = target.destination.content
@@ -48,8 +44,8 @@ public enum DashboardCatalog {
         return DashboardSectionDefinition(
             kind: kind,
             title: target.destination.title,
-            systemImage: systemImage ?? target.destination.systemImage,
-            colorRole: colorRole,
+            systemImage: kind == .audioLibrary ? "waveform" : target.destination.systemImage,
+            colorRole: .entity(kind),
             destinationID: target.destination.id,
             query: query
         )

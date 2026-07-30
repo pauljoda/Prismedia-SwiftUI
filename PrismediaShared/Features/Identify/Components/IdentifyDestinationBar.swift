@@ -20,7 +20,7 @@ import SwiftUI
                     ForEach(session.kindSummaries) { summary in
                         destinationButton(
                             title: summary.kind.displayLabel,
-                            systemImage: systemImage(for: summary.kind),
+                            systemImage: summary.kind.thumbnailFallbackSystemImage,
                             pendingCount: summary.pendingCount,
                             isSelected: session.selectedKind == summary.kind
                         ) {
@@ -74,17 +74,6 @@ import SwiftUI
             .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
 
-        private func systemImage(for kind: EntityKind) -> String {
-            switch kind {
-            case .movie, .video: "film"
-            case .videoSeries, .videoSeason: "rectangle.stack"
-            case .book, .bookVolume, .bookChapter: "book.closed"
-            case .person, .bookAuthor, .musicArtist: "person.crop.circle"
-            case .studio: "building.2"
-            case .audio, .audioLibrary, .audioTrack: "music.note"
-            default: "square.grid.2x2"
-            }
-        }
     }
 
     #if DEBUG

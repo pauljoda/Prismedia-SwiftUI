@@ -193,7 +193,7 @@ import SwiftUI
             } label: {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                     HStack {
-                        Image(systemName: systemImage(for: summary.kind))
+                        Image(systemName: summary.kind.thumbnailFallbackSystemImage)
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(accent)
                         Spacer(minLength: 0)
@@ -258,17 +258,6 @@ import SwiftUI
             }
         }
 
-        private func systemImage(for kind: EntityKind) -> String {
-            switch kind {
-            case .movie, .video: "film"
-            case .videoSeries, .videoSeason: "rectangle.stack"
-            case .book, .bookVolume, .bookChapter: "book.closed"
-            case .person, .bookAuthor, .musicArtist: "person.crop.circle"
-            case .studio: "building.2"
-            case .audio, .audioLibrary, .audioTrack: "music.note"
-            default: "square.grid.2x2"
-            }
-        }
     }
 
     #if DEBUG

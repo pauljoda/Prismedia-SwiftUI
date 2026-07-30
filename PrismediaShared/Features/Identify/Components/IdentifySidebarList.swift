@@ -116,7 +116,7 @@ import SwiftUI
                 onOpenKind(summary.kind)
             } label: {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                    Image(systemName: systemImage(for: summary.kind))
+                    Image(systemName: summary.kind.thumbnailFallbackSystemImage)
                         .font(.title3)
                         .foregroundStyle(PrismediaColor.entityAccent(for: summary.kind))
 
@@ -162,7 +162,7 @@ import SwiftUI
                 Label {
                     Text(summary.kind.displayLabel)
                 } icon: {
-                    Image(systemName: systemImage(for: summary.kind))
+                    Image(systemName: summary.kind.thumbnailFallbackSystemImage)
                         .foregroundStyle(PrismediaColor.entityAccent(for: summary.kind))
                 }
                 Spacer()
@@ -173,17 +173,6 @@ import SwiftUI
             }
         }
 
-        private func systemImage(for kind: EntityKind) -> String {
-            switch kind {
-            case .movie, .video: "film"
-            case .videoSeries, .videoSeason: "rectangle.stack"
-            case .book, .bookVolume, .bookChapter: "book.closed"
-            case .person, .bookAuthor, .musicArtist: "person.crop.circle"
-            case .studio: "building.2"
-            case .audio, .audioLibrary, .audioTrack: "music.note"
-            default: "square.grid.2x2"
-            }
-        }
     }
 
     #if DEBUG

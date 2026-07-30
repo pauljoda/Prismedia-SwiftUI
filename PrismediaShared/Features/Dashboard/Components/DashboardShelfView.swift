@@ -46,7 +46,7 @@ struct DashboardShelfView: View {
             DashboardShelfView(
                 title: "Recently Added",
                 systemImage: "movieclapper",
-                colorRole: .movie,
+                colorRole: .entity(.movie),
                 items: [
                     PrismediaPreviewData.videos[0],
                     PrismediaPreviewData.series,

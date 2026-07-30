@@ -46,6 +46,10 @@ public extension EntityKind {
             ?? rawValue.replacingOccurrences(of: "-", with: " ").capitalized
     }
 
+    var groupLabel: String {
+        definition?.groupLabel ?? displayLabel
+    }
+
     var thumbnailAspectRatio: Double {
         guard let presentation = definition?.presentation,
               presentation.thumbnailHeight > 0

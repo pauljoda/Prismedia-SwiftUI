@@ -66,13 +66,13 @@ struct DashboardSectionHeader: View {
             DashboardSectionHeader(
                 title: "Movies",
                 systemImage: "movieclapper",
-                colorRole: .movie,
+                colorRole: .entity(.movie),
                 onSelect: {}
             )
             DashboardSectionHeader(
                 title: "Series",
                 systemImage: "rectangle.stack",
-                colorRole: .series,
+                colorRole: .entity(.videoSeries),
                 onSelect: {}
             )
         }
