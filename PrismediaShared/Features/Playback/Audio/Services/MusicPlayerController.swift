@@ -32,6 +32,7 @@ public final class MusicPlayerController {
     private var activeQueueID = UUID()
     private var currentTrackRequestedAt: TimeInterval?
     private var audiobookActivityClock = BookActivityClock()
+    private var isReaderPlaybackRateControlActive = false
 
     private static let quickSkipThreshold: TimeInterval = 10
 
@@ -124,11 +125,13 @@ public final class MusicPlayerController {
             history: previousQueue.history
         )
         activeQueueID = UUID()
-        self.context = context
-        if context?.isAudiobook != true, playbackRate != 1 {
+        let preservesPlaybackRate = context?.isAudiobook == true
+            && context?.playbackOwnerEntityID == self.context?.playbackOwnerEntityID
+        if !preservesPlaybackRate, playbackRate != 1 {
             playbackRate = 1
             engine.setPlaybackRate(playbackRate)
         }
+        self.context = context
         audiobookCompleted = false
         if preferences.repeatMode == .one {
             preferences.repeatMode = .all
@@ -231,8 +234,19 @@ public final class MusicPlayerController {
         publishNowPlayingState()
     }
 
+    /// Marks whether Reader Mode currently owns variable-speed audiobook playback.
+    /// Leaving Reader Mode preserves the current rate but makes it read-only until
+    /// Reader Mode becomes active again or the playback context changes.
+    public func setReaderPlaybackRateControlActive(_ isActive: Bool) {
+        isReaderPlaybackRateControlActive = isActive
+    }
+
+    /// Applies a variable audiobook playback rate while Reader Mode is active.
     public func setPlaybackRate(_ rate: Float) {
-        guard rate.isFinite else { return }
+        guard isReaderPlaybackRateControlActive,
+            context?.isAudiobook == true,
+            rate.isFinite
+        else { return }
         playbackRate = min(max(rate, 0.5), 3)
         engine.setPlaybackRate(playbackRate)
         publishNowPlayingState()

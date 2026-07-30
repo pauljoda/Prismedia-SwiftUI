@@ -67,7 +67,6 @@ final class MusicPlayerControllerTests: XCTestCase {
             service: MusicPlaybackServiceStub()
         )
 
-        controller.setPlaybackRate(1.5)
         controller.play(
             tracks: tracks,
             context: MusicPlaybackContext(
@@ -76,10 +75,73 @@ final class MusicPlayerControllerTests: XCTestCase {
                 playbackOwnerEntityKind: .book
             )
         )
+        controller.setReaderPlaybackRateControlActive(true)
+        controller.setPlaybackRate(1.5)
         controller.skipToNext()
 
         XCTAssertEqual(controller.playbackRate, 1.5)
-        XCTAssertEqual(engine.playbackRates, [1.5, 1.5, 1.5])
+        XCTAssertEqual(engine.playbackRates, [1, 1.5, 1.5])
+    }
+
+    func testPlaybackRateIsReadOnlyOutsideReaderModeAndPreservedWhenReaderCloses() {
+        let track = makeTrack(idSuffix: 1)
+        let engine = AudioPlaybackEngineSpy()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: MusicPlaybackServiceStub()
+        )
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book
+            )
+        )
+
+        controller.setPlaybackRate(1.5)
+        XCTAssertEqual(controller.playbackRate, 1)
+
+        controller.setReaderPlaybackRateControlActive(true)
+        controller.setPlaybackRate(1.5)
+        XCTAssertEqual(controller.playbackRate, 1.5)
+
+        controller.setReaderPlaybackRateControlActive(false)
+        controller.setPlaybackRate(2)
+
+        XCTAssertEqual(controller.playbackRate, 1.5)
+        XCTAssertEqual(engine.playbackRates, [1, 1.5])
+    }
+
+    func testStartingDifferentAudiobookResetsPlaybackRate() {
+        let track = makeTrack(idSuffix: 1)
+        let engine = AudioPlaybackEngineSpy()
+        let controller = MusicPlayerController(
+            engine: engine,
+            service: MusicPlaybackServiceStub()
+        )
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "First Book",
+                playbackOwnerEntityKind: .book
+            )
+        )
+        controller.setReaderPlaybackRateControlActive(true)
+        controller.setPlaybackRate(1.75)
+
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Second Book",
+                playbackOwnerEntityKind: .book
+            )
+        )
+
+        XCTAssertEqual(controller.playbackRate, 1)
+        XCTAssertEqual(engine.playbackRates.suffix(2), [1, 1])
     }
 
     func testStartingOrdinaryMusicResetsAudiobookPlaybackRate() {
@@ -90,6 +152,15 @@ final class MusicPlayerControllerTests: XCTestCase {
             service: MusicPlaybackServiceStub()
         )
 
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(),
+                playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book
+            )
+        )
+        controller.setReaderPlaybackRateControlActive(true)
         controller.setPlaybackRate(1.75)
         controller.play(tracks: [track])
 
