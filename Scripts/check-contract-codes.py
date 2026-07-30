@@ -20,6 +20,8 @@ from urllib.request import urlopen
 
 from entity_kind_definition_codegen import OUTPUT as ENTITY_KIND_DEFINITIONS_PATH
 from entity_kind_definition_codegen import render_manifest as render_entity_kind_definitions
+from request_kind_definition_codegen import OUTPUT as REQUEST_KIND_DEFINITIONS_PATH
+from request_kind_definition_codegen import render_manifest as render_request_kind_definitions
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
@@ -97,6 +99,14 @@ def main() -> int:
             failures.append(
                 "Generated EntityKind definitions differ; run "
                 "`python3 Scripts/generate-entity-kind-definitions.py`"
+            )
+
+        expected_request_definitions = render_request_kind_definitions(manifest)
+        actual_request_definitions = REQUEST_KIND_DEFINITIONS_PATH.read_text(encoding="utf-8")
+        if actual_request_definitions != expected_request_definitions:
+            failures.append(
+                "Generated RequestKind definitions differ; run "
+                "`python3 Scripts/generate-request-kind-definitions.py`"
             )
 
         for family, (relative_path, pattern) in FAMILIES.items():

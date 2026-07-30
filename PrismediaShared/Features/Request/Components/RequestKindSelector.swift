@@ -11,7 +11,7 @@ import SwiftUI
                 Section {
                     ScrollView(.horizontal) {
                         HStack(spacing: PrismediaSpacing.small) {
-                            ForEach(RequestKindDefinition.allCases) { kind in
+                            ForEach(RequestKindDefinition.discoverable) { kind in
                                 Button {
                                     selection = kind
                                 } label: {
@@ -23,7 +23,7 @@ import SwiftUI
                                                     : PrismediaColor.textSecondary
                                             )
                                     } icon: {
-                                        Image(systemName: kind.systemImage)
+                                        Image(systemName: kind.entityKind.thumbnailFallbackSystemImage)
                                             .foregroundStyle(kindAccent(for: kind))
                                     }
                                         .font(.callout.weight(.medium))
@@ -66,11 +66,11 @@ import SwiftUI
                         Label("Choose Type", systemImage: "square.grid.2x2")
                             .tag(nil as RequestKindDefinition?)
 
-                        ForEach(RequestKindDefinition.allCases) { kind in
+                        ForEach(RequestKindDefinition.discoverable) { kind in
                             Label {
                                 Text(kind.label)
                             } icon: {
-                                Image(systemName: kind.systemImage)
+                                Image(systemName: kind.entityKind.thumbnailFallbackSystemImage)
                                     .foregroundStyle(kindAccent(for: kind))
                             }
                                 .tag(Optional(kind))
@@ -91,14 +91,7 @@ import SwiftUI
         }
 
         private func kindAccent(for kind: RequestKindDefinition) -> Color {
-            switch kind {
-            case .book, .author: PrismediaColor.materialSpectrumCyan
-            case .audiobook: PrismediaColor.materialSpectrumGreen
-            case .movie: PrismediaColor.materialSpectrumOrange
-            case .series: PrismediaColor.materialSpectrumYellow
-            case .artist: PrismediaColor.materialSpectrumViolet
-            case .album: PrismediaColor.materialSpectrumMagenta
-            }
+            PrismediaColor.entityAccent(for: kind.entityKind)
         }
     }
 
