@@ -15,6 +15,7 @@ final class EPUBProgressLocationTests: XCTestCase {
         XCTAssertEqual(location.href, "Text/chapter-4.xhtml")
         XCTAssertEqual(location.resourceProgression, 0.5, accuracy: 0.001)
         XCTAssertEqual(try XCTUnwrap(location.totalProgression), 0.42, accuracy: 0.001)
+        XCTAssertTrue(location.isSerializedLocator)
     }
 
     func testFallbackProgressMarkerExposesChapterAndLocalFraction() throws {
@@ -27,6 +28,7 @@ final class EPUBProgressLocationTests: XCTestCase {
         XCTAssertEqual(location.href, "Text/chapter-2.xhtml")
         XCTAssertEqual(location.resourceProgression, 0.25, accuracy: 0.001)
         XCTAssertNil(location.totalProgression)
+        XCTAssertFalse(location.isSerializedLocator)
     }
 
     func testMalformedOrCFILocationsDoNotPretendToIdentifyAChapter() {

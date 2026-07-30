@@ -333,6 +333,9 @@
                     : nil
             )
             switch source {
+            case .explicitLocator(let location):
+                guard let locator = try? Locator(jsonString: location) else { return nil }
+                return await publication.locate(locator)
             case .explicit(let target):
                 guard
                     let link = findLink(
@@ -542,6 +545,9 @@
 
         private func saveProgress(closing: Bool, stoppingActivity: Bool = false) {
             let currentLocation = navigator?.currentLocation
+            if let currentLocation {
+                rememberChapterPosition(currentLocation)
+            }
             let location = currentLocation.flatMap { try? $0.jsonString() }
             let mappedProgression = currentLocation.flatMap {
                 DocumentReaderProgressMapper.epubBookProgression(

@@ -6,6 +6,19 @@ struct EPUBReaderResumeSourceResolver: Sendable {
         explicitProgression: Double?,
         deviceLocation: String?
     ) -> EPUBReaderResumeSource? {
+        if let explicitLocation,
+            let parsed = EPUBProgressLocation(serialized: explicitLocation),
+            parsed.isSerializedLocator
+        {
+            if let deviceLocation,
+                let device = EPUBProgressLocation(serialized: deviceLocation),
+                device.isSerializedLocator,
+                isFarther(device, than: parsed)
+            {
+                return .device(deviceLocation)
+            }
+            return .explicitLocator(explicitLocation)
+        }
         if let target = locationTarget(
             location: explicitLocation,
             progression: explicitProgression
@@ -41,5 +54,21 @@ struct EPUBReaderResumeSourceResolver: Sendable {
                 ?? DocumentReaderProgressMapper.epubProgress(from: location)
                 ?? 0
         )
+    }
+
+    private func isFarther(
+        _ candidate: EPUBProgressLocation,
+        than current: EPUBProgressLocation
+    ) -> Bool {
+        if let candidateTotal = candidate.totalProgression,
+            let currentTotal = current.totalProgression
+        {
+            return candidateTotal > currentTotal
+        }
+        guard EPUBResourceLocationMatcher().bestMatch(
+            for: candidate.href,
+            candidates: [current.href]
+        ) != nil else { return false }
+        return candidate.resourceProgression > current.resourceProgression
     }
 }

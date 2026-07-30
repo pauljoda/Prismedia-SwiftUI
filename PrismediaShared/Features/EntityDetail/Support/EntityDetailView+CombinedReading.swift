@@ -77,22 +77,8 @@ extension EntityDetailView {
 
     func unifiedBookReadingTarget(
         for detail: EntityDetail
-    ) -> BookReaderLocationTarget? {
-        guard let target = combinedResumeTarget(for: detail) else { return nil }
-        switch target.readingTarget {
-        case .savedLocation(let location):
-            return EPUBReaderResumeSourceResolver().locationTarget(
-                location: location,
-                progression: nil
-            )
-        case .chapter(let location, let progression):
-            return BookReaderLocationTarget(
-                location: location,
-                progression: progression
-            )
-        case .entityChapter:
-            return nil
-        }
+    ) -> BookCombinedReadingTarget? {
+        combinedResumeTarget(for: detail)?.readingTarget
     }
 
     func promoteLegacyAudiobookProgressIfNeeded(for detail: EntityDetail) async {

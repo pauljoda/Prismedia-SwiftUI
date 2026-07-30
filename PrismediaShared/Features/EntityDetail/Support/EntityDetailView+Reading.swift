@@ -23,15 +23,27 @@ extension EntityDetailView {
                 ? unifiedBookReadingTarget(for: detail)
                 : nil
         #else
-            let unifiedTarget: BookReaderLocationTarget? = nil
+            let unifiedTarget: BookCombinedReadingTarget? = nil
         #endif
         let progress: EntityProgressCapability? = detail.capability()
+        let initialEPUBLocation: String?
+        let initialEPUBProgression: Double?
+        switch unifiedTarget {
+        case .savedLocation(let location):
+            initialEPUBLocation = location ?? progress?.location
+            initialEPUBProgression = nil
+        case .chapter(let location, let progression):
+            initialEPUBLocation = location
+            initialEPUBProgression = progression
+        case .entityChapter, nil:
+            initialEPUBLocation = command == .resume ? progress?.location : nil
+            initialEPUBProgression = nil
+        }
         readerPresentation = .init(
             detail: detail,
             command: command,
-            initialEPUBLocation: unifiedTarget?.location
-                ?? (command == .resume ? progress?.location : nil),
-            initialEPUBProgression: unifiedTarget?.progression
+            initialEPUBLocation: initialEPUBLocation,
+            initialEPUBProgression: initialEPUBProgression
         )
     }
 

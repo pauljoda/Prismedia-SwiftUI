@@ -4,6 +4,7 @@ struct EPUBProgressLocation: Equatable, Sendable {
     let href: String
     let resourceProgression: Double
     let totalProgression: Double?
+    let isSerializedLocator: Bool
 
     init?(serialized: String) {
         if let data = serialized.data(using: .utf8),
@@ -15,6 +16,7 @@ struct EPUBProgressLocation: Equatable, Sendable {
             self.href = href
             resourceProgression = Self.fraction(locations["progression"])
             totalProgression = locations["totalProgression"].flatMap(Self.optionalFraction)
+            isSerializedLocator = true
             return
         }
 
@@ -27,6 +29,7 @@ struct EPUBProgressLocation: Equatable, Sendable {
         href = String(serialized[..<range.lowerBound])
         resourceProgression = min(max(0, value), 1)
         totalProgression = nil
+        isSerializedLocator = false
     }
 
     private static func fraction(_ value: Any?) -> Double {
