@@ -39,14 +39,13 @@ enum AdministrativeStringListOptionCatalog {
         }
     }
 
-    private static let entityKindOptions = [
-        AdministrativeSettingOption(value: "movie", label: "Movies", description: nil),
-        AdministrativeSettingOption(value: "video", label: "Videos", description: nil),
-        AdministrativeSettingOption(value: "gallery", label: "Galleries", description: nil),
-        AdministrativeSettingOption(value: "image", label: "Images", description: nil),
-        AdministrativeSettingOption(value: "audio", label: "Audio", description: nil),
-        AdministrativeSettingOption(value: "book", label: "Books", description: nil),
-    ]
+    private static let entityKindOptions = AutoIdentifySelectorKind.allCases.map { kind in
+        AdministrativeSettingOption(
+            value: kind.rawValue,
+            label: kind.displayLabel,
+            description: nil
+        )
+    }
 
     private static func pluginOptions(from plugins: [AdministrativePlugin]) -> [AdministrativeSettingOption] {
         plugins

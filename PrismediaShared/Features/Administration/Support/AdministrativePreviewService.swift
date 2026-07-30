@@ -79,7 +79,7 @@ import Foundation
             label: "Identify these kinds",
             description: "Which kinds of scanned media Auto Identify applies to.",
             type: "stringList",
-            value: .stringList(["movie", "video", "book"]),
+            value: .stringList(["video", "book"]),
             defaultValue: .stringList(["video", "gallery", "image", "audio", "book"]),
             isDefault: false,
             order: 0,

@@ -24,11 +24,16 @@ DEFAULT_CODES_URL = "http://127.0.0.1:8008/api/_codegen/codes.json"
 STATIC_CODE_PATTERN = re.compile(
     r'public static let \w+ = (?:EntityKind|Self)\(rawValue: "([^"]+)"\)'
 )
+ENUM_CASE_CODE_PATTERN = re.compile(r'case \w+ = "([^"]+)"')
 FAMILIES = {
-    "EntityKind": "PrismediaShared/Domain/Entities/EntityKind.swift",
-    "BookFormat": "PrismediaShared/Features/Reader/Models/BookFormat.swift",
-    "ReaderMode": "PrismediaShared/Features/Reader/Models/ReaderMode.swift",
-    "ProgressUnit": "PrismediaShared/Features/Reader/Models/ProgressUnit.swift",
+    "EntityKind": ("PrismediaShared/Domain/Entities/EntityKind.swift", STATIC_CODE_PATTERN),
+    "AutoIdentifySelectorKind": (
+        "PrismediaShared/Features/Administration/Models/AutoIdentifySelectorKind.swift",
+        ENUM_CASE_CODE_PATTERN,
+    ),
+    "BookFormat": ("PrismediaShared/Features/Reader/Models/BookFormat.swift", STATIC_CODE_PATTERN),
+    "ReaderMode": ("PrismediaShared/Features/Reader/Models/ReaderMode.swift", STATIC_CODE_PATTERN),
+    "ProgressUnit": ("PrismediaShared/Features/Reader/Models/ProgressUnit.swift", STATIC_CODE_PATTERN),
 }
 CAPABILITY_KINDS_PATH = "PrismediaShared/Domain/Entities/Detail/EntityCapabilityKind.swift"
 
@@ -52,12 +57,12 @@ def load_manifest(arguments: argparse.Namespace) -> dict:
         return json.load(response)
 
 
-def swift_codes(relative_path: str) -> set[str]:
+def swift_codes(relative_path: str, pattern: re.Pattern[str]) -> set[str]:
     source = (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8")
-    matches = STATIC_CODE_PATTERN.findall(source)
+    matches = pattern.findall(source)
     codes = set(matches)
     if not codes:
-        raise ValueError(f"No static raw-value codes found in {relative_path}")
+        raise ValueError(f"No contract codes found in {relative_path}")
     if len(codes) != len(matches):
         raise ValueError(f"Duplicate static raw-value codes found in {relative_path}")
     return codes
@@ -83,15 +88,15 @@ def main() -> int:
         manifest_enums = manifest["enums"]
         failures: list[str] = []
 
-        for family, relative_path in FAMILIES.items():
+        for family, (relative_path, pattern) in FAMILIES.items():
             expected = {entry["code"] for entry in manifest_enums[family]}
-            failures.extend(compare(family, expected, swift_codes(relative_path)))
+            failures.extend(compare(family, expected, swift_codes(relative_path, pattern)))
 
         failures.extend(
             compare(
                 "CapabilityKinds",
                 set(manifest["capabilityKinds"]),
-                swift_codes(CAPABILITY_KINDS_PATH),
+                swift_codes(CAPABILITY_KINDS_PATH, STATIC_CODE_PATTERN),
             )
         )
     except (KeyError, OSError, URLError, ValueError, json.JSONDecodeError) as error:
