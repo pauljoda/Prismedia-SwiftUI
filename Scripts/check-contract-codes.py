@@ -36,6 +36,7 @@ FAMILIES = {
     "ProgressUnit": ("PrismediaShared/Features/Reader/Models/ProgressUnit.swift", STATIC_CODE_PATTERN),
 }
 CAPABILITY_KINDS_PATH = "PrismediaShared/Domain/Entities/Detail/EntityCapabilityKind.swift"
+PROPOSAL_KIND_PATH = "PrismediaShared/Domain/Entities/ProposalKind.swift"
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -91,6 +92,16 @@ def main() -> int:
         for family, (relative_path, pattern) in FAMILIES.items():
             expected = {entry["code"] for entry in manifest_enums[family]}
             failures.extend(compare(family, expected, swift_codes(relative_path, pattern)))
+
+        entity_kind_codes = {entry["code"] for entry in manifest_enums["EntityKind"]}
+        proposal_kind_codes = {entry["code"] for entry in manifest_enums["ProposalKind"]}
+        failures.extend(
+            compare(
+                "ProposalKind protocol-only values",
+                proposal_kind_codes - entity_kind_codes,
+                swift_codes(PROPOSAL_KIND_PATH, STATIC_CODE_PATTERN),
+            )
+        )
 
         failures.extend(
             compare(

@@ -13,6 +13,11 @@ public struct AdministrativeEntityMetadataProposal: Codable, Hashable, Sendable 
     public let targetEntityID: UUID?
     public let relationships: [AdministrativeEntityMetadataProposal]
 
+    /// Entity kind used when a proposal is shown through shared Entity presentation components.
+    public var presentationEntityKind: EntityKind {
+        ProposalKind(rawValue: targetKind).entityKind
+    }
+
     enum CodingKeys: String, CodingKey {
         case proposalID = "proposalId"
         case provider, targetKind, confidence, matchReason, patch, images, children, candidates

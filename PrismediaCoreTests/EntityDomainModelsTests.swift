@@ -3,6 +3,11 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityDomainModelsTests: XCTestCase {
+    func testProposalOnlyEpisodeKindUsesVideoPresentation() {
+        XCTAssertEqual(ProposalKind.videoEpisode.entityKind, .video)
+        XCTAssertEqual(ProposalKind(rawValue: EntityKind.movie.rawValue).entityKind, .movie)
+    }
+
     func testThumbnailArtworkUsesCanonicalAspectRatios() {
         let cases: [(EntityKind, Double)] = [
             (.audioLibrary, 1),

@@ -62,7 +62,7 @@ import SwiftUI
             guard let proposal = item.proposal else { return item.entity }
             return EntityThumbnail(
                 id: item.entity.id,
-                kind: EntityKind(rawValue: proposal.targetKind),
+                kind: proposal.presentationEntityKind,
                 title: proposal.patch.title ?? item.entity.title,
                 subtitle: item.entity.subtitle,
                 summary: proposal.patch.description ?? item.entity.summary,
