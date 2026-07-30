@@ -17,9 +17,9 @@ import Foundation
 
         public func detail(
             entityID: UUID,
-            kind: EntityKind
+            kind _: EntityKind
         ) async throws -> EntityDetail {
-            try await client.fetchEntity(id: entityID, kind: kind)
+            try await client.fetchEntity(id: entityID)
         }
     }
 #endif

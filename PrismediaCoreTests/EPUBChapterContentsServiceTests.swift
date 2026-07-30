@@ -11,9 +11,9 @@ final class EPUBChapterContentsServiceTests: XCTestCase {
             title: "Wanted Book",
             parentEntityID: nil,
             sortOrder: nil,
-            bookFormat: .epub,
             hasSourceMedia: false,
             capabilities: [
+                .bookMetadata(.init(bookType: "book", format: .epub)),
                 .flags(
                     EntityFlagsCapability(
                         isFavorite: false,
@@ -123,9 +123,9 @@ final class EPUBChapterContentsServiceTests: XCTestCase {
             title: "Comic",
             parentEntityID: nil,
             sortOrder: nil,
-            bookFormat: .imageArchive,
             hasSourceMedia: false,
             capabilities: [
+                .bookMetadata(.init(bookType: "book", format: .imageArchive)),
                 .progress(
                     EntityProgressCapability(
                         currentEntityID: chapterID,

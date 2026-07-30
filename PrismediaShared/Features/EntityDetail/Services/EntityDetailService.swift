@@ -26,17 +26,8 @@ struct EntityDetailService {
     }
 
     func load(id: UUID) async -> EntityDetailLoadOutcome {
-        await load(id: id, kind: nil)
-    }
-
-    func load(id: UUID, kind: EntityKind?) async -> EntityDetailLoadOutcome {
         do {
-            let detail: EntityDetail
-            if let kind {
-                detail = try await loader.loadEntity(id: id, kind: kind)
-            } else {
-                detail = try await loader.loadEntity(id: id)
-            }
+            let detail = try await loader.loadEntity(id: id)
             guard !Task.isCancelled else { return .cancelled }
             return .content(detail)
         } catch is CancellationError {

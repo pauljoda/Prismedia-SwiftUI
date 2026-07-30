@@ -36,15 +36,17 @@ struct SearchHubResultGroup: View {
                     .accessibilityLabel("\(section.items.count) loaded results")
             }
 
-            ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: PrismediaSpacing.small) {
-                    ForEach(visibleItems) { item in
-                        entityCard(item)
-                    }
-                }
-                .padding(.bottom, PrismediaSpacing.extraSmall)
+            EntityThumbnailRail(
+                items: visibleItems,
+                contentInsets: EdgeInsets(
+                    top: 0,
+                    leading: 0,
+                    bottom: PrismediaSpacing.extraSmall,
+                    trailing: 0
+                )
+            ) { item, width in
+                entityCard(item, preferredWidth: width)
             }
-            .scrollIndicators(.hidden)
 
             if section.items.count > collapsedLimit {
                 Button {
@@ -66,23 +68,19 @@ struct SearchHubResultGroup: View {
         .accessibilityIdentifier("shell.search.section.\(section.kind.rawValue)")
     }
 
-    private var railArtworkHeight: CGFloat {
-        216
-    }
-
-    private func entityCard(_ item: EntityThumbnail) -> some View {
+    private func entityCard(
+        _ item: EntityThumbnail,
+        preferredWidth: CGFloat
+    ) -> some View {
         EntityThumbnailNavigationSurface(
             item: item,
             layout: .rail,
-            preferredWidth: railCardWidth(for: item)
+            preferredWidth: preferredWidth
         )
         .accessibilityHint(item.id == topResultID ? "Top result. Opens details" : "Opens details")
         .accessibilityIdentifier("shell.search.result.\(item.id.uuidString)")
     }
 
-    private func railCardWidth(for item: EntityThumbnail) -> CGFloat {
-        item.thumbnailArtworkPresentation.width(forHeight: railArtworkHeight)
-    }
 }
 
 #if DEBUG

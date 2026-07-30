@@ -192,7 +192,7 @@ struct EntityDetailPresentation {
     }
 
     var subtitles: [EntitySubtitle] {
-        detail.capability(EntityItemsCapability<EntitySubtitle>.self)?.items ?? []
+        detail.capability(EntitySubtitlesCapability.self)?.items ?? []
     }
 
     var heroPath: String? {

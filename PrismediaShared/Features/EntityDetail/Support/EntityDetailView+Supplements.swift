@@ -168,10 +168,7 @@ extension EntityDetailView {
         ), videoID != detail.id else { return }
 
         do {
-            let resolved = try await dependencies.detailLoader.loadEntity(
-                id: videoID,
-                kind: .video
-            )
+            let resolved = try await dependencies.detailLoader.loadEntity(id: videoID)
             guard !Task.isCancelled, currentDetail?.id == detail.id else { return }
             resolvedVideoTechnicalDetail = resolved
         } catch {

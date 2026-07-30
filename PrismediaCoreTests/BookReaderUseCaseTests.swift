@@ -22,9 +22,8 @@ final class BookReaderUseCaseTests: XCTestCase {
             title: "Book",
             parentEntityID: nil,
             sortOrder: nil,
-            bookFormat: .imageArchive,
             hasSourceMedia: true,
-            capabilities: [],
+            capabilities: [.bookMetadata(.init(bookType: "book", format: .imageArchive))],
             childrenByKind: [
                 EntityGroup(
                     kind: .bookChapter,

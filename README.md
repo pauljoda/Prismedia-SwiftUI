@@ -85,7 +85,7 @@ public dependencies; they do not require owner sign-in or repository access.
 
 ## Xcode previews
 
-Every visual type has a named, direct `#Preview` beside it, enforced by `PreviewCoverageTests`. A screen preview may wrap the type in navigation or `PreviewShell`, but it must still instantiate the component under test rather than substituting a larger screen. `PreviewShell` injects an in-memory app environment, router, API fixture loader, and artwork loader so previews never require a server, Keychain, preferences, or network.
+Every visual type has a named, direct `#Preview` beside it. A screen preview may wrap the type in navigation or `PreviewShell`, but it must still instantiate the component under test rather than substituting a larger screen. `PreviewShell` injects an in-memory app environment, router, API fixture loader, and artwork loader so previews never require a server, Keychain, preferences, or network.
 
 Important surfaces include representative loading, content, empty/error, fixed-dark, and accessibility-size scenarios. Reader previews may additionally exercise document-specific light and sepia themes. Xcode's preview controls remain the source of truth for Reduce Transparency and Increase Contrast because those environment values are read-only.
 
@@ -93,7 +93,6 @@ Important surfaces include representative loading, content, empty/error, fixed-d
 
 ```sh
 swift test
-swift test --filter PreviewCoverageTests
 xcodebuild -project Prismedia.xcodeproj -scheme PrismediaiOS -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
 xcodebuild -project Prismedia.xcodeproj -scheme PrismediaMac -destination 'generic/platform=macOS' build CODE_SIGNING_ALLOWED=NO
 xcodebuild -project Prismedia.xcodeproj -scheme PrismediaTV -destination 'generic/platform=tvOS Simulator' build CODE_SIGNING_ALLOWED=NO

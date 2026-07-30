@@ -72,7 +72,7 @@ extension EntityDetailView {
         }
 
         let request = readingState.beginLoad(entityID: detail.id)
-        let outcome = await readingService.reload(detailID: detail.id, kind: detail.kind)
+        let outcome = await readingService.reload(detailID: detail.id)
         readingState.finishLoad(outcome, request: request)
     }
 

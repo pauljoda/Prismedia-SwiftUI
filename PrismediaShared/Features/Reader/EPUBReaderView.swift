@@ -464,10 +464,8 @@
                 title: "Signal in the Static",
                 parentEntityID: nil,
                 sortOrder: nil,
-                bookType: "book",
-                bookFormat: .epub,
                 hasSourceMedia: true,
-                capabilities: [],
+                capabilities: [.bookMetadata(.init(bookType: "book", format: .epub))],
                 childrenByKind: [],
                 relationships: []
             )

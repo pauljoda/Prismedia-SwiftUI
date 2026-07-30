@@ -26,7 +26,10 @@
                     { "kind": "position", "items": [{ "code": "part", "value": 1, "label": "Part One" }] },
                     { "kind": "classification", "value": "Feature", "system": "Prismedia" },
                     { "kind": "links", "urls": [{ "value": "https://example.com/signal", "label": "Official Site" }], "externalIds": [{ "provider": "tmdb", "value": "603", "url": "https://www.themoviedb.org/movie/603" }] },
-                    { "kind": "technical", "duration": "1h 52m", "width": 3840, "height": 2160, "codec": "hevc", "container": "mkv" }
+                    { "kind": "technical", "duration": "1h 52m", "width": 3840, "height": 2160, "codec": "hevc", "container": "mkv" },
+                    { "kind": "credits", "items": [
+                      { "personId": "22222222-2222-2222-2222-222222222222", "role": "actor", "character": "Dr. Hale", "roles": ["actor", "producer"], "characters": ["Dr. Hale"] }
+                    ] }
                   ],
                   "childrenByKind": [
                     {
@@ -79,9 +82,6 @@
                         { "id": "77777777-7777-7777-7777-777777777777", "kind": "studio", "title": "Northlight Pictures", "hoverImages": [], "meta": [] }
                       ]
                     }
-                  ],
-                  "creditMetadata": [
-                    { "personId": "22222222-2222-2222-2222-222222222222", "role": "actor", "character": "Dr. Hale", "roles": ["actor", "producer"], "characters": ["Dr. Hale"] }
                   ]
                 }
                 """

@@ -25,10 +25,8 @@ import SwiftUI
             title: "Signal in the Static",
             parentEntityID: nil,
             sortOrder: nil,
-            bookType: "comic",
-            bookFormat: .imageArchive,
             hasSourceMedia: true,
-            capabilities: [],
+            capabilities: [.bookMetadata(.init(bookType: "comic", format: .imageArchive))],
             childrenByKind: [.init(kind: .bookChapter, label: "Chapters", entities: [chapterThumbnail], code: nil)],
             relationships: []
         )

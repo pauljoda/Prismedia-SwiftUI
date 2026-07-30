@@ -74,6 +74,7 @@ let package = Package(
                 "PrismediaiOS/PrismediaAppDelegate.swift",
                 "PrismediaiOS/PrismediaiOS.entitlements",
                 "PrismediaiOS/PrismediaiOSApp.swift",
+                "PrismediaiOS/UIViewControllerOrientationResolution.swift",
                 "PrismediaiOSUITests",
                 "Scripts",
                 "XcodeCloudBootstrap",

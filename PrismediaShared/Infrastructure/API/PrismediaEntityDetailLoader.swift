@@ -16,10 +16,6 @@ public struct PrismediaEntityDetailLoader: EntityDetailLoading, EntityDetailMuta
         try await client.fetchEntity(id: id)
     }
 
-    public func loadEntity(id: UUID, kind: EntityKind) async throws -> EntityDetail {
-        try await client.fetchEntity(id: id, kind: kind)
-    }
-
     public func loadCollectionItems(collectionID: UUID) async throws -> [EntityThumbnail] {
         try await client.fetchCollectionItems(collectionID: collectionID)
     }

@@ -216,38 +216,45 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
     }
 
-    func testFetchBookUsesKindSpecificDetailEndpoint() async throws {
-        let entityID = UUID(uuidString: "29bfc229-2c44-4db4-ae9d-7842c6735d2c")!
+    func testFetchEntityUsesCanonicalDetailEndpointForEveryEntityKind() async throws {
+        let cases: [(id: UUID, kind: EntityKind)] = [
+            (UUID(uuidString: "29bfc229-2c44-4db4-ae9d-7842c6735d2c")!, .book),
+            (UUID(uuidString: "7e72cc70-b6c6-441a-8218-867accf82075")!, .movie),
+            (UUID(uuidString: "bcae3577-63df-44f8-896b-08f9c44c9c46")!, .videoSeries),
+        ]
         let loader = MockHTTPDataLoader(responses: [
             .json(
                 """
                 {
-                  "id": "\(entityID.uuidString)",
-                  "kind": "book",
+                  "id": "\(cases[0].id.uuidString)",
+                  "kind": "\(cases[0].kind.rawValue)",
                   "title": "A Game of Thrones",
-                  "bookType": "novel",
-                  "format": "epub",
                   "hasSourceMedia": true,
                   "capabilities": [],
                   "childrenByKind": [],
                   "relationships": []
                 }
-                """)
+                """),
+            .json(entityDetailJSON(id: cases[1].id, kind: cases[1].kind.rawValue, rating: nil)),
+            .json(entityDetailJSON(id: cases[2].id, kind: cases[2].kind.rawValue, rating: nil)),
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, loader: loader)
             .allowingNsfwContent(true)
             .authenticated(with: "token")
 
-        let detail = try await client.fetchEntity(id: entityID, kind: .book)
+        for item in cases {
+            let detail = try await client.fetchEntity(id: item.id)
+            XCTAssertEqual(detail.kind, item.kind)
+        }
 
-        XCTAssertEqual(detail.bookType, "novel")
-        XCTAssertEqual(detail.bookFormat, .epub)
-        let request = try XCTUnwrap(loader.requests.first)
-        XCTAssertEqual(request.url?.path, "/api/books/\(entityID.uuidString.lowercased())")
-        XCTAssertEqual(queryItem("hideNsfw", in: request), "false")
+        XCTAssertEqual(
+            loader.requests.map { $0.url?.path },
+            cases.map { "/api/entities/\($0.id.uuidString.lowercased())" }
+        )
+        XCTAssertTrue(loader.requests.allSatisfy { queryItem("hideNsfw", in: $0) == "false" })
     }
 
-    func testFetchMovieAndSeriesUseCreditBearingDetailEndpoints() async throws {
+    func testEntityCapabilitiesDecodeKindSpecificMetadata() async throws {
         let movieID = UUID(uuidString: "7e72cc70-b6c6-441a-8218-867accf82075")!
         let seriesID = UUID(uuidString: "bcae3577-63df-44f8-896b-08f9c44c9c46")!
         let personID = UUID(uuidString: "97bea9e6-c1cb-4c0a-8ab3-d77b822e581a")!
@@ -259,16 +266,16 @@ final class PrismediaAPIClientTests: XCTestCase {
         let client = PrismediaAPIClient(serverURL: serverURL, loader: loader)
             .authenticated(with: "token")
 
-        let movie = try await client.fetchEntity(id: movieID, kind: .movie)
-        let series = try await client.fetchEntity(id: seriesID, kind: .videoSeries)
+        let movie = try await client.fetchEntity(id: movieID)
+        let series = try await client.fetchEntity(id: seriesID)
 
         XCTAssertEqual(movie.creditMetadata.first?.character, "Louise Banks")
         XCTAssertEqual(series.creditMetadata.first?.character, "Rebecca Welton")
         XCTAssertEqual(
             loader.requests.map { $0.url?.path },
             [
-                "/api/movies/\(movieID.uuidString.lowercased())",
-                "/api/series/\(seriesID.uuidString.lowercased())",
+                "/api/entities/\(movieID.uuidString.lowercased())",
+                "/api/entities/\(seriesID.uuidString.lowercased())",
             ]
         )
     }
@@ -1196,12 +1203,12 @@ final class PrismediaAPIClientTests: XCTestCase {
             .value
     }
 
-    private func entityDetailJSON(id: UUID, rating: Int?) -> String {
+    private func entityDetailJSON(id: UUID, kind: String = "movie", rating: Int?) -> String {
         let ratingCapability = rating.map { #", { "kind": "rating", "value": \#($0) }"# } ?? ""
         return """
             {
               "id": "\(id.uuidString)",
-              "kind": "movie",
+              "kind": "\(kind)",
               "title": "Updated Movie",
               "hasSourceMedia": true,
               "capabilities": [
@@ -1220,7 +1227,17 @@ final class PrismediaAPIClientTests: XCTestCase {
           "id": "\(id.uuidString)",
           "kind": "\(kind)",
           "title": "Credit Detail",
-          "capabilities": [],
+          "capabilities": [
+            { "kind": "credits", "items": [
+              {
+                "personId": "\(personID.uuidString)",
+                "role": "actor",
+                "character": "\(character)",
+                "roles": ["actor"],
+                "characters": ["\(character)"]
+              }
+            ] }
+          ],
           "childrenByKind": [],
           "relationships": [
             {
@@ -1230,15 +1247,6 @@ final class PrismediaAPIClientTests: XCTestCase {
               "entities": [
                 { "id": "\(personID.uuidString)", "kind": "person", "title": "Actor" }
               ]
-            }
-          ],
-          "creditMetadata": [
-            {
-              "personId": "\(personID.uuidString)",
-              "role": "actor",
-              "character": "\(character)",
-              "roles": ["actor"],
-              "characters": ["\(character)"]
             }
           ]
         }

@@ -28,9 +28,8 @@ final class BookChapterContentsLoadPolicyTests: XCTestCase {
             title: "Comic",
             parentEntityID: nil,
             sortOrder: nil,
-            bookFormat: .imageArchive,
             hasSourceMedia: false,
-            capabilities: [],
+            capabilities: [.bookMetadata(.init(bookType: "book", format: .imageArchive))],
             childrenByKind: [],
             relationships: []
         )
@@ -48,9 +47,9 @@ final class BookChapterContentsLoadPolicyTests: XCTestCase {
             title: "Book",
             parentEntityID: nil,
             sortOrder: nil,
-            bookFormat: .epub,
             hasSourceMedia: hasSourceMedia,
             capabilities: [
+                .bookMetadata(.init(bookType: "book", format: .epub)),
                 .flags(
                     EntityFlagsCapability(
                         isFavorite: false,

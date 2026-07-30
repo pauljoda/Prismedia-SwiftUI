@@ -20,11 +20,11 @@ struct EntityDetailReadingService {
         return await resolve(detail: detail, reader: reader)
     }
 
-    func reload(detailID: UUID, kind: EntityKind) async -> EntityDetailReadingLoadOutcome {
+    func reload(detailID: UUID) async -> EntityDetailReadingLoadOutcome {
         guard let reader else { return .unavailable }
 
         do {
-            let detail = try await reader.loadEntity(id: detailID, kind: kind)
+            let detail = try await reader.loadEntity(id: detailID)
             guard !Task.isCancelled else { return .cancelled }
             return await resolve(detail: detail, reader: reader)
         } catch is CancellationError {
@@ -43,7 +43,7 @@ struct EntityDetailReadingService {
 
         do {
             if isSingleFile(detail) {
-                let refreshedDetail = try await reader.loadEntity(id: detail.id, kind: detail.kind)
+                let refreshedDetail = try await reader.loadEntity(id: detail.id)
                 guard let progress = progress(in: refreshedDetail), progress.total > 0 else {
                     return .failure("Reading progress is unavailable.")
                 }
@@ -60,7 +60,7 @@ struct EntityDetailReadingService {
                         location: nil
                     )
                 )
-                return await refreshedContent(detailID: detail.id, kind: detail.kind, reader: reader)
+                return await refreshedContent(detailID: detail.id, reader: reader)
             }
 
             let start = try await BookReaderManifestResolver(loader: reader).resolve(
@@ -82,7 +82,7 @@ struct EntityDetailReadingService {
                     reset: true
                 )
             )
-            return await refreshedContent(detailID: detail.id, kind: detail.kind, reader: reader)
+            return await refreshedContent(detailID: detail.id, reader: reader)
         } catch is CancellationError {
             return .cancelled
         } catch {
@@ -117,7 +117,7 @@ struct EntityDetailReadingService {
                     location: progress.location
                 )
             )
-            return await refreshedContent(detailID: detail.id, kind: detail.kind, reader: reader)
+            return await refreshedContent(detailID: detail.id, reader: reader)
         } catch is CancellationError {
             return .cancelled
         } catch {
@@ -128,11 +128,10 @@ struct EntityDetailReadingService {
 
     private func refreshedContent(
         detailID: UUID,
-        kind: EntityKind,
         reader: any BookReaderServicing
     ) async -> EntityDetailReadingMutationOutcome {
         do {
-            let refreshedDetail = try await reader.loadEntity(id: detailID, kind: kind)
+            let refreshedDetail = try await reader.loadEntity(id: detailID)
             if isSingleFile(refreshedDetail) {
                 guard !Task.isCancelled else { return .cancelled }
                 return .singleFile(refreshedDetail)

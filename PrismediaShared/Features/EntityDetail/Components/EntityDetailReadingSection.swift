@@ -159,10 +159,9 @@ struct EntityDetailReadingSection: View {
             title: "The Quiet Frequency",
             parentEntityID: nil,
             sortOrder: nil,
-            bookType: "novel",
-            bookFormat: .epub,
             hasSourceMedia: true,
             capabilities: [
+                .bookMetadata(.init(bookType: "novel", format: .epub)),
                 .progress(
                     EntityProgressCapability(
                         currentEntityID: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,

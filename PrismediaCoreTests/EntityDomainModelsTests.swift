@@ -45,16 +45,16 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(thumbnail.thumbnailPresentationKind, .movie)
     }
 
-    func testBookDetailKeepsReaderDispatchFields() throws {
+    func testBookReaderMetadataIsCapabilityBacked() throws {
         let json = """
             {
               "id": "11111111-1111-1111-1111-111111111111",
               "kind": "book",
               "title": "Native Book",
-              "bookType": "comic",
-              "format": "image-archive",
-              "coverPageId": "22222222-2222-2222-2222-222222222222",
-              "capabilities": [],
+              "capabilities": [
+                { "kind": "book-metadata", "bookType": "comic", "format": "image-archive" },
+                { "kind": "cover-selection", "entityId": "22222222-2222-2222-2222-222222222222" }
+              ],
               "childrenByKind": [],
               "relationships": []
             }
@@ -64,7 +64,60 @@ final class EntityDomainModelsTests: XCTestCase {
 
         XCTAssertEqual(detail.bookType, "comic")
         XCTAssertEqual(detail.bookFormat, .imageArchive)
-        XCTAssertEqual(detail.coverPageID, UUID(uuidString: "22222222-2222-2222-2222-222222222222"))
+        XCTAssertEqual(detail.selectedCoverEntityID, UUID(uuidString: "22222222-2222-2222-2222-222222222222"))
+    }
+
+    func testKindSpecificCapabilityWireShapesDecode() throws {
+        let cases: [(json: String, matches: (EntityCapability) -> Bool)] = [
+            (#"{"kind":"book-metadata","bookType":"novel","format":"epub"}"#, {
+                if case .bookMetadata(let value) = $0 { return value.format == .epub }
+                return false
+            }),
+            (#"{"kind":"collection-configuration","isShared":true,"canEdit":false,"mode":"manual","ruleTreeJson":null,"coverMode":"auto","lastRefreshedAt":null}"#, {
+                if case .collectionConfiguration(let value) = $0 { return value.isShared && !value.canEdit }
+                return false
+            }),
+            (#"{"kind":"cover-selection","entityId":"22222222-2222-2222-2222-222222222222"}"#, {
+                if case .coverSelection(let value) = $0 { return value.entityID != nil }
+                return false
+            }),
+            (#"{"kind":"credits","items":[{"personId":"22222222-2222-2222-2222-222222222222","role":"actor","character":"Lead","roles":["actor"],"characters":["Lead"]}]}"#, {
+                if case .credits(let value) = $0 { return value.items.first?.character == "Lead" }
+                return false
+            }),
+            (#"{"kind":"embedded-audio-metadata","artist":"Artist","album":"Album"}"#, {
+                if case .embeddedAudioMetadata(let value) = $0 { return value.album == "Album" }
+                return false
+            }),
+            (#"{"kind":"gallery-metadata","galleryType":"images"}"#, {
+                if case .galleryMetadata(let value) = $0 { return value.galleryType == "images" }
+                return false
+            }),
+            (#"{"kind":"person-profile","disambiguation":"Writer","gender":null,"country":null,"ethnicity":null,"eyeColor":null,"hairColor":null,"height":null,"weight":null,"measurements":null,"tattoos":null,"piercings":null}"#, {
+                if case .personProfile(let value) = $0 { return value.disambiguation == "Writer" }
+                return false
+            }),
+            (#"{"kind":"series-metadata","status":"continuing"}"#, {
+                if case .seriesMetadata(let value) = $0 { return value.status == "continuing" }
+                return false
+            }),
+            (#"{"kind":"subtitles","items":[],"extractedAt":"2026-07-30T12:00:00Z"}"#, {
+                if case .subtitles(let value) = $0 { return value.extractedAt == "2026-07-30T12:00:00Z" }
+                return false
+            }),
+            (#"{"kind":"tag-policy","ignoreAutoTag":true}"#, {
+                if case .tagPolicy(let value) = $0 { return value.ignoreAutoTag }
+                return false
+            }),
+        ]
+
+        for testCase in cases {
+            let capability = try PrismediaJSON.decoder().decode(
+                EntityCapability.self,
+                from: Data(testCase.json.utf8)
+            )
+            XCTAssertTrue(testCase.matches(capability), "Did not decode \(testCase.json)")
+        }
     }
 
     func testThumbnailDecodesNativeStateAndPrefersDoubleDensityArtwork() throws {

@@ -106,7 +106,7 @@ Feature and shared UI files do not import UIKit or AppKit. Image loading, reader
 
 Every visual type keeps a direct preview beside the component. The preview must instantiate or apply that exact type, even when `PreviewShell`, `NavigationStack`, or another environment wrapper surrounds it. Important screens cover representative content and state variants. Fixed-dark and accessibility Dynamic Type previews are committed in source; reader document components may also preview light and sepia content. Use Xcode's environment overrides for Increase Contrast, Reduce Transparency, Reduce Motion, locale, and layout direction.
 
-`PreviewCoverageTests` prevents wrapper previews from standing in for the component under test. `ModernArchitectureGuardTests` also keeps feature roots screen-only and separates `Components`, `Models`, `Services`, and `Support` so visual and nonvisual responsibilities remain discoverable.
+Direct previews are maintained alongside visual types and reviewed in Xcode. `ModernArchitectureGuardTests` keeps feature roots screen-only and separates `Components`, `Models`, `Services`, and `Support` so visual and nonvisual responsibilities remain discoverable.
 
 ## Validation contract
 

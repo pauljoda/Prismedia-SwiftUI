@@ -306,9 +306,8 @@ final class BookReaderManifestResolverTests: XCTestCase {
             title: title,
             parentEntityID: parent,
             sortOrder: nil,
-            bookFormat: kind == .book ? .imageArchive : nil,
             hasSourceMedia: false,
-            capabilities: progress.map { [.progress($0)] } ?? [],
+            capabilities: (kind == .book ? [.bookMetadata(.init(bookType: "book", format: .imageArchive))] : []) + (progress.map { [.progress($0)] } ?? []),
             childrenByKind: children,
             relationships: []
         )

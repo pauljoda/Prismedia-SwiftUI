@@ -244,10 +244,8 @@ final class EntityDetailReadingTests: XCTestCase {
             title: "Single File Book",
             parentEntityID: nil,
             sortOrder: nil,
-            bookType: "book",
-            bookFormat: format,
             hasSourceMedia: true,
-            capabilities: progress.map { [.progress($0)] } ?? [],
+            capabilities: [.bookMetadata(.init(bookType: "book", format: format))] + (progress.map { [.progress($0)] } ?? []),
             childrenByKind: [],
             relationships: []
         )

@@ -357,10 +357,8 @@
                 title: "Signal in the Static",
                 parentEntityID: nil,
                 sortOrder: nil,
-                bookType: "book",
-                bookFormat: .pdf,
                 hasSourceMedia: true,
-                capabilities: [],
+                capabilities: [.bookMetadata(.init(bookType: "book", format: .pdf))],
                 childrenByKind: [],
                 relationships: []
             )

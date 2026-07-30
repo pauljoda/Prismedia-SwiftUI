@@ -30,19 +30,19 @@ public struct BookReaderManifestResolver: Sendable {
 
     private func owningBook(for selected: EntityDetail) async throws -> EntityDetail {
         if selected.kind == .book {
-            return try await loader.loadEntity(id: selected.id, kind: .book)
+            return try await loader.loadEntity(id: selected.id)
         }
         guard let parentID = selected.parentEntityID else {
             throw BookReaderManifestError.missingParent(selected.kind)
         }
         let parent = try await loader.loadEntity(id: parentID)
         if parent.kind == .book {
-            return try await loader.loadEntity(id: parent.id, kind: .book)
+            return try await loader.loadEntity(id: parent.id)
         }
         guard parent.kind == .bookVolume, let bookID = parent.parentEntityID else {
             throw BookReaderManifestError.missingBook
         }
-        let book = try await loader.loadEntity(id: bookID, kind: .book)
+        let book = try await loader.loadEntity(id: bookID)
         guard book.kind == .book else { throw BookReaderManifestError.missingBook }
         return book
     }

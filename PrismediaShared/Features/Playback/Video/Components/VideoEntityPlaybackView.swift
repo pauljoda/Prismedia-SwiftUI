@@ -328,10 +328,7 @@ struct VideoEntityPlaybackView: View {
         private func refreshResolvedVideo() async {
             guard let presentedVideoDetail else { return }
             do {
-                let refreshed = try await detailLoader.loadEntity(
-                    id: presentedVideoDetail.id,
-                    kind: presentedVideoDetail.kind
-                )
+                let refreshed = try await detailLoader.loadEntity(id: presentedVideoDetail.id)
                 guard !Task.isCancelled else { return }
                 videoDetail = refreshed
                 loadFailed = false

@@ -4,7 +4,6 @@
     struct MusicArtistDetailView: View {
         @Environment(PrismediaAppEnvironment.self) private var environment
         @Environment(MusicPlayerController.self) private var controller
-        @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @State private var artworkPalette: ArtworkPalette?
         @State private var loadingQueueMode: MusicQueueStartMode?
         @State private var playbackError: String?
@@ -126,28 +125,13 @@
         }
 
         private var albumGrid: some View {
-            LazyVGrid(
-                columns: albumColumns,
-                spacing: PrismediaSpacing.large
-            ) {
-                ForEach(albums) { album in
-                    NavigationLink(value: EntityLink(thumbnail: album, previewSubtitle: detail.title)) {
-                        EntityThumbnailCardView(item: album, subtitle: detail.title)
-                    }
-                    .buttonStyle(.plain)
-                    .onAppear { prewarmArtwork(after: album.id) }
+            EntityThumbnailGrid(items: albums, minimumColumnWidth: 150) { album, layout in
+                NavigationLink(value: EntityLink(thumbnail: album, previewSubtitle: detail.title)) {
+                    EntityThumbnailCardView(item: album, layout: layout, subtitle: detail.title)
                 }
+                .buttonStyle(.plain)
+                .onAppear { prewarmArtwork(after: album.id) }
             }
-        }
-
-        private var albumColumns: [GridItem] {
-            if dynamicTypeSize.isAccessibilitySize {
-                return [GridItem(.flexible())]
-            }
-            return [
-                GridItem(.flexible(), spacing: PrismediaSpacing.small),
-                GridItem(.flexible(), spacing: PrismediaSpacing.small),
-            ]
         }
 
         private func prewarmArtwork(after itemID: UUID) {

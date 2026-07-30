@@ -52,7 +52,7 @@ final class EntityDetailEditingTests: XCTestCase {
     }
 
     func testEditDraftKeepsReferencedPeopleWhenExpandedCreditMetadataIsMissing() throws {
-        let detail = try makeDetail(creditMetadata: "[]")
+        let detail = try makeDetail(credits: "[]")
 
         let draft = EntityDetailEditDraft(detail: detail)
 
@@ -239,7 +239,7 @@ final class EntityDetailEditingTests: XCTestCase {
     }
 
     func testEditableEntityKeepsEmptyMetadataTabReachable() throws {
-        let detail = try makeDetail(capabilities: "[]", relationships: "[]", creditMetadata: "[]")
+        let detail = try makeDetail(capabilities: "[]", relationships: "[]", credits: "[]")
 
         let presentation = EntityDetailPresentation(detail: detail, canEditMetadata: true)
 
@@ -260,7 +260,7 @@ final class EntityDetailEditingTests: XCTestCase {
 
     func testCreditPresentationHumanizesRoleWhenCharacterIsUnavailable() throws {
         let detail = try makeDetail(
-            creditMetadata:
+            credits:
                 #"[{"personId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"executive_producer","character":null,"roles":["executive_producer"],"characters":[]}]"#
         )
 
@@ -274,7 +274,7 @@ final class EntityDetailEditingTests: XCTestCase {
 
     func testCreditPresentationSuppressesGenericPersonRole() throws {
         let detail = try makeDetail(
-            creditMetadata:
+            credits:
                 #"[{"personId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"person","character":null,"roles":["person"],"characters":[]}]"#
         )
 
@@ -311,7 +311,7 @@ final class EntityDetailEditingTests: XCTestCase {
                 kind: expectation.kind,
                 capabilities: "[]",
                 relationships: "[]",
-                creditMetadata: "[]"
+                credits: "[]"
             )
             let presentation = try XCTUnwrap(
                 EntityDetailReferencedContentPresentation(detail: detail)
@@ -329,9 +329,13 @@ final class EntityDetailEditingTests: XCTestCase {
             #"[{"kind":"description","value":"A mystery."},{"kind":"flags","isFavorite":false,"isNsfw":false,"isOrganized":true,"isWanted":false}]"#,
         relationships: String =
             #"[{"kind":"person","label":"Cast","code":"cast","entities":[{"id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","kind":"person","title":"Mara Voss","hoverImages":[],"meta":[]}]},{"kind":"tag","label":"Tags","code":"tags","entities":[{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","kind":"tag","title":"Atmospheric","hoverImages":[],"meta":[]}]},{"kind":"studio","label":"Studio","code":"studio","entities":[{"id":"dddddddd-dddd-dddd-dddd-dddddddddddd","kind":"studio","title":"Northlight","hoverImages":[],"meta":[]}]}]"#,
-        creditMetadata: String =
+        credits: String =
             #"[{"personId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","role":"actor","character":"Dr. Hale","roles":["actor","producer"],"characters":["Dr. Hale","The Witness"]}]"#
     ) throws -> EntityDetail {
+        let creditsCapability = #"{"kind":"credits","items":\#(credits)}"#
+        let mergedCapabilities = capabilities == "[]"
+            ? "[\(creditsCapability)]"
+            : "\(capabilities.dropLast()),\(creditsCapability)]"
         let json = """
             {
               "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -340,10 +344,9 @@ final class EntityDetailEditingTests: XCTestCase {
               "parentEntityId": null,
               "sortOrder": null,
               "hasSourceMedia": true,
-              "capabilities": \(capabilities),
+              "capabilities": \(mergedCapabilities),
               "childrenByKind": [],
-              "relationships": \(relationships),
-              "creditMetadata": \(creditMetadata)
+              "relationships": \(relationships)
             }
             """
         return try PrismediaJSON.decoder().decode(EntityDetail.self, from: Data(json.utf8))

@@ -32,7 +32,7 @@ extension EntityDetailView {
         preservingContent: Bool = true
     ) async {
         guard let request = state.beginLoad(preservingContent: preservingContent) else { return }
-        let outcome = await service.load(id: link.entityID, kind: link.kind)
+        let outcome = await service.load(id: link.entityID)
         state.finishLoad(outcome, request: request)
         #if os(iOS) || os(macOS)
             guard case .content(let detail) = state.phase else { return }
@@ -243,7 +243,7 @@ extension EntityDetailView {
             return false
         }
 
-        let refreshOutcome = await service.load(id: link.entityID, kind: link.kind)
+        let refreshOutcome = await service.load(id: link.entityID)
         state.finishMutationRefresh(refreshOutcome, request: request)
         return true
     }
