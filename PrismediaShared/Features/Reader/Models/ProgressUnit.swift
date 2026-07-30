@@ -4,6 +4,8 @@ public struct ProgressUnit: RawRepresentable, Codable, Hashable, Sendable {
     public static let page = Self(rawValue: "page")
     public static let cfi = Self(rawValue: "cfi")
     public static let item = Self(rawValue: "item")
+    public static let chapter = Self(rawValue: "chapter")
+    public static let track = Self(rawValue: "track")
     public static let second = Self(rawValue: "second")
 
     public let rawValue: String

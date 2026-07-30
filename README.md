@@ -98,6 +98,18 @@ xcodebuild -project Prismedia.xcodeproj -scheme PrismediaMac -destination 'gener
 xcodebuild -project Prismedia.xcodeproj -scheme PrismediaTV -destination 'generic/platform=tvOS Simulator' build CODE_SIGNING_ALLOWED=NO
 ```
 
+When the Prismedia API is running locally, validate the native code families against the
+backend's canonical code manifest:
+
+```sh
+python3 Scripts/check-contract-codes.py
+```
+
+Use `--manifest path/to/codes.json` for an exported manifest, or `PRISMEDIA_CODES_URL` to
+target another development API. This covers Entity kinds, capability discriminators, and the
+book/reader code families the native app models directly; UI-only and playback-local values are
+intentionally outside the check.
+
 UI smoke test against the deterministic mock server:
 
 ```sh
