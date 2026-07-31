@@ -1282,7 +1282,7 @@ def build_video_playback_plan_response(entity_id, audio_stream_index):
             "durationSeconds": 30,
             "method": "remux" if is_explicit_selection else "direct",
             "url": (
-                f"/api/playback/videos/{entity_id}/stream?audioStreamIndex={selected_index}"
+                f"/api/playback/videos/{entity_id}/hls/v/remux/stream.m3u8?audioStreamIndex={selected_index}"
                 if is_explicit_selection
                 else f"/api/playback/videos/{entity_id}/stream"
             ),

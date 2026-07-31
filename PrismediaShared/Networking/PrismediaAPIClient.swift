@@ -8,6 +8,8 @@ import Foundation
 /// native player fetches itself (AVPlayer, HLS) get the token as `?access_token=`.
 /// Cover/thumbnail assets under `/assets/**` are public and need no token.
 public struct PrismediaAPIClient: Sendable {
+    private static let accessTokenQueryName = "access_token"
+
     public let serverURL: URL
     public let accessToken: String?
     public var allowsNsfwContent: Bool { nsfwPolicy.isAllowed }
@@ -600,7 +602,7 @@ public struct PrismediaAPIClient: Sendable {
         let existingNames = Set(
             URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.map { $0.name.lowercased() } ?? [])
-        if existingNames.contains("access_token") {
+        if existingNames.contains(Self.accessTokenQueryName) {
             return url
         }
         return tokenAuthenticatedURL(for: path)
@@ -631,7 +633,10 @@ public struct PrismediaAPIClient: Sendable {
         guard let accessToken else { return nil }
         guard let resolvedURL = try? url(path: path) else { return nil }
         guard isSameOrigin(resolvedURL) else { return resolvedURL }
-        return try? url(path: path, queryItems: [URLQueryItem(name: "access_token", value: accessToken)])
+        return try? url(
+            path: path,
+            queryItems: [URLQueryItem(name: Self.accessTokenQueryName, value: accessToken)]
+        )
     }
 
     // MARK: - Request plumbing

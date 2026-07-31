@@ -732,8 +732,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            client.tokenAuthenticatedURL(for: "/api/video-stream/1/hls2/master.m3u8")?.absoluteString,
-            "https://media.example.test/api/video-stream/1/hls2/master.m3u8?access_token=opaque-session-token"
+            client.tokenAuthenticatedURL(for: "/api/playback/videos/1/hls/master.m3u8")?.absoluteString,
+            "https://media.example.test/api/playback/videos/1/hls/master.m3u8?access_token=opaque-session-token"
         )
     }
 
@@ -780,7 +780,7 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "source":{
                     "id":"source-1","container":"mkv","durationSeconds":5400,
                     "method":"remux",
-                    "url":"/api/playback/videos/\(videoID)/hls/remux/stream.m3u8",
+                    "url":"/api/playback/videos/\(videoID)/hls/v/remux/stream.m3u8",
                     "supportsTranscoding":true,
                     "streams":[
                       {
@@ -800,7 +800,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         let plan = try await client.negotiateVideoPlayback(videoID: videoID)
 
         XCTAssertEqual(plan.delivery, .remux)
-        XCTAssertEqual(plan.url.path, "/api/playback/videos/\(videoID)/hls/remux/stream.m3u8")
+        XCTAssertEqual(plan.url.path, "/api/playback/videos/\(videoID)/hls/v/remux/stream.m3u8")
         XCTAssertEqual(plan.httpHeaders["Authorization"], "Bearer token")
         XCTAssertEqual(plan.diagnostics?.sourceContainer, "mkv")
         XCTAssertEqual(plan.diagnostics?.sourceVideoCodec, "hevc")
@@ -863,7 +863,7 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "sessionId":"session-1",
                   "source":{
                     "id":"source-1","container":"mkv","durationSeconds":90,
-                    "method":"transcode","url":"/api/playback/videos/\(videoID)/hls/transcode/master.m3u8",
+                    "method":"transcode","url":"/api/playback/videos/\(videoID)/hls/master.m3u8",
                     "supportsTranscoding":true,"streams":[],
                     "transcoding":{"container":"ts","videoCodec":"h264","audioCodec":"aac","isVideoDirect":false,"isAudioDirect":false}
                   }
@@ -891,7 +891,7 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "sessionId":"session-1",
                   "source":{
                     "id":"source-1","container":"mkv","durationSeconds":90,
-                    "method":"remux","url":"/api/playback/videos/\(videoID)/hls/remux/stream.m3u8",
+                    "method":"remux","url":"/api/playback/videos/\(videoID)/hls/v/remux/stream.m3u8",
                     "supportsTranscoding":true,"streams":[],
                     "transcoding":{"container":"mp4","videoCodec":"h264","audioCodec":"aac","isVideoDirect":true,"isAudioDirect":false}
                   }
@@ -969,7 +969,7 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "sessionId":"remux-session",
                   "source":{
                     "id":"source-1","container":"mkv","durationSeconds":90,
-                    "method":"remux","url":"/api/playback/videos/\(videoID)/hls/remux/stream.m3u8?audioStreamIndex=3",
+                    "method":"remux","url":"/api/playback/videos/\(videoID)/hls/v/remux/stream.m3u8?audioStreamIndex=3",
                     "supportsTranscoding":true,
                     "streams":[
                       {"index":0,"type":"Video","codec":"h264","bitDepth":8,"videoRangeType":"SDR","isDefault":true},
@@ -1013,7 +1013,7 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "source":{
                     "id":"source-1","container":"mkv","durationSeconds":90,
                     "method":"remux",
-                    "url":"/api/playback/videos/11111111-1111-1111-1111-111111111111/hls/remux/stream.m3u8?audioStreamIndex=3",
+                    "url":"/api/playback/videos/11111111-1111-1111-1111-111111111111/hls/v/remux/stream.m3u8?audioStreamIndex=3",
                     "supportsTranscoding":true,"streams":[],
                     "transcoding":{"container":"mp4","isVideoDirect":true,"isAudioDirect":false,"videoCodec":"hevc","audioCodec":"aac"}
                   }

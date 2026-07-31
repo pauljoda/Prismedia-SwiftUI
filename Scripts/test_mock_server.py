@@ -244,7 +244,7 @@ class PlaybackFixtureTests(unittest.TestCase):
 
         self.assertEqual("remux", source["method"])
         self.assertEqual(
-            "/api/playback/videos/video-id/stream?audioStreamIndex=2",
+            "/api/playback/videos/video-id/hls/v/remux/stream.m3u8?audioStreamIndex=2",
             source["url"],
         )
         self.assertTrue(source["transcoding"]["isVideoDirect"])
