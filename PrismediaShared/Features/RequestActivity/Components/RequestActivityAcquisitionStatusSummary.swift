@@ -34,7 +34,7 @@ import SwiftUI
     #if DEBUG
         #Preview("Acquisition Status · Downloading") {
             RequestActivityAcquisitionStatusSummary(
-                status: AcquisitionStatus(rawValue: "downloading"),
+                status: .downloading,
                 message: nil,
                 updatedAt: RequestActivityPreviewFixtures.referenceDate
             )
@@ -44,7 +44,7 @@ import SwiftUI
 
         #Preview("Acquisition Status · Failed · Accessibility") {
             RequestActivityAcquisitionStatusSummary(
-                status: AcquisitionStatus(rawValue: "failed"),
+                status: .failed,
                 message: "The download client rejected this release.",
                 updatedAt: RequestActivityPreviewFixtures.referenceDate
             )

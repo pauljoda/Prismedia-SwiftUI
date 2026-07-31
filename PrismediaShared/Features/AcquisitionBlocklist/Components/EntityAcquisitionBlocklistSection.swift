@@ -107,7 +107,7 @@ struct EntityAcquisitionBlocklistSection: View {
             blocklistEntries: [
                 RequestActivityBlocklistEntry(
                     id: UUID(),
-                    reason: RequestActivityBlocklistReason(rawValue: "failed"),
+                    reason: .failed,
                     title: "Example.Release.WEB",
                     indexerName: "Example Indexer",
                     infoHash: nil,
