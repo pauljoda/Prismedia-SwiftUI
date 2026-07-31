@@ -1,5 +1,18 @@
 import Foundation
 
+/// Generated client snapshot of one Entity kind's manual acquisition policy.
+public struct EntityManualAcquisitionPolicy: Hashable, Sendable {
+    /// Whether this kind is a concrete browser upload/import unit.
+    public let supportsUpload: Bool
+    /// Whether existing owned content may be replaced after review.
+    public let supportsReplacement: Bool
+
+    public init(supportsUpload: Bool, supportsReplacement: Bool) {
+        self.supportsUpload = supportsUpload
+        self.supportsReplacement = supportsReplacement
+    }
+}
+
 /// Generated client snapshot of one canonical backend Entity-kind definition.
 public struct EntityKindDefinition: Hashable, Sendable {
     public let kind: EntityKind
@@ -18,6 +31,8 @@ public struct EntityKindDefinition: Hashable, Sendable {
     public let containableKinds: [EntityKind]?
     /// Whether users may create and manage instances of this kind without imported media.
     public let supportsManualManagement: Bool
+    /// Browser upload and reviewed-replacement behavior declared by the backend kind definition.
+    public let manualAcquisition: EntityManualAcquisitionPolicy
     /// Media quality family used by acquisition upgrade policy.
     public let mediaQualityFamily: EntityMediaQualityFamily
     /// Whether acquisition may replace this kind's media atomically during an upgrade.
@@ -38,6 +53,7 @@ public struct EntityKindDefinition: Hashable, Sendable {
         autoIdentifySelector: String?,
         containableKinds: [EntityKind]?,
         supportsManualManagement: Bool,
+        manualAcquisition: EntityManualAcquisitionPolicy,
         mediaQualityFamily: EntityMediaQualityFamily,
         supportsAtomicMediaUpgrade: Bool,
         enumeratesIdentifyChildren: Bool
@@ -55,6 +71,7 @@ public struct EntityKindDefinition: Hashable, Sendable {
         self.autoIdentifySelector = autoIdentifySelector
         self.containableKinds = containableKinds
         self.supportsManualManagement = supportsManualManagement
+        self.manualAcquisition = manualAcquisition
         self.mediaQualityFamily = mediaQualityFamily
         self.supportsAtomicMediaUpgrade = supportsAtomicMediaUpgrade
         self.enumeratesIdentifyChildren = enumeratesIdentifyChildren

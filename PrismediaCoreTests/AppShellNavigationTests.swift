@@ -365,6 +365,23 @@ final class AppShellNavigationTests: XCTestCase {
         }
     }
 
+    func testGeneratedEntityDefinitionsOwnManualAcquisitionPolicy() throws {
+        let uploadableKinds = Set(
+            generatedEntityKindDefinitions.values
+                .filter(\.manualAcquisition.supportsUpload)
+                .map(\.kind)
+        )
+        let replaceableKinds = Set(
+            generatedEntityKindDefinitions.values
+                .filter(\.manualAcquisition.supportsReplacement)
+                .map(\.kind)
+        )
+
+        XCTAssertEqual(uploadableKinds, [.audioLibrary, .book, .movie, .video, .videoSeason])
+        XCTAssertEqual(replaceableKinds, [.audioLibrary, .book, .movie, .video])
+        XCTAssertTrue(replaceableKinds.isSubset(of: uploadableKinds))
+    }
+
     func testEntityDeepLinksKeepCanonicalAndLegacyFormsDistinct() throws {
         let id = UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!
         let parentID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!

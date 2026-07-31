@@ -102,6 +102,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -137,6 +141,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "audio",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: true,
+            supportsReplacement: true
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
@@ -172,6 +180,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "audio",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -207,6 +219,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "book",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: true,
+            supportsReplacement: true
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
@@ -242,6 +258,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
@@ -277,6 +297,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -312,6 +336,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -347,6 +375,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: [.video, .movie, .videoSeries, .gallery, .image, .book, .musicArtist, .audioLibrary, .audioTrack],
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -382,6 +414,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "gallery",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -417,6 +453,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "image",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -452,6 +492,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "audio",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
@@ -487,6 +531,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
@@ -522,6 +570,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: true,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -557,6 +609,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "video",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: true,
+            supportsReplacement: true
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: true,
         enumeratesIdentifyChildren: false
@@ -592,6 +648,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: true,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -627,6 +687,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: true,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: false
@@ -662,6 +726,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "video",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: true,
+            supportsReplacement: true
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: true,
         enumeratesIdentifyChildren: false
@@ -697,6 +765,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: "video",
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true
@@ -732,6 +804,10 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         autoIdentifySelector: nil,
         containableKinds: nil,
         supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: true,
+            supportsReplacement: false
+        ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: false,
         enumeratesIdentifyChildren: true

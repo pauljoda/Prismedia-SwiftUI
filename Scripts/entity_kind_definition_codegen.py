@@ -184,6 +184,12 @@ def render_manifest(manifest: dict) -> str:
             containable_kinds_line,
             "        supportsManualManagement: "
             f"{swift_bool(kind['supportsManualManagement'])},",
+            "        manualAcquisition: EntityManualAcquisitionPolicy(",
+            "            supportsUpload: "
+            f"{swift_bool(kind['manualAcquisition']['supportsUpload'])},",
+            "            supportsReplacement: "
+            f"{swift_bool(kind['manualAcquisition']['supportsReplacement'])}",
+            "        ),",
             "        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "
             f"{swift_literal(kind.get('mediaQualityFamily', 'none'))}),",
             "        supportsAtomicMediaUpgrade: "
