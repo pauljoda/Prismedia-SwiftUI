@@ -1270,55 +1270,63 @@ def build_book_detail_response(entity_id):
     return response
 
 
-def build_playback_info_response(audio_stream_index):
-    """Build playback negotiation with a deterministic selectable audio pair."""
+def build_video_playback_plan_response(entity_id, audio_stream_index):
+    """Build a native playback plan with a deterministic selectable audio pair."""
     selected_index = audio_stream_index if audio_stream_index in (1, 2) else 1
     is_explicit_selection = audio_stream_index is not None
     return {
-        "PlaySessionId": "mock-play-session",
-        "MediaSources": [
-            {
-                "Id": "mock-source",
-                "Path": MOCK_VIDEO_PATH,
-                "Protocol": "File",
-                "Container": "mp4",
-                "RunTimeTicks": 300_000_000,
-                "SupportsDirectPlay": not is_explicit_selection,
-                "SupportsDirectStream": True,
-                "SupportsTranscoding": is_explicit_selection,
-                "TranscodingUrl": (
-                    f"/Videos/mock/stream?AudioStreamIndex={selected_index}"
-                    if is_explicit_selection
-                    else None
-                ),
-                "MediaStreams": [
-                    {"Index": 0, "Type": "Video", "Codec": "h264", "Width": 1280, "Height": 720},
-                    {
-                        "Index": 1,
-                        "Type": "Audio",
-                        "Codec": "aac",
-                        "Channels": 2,
-                        "Language": "eng",
-                        "DisplayTitle": "Main",
-                        "IsDefault": selected_index == 1,
-                    },
-                    {
-                        "Index": 2,
-                        "Type": "Audio",
-                        "Codec": "aac",
-                        "Channels": 2,
-                        "Language": "eng",
-                        "DisplayTitle": "Commentary",
-                        "IsDefault": selected_index == 2,
-                    },
-                ],
-                "TranscodingInfo": (
-                    {"IsVideoDirect": True, "VideoCodec": "h264", "AudioCodec": "aac"}
-                    if is_explicit_selection
-                    else None
-                ),
-            }
-        ],
+        "sessionId": "mock-play-session",
+        "source": {
+            "id": "mock-source",
+            "container": "mp4",
+            "durationSeconds": 30,
+            "method": "remux" if is_explicit_selection else "direct",
+            "url": (
+                f"/api/playback/videos/{entity_id}/stream?audioStreamIndex={selected_index}"
+                if is_explicit_selection
+                else f"/api/playback/videos/{entity_id}/stream"
+            ),
+            "supportsTranscoding": True,
+            "streams": [
+                {
+                    "index": 0,
+                    "type": "Video",
+                    "codec": "h264",
+                    "width": 1280,
+                    "height": 720,
+                    "isDefault": True,
+                },
+                {
+                    "index": 1,
+                    "type": "Audio",
+                    "codec": "aac",
+                    "channels": 2,
+                    "language": "eng",
+                    "displayTitle": "Main",
+                    "isDefault": selected_index == 1,
+                },
+                {
+                    "index": 2,
+                    "type": "Audio",
+                    "codec": "aac",
+                    "channels": 2,
+                    "language": "eng",
+                    "displayTitle": "Commentary",
+                    "isDefault": selected_index == 2,
+                },
+            ],
+            "transcoding": (
+                {
+                    "container": "mp4",
+                    "videoCodec": "h264",
+                    "audioCodec": "aac",
+                    "isVideoDirect": True,
+                    "isAudioDirect": True,
+                }
+                if is_explicit_selection
+                else None
+            ),
+        },
     }
 
 
@@ -1423,7 +1431,7 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(urlsplit(self.path).query)
         return (
             self.headers.get("Authorization") == f"Bearer {TOKEN}"
-            or _first_parameter(query, "api_key") == TOKEN
+            or _first_parameter(query, "access_token") == TOKEN
         )
 
     def _send_text(self, status, contents, content_type="text/plain; charset=utf-8"):
@@ -1666,7 +1674,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, detail)
             return self._send(404, {"code": "entity_not_found", "message": "Entity was not found."})
 
-        if path.startswith("/Videos/") and path.endswith("/stream"):
+        playback_parts = path.strip("/").split("/")
+        if (
+            len(playback_parts) == 5
+            and playback_parts[:3] == ["api", "playback", "videos"]
+            and playback_parts[4] == "stream"
+        ):
             return self._send_video()
 
         return self._send(404, {"code": "not_found", "message": f"No mock for {path}"})
@@ -1690,6 +1703,13 @@ class Handler(BaseHTTPRequestHandler):
             track_id = path.removeprefix("/api/audio-stream/")
             if any(item["id"] == track_id for item in AUDIOBOOK_PARTS):
                 return self._send_audio(head_only=True)
+        playback_parts = path.strip("/").split("/")
+        if (
+            len(playback_parts) == 5
+            and playback_parts[:3] == ["api", "playback", "videos"]
+            and playback_parts[4] == "stream"
+        ):
+            return self._send_video(head_only=True)
         return self._send(404, {"code": "not_found", "message": f"No mock for {path}"})
 
     def do_PATCH(self):
@@ -1788,13 +1808,29 @@ class Handler(BaseHTTPRequestHandler):
         if request_url.path == "/api/requests/commit-reviewed":
             return self._send(200, REQUEST_COMMIT_RESPONSE)
 
-        if request_url.path.startswith("/Items/") and request_url.path.endswith("/PlaybackInfo"):
+        playback_parts = request_url.path.strip("/").split("/")
+        if (
+            len(playback_parts) == 5
+            and playback_parts[:3] == ["api", "playback", "videos"]
+            and playback_parts[4] == "plan"
+        ):
             if PLAYBACK_DELAY_SECONDS > 0:
                 time.sleep(PLAYBACK_DELAY_SECONDS)
             return self._send(
                 200,
-                build_playback_info_response(body.get("AudioStreamIndex")),
+                build_video_playback_plan_response(
+                    playback_parts[3],
+                    body.get("audioStreamIndex"),
+                ),
             )
+
+        if request_url.path in (
+            "/api/playback/sessions/start",
+            "/api/playback/sessions/progress",
+            "/api/playback/sessions/ping",
+            "/api/playback/sessions/stop",
+        ):
+            return self._send(204)
 
         if request_url.path.startswith("/api/audio-tracks/") and request_url.path.endswith("/play"):
             track_id = request_url.path.split("/")[3]
@@ -1827,7 +1863,7 @@ class Handler(BaseHTTPRequestHandler):
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
-    def _send_video(self):
+    def _send_video(self, head_only=False):
         if not os.path.exists(MOCK_VIDEO_PATH):
             return self._send(404, {"code": "mock_video_missing", "message": MOCK_VIDEO_PATH})
 
@@ -1847,12 +1883,13 @@ class Handler(BaseHTTPRequestHandler):
         if range_header:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         self.end_headers()
-        with open(MOCK_VIDEO_PATH, "rb") as media:
-            media.seek(start)
-            try:
-                self.wfile.write(media.read(length))
-            except (BrokenPipeError, ConnectionResetError):
-                pass
+        if not head_only:
+            with open(MOCK_VIDEO_PATH, "rb") as media:
+                media.seek(start)
+                try:
+                    self.wfile.write(media.read(length))
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
 
     def log_message(self, fmt, *args):
         print(f"[mock] {fmt % args}")

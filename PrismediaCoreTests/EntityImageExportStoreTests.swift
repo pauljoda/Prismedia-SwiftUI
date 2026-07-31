@@ -23,7 +23,7 @@ final class EntityImageExportStoreTests: XCTestCase {
         XCTAssertFalse(artifact.fileURL.lastPathComponent.contains("/"))
         XCTAssertFalse(artifact.fileURL.lastPathComponent.contains(":"))
         XCTAssertFalse(artifact.fileURL.lastPathComponent.contains("?"))
-        XCTAssertFalse(artifact.fileURL.absoluteString.contains("api_key"))
+        XCTAssertFalse(artifact.fileURL.absoluteString.contains("access_token"))
         XCTAssertFalse(artifact.fileURL.absoluteString.contains("Authorization"))
         XCTAssertEqual(try Data(contentsOf: artifact.fileURL), payload)
     }

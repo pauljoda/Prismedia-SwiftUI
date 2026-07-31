@@ -51,15 +51,15 @@ final class VideoPlaybackReporter {
         record(.progress, context: context, positionSeconds: positionSeconds)
     }
 
-    func flushProgress(positionSeconds: Double, isPaused: Bool) {
+    func flushProgress(positionSeconds: Double) {
         guard hasStarted, !isTerminal, let context else { return }
-        record(.progress, context: context, positionSeconds: positionSeconds, isPaused: isPaused)
+        record(.progress, context: context, positionSeconds: positionSeconds)
     }
 
     func stop(positionSeconds: Double) {
         guard hasStarted, !isTerminal, let context else { return }
         isTerminal = true
-        record(.stopped, context: context, positionSeconds: positionSeconds, isPaused: true)
+        record(.stopped, context: context, positionSeconds: positionSeconds)
     }
 
     func complete() {
@@ -73,7 +73,7 @@ final class VideoPlaybackReporter {
             .stopped,
             context: context,
             positionSeconds: completionPosition,
-            isPaused: true
+            completed: true
         )
     }
 
@@ -92,16 +92,16 @@ final class VideoPlaybackReporter {
 
     private func stopCurrentSessionForReplacement(positionSeconds: Double) {
         guard hasStarted, !isTerminal, let context else { return }
-        record(.stopped, context: context, positionSeconds: positionSeconds, isPaused: true)
+        record(.stopped, context: context, positionSeconds: positionSeconds)
     }
 
     private func record(
         _ event: VideoPlaybackEvent,
         context: VideoPlaybackReportContext,
         positionSeconds: Double,
-        isPaused: Bool = false
+        completed: Bool? = nil
     ) {
-        let report = context.report(positionSeconds: positionSeconds, isPaused: isPaused)
+        let report = context.report(positionSeconds: positionSeconds, completed: completed)
         lastReportTime = clock.now
         lastReportedPosition = max(0, positionSeconds)
         enqueue { service in

@@ -5,7 +5,7 @@ import Foundation
 /// Construct unauthenticated for the public routes (health, setup-status, login,
 /// first-run setup), then call `authenticated(with:)` once a session token exists.
 /// Authenticated requests send `Authorization: Bearer <token>`; media URLs that a
-/// native player fetches itself (AVPlayer, HLS) get the token as `?api_key=`.
+/// native player fetches itself (AVPlayer, HLS) get the token as `?access_token=`.
 /// Cover/thumbnail assets under `/assets/**` are public and need no token.
 public struct PrismediaAPIClient: Sendable {
     public let serverURL: URL
@@ -475,9 +475,9 @@ public struct PrismediaAPIClient: Sendable {
     ) async throws {
         let path =
             switch event {
-            case .started: "/Sessions/Playing"
-            case .progress: "/Sessions/Playing/Progress"
-            case .stopped: "/Sessions/Playing/Stopped"
+            case .started: "/api/playback/sessions/start"
+            case .progress: "/api/playback/sessions/progress"
+            case .stopped: "/api/playback/sessions/stop"
             }
         try await sendExpectingNoContent(path: path, method: "POST", body: report)
     }
@@ -527,41 +527,25 @@ public struct PrismediaAPIClient: Sendable {
         preferredEngine: VideoPlaybackEngine
     ) async throws -> VideoPlaybackPlan {
         let response = try await send(
-            VideoPlaybackInfoResponse.self,
-            path: "/Items/\(videoID.uuidString.lowercased())/PlaybackInfo",
+            VideoPlaybackPlanResponse.self,
+            path: "/api/playback/videos/\(videoID.uuidString.lowercased())/plan",
             method: "POST",
-            body: ApplePlaybackInfoRequest(
+            body: VideoPlaybackPlanRequest(
                 mode: mode,
                 audioStreamIndex: audioStreamIndex,
                 preferredEngine: preferredEngine
             )
         )
-        guard let source = response.mediaSources.first else {
+        let source = response.source
+        let delivery = source.method
+        guard let url = authenticatedMediaURL(for: source.url) else {
             throw VideoPlaybackError.noPlayableSource
         }
-
-        let delivery: VideoPlaybackDelivery
-        let url: URL?
-        if source.supportsDirectPlay && mode.allowsDirectPlay && audioStreamIndex == nil {
-            delivery = .direct
-            let audioQuery = audioStreamIndex.map { "&AudioStreamIndex=\($0)" } ?? ""
-            url = tokenAuthenticatedURL(
-                for: "/Videos/\(videoID.uuidString.lowercased())/stream?MediaSourceId=\(source.id)\(audioQuery)"
-            )
-        } else if let transcodingURL = source.transcodingURL {
-            delivery = source.transcodingInfo?.isVideoDirect == true ? .remux : .transcode
-            url = authenticatedMediaURL(for: transcodingURL)
-        } else {
-            delivery = .transcode
-            url = nil
+        let sourceVideo = source.streams.first {
+            $0.type.caseInsensitiveCompare(PrismediaContractCodes.StreamKind.video) == .orderedSame
         }
-
-        guard let url else { throw VideoPlaybackError.noPlayableSource }
-        let sourceVideo = source.mediaStreams.first {
-            $0.type.caseInsensitiveCompare("Video") == .orderedSame
-        }
-        let sourceAudioStreams = source.mediaStreams.filter {
-            $0.type.caseInsensitiveCompare("Audio") == .orderedSame
+        let sourceAudioStreams = source.streams.filter {
+            $0.type.caseInsensitiveCompare(PrismediaContractCodes.StreamKind.audio) == .orderedSame
         }
         if mode == .automatic,
             audioStreamIndex == nil,
@@ -579,7 +563,7 @@ public struct PrismediaAPIClient: Sendable {
                 preferredEngine: .native
             )
         }
-        let sourceAudio = sourceAudioStreams.first(where: { $0.isDefault == true }) ?? sourceAudioStreams.first
+        let sourceAudio = sourceAudioStreams.first(where: \.isDefault) ?? sourceAudioStreams.first
         let renderer = source.playbackRenderer(
             delivery: delivery,
             preferredEngine: preferredEngine
@@ -588,9 +572,8 @@ public struct PrismediaAPIClient: Sendable {
             videoID: videoID,
             url: url,
             delivery: delivery,
-            playSessionID: response.playSessionID,
-            mediaSourceID: source.id,
-            durationSeconds: Double(source.runTimeTicks ?? 0) / 10_000_000,
+            sessionID: response.sessionID,
+            durationSeconds: source.durationSeconds ?? 0,
             badges: source.playbackBadges(delivery: delivery),
             audioStreams: source.playbackAudioStreams,
             httpHeaders:
@@ -600,11 +583,11 @@ public struct PrismediaAPIClient: Sendable {
             diagnostics: VideoPlaybackDiagnostics(
                 sourceContainer: source.container,
                 sourceVideoCodec: sourceVideo?.codec,
-                sourceVideoCodecTag: sourceVideo?.codecTag,
+                sourceVideoCodecTag: nil,
                 sourceAudioCodec: sourceAudio?.codec,
-                outputVideoCodec: source.transcodingInfo?.videoCodec ?? sourceVideo?.codec,
-                outputAudioCodec: source.transcodingInfo?.audioCodec ?? sourceAudio?.codec,
-                transcodeReasons: source.transcodingInfo?.transcodeReasons ?? []
+                outputVideoCodec: source.transcoding?.videoCodec ?? sourceVideo?.codec,
+                outputAudioCodec: source.transcoding?.audioCodec ?? sourceAudio?.codec,
+                transcodeReasons: []
             ),
             displayMetadata: source.playbackDisplayMetadata(delivery: delivery),
             requiresNativePlayabilityCheck: delivery == .direct && renderer == .native,
@@ -617,7 +600,7 @@ public struct PrismediaAPIClient: Sendable {
         let existingNames = Set(
             URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.map { $0.name.lowercased() } ?? [])
-        if existingNames.contains("apikey") || existingNames.contains("api_key") {
+        if existingNames.contains("access_token") {
             return url
         }
         return tokenAuthenticatedURL(for: path)
@@ -642,13 +625,13 @@ public struct PrismediaAPIClient: Sendable {
         return try? url(path: path)
     }
 
-    /// Resolves a stream path and appends the session token as `api_key`, for
+    /// Resolves a stream path and appends the session token as `access_token`, for
     /// players that cannot send an Authorization header.
     public func tokenAuthenticatedURL(for path: String) -> URL? {
         guard let accessToken else { return nil }
         guard let resolvedURL = try? url(path: path) else { return nil }
         guard isSameOrigin(resolvedURL) else { return resolvedURL }
-        return try? url(path: path, queryItems: [URLQueryItem(name: "api_key", value: accessToken)])
+        return try? url(path: path, queryItems: [URLQueryItem(name: "access_token", value: accessToken)])
     }
 
     // MARK: - Request plumbing

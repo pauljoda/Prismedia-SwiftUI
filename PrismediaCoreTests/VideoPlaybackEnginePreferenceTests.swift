@@ -9,7 +9,7 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
     }
 
     func testCompatibilityProfileAdvertisesMatroskaAndRichAudio() throws {
-        let profile = AppleDeviceProfile.make(supportsCompatibilityRenderer: true)
+        let profile = AppleVideoPlaybackProfile.make(supportsCompatibilityRenderer: true)
         let matroska = try XCTUnwrap(
             profile.directPlayProfiles.first { $0.container.contains("mkv") }
         )
@@ -21,23 +21,21 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
     }
 
     func testNativeProfileDoesNotAdvertiseMatroska() {
-        let profile = AppleDeviceProfile.make(supportsCompatibilityRenderer: false)
+        let profile = AppleVideoPlaybackProfile.make(supportsCompatibilityRenderer: false)
 
         XCTAssertFalse(
             profile.directPlayProfiles.contains { $0.container.contains("mkv") }
         )
     }
 
-    func testH264DirectPlaybackIsLimitedToHardwareDecodableBitDepth() throws {
-        let profile = AppleDeviceProfile.make(supportsCompatibilityRenderer: true)
-        let h264 = try XCTUnwrap(profile.codecProfiles.first { $0.codec == "h264" })
-        let bitDepth = try XCTUnwrap(
-            h264.conditions.first { $0.property == "VideoBitDepth" }
-        )
+    func testProfileUsesNativeStreamKindCode() {
+        let profile = AppleVideoPlaybackProfile.make(supportsCompatibilityRenderer: true)
 
-        XCTAssertEqual(bitDepth.condition, "LessThanEqual")
-        XCTAssertEqual(bitDepth.value, "8")
-        XCTAssertTrue(bitDepth.isRequired)
+        XCTAssertTrue(
+            profile.directPlayProfiles.allSatisfy {
+                $0.type == PrismediaContractCodes.StreamKind.video
+            }
+        )
     }
 
     func testPreferencesPersistSelectedEngine() {

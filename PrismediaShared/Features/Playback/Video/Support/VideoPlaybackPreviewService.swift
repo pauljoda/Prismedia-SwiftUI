@@ -7,8 +7,7 @@
                 videoID: videoID,
                 url: URL(string: "https://example.invalid/video.mp4")!,
                 delivery: forceTranscode ? .transcode : .direct,
-                playSessionID: "preview",
-                mediaSourceID: "preview",
+                sessionID: "preview",
                 durationSeconds: 7_200
             )
         }

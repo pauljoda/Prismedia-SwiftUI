@@ -714,6 +714,12 @@ public enum PrismediaContractCodes {
         public static let `member` = "member"
     }
 
+    public enum VideoPlaybackMethod {
+        public static let `direct` = "direct"
+        public static let `remux` = "remux"
+        public static let `transcode` = "transcode"
+    }
+
     public enum VideoQuality {
         public static let `unknown` = "unknown"
         public static let `sdtv` = "sdtv"
@@ -827,14 +833,6 @@ public enum PrismediaContractCodes {
         public static let `invalidPlaybackEventKind` = "invalid_playback_event_kind"
         public static let `invalidPlaybackStatisticsWindow` = "invalid_playback_statistics_window"
         public static let `invalidUpload` = "invalid_upload"
-        public static let `jellyfinAudioNotFound` = "jellyfin_audio_not_found"
-        public static let `jellyfinAuthFailed` = "jellyfin_auth_failed"
-        public static let `jellyfinImageNotFound` = "jellyfin_image_not_found"
-        public static let `jellyfinItemFileNotFound` = "jellyfin_item_file_not_found"
-        public static let `jellyfinItemNotFound` = "jellyfin_item_not_found"
-        public static let `jellyfinQuickConnectDisabled` = "jellyfin_quick_connect_disabled"
-        public static let `jellyfinQuickConnectNotFound` = "jellyfin_quick_connect_not_found"
-        public static let `jellyfinUserNotFound` = "jellyfin_user_not_found"
         public static let `lastAdminRequired` = "last_admin_required"
         public static let `libraryRootPathConflict` = "library_root_path_conflict"
         public static let `notFound` = "not_found"

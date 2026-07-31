@@ -1,26 +1,23 @@
 import Foundation
 
 struct VideoPlaybackReportContext: Hashable, Sendable {
-    let videoID: UUID
-    let mediaSourceID: String
-    let playSessionID: String
+    let entityID: UUID
+    let sessionID: String
     let durationSeconds: Double
 
     init(plan: VideoPlaybackPlan) {
-        videoID = plan.videoID
-        mediaSourceID = plan.mediaSourceID
-        playSessionID = plan.playSessionID
+        entityID = plan.videoID
+        sessionID = plan.sessionID
         durationSeconds = plan.durationSeconds
     }
 
-    func report(positionSeconds: Double, isPaused: Bool) -> VideoPlaybackReport {
+    func report(positionSeconds: Double, completed: Bool? = nil) -> VideoPlaybackReport {
         VideoPlaybackReport(
-            videoID: videoID,
-            mediaSourceID: mediaSourceID,
-            playSessionID: playSessionID,
+            entityID: entityID,
+            sessionID: sessionID,
             positionSeconds: positionSeconds,
-            isPaused: isPaused,
-            isMuted: false
+            durationSeconds: durationSeconds,
+            completed: completed
         )
     }
 }

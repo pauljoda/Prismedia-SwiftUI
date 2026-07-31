@@ -231,7 +231,7 @@ final class AdministrativeFileAPIClientTests: XCTestCase {
             loader.requests.suffix(2).allSatisfy {
                 $0.value(forHTTPHeaderField: "Authorization") == "Bearer secret-token"
             })
-        XCTAssertNil(queryItem("api_key", in: loader.requests[3]))
+        XCTAssertNil(queryItem("access_token", in: loader.requests[3]))
     }
 
     func testPluginCatalogMutationAndCredentialContracts() async throws {

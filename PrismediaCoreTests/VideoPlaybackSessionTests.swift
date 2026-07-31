@@ -380,8 +380,7 @@ private actor SessionVideoPlaybackService: VideoPlaybackServicing {
             videoID: videoID,
             url: URL(string: "https://media.example.test/video.mp4")!,
             delivery: .direct,
-            playSessionID: "session",
-            mediaSourceID: "source",
+            sessionID: "session",
             durationSeconds: 90
         )
     }
@@ -400,8 +399,7 @@ private actor RetryVideoPlaybackService: VideoPlaybackServicing {
             videoID: videoID,
             url: URL(string: "http://192.0.2.1/video.mp4")!,
             delivery: .direct,
-            playSessionID: "retry",
-            mediaSourceID: "retry-source",
+            sessionID: "retry",
             durationSeconds: 90
         )
     }

@@ -1043,7 +1043,7 @@ public final class VideoPlaybackController {
     }
 
     func flushPlaybackProgress() {
-        playbackReporter.flushProgress(positionSeconds: currentTime, isPaused: !isPlaying)
+        playbackReporter.flushProgress(positionSeconds: currentTime)
     }
 
     func waitForPendingPlaybackReports() async {

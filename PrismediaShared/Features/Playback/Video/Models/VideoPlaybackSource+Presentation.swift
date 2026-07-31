@@ -1,23 +1,21 @@
 import Foundation
 
-extension VideoMediaSource {
+extension VideoPlaybackSource {
     func playbackDisplayMetadata(
         delivery: VideoPlaybackDelivery
     ) -> VideoPlaybackDisplayMetadata? {
-        guard let video = mediaStreams.first(where: {
-            $0.type.caseInsensitiveCompare("Video") == .orderedSame
+        guard let video = streams.first(where: {
+            $0.type.caseInsensitiveCompare(PrismediaContractCodes.StreamKind.video) == .orderedSame
         }) else { return nil }
-        let preservesSourceVideo = delivery != .transcode || transcodingInfo?.isVideoDirect == true
+        let preservesSourceVideo = delivery != .transcode || transcoding?.isVideoDirect == true
         let dynamicRange = preservesSourceVideo ? video.playbackDynamicRange : .sdr
-        let frameRate = [video.averageFrameRate, video.realFrameRate]
-            .compactMap { $0 }
-            .first(where: { $0.isFinite && $0 > 0 })
+        let frameRate = video.averageFrameRate.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
         return VideoPlaybackDisplayMetadata(
             dynamicRange: dynamicRange,
             frameRate: frameRate,
             width: video.width,
             height: video.height,
-            codec: preservesSourceVideo ? video.codec : transcodingInfo?.videoCodec,
+            codec: preservesSourceVideo ? video.codec : transcoding?.videoCodec,
             dolbyVisionProfile: dynamicRange == .dolbyVision ? video.dolbyVisionProfile : nil,
             bitDepth: preservesSourceVideo ? video.bitDepth : 8
         )
@@ -39,10 +37,10 @@ extension VideoMediaSource {
     }
 
     var playbackAudioStreams: [VideoPlaybackStreamChoice] {
-        mediaStreams.compactMap { stream in
-            guard stream.type.caseInsensitiveCompare("Audio") == .orderedSame,
-                let index = stream.index
+        streams.compactMap { stream in
+            guard stream.type.caseInsensitiveCompare(PrismediaContractCodes.StreamKind.audio) == .orderedSame
             else { return nil }
+            let index = stream.index
             let title =
                 stream.displayTitle
                 ?? stream.language?.uppercased()
@@ -51,7 +49,7 @@ extension VideoMediaSource {
             return .init(
                 index: index,
                 title: title,
-                isSelected: stream.isDefault == true
+                isSelected: stream.isDefault
             )
         }
     }
@@ -64,9 +62,13 @@ extension VideoMediaSource {
                 transcodedAudioBadge,
             ].compactMap { $0 }
         }
-        let video = mediaStreams.first { $0.type.caseInsensitiveCompare("Video") == .orderedSame }
-        let audioStreams = mediaStreams.filter { $0.type.caseInsensitiveCompare("Audio") == .orderedSame }
-        let audio = audioStreams.first(where: { $0.isDefault == true }) ?? audioStreams.first
+        let video = streams.first {
+            $0.type.caseInsensitiveCompare(PrismediaContractCodes.StreamKind.video) == .orderedSame
+        }
+        let audioStreams = streams.filter {
+            $0.type.caseInsensitiveCompare(PrismediaContractCodes.StreamKind.audio) == .orderedSame
+        }
+        let audio = audioStreams.first(where: \.isDefault) ?? audioStreams.first
         return [
             deliveryBadge(delivery),
             resolutionBadge(video),
@@ -77,12 +79,12 @@ extension VideoMediaSource {
     }
 
     private var transcodedVideoBadge: VideoPlaybackBadge? {
-        guard let codec = transcodingInfo?.videoCodec?.lowercased() else { return nil }
+        guard let codec = transcoding?.videoCodec.lowercased() else { return nil }
         return .init(label: videoCodecLabel(codec), tone: .neutral)
     }
 
     private var transcodedAudioBadge: VideoPlaybackBadge? {
-        guard let codec = transcodingInfo?.audioCodec?.lowercased() else { return nil }
+        guard let codec = transcoding?.audioCodec.lowercased() else { return nil }
         return .init(label: audioCodecLabel(codec), tone: premiumAudioCodecs.contains(codec) ? .premium : .neutral)
     }
 
@@ -94,7 +96,7 @@ extension VideoMediaSource {
         }
     }
 
-    private func resolutionBadge(_ stream: VideoMediaStream?) -> VideoPlaybackBadge? {
+    private func resolutionBadge(_ stream: VideoPlaybackStream?) -> VideoPlaybackBadge? {
         guard let width = stream?.width, let height = stream?.height else { return nil }
         let label =
             width >= 3_800 || height >= 2_100
@@ -105,12 +107,12 @@ extension VideoMediaSource {
         return .init(label: label, tone: .neutral)
     }
 
-    private func codecBadge(_ stream: VideoMediaStream?) -> VideoPlaybackBadge? {
+    private func codecBadge(_ stream: VideoPlaybackStream?) -> VideoPlaybackBadge? {
         guard let codec = stream?.codec?.lowercased() else { return nil }
         return .init(label: videoCodecLabel(codec), tone: .neutral)
     }
 
-    private func rangeBadge(_ stream: VideoMediaStream?) -> VideoPlaybackBadge? {
+    private func rangeBadge(_ stream: VideoPlaybackStream?) -> VideoPlaybackBadge? {
         guard let range = stream?.videoRangeType?.uppercased(), range != "SDR" else { return nil }
         let label =
             switch range {
@@ -121,7 +123,7 @@ extension VideoMediaSource {
         return .init(label: label, systemImage: "sparkles", tone: .premium)
     }
 
-    private func audioBadge(_ stream: VideoMediaStream?) -> VideoPlaybackBadge? {
+    private func audioBadge(_ stream: VideoPlaybackStream?) -> VideoPlaybackBadge? {
         guard let codec = stream?.codec?.lowercased() else { return nil }
         let format = audioCodecLabel(codec)
         let layout: String? =
@@ -162,7 +164,7 @@ extension VideoMediaSource {
     private var premiumAudioCodecs: Set<String> { ["eac3", "ac3", "truehd", "dts"] }
 }
 
-extension VideoMediaStream {
+extension VideoPlaybackStream {
     fileprivate var playbackDynamicRange: VideoPlaybackDynamicRange {
         let range = videoRangeType?.uppercased() ?? ""
         if range.contains("DOVI") { return .dolbyVision }

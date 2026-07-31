@@ -968,7 +968,7 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     func audioStreamURL(for trackID: UUID) -> URL? {
         requestedStreamIDs.append(trackID)
         guard !missingStreamIDs.contains(trackID) else { return nil }
-        return URL(string: "https://media.example.test/api/audio-stream/\(trackID)?api_key=token")
+        return URL(string: "https://media.example.test/api/audio-stream/\(trackID)?access_token=token")
     }
 
     func recordAudioTrackPlay(id: UUID) async throws {
@@ -1012,7 +1012,7 @@ private final class SuspendingMusicPlaybackServiceStub: MusicPlaybackServicing {
     private var recordingContinuation: CheckedContinuation<Void, Never>?
 
     func audioStreamURL(for trackID: UUID) -> URL? {
-        URL(string: "https://media.example.test/api/audio-stream/\(trackID)?api_key=token")
+        URL(string: "https://media.example.test/api/audio-stream/\(trackID)?access_token=token")
     }
 
     func recordAudioTrackPlay(id: UUID) async throws {

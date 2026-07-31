@@ -5,11 +5,11 @@ import XCTest
 
 @MainActor
 final class VideoPlaybackReporterTests: XCTestCase {
-    func testStartedReportCarriesNegotiatedSessionIdentifiersAndCurrentPosition() async {
+    func testStartedReportCarriesNegotiatedSessionAndCurrentPosition() async {
         let service = ReportingSpy()
         let clock = TestVideoPlaybackClock()
         let reporter = VideoPlaybackReporter(service: service, clock: clock)
-        let plan = makePlan(playSessionID: "session-1", mediaSourceID: "source-1")
+        let plan = makePlan(sessionID: "session-1")
 
         reporter.install(plan: plan, positionSeconds: 7)
         reporter.playbackStarted(positionSeconds: 7)
@@ -17,10 +17,10 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started])
-        XCTAssertEqual(reports.first?.report.videoID, plan.videoID)
-        XCTAssertEqual(reports.first?.report.playSessionID, "session-1")
-        XCTAssertEqual(reports.first?.report.mediaSourceID, "source-1")
-        XCTAssertEqual(reports.first?.report.positionTicks, 70_000_000)
+        XCTAssertEqual(reports.first?.report.entityID, plan.videoID)
+        XCTAssertEqual(reports.first?.report.sessionID, "session-1")
+        XCTAssertEqual(reports.first?.report.positionSeconds, 7)
+        XCTAssertEqual(reports.first?.report.durationSeconds, 120)
     }
 
     func testHeartbeatWaitsTenSecondsAndMeaningfulPlaybackMovement() async {
@@ -38,7 +38,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .progress])
-        XCTAssertEqual(reports.last?.report.positionTicks, 100_000_000)
+        XCTAssertEqual(reports.last?.report.positionSeconds, 10)
     }
 
     func testHeartbeatDoesNotReportPausedOrUnchangedPlayback() async {
@@ -73,24 +73,23 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .progress])
-        XCTAssertEqual(reports.last?.report.positionTicks, 420_000_000)
+        XCTAssertEqual(reports.last?.report.positionSeconds, 42)
     }
 
-    func testBackgroundFlushReportsCurrentPausedStateWithoutEndingSession() async {
+    func testBackgroundFlushReportsCurrentPositionWithoutEndingSession() async {
         let service = ReportingSpy()
         let reporter = VideoPlaybackReporter(service: service, clock: TestVideoPlaybackClock())
         reporter.install(plan: makePlan(), positionSeconds: 0)
         reporter.playbackStarted(positionSeconds: 0)
 
-        reporter.flushProgress(positionSeconds: 27, isPaused: true)
+        reporter.flushProgress(positionSeconds: 27)
         reporter.stop(positionSeconds: 29)
         await reporter.waitForPendingReports()
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .progress, .stopped])
-        XCTAssertEqual(reports[1].report.positionTicks, 270_000_000)
-        XCTAssertTrue(reports[1].report.isPaused)
-        XCTAssertEqual(reports[2].report.positionTicks, 290_000_000)
+        XCTAssertEqual(reports[1].report.positionSeconds, 27)
+        XCTAssertEqual(reports[2].report.positionSeconds, 29)
     }
 
     func testStopFlushesFinalPositionOnlyOnce() async {
@@ -105,7 +104,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .stopped])
-        XCTAssertEqual(reports.last?.report.positionTicks, 310_000_000)
+        XCTAssertEqual(reports.last?.report.positionSeconds, 31)
     }
 
     func testCompletionStopsAtDurationWithoutAnExplicitPlayedMutation() async {
@@ -120,7 +119,8 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .stopped])
-        XCTAssertEqual(reports.last?.report.positionTicks, 1_200_000_000)
+        XCTAssertEqual(reports.last?.report.positionSeconds, 120)
+        XCTAssertEqual(reports.last?.report.completed, true)
     }
 
     func testCompletionKeepsFinalStopAtDurationAfterThresholdProgress() async {
@@ -135,7 +135,8 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .progress, .stopped])
-        XCTAssertEqual(reports.last?.report.positionTicks, 1_200_000_000)
+        XCTAssertEqual(reports.last?.report.positionSeconds, 120)
+        XCTAssertEqual(reports.last?.report.completed, true)
     }
 
     func testCompletionStillStopsAtDurationWhenPlayerStateNotificationWasMissed() async {
@@ -148,7 +149,8 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.stopped])
-        XCTAssertEqual(reports.first?.report.positionTicks, 1_200_000_000)
+        XCTAssertEqual(reports.first?.report.positionSeconds, 120)
+        XCTAssertEqual(reports.first?.report.completed, true)
     }
 
     func testReportingFailureDoesNotPreventLaterStopOrCompletion() async {
@@ -175,20 +177,20 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .stopped])
-        XCTAssertEqual(reports.last?.report.positionTicks, 80_000_000)
+        XCTAssertEqual(reports.last?.report.positionSeconds, 8)
     }
 
     func testInstallingReplacementStopsStartedSessionBeforeUsingNewIdentifiers() async {
         let service = ReportingSpy()
         let reporter = VideoPlaybackReporter(service: service, clock: TestVideoPlaybackClock())
         reporter.install(
-            plan: makePlan(playSessionID: "old-session", mediaSourceID: "old-source"),
+            plan: makePlan(sessionID: "old-session"),
             positionSeconds: 0
         )
         reporter.playbackStarted(positionSeconds: 0)
 
         reporter.install(
-            plan: makePlan(playSessionID: "new-session", mediaSourceID: "new-source"),
+            plan: makePlan(sessionID: "new-session"),
             positionSeconds: 18
         )
         reporter.playbackStarted(positionSeconds: 18)
@@ -196,20 +198,18 @@ final class VideoPlaybackReporterTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .stopped, .started])
-        XCTAssertEqual(reports.map(\.report.playSessionID), ["old-session", "old-session", "new-session"])
-        XCTAssertEqual(reports[1].report.positionTicks, 180_000_000)
+        XCTAssertEqual(reports.map(\.report.sessionID), ["old-session", "old-session", "new-session"])
+        XCTAssertEqual(reports[1].report.positionSeconds, 18)
     }
 
     private func makePlan(
-        playSessionID: String = "session",
-        mediaSourceID: String = "source"
+        sessionID: String = "session"
     ) -> VideoPlaybackPlan {
         VideoPlaybackPlan(
             videoID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
             url: URL(string: "https://media.example.test/video.mp4")!,
             delivery: .direct,
-            playSessionID: playSessionID,
-            mediaSourceID: mediaSourceID,
+            sessionID: sessionID,
             durationSeconds: 120
         )
     }

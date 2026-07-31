@@ -3,7 +3,7 @@ import Foundation
 enum VideoNativeAudioStreamPolicy {
     static func preferredStreamIndex(
         container: String?,
-        streams: [VideoMediaStream]
+        streams: [VideoPlaybackStream]
     ) -> Int? {
         let normalizedContainer = container?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -13,9 +13,9 @@ enum VideoNativeAudioStreamPolicy {
         }
 
         let audioStreams = streams.filter {
-            $0.type.caseInsensitiveCompare("Audio") == .orderedSame
+            $0.type.caseInsensitiveCompare(PrismediaContractCodes.StreamKind.audio) == .orderedSame
         }
-        let selectedLanguage = audioStreams.first(where: { $0.isDefault == true })?
+        let selectedLanguage = audioStreams.first(where: \.isDefault)?
             .language?
             .lowercased()
         let codecPriority = ["eac3": 0, "ac3": 1, "aac": 2]
@@ -23,7 +23,6 @@ enum VideoNativeAudioStreamPolicy {
             .filter {
                 ($0.channels ?? 0) > 2
                     && codecPriority[$0.codec?.lowercased() ?? ""] != nil
-                    && $0.index != nil
                     && (selectedLanguage == nil || $0.language?.lowercased() == selectedLanguage)
             }
             .sorted {
@@ -35,7 +34,7 @@ enum VideoNativeAudioStreamPolicy {
                 if $0.channels != $1.channels {
                     return ($0.channels ?? 0) > ($1.channels ?? 0)
                 }
-                return ($0.index ?? .max) < ($1.index ?? .max)
+                return $0.index < $1.index
             }
             .first?.index
     }

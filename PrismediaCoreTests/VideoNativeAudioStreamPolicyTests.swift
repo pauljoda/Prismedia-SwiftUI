@@ -64,16 +64,14 @@ final class VideoNativeAudioStreamPolicyTests: XCTestCase {
         channels: Int,
         isDefault: Bool = false,
         language: String? = nil
-    ) -> VideoMediaStream {
-        VideoMediaStream(
+    ) -> VideoPlaybackStream {
+        VideoPlaybackStream(
             index: index,
-            type: "Audio",
+            type: PrismediaContractCodes.StreamKind.audio,
             codec: codec,
-            codecTag: nil,
             width: nil,
             height: nil,
             averageFrameRate: nil,
-            realFrameRate: nil,
             channels: channels,
             isDefault: isDefault,
             videoRangeType: nil,

@@ -4,8 +4,7 @@ public struct VideoPlaybackPlan: Sendable {
     public let videoID: UUID
     public let url: URL
     public let delivery: VideoPlaybackDelivery
-    public let playSessionID: String
-    public let mediaSourceID: String
+    public let sessionID: String
     public let durationSeconds: Double
     public let badges: [VideoPlaybackBadge]
     public let audioStreams: [VideoPlaybackStreamChoice]
@@ -16,7 +15,7 @@ public struct VideoPlaybackPlan: Sendable {
     public let renderer: VideoPlaybackRenderer
 
     public init(
-        videoID: UUID, url: URL, delivery: VideoPlaybackDelivery, playSessionID: String, mediaSourceID: String,
+        videoID: UUID, url: URL, delivery: VideoPlaybackDelivery, sessionID: String,
         durationSeconds: Double, badges: [VideoPlaybackBadge] = [], audioStreams: [VideoPlaybackStreamChoice] = [],
         httpHeaders: [String: String] = [:], diagnostics: VideoPlaybackDiagnostics? = nil,
         displayMetadata: VideoPlaybackDisplayMetadata? = nil,
@@ -26,8 +25,7 @@ public struct VideoPlaybackPlan: Sendable {
         self.videoID = videoID
         self.url = url
         self.delivery = delivery
-        self.playSessionID = playSessionID
-        self.mediaSourceID = mediaSourceID
+        self.sessionID = sessionID
         self.durationSeconds = durationSeconds
         self.badges = badges
         self.audioStreams = audioStreams

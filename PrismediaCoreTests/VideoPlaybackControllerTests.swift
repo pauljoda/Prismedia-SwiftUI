@@ -213,7 +213,7 @@ final class VideoPlaybackControllerTests: XCTestCase {
 
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .stopped])
-        XCTAssertEqual(reports.last?.report.positionTicks, 120_000_000)
+        XCTAssertEqual(reports.last?.report.positionSeconds, 12)
     }
 
     func testCompatibilityShuttleUsesDoubleSpeedUntilTheHoldEnds() async {
@@ -278,10 +278,9 @@ private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing, VideoPl
     func negotiateVideoPlayback(videoID: UUID, forceTranscode: Bool) async throws -> VideoPlaybackPlan {
         VideoPlaybackPlan(
             videoID: self.videoID,
-            url: URL(string: "https://media.example.test/malformed-hdr.mkv?api_key=token")!,
+            url: URL(string: "https://media.example.test/malformed-hdr.mkv?access_token=token")!,
             delivery: .direct,
-            playSessionID: "compatibility-session",
-            mediaSourceID: "compatibility-source",
+            sessionID: "compatibility-session",
             durationSeconds: 120,
             renderer: .compatibility
         )
@@ -312,8 +311,7 @@ private actor DisplayMetadataVideoPlaybackService: VideoPlaybackServicing {
             videoID: self.videoID,
             url: URL(string: "https://media.example.test/dolby-vision.m3u8")!,
             delivery: .remux,
-            playSessionID: "display-session",
-            mediaSourceID: "display-source",
+            sessionID: "display-session",
             durationSeconds: 120,
             displayMetadata: metadata
         )
@@ -343,8 +341,7 @@ private actor VideoPlaybackServiceSpy: VideoPlaybackServicing {
             videoID: videoID,
             url: URL(string: "https://media.example.test/video.mp4")!,
             delivery: .direct,
-            playSessionID: "session",
-            mediaSourceID: "source",
+            sessionID: "session",
             durationSeconds: 120
         )
     }
@@ -385,8 +382,7 @@ private actor StagedFallbackVideoPlaybackService: VideoPlaybackServicing {
             videoID: self.videoID,
             url: URL(string: "https://media.example.test/\(mode).m3u8")!,
             delivery: delivery,
-            playSessionID: "session",
-            mediaSourceID: "source",
+            sessionID: "session",
             durationSeconds: 120
         )
     }
@@ -422,8 +418,7 @@ private actor NativePreflightVideoPlaybackService: VideoPlaybackServicing {
                 videoID: self.videoID,
                 url: URL(fileURLWithPath: "/dev/null"),
                 delivery: .direct,
-                playSessionID: "session",
-                mediaSourceID: "source",
+                sessionID: "session",
                 durationSeconds: 120,
                 requiresNativePlayabilityCheck: true
             )
@@ -432,8 +427,7 @@ private actor NativePreflightVideoPlaybackService: VideoPlaybackServicing {
             videoID: self.videoID,
             url: URL(string: "https://media.example.test/remux.m3u8")!,
             delivery: .remux,
-            playSessionID: "session",
-            mediaSourceID: "source",
+            sessionID: "session",
             durationSeconds: 120
         )
     }

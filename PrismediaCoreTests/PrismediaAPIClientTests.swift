@@ -356,7 +356,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(body["activityKind"] as? String, "reading")
     }
 
-    func testVideoPlaybackReportsUseRootJellyfinSessionEndpointsAndExactIdentifiers() async throws {
+    func testVideoPlaybackReportsUseNativeSessionEndpointsAndExactProgress() async throws {
         let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let loader = MockHTTPDataLoader(responses: [
             .json("", statusCode: 204),
@@ -365,12 +365,11 @@ final class PrismediaAPIClientTests: XCTestCase {
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
         let report = VideoPlaybackReport(
-            videoID: videoID,
-            mediaSourceID: "media-source",
-            playSessionID: "play-session",
+            entityID: videoID,
+            sessionID: "play-session",
             positionSeconds: 12.345,
-            isPaused: false,
-            isMuted: false
+            durationSeconds: 98.7,
+            completed: false
         )
 
         try await client.reportVideoPlayback(.started, report: report)
@@ -379,7 +378,11 @@ final class PrismediaAPIClientTests: XCTestCase {
 
         XCTAssertEqual(
             loader.requests.compactMap(\.url?.path),
-            ["/Sessions/Playing", "/Sessions/Playing/Progress", "/Sessions/Playing/Stopped"]
+            [
+                "/api/playback/sessions/start",
+                "/api/playback/sessions/progress",
+                "/api/playback/sessions/stop",
+            ]
         )
         for request in loader.requests {
             XCTAssertEqual(request.httpMethod, "POST")
@@ -387,12 +390,11 @@ final class PrismediaAPIClientTests: XCTestCase {
             let body = try XCTUnwrap(
                 JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
             )
-            XCTAssertEqual(body["ItemId"] as? String, videoID.uuidString)
-            XCTAssertEqual(body["MediaSourceId"] as? String, "media-source")
-            XCTAssertEqual(body["PlaySessionId"] as? String, "play-session")
-            XCTAssertEqual(body["PositionTicks"] as? Int, 123_450_000)
-            XCTAssertEqual(body["IsPaused"] as? Bool, false)
-            XCTAssertEqual(body["IsMuted"] as? Bool, false)
+            XCTAssertEqual(body["entityId"] as? String, videoID.uuidString)
+            XCTAssertEqual(body["sessionId"] as? String, "play-session")
+            XCTAssertEqual(body["positionSeconds"] as? Double, 12.345)
+            XCTAssertEqual(body["durationSeconds"] as? Double, 98.7)
+            XCTAssertEqual(body["completed"] as? Bool, false)
         }
     }
 
@@ -720,7 +722,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         }
     }
 
-    func testAssetURLIsPublicAndTokenURLCarriesAPIKey() {
+    func testAssetURLIsPublicAndTokenURLCarriesNativeAccessToken() {
         let client = PrismediaAPIClient(serverURL: serverURL, loader: MockHTTPDataLoader(responses: []))
             .authenticated(with: "opaque-session-token")
 
@@ -731,7 +733,7 @@ final class PrismediaAPIClientTests: XCTestCase {
 
         XCTAssertEqual(
             client.tokenAuthenticatedURL(for: "/api/video-stream/1/hls2/master.m3u8")?.absoluteString,
-            "https://media.example.test/api/video-stream/1/hls2/master.m3u8?api_key=opaque-session-token"
+            "https://media.example.test/api/video-stream/1/hls2/master.m3u8?access_token=opaque-session-token"
         )
     }
 
@@ -749,7 +751,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
         XCTAssertNil(
             URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?
-                .queryItems?.first(where: { $0.name == "api_key" })
+                .queryItems?.first(where: { $0.name == "access_token" })
         )
     }
 
@@ -763,7 +765,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(url.path, "/api/audio-stream/\(trackID.uuidString.lowercased())")
         XCTAssertEqual(
             URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first(where: { $0.name == "api_key" })?.value,
+                .queryItems?.first(where: { $0.name == "access_token" })?.value,
             "opaque-session-token"
         )
     }
@@ -774,21 +776,22 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(
                 """
                 {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","Path":"/media/movie.mkv","Protocol":"File","Container":"mkv",
-                    "SupportsDirectPlay":false,"SupportsDirectStream":true,"SupportsTranscoding":true,
-                    "TranscodingUrl":"/Videos/\(videoID)/hls/remux/stream.m3u8?PlaySessionId=session-1",
-                    "MediaStreams":[
+                  "sessionId":"session-1",
+                  "source":{
+                    "id":"source-1","container":"mkv","durationSeconds":5400,
+                    "method":"remux",
+                    "url":"/api/playback/videos/\(videoID)/hls/remux/stream.m3u8",
+                    "supportsTranscoding":true,
+                    "streams":[
                       {
-                        "Index":0,"Type":"Video","Codec":"hevc","CodecTag":"dvh1",
-                        "Width":3840,"Height":2160,"AverageFrameRate":23.976,
-                        "VideoRangeType":"DOVIWithHDR10","ColorTransfer":"smpte2084","DvProfile":8
+                        "index":0,"type":"Video","codec":"hevc","isDefault":true,
+                        "width":3840,"height":2160,"averageFrameRate":23.976,
+                        "videoRangeType":"DOVI","colorTransfer":"smpte2084","dvProfile":8
                       },
-                      {"Index":1,"Type":"Audio","Codec":"truehd","IsDefault":true}
+                      {"index":1,"type":"Audio","codec":"truehd","isDefault":true}
                     ],
-                    "TranscodingInfo":{"Container":"mp4","VideoCodec":"hevc","AudioCodec":"aac","Protocol":"hls","IsVideoDirect":true,"IsAudioDirect":false,"TranscodeReasons":["AudioCodecNotSupported"]}
-                  }]
+                    "transcoding":{"container":"mp4","videoCodec":"hevc","audioCodec":"aac","isVideoDirect":true,"isAudioDirect":false}
+                  }
                 }
                 """)
         ])
@@ -797,67 +800,34 @@ final class PrismediaAPIClientTests: XCTestCase {
         let plan = try await client.negotiateVideoPlayback(videoID: videoID)
 
         XCTAssertEqual(plan.delivery, .remux)
-        XCTAssertEqual(plan.url.path, "/Videos/\(videoID)/hls/remux/stream.m3u8")
+        XCTAssertEqual(plan.url.path, "/api/playback/videos/\(videoID)/hls/remux/stream.m3u8")
         XCTAssertEqual(plan.httpHeaders["Authorization"], "Bearer token")
         XCTAssertEqual(plan.diagnostics?.sourceContainer, "mkv")
         XCTAssertEqual(plan.diagnostics?.sourceVideoCodec, "hevc")
-        XCTAssertEqual(plan.diagnostics?.sourceVideoCodecTag, "dvh1")
         XCTAssertEqual(plan.diagnostics?.sourceAudioCodec, "truehd")
         XCTAssertEqual(plan.diagnostics?.outputVideoCodec, "hevc")
         XCTAssertEqual(plan.diagnostics?.outputAudioCodec, "aac")
-        XCTAssertEqual(plan.diagnostics?.transcodeReasons, ["AudioCodecNotSupported"])
         XCTAssertEqual(plan.displayMetadata?.dynamicRange, .dolbyVision)
         XCTAssertEqual(plan.displayMetadata?.frameRate, 23.976)
         XCTAssertEqual(plan.displayMetadata?.width, 3_840)
         XCTAssertEqual(plan.displayMetadata?.height, 2_160)
         XCTAssertEqual(plan.displayMetadata?.dolbyVisionProfile, 8)
         let request = try XCTUnwrap(loader.requests.first)
-        XCTAssertEqual(request.url?.path, "/Items/\(videoID.uuidString.lowercased())/PlaybackInfo")
+        XCTAssertEqual(
+            request.url?.path,
+            "/api/playback/videos/\(videoID.uuidString.lowercased())/plan"
+        )
         XCTAssertEqual(request.httpMethod, "POST")
         let body = try XCTUnwrap(
             JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
         )
-        XCTAssertEqual(body["EnableDirectPlay"] as? Bool, true)
-        XCTAssertEqual(body["EnableDirectStream"] as? Bool, true)
-        XCTAssertEqual(body["EnableTranscoding"] as? Bool, true)
-        let profile = try XCTUnwrap(body["DeviceProfile"] as? [String: Any])
-        let directProfiles = try XCTUnwrap(profile["DirectPlayProfiles"] as? [[String: Any]])
-        XCTAssertTrue(directProfiles.contains { ($0["Container"] as? String)?.contains("mp4") == true })
-        XCTAssertTrue(directProfiles.contains { ($0["VideoCodec"] as? String)?.contains("h264") == true })
-        let movProfile = try XCTUnwrap(
-            directProfiles.first { ($0["Container"] as? String) == "mov" }
-        )
-        let movCodecs = Set(
-            (try XCTUnwrap(movProfile["VideoCodec"] as? String))
-                .split(separator: ",")
-                .map(String.init)
-        )
-        XCTAssertTrue(movCodecs.isSuperset(of: ["h264", "mpeg4", "mjpeg"]))
-        XCTAssertFalse(movCodecs.contains("av1"))
-        XCTAssertFalse(movCodecs.contains("vp9"))
-
-        let codecProfiles = try XCTUnwrap(profile["CodecProfiles"] as? [[String: Any]])
-        let h264Profile = try XCTUnwrap(codecProfiles.first { ($0["Codec"] as? String) == "h264" })
-        let h264Conditions = try XCTUnwrap(h264Profile["Conditions"] as? [[String: Any]])
-        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "IsAnamorphic" })
-        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "IsInterlaced" })
-        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "VideoProfile" })
-        XCTAssertTrue(h264Conditions.contains { ($0["Property"] as? String) == "VideoLevel" })
-        let hevcProfile = try XCTUnwrap(codecProfiles.first { ($0["Codec"] as? String) == "hevc" })
-        let hevcConditions = try XCTUnwrap(hevcProfile["Conditions"] as? [[String: Any]])
-        XCTAssertTrue(
-            hevcConditions.contains {
-                ($0["Property"] as? String) == "VideoCodecTag"
-                    && ($0["Value"] as? String) == "hvc1"
-            })
-
-        let transcodingProfiles = try XCTUnwrap(profile["TranscodingProfiles"] as? [[String: Any]])
-        XCTAssertTrue(
-            transcodingProfiles.contains {
-                ($0["Container"] as? String) == "mp4"
-                    && ($0["Protocol"] as? String) == "hls"
-                    && ($0["VideoCodec"] as? String)?.contains("h264") == true
-            })
+        XCTAssertEqual(body["enableDirectPlay"] as? Bool, true)
+        XCTAssertEqual(body["enableDirectStream"] as? Bool, true)
+        XCTAssertEqual(body["enableTranscoding"] as? Bool, true)
+        let profile = try XCTUnwrap(body["profile"] as? [String: Any])
+        let directProfiles = try XCTUnwrap(profile["directPlayProfiles"] as? [[String: Any]])
+        XCTAssertTrue(directProfiles.contains { ($0["container"] as? String)?.contains("mp4") == true })
+        XCTAssertTrue(directProfiles.allSatisfy { $0["type"] as? String == PrismediaContractCodes.StreamKind.video })
     }
 
     func testCrossOriginTranscodePlanDoesNotForwardSessionCredentials() async throws {
@@ -866,13 +836,13 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(
                 """
                 {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","SupportsDirectPlay":false,"SupportsTranscoding":true,
-                    "TranscodingUrl":"https://cdn.example.test/hls/stream.m3u8",
-                    "MediaStreams":[],
-                    "TranscodingInfo":{"Protocol":"hls","IsVideoDirect":false,"IsAudioDirect":false}
-                  }]
+                  "sessionId":"session-1",
+                  "source":{
+                    "id":"source-1","container":"mp4","durationSeconds":90,
+                    "method":"transcode","url":"https://cdn.example.test/hls/stream.m3u8",
+                    "supportsTranscoding":true,"streams":[],
+                    "transcoding":{"container":"mp4","videoCodec":"h264","audioCodec":"aac","isVideoDirect":false,"isAudioDirect":false}
+                  }
                 }
                 """)
         ])
@@ -890,14 +860,13 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(
                 """
                 {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","Path":"/media/movie.mkv","Protocol":"File","Container":"mkv",
-                    "SupportsDirectPlay":false,"SupportsDirectStream":false,"SupportsTranscoding":true,
-                    "TranscodingUrl":"/Videos/\(videoID)/master.m3u8?PlaySessionId=session-1",
-                    "MediaStreams":[],
-                    "TranscodingInfo":{"Container":"ts","VideoCodec":"h264","AudioCodec":"aac","Protocol":"hls","IsVideoDirect":false,"IsAudioDirect":false}
-                  }]
+                  "sessionId":"session-1",
+                  "source":{
+                    "id":"source-1","container":"mkv","durationSeconds":90,
+                    "method":"transcode","url":"/api/playback/videos/\(videoID)/hls/transcode/master.m3u8",
+                    "supportsTranscoding":true,"streams":[],
+                    "transcoding":{"container":"ts","videoCodec":"h264","audioCodec":"aac","isVideoDirect":false,"isAudioDirect":false}
+                  }
                 }
                 """)
         ])
@@ -909,8 +878,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         let body = try XCTUnwrap(
             JSONSerialization.jsonObject(with: XCTUnwrap(loader.requests[0].httpBody)) as? [String: Any]
         )
-        XCTAssertEqual(body["EnableDirectPlay"] as? Bool, false)
-        XCTAssertEqual(body["EnableDirectStream"] as? Bool, false)
+        XCTAssertEqual(body["enableDirectPlay"] as? Bool, false)
+        XCTAssertEqual(body["enableDirectStream"] as? Bool, false)
     }
 
     func testDirectStreamFallbackDisablesDirectPlayButStillAllowsRemuxing() async throws {
@@ -919,14 +888,13 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(
                 """
                 {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","SupportsDirectPlay":false,"SupportsDirectStream":true,
-                    "SupportsTranscoding":true,
-                    "TranscodingUrl":"/Videos/\(videoID)/hls/remux/stream.m3u8?PlaySessionId=session-1",
-                    "MediaStreams":[],
-                    "TranscodingInfo":{"VideoCodec":"h264","AudioCodec":"aac","IsVideoDirect":true}
-                  }]
+                  "sessionId":"session-1",
+                  "source":{
+                    "id":"source-1","container":"mkv","durationSeconds":90,
+                    "method":"remux","url":"/api/playback/videos/\(videoID)/hls/remux/stream.m3u8",
+                    "supportsTranscoding":true,"streams":[],
+                    "transcoding":{"container":"mp4","videoCodec":"h264","audioCodec":"aac","isVideoDirect":true,"isAudioDirect":false}
+                  }
                 }
                 """)
         ])
@@ -941,8 +909,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         let body = try XCTUnwrap(
             JSONSerialization.jsonObject(with: XCTUnwrap(loader.requests[0].httpBody)) as? [String: Any]
         )
-        XCTAssertEqual(body["EnableDirectPlay"] as? Bool, false)
-        XCTAssertEqual(body["EnableDirectStream"] as? Bool, true)
+        XCTAssertEqual(body["enableDirectPlay"] as? Bool, false)
+        XCTAssertEqual(body["enableDirectStream"] as? Bool, true)
     }
 
     func testDirectVideoPlanUsesAuthenticatedRangeStream() async throws {
@@ -951,12 +919,12 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(
                 """
                 {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","Path":"/media/movie.mp4","Protocol":"File","Container":"mp4",
-                    "RunTimeTicks":900000000,"SupportsDirectPlay":true,"SupportsDirectStream":true,
-                    "SupportsTranscoding":true,"TranscodingUrl":null,"MediaStreams":[],"TranscodingInfo":null
-                  }]
+                  "sessionId":"session-1",
+                  "source":{
+                    "id":"source-1","container":"mp4","durationSeconds":90,
+                    "method":"direct","url":"/api/playback/videos/\(videoID)/stream",
+                    "supportsTranscoding":true,"streams":[],"transcoding":null
+                  }
                 }
                 """)
         ])
@@ -966,9 +934,11 @@ final class PrismediaAPIClientTests: XCTestCase {
 
         XCTAssertEqual(plan.delivery, .direct)
         XCTAssertEqual(plan.durationSeconds, 90)
-        XCTAssertEqual(plan.url.path, "/Videos/\(videoID.uuidString.lowercased())/stream")
-        XCTAssertEqual(queryItem("MediaSourceId", in: URLRequest(url: plan.url)), "source-1")
-        XCTAssertEqual(queryItem("api_key", in: URLRequest(url: plan.url)), "opaque-token")
+        XCTAssertEqual(
+            plan.url.path,
+            "/api/playback/videos/\(videoID.uuidString.lowercased())/stream"
+        )
+        XCTAssertEqual(queryItem("access_token", in: URLRequest(url: plan.url)), "opaque-token")
         XCTAssertTrue(plan.requiresNativePlayabilityCheck)
     }
 
@@ -978,40 +948,40 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(
                 """
                 {
-                  "PlaySessionId":"direct-session",
-                  "MediaSources":[{
-                    "Id":"source-1","Container":"mkv","RunTimeTicks":900000000,
-                    "SupportsDirectPlay":true,"SupportsDirectStream":true,"SupportsTranscoding":true,
-                    "TranscodingUrl":null,
-                    "MediaStreams":[
-                      {"Index":0,"Type":"Video","Codec":"h264","BitDepth":8,"VideoRangeType":"SDR"},
-                      {"Index":1,"Type":"Audio","Codec":"truehd","Channels":8,"Language":"eng","IsDefault":true},
-                      {"Index":2,"Type":"Audio","Codec":"ac3","Channels":6,"Language":"eng","IsDefault":false},
-                      {"Index":3,"Type":"Audio","Codec":"eac3","Channels":8,"Language":"eng","IsDefault":false}
+                  "sessionId":"direct-session",
+                  "source":{
+                    "id":"source-1","container":"mkv","durationSeconds":90,
+                    "method":"direct","url":"/api/playback/videos/\(videoID)/stream",
+                    "supportsTranscoding":true,
+                    "streams":[
+                      {"index":0,"type":"Video","codec":"h264","bitDepth":8,"videoRangeType":"SDR","isDefault":true},
+                      {"index":1,"type":"Audio","codec":"truehd","channels":8,"language":"eng","isDefault":true},
+                      {"index":2,"type":"Audio","codec":"ac3","channels":6,"language":"eng","isDefault":false},
+                      {"index":3,"type":"Audio","codec":"eac3","channels":8,"language":"eng","isDefault":false}
                     ],
-                    "TranscodingInfo":null
-                  }]
+                    "transcoding":null
+                  }
                 }
                 """),
             .json(
                 """
                 {
-                  "PlaySessionId":"remux-session",
-                  "MediaSources":[{
-                    "Id":"source-1","Container":"mkv","RunTimeTicks":900000000,
-                    "SupportsDirectPlay":false,"SupportsDirectStream":true,"SupportsTranscoding":true,
-                    "TranscodingUrl":"/Videos/\(videoID)/hls/remux/stream.m3u8?AudioStreamIndex=3",
-                    "MediaStreams":[
-                      {"Index":0,"Type":"Video","Codec":"h264","BitDepth":8,"VideoRangeType":"SDR"},
-                      {"Index":1,"Type":"Audio","Codec":"truehd","Channels":8,"Language":"eng","IsDefault":false},
-                      {"Index":2,"Type":"Audio","Codec":"ac3","Channels":6,"Language":"eng","IsDefault":false},
-                      {"Index":3,"Type":"Audio","Codec":"eac3","Channels":8,"Language":"eng","IsDefault":true}
+                  "sessionId":"remux-session",
+                  "source":{
+                    "id":"source-1","container":"mkv","durationSeconds":90,
+                    "method":"remux","url":"/api/playback/videos/\(videoID)/hls/remux/stream.m3u8?audioStreamIndex=3",
+                    "supportsTranscoding":true,
+                    "streams":[
+                      {"index":0,"type":"Video","codec":"h264","bitDepth":8,"videoRangeType":"SDR","isDefault":true},
+                      {"index":1,"type":"Audio","codec":"truehd","channels":8,"language":"eng","isDefault":false},
+                      {"index":2,"type":"Audio","codec":"ac3","channels":6,"language":"eng","isDefault":false},
+                      {"index":3,"type":"Audio","codec":"eac3","channels":8,"language":"eng","isDefault":true}
                     ],
-                    "TranscodingInfo":{
-                      "Container":"mp4","VideoCodec":"h264","AudioCodec":"eac3",
-                      "Protocol":"hls","IsVideoDirect":true,"IsAudioDirect":true
+                    "transcoding":{
+                      "container":"mp4","videoCodec":"h264","audioCodec":"eac3",
+                      "isVideoDirect":true,"isAudioDirect":true
                     }
-                  }]
+                  }
                 }
                 """)
         ])
@@ -1024,9 +994,9 @@ final class PrismediaAPIClientTests: XCTestCase {
             JSONSerialization.jsonObject(with: XCTUnwrap(loader.requests.last?.httpBody))
                 as? [String: Any]
         )
-        XCTAssertEqual(replacementBody["EnableDirectPlay"] as? Bool, false)
-        XCTAssertEqual(replacementBody["EnableDirectStream"] as? Bool, true)
-        XCTAssertEqual(replacementBody["AudioStreamIndex"] as? Int, 3)
+        XCTAssertEqual(replacementBody["enableDirectPlay"] as? Bool, false)
+        XCTAssertEqual(replacementBody["enableDirectStream"] as? Bool, true)
+        XCTAssertEqual(replacementBody["audioStreamIndex"] as? Int, 3)
         XCTAssertEqual(plan.delivery, .remux)
         XCTAssertEqual(plan.renderer, .native)
         XCTAssertEqual(plan.diagnostics?.outputAudioCodec, "eac3")
@@ -1039,14 +1009,14 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(
                 """
                 {
-                  "PlaySessionId":"session-1",
-                  "MediaSources":[{
-                    "Id":"source-1","RunTimeTicks":900000000,"SupportsDirectPlay":false,
-                    "SupportsTranscoding":true,
-                    "TranscodingUrl":"/Videos/11111111-1111-1111-1111-111111111111/hls/remux/stream.m3u8?AudioStreamIndex=3",
-                    "MediaStreams":[],
-                    "TranscodingInfo":{"IsVideoDirect":true,"VideoCodec":"hevc","AudioCodec":"aac"}
-                  }]
+                  "sessionId":"session-1",
+                  "source":{
+                    "id":"source-1","container":"mkv","durationSeconds":90,
+                    "method":"remux",
+                    "url":"/api/playback/videos/11111111-1111-1111-1111-111111111111/hls/remux/stream.m3u8?audioStreamIndex=3",
+                    "supportsTranscoding":true,"streams":[],
+                    "transcoding":{"container":"mp4","isVideoDirect":true,"isAudioDirect":false,"videoCodec":"hevc","audioCodec":"aac"}
+                  }
                 }
                 """)
         ])
@@ -1062,11 +1032,11 @@ final class PrismediaAPIClientTests: XCTestCase {
             try JSONSerialization.jsonObject(
                 with: XCTUnwrap(loader.requests.first?.httpBody)
             ) as? [String: Any]
-        XCTAssertEqual(body?["AudioStreamIndex"] as? Int, 3)
-        XCTAssertEqual(body?["EnableDirectPlay"] as? Bool, false)
-        XCTAssertEqual(body?["EnableDirectStream"] as? Bool, true)
+        XCTAssertEqual(body?["audioStreamIndex"] as? Int, 3)
+        XCTAssertEqual(body?["enableDirectPlay"] as? Bool, false)
+        XCTAssertEqual(body?["enableDirectStream"] as? Bool, true)
         XCTAssertEqual(plan.delivery, .remux)
-        XCTAssertEqual(queryItem("AudioStreamIndex", in: URLRequest(url: plan.url)), "3")
+        XCTAssertEqual(queryItem("audioStreamIndex", in: URLRequest(url: plan.url)), "3")
     }
 
     func testRecordAudioTrackPlayPostsToCompletionEndpoint() async throws {

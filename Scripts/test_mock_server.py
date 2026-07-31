@@ -228,24 +228,27 @@ class EntityListResponseTests(unittest.TestCase):
 
 
 class PlaybackFixtureTests(unittest.TestCase):
-    def test_default_playback_info_exposes_two_audio_tracks(self):
-        response = mock_server.build_playback_info_response(audio_stream_index=None)
-        source = response["MediaSources"][0]
-        audio = [stream for stream in source["MediaStreams"] if stream["Type"] == "Audio"]
+    def test_default_playback_plan_exposes_two_audio_tracks(self):
+        response = mock_server.build_video_playback_plan_response("video-id", audio_stream_index=None)
+        source = response["source"]
+        audio = [stream for stream in source["streams"] if stream["type"] == "Audio"]
 
-        self.assertEqual(["Main", "Commentary"], [stream["DisplayTitle"] for stream in audio])
-        self.assertTrue(source["SupportsDirectPlay"])
-        self.assertTrue(audio[0]["IsDefault"])
+        self.assertEqual(["Main", "Commentary"], [stream["displayTitle"] for stream in audio])
+        self.assertEqual("direct", source["method"])
+        self.assertTrue(audio[0]["isDefault"])
 
     def test_explicit_audio_selection_returns_a_remux_url_and_selected_track(self):
-        response = mock_server.build_playback_info_response(audio_stream_index=2)
-        source = response["MediaSources"][0]
-        audio = [stream for stream in source["MediaStreams"] if stream["Type"] == "Audio"]
+        response = mock_server.build_video_playback_plan_response("video-id", audio_stream_index=2)
+        source = response["source"]
+        audio = [stream for stream in source["streams"] if stream["type"] == "Audio"]
 
-        self.assertFalse(source["SupportsDirectPlay"])
-        self.assertEqual("/Videos/mock/stream?AudioStreamIndex=2", source["TranscodingUrl"])
-        self.assertTrue(source["TranscodingInfo"]["IsVideoDirect"])
-        self.assertEqual([False, True], [stream["IsDefault"] for stream in audio])
+        self.assertEqual("remux", source["method"])
+        self.assertEqual(
+            "/api/playback/videos/video-id/stream?audioStreamIndex=2",
+            source["url"],
+        )
+        self.assertTrue(source["transcoding"]["isVideoDirect"])
+        self.assertEqual([False, True], [stream["isDefault"] for stream in audio])
 
 
 class EntityListHTTPTests(unittest.TestCase):
@@ -272,6 +275,43 @@ class EntityListHTTPTests(unittest.TestCase):
 
         self.assertEqual(["Mock Movie Two"], [item["title"] for item in payload["items"]])
         self.assertEqual(2, payload["totalCount"])
+
+    def test_native_playback_plan_and_session_routes_share_the_app_contract(self):
+        port = self.server.server_address[1]
+        video_id = mock_server.ENTITIES[mock_server.VIDEO_ALPHA_INDEX]["id"]
+        headers = {
+            "Authorization": f"Bearer {mock_server.TOKEN}",
+            "Content-Type": "application/json",
+        }
+        plan_request = Request(
+            f"http://127.0.0.1:{port}/api/playback/videos/{video_id}/plan",
+            data=json.dumps({"audioStreamIndex": 2}).encode(),
+            headers=headers,
+            method="POST",
+        )
+
+        with urlopen(plan_request) as response:
+            plan = json.load(response)
+
+        self.assertEqual("mock-play-session", plan["sessionId"])
+        self.assertEqual("remux", plan["source"]["method"])
+        self.assertIn("audioStreamIndex=2", plan["source"]["url"])
+
+        session_request = Request(
+            f"http://127.0.0.1:{port}/api/playback/sessions/progress",
+            data=json.dumps(
+                {
+                    "entityId": video_id,
+                    "sessionId": plan["sessionId"],
+                    "positionSeconds": 12,
+                    "durationSeconds": 30,
+                }
+            ).encode(),
+            headers=headers,
+            method="POST",
+        )
+        with urlopen(session_request) as response:
+            self.assertEqual(204, response.status)
 
     def test_subtitle_settings_and_ass_routes_support_both_player_contracts(self):
         port = self.server.server_address[1]
@@ -458,7 +498,7 @@ class EntityListHTTPTests(unittest.TestCase):
     def test_authenticated_audiobook_stream_supports_head_and_ranges(self):
         port = self.server.server_address[1]
         track_id = mock_server.AUDIOBOOK_PARTS[0]["id"]
-        url = f"http://127.0.0.1:{port}/api/audio-stream/{track_id}?api_key={mock_server.TOKEN}"
+        url = f"http://127.0.0.1:{port}/api/audio-stream/{track_id}?access_token={mock_server.TOKEN}"
 
         with urlopen(Request(url, method="HEAD")) as response:
             self.assertEqual("audio/wav", response.headers.get_content_type())

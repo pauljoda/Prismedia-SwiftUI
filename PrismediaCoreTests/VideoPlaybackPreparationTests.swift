@@ -349,8 +349,7 @@ private actor DeferredPlaybackService: VideoPlaybackServicing {
             videoID: self.videoID,
             url: URL(string: "https://media.example.test/video.mp4")!,
             delivery: .direct,
-            playSessionID: "deferred",
-            mediaSourceID: "source",
+            sessionID: "deferred",
             durationSeconds: 120
         )
     }

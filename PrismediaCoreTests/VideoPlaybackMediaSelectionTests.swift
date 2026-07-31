@@ -281,8 +281,7 @@ private actor MediaSelectionVideoService: VideoPlaybackServicing {
             videoID: self.videoID,
             url: URL(string: "https://media.example.test/\(fileName)")!,
             delivery: audioStreamIndex == nil ? .direct : .remux,
-            playSessionID: "selection-session",
-            mediaSourceID: "selection-source",
+            sessionID: "selection-session",
             durationSeconds: 120,
             audioStreams: [
                 .init(index: 2, title: "English AAC", isSelected: true),
