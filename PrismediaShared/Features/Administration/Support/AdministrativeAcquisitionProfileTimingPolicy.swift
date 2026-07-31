@@ -2,18 +2,12 @@ import Foundation
 
 public enum AdministrativeAcquisitionProfileTimingPolicy {
     public static func supportedTypes(for kind: EntityKind) -> [EntityDateType] {
-        switch kind {
-        case .movie:
-            [.premiere, .theatricalRelease, .streamingRelease, .digitalRelease, .physicalRelease, .release]
-        case .video, .videoSeries, .videoSeason:
-            [.premiere, .air, .firstAir, .streamingRelease, .digitalRelease, .release]
-        case .book, .bookVolume:
-            [.publication, .digitalRelease, .physicalRelease, .release]
-        case .audio, .audioLibrary:
-            [.release, .digitalRelease, .physicalRelease]
-        default:
-            [.release]
-        }
+        let profileKind = RequestKindDefinition.allCases
+            .first(where: { $0.acquisitionKind == kind })?
+            .profileKind
+            ?? kind.definition?.navigation?.canonicalBrowseKind
+            ?? kind
+        return profileKind.definition?.acquisitionProfile?.supportedReleaseDateTypes ?? [.release]
     }
 
     public static func compatibilityDescription(for type: EntityDateType?) -> String? {

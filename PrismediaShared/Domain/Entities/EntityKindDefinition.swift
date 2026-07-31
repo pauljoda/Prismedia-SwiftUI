@@ -1,18 +1,5 @@
 import Foundation
 
-/// Generated client snapshot of one Entity kind's manual acquisition policy.
-public struct EntityManualAcquisitionPolicy: Hashable, Sendable {
-    /// Whether this kind is a concrete browser upload/import unit.
-    public let supportsUpload: Bool
-    /// Whether existing owned content may be replaced after review.
-    public let supportsReplacement: Bool
-
-    public init(supportsUpload: Bool, supportsReplacement: Bool) {
-        self.supportsUpload = supportsUpload
-        self.supportsReplacement = supportsReplacement
-    }
-}
-
 /// Generated client snapshot of one canonical backend Entity-kind definition.
 public struct EntityKindDefinition: Hashable, Sendable {
     public let kind: EntityKind
@@ -27,6 +14,8 @@ public struct EntityKindDefinition: Hashable, Sendable {
     public let supportsRequests: Bool
     /// Server selector used by automatic metadata identification, when this kind can be identified.
     public let autoIdentifySelector: String?
+    /// Compatible provider kind used when plugins do not advertise this exact Entity kind.
+    public let identifyPluginFallbackKind: EntityKind?
     /// Entity kinds that this kind may directly contain, when it owns a collection relationship.
     public let containableKinds: [EntityKind]?
     /// Whether users may create and manage instances of this kind without imported media.
@@ -37,6 +26,12 @@ public struct EntityKindDefinition: Hashable, Sendable {
     public let mediaQualityFamily: EntityMediaQualityFamily
     /// Whether acquisition may replace this kind's media atomically during an upgrade.
     public let supportsAtomicMediaUpgrade: Bool
+    /// Completion and filtering vocabulary declared by the backend kind definition.
+    public let engagementMode: EntityEngagementMode
+    /// Whether direct-child playback contributes to this container's engagement state.
+    public let aggregatesDirectChildPlayback: Bool
+    /// Acquisition profile owned by this kind, when applicable.
+    public let acquisitionProfile: EntityAcquisitionProfileDefinition?
     public let enumeratesIdentifyChildren: Bool
 
     public init(
@@ -51,11 +46,15 @@ public struct EntityKindDefinition: Hashable, Sendable {
         supportsFileDeletion: Bool,
         supportsRequests: Bool,
         autoIdentifySelector: String?,
+        identifyPluginFallbackKind: EntityKind?,
         containableKinds: [EntityKind]?,
         supportsManualManagement: Bool,
         manualAcquisition: EntityManualAcquisitionPolicy,
         mediaQualityFamily: EntityMediaQualityFamily,
         supportsAtomicMediaUpgrade: Bool,
+        engagementMode: EntityEngagementMode,
+        aggregatesDirectChildPlayback: Bool,
+        acquisitionProfile: EntityAcquisitionProfileDefinition?,
         enumeratesIdentifyChildren: Bool
     ) {
         self.kind = kind
@@ -69,11 +68,15 @@ public struct EntityKindDefinition: Hashable, Sendable {
         self.supportsFileDeletion = supportsFileDeletion
         self.supportsRequests = supportsRequests
         self.autoIdentifySelector = autoIdentifySelector
+        self.identifyPluginFallbackKind = identifyPluginFallbackKind
         self.containableKinds = containableKinds
         self.supportsManualManagement = supportsManualManagement
         self.manualAcquisition = manualAcquisition
         self.mediaQualityFamily = mediaQualityFamily
         self.supportsAtomicMediaUpgrade = supportsAtomicMediaUpgrade
+        self.engagementMode = engagementMode
+        self.aggregatesDirectChildPlayback = aggregatesDirectChildPlayback
+        self.acquisitionProfile = acquisitionProfile
         self.enumeratesIdentifyChildren = enumeratesIdentifyChildren
     }
 }

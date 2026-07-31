@@ -117,6 +117,21 @@ final class ReleaseTimingAndCalendarTests: XCTestCase {
         )
     }
 
+    func testAcquisitionProfileMilestonesComeFromGeneratedEntityDefinitions() {
+        XCTAssertEqual(
+            AdministrativeAcquisitionProfileTimingPolicy.supportedTypes(for: .movie),
+            EntityKind.movie.definition?.acquisitionProfile?.supportedReleaseDateTypes
+        )
+        XCTAssertEqual(
+            AdministrativeAcquisitionProfileTimingPolicy.supportedTypes(for: .video),
+            EntityKind.videoSeries.definition?.acquisitionProfile?.supportedReleaseDateTypes
+        )
+        XCTAssertEqual(
+            AdministrativeAcquisitionProfileTimingPolicy.supportedTypes(for: .bookVolume),
+            EntityKind.book.definition?.acquisitionProfile?.supportedReleaseDateTypes
+        )
+    }
+
     func testProfileSaveContractCarriesReleaseTimingAndImmediateDefaultsToZeroDelay() throws {
         let profile = AdministrativeAcquisitionProfile(
             id: UUID(),

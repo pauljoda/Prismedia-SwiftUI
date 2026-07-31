@@ -157,6 +157,34 @@ def render_manifest(manifest: dict) -> str:
             + "],"
         )
 
+        plugin_fallback = kind["identifyPluginFallbackKind"]
+        plugin_fallback_value = (
+            f".{entity_kind_members[plugin_fallback]}"
+            if plugin_fallback is not None
+            else "nil"
+        )
+        acquisition_profile = kind["acquisitionProfile"]
+        if acquisition_profile is None:
+            acquisition_profile_lines = ["        acquisitionProfile: nil,"]
+        else:
+            supported_dates = ", ".join(
+                f".{swift_member(next(entry['name'] for entry in enums['EntityDateType'] if entry['code'] == code))}"
+                for code in acquisition_profile["supportedReleaseDateTypes"]
+            )
+            acquisition_profile_lines = [
+                "        acquisitionProfile: EntityAcquisitionProfileDefinition(",
+                f"            label: {swift_literal(acquisition_profile['label'])},",
+                f"            displayOrder: {acquisition_profile['displayOrder']},",
+                "            libraryRootMediaCapability: "
+                f"{swift_literal(acquisition_profile['libraryRootMediaCapability'])},",
+                f"            supportedReleaseDateTypes: [{supported_dates}],",
+                "            defaultNamingTemplate: "
+                f"{swift_literal(acquisition_profile['defaultNamingTemplate'])},",
+                f"            namingHint: {swift_literal(acquisition_profile['namingHint'])},",
+                f"            namingFamily: {swift_literal(acquisition_profile['namingFamily'])}",
+                "        ),",
+            ]
+
         sections.extend([
             f"    .{kind_member}: EntityKindDefinition(",
             f"        kind: .{kind_member},",
@@ -181,6 +209,7 @@ def render_manifest(manifest: dict) -> str:
             f"        supportsRequests: {swift_bool(kind['supportsRequests'])},",
             "        autoIdentifySelector: "
             f"{swift_optional_literal(kind['autoIdentifySelector'])},",
+            f"        identifyPluginFallbackKind: {plugin_fallback_value},",
             containable_kinds_line,
             "        supportsManualManagement: "
             f"{swift_bool(kind['supportsManualManagement'])},",
@@ -194,6 +223,11 @@ def render_manifest(manifest: dict) -> str:
             f"{swift_literal(kind.get('mediaQualityFamily', 'none'))}),",
             "        supportsAtomicMediaUpgrade: "
             f"{swift_bool(kind.get('supportsAtomicMediaUpgrade', False))},",
+            "        engagementMode: EntityEngagementMode(rawValue: "
+            f"{swift_literal(kind['engagementMode'])}),",
+            "        aggregatesDirectChildPlayback: "
+            f"{swift_bool(kind['aggregatesDirectChildPlayback'])},",
+            *acquisition_profile_lines,
             f"        enumeratesIdentifyChildren: {swift_bool(kind['enumeratesIdentifyChildren'])}",
             "    ),",
         ])

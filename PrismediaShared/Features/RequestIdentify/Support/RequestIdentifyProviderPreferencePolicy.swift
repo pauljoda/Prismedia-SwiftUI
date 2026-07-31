@@ -27,6 +27,8 @@ enum RequestIdentifyProviderPreferencePolicy {
         hidesNsfw: Bool
     ) -> [AdministrativePlugin] {
         let normalizedKind = entityKind.lowercased()
+        let pluginFallbackKind = EntityKind(rawValue: normalizedKind)
+            .definition?.identifyPluginFallbackKind?.rawValue
         let preferredProviderID = defaultProviderID(
             for: entityKind,
             in: defaultProviderIDs
@@ -42,7 +44,7 @@ enum RequestIdentifyProviderPreferencePolicy {
                     && provider.supports.contains { support in
                         let supportedKind = support.entityKind.lowercased()
                         return supportedKind == normalizedKind
-                            || (normalizedKind == EntityKind.movie.rawValue && supportedKind == "video")
+                            || supportedKind == pluginFallbackKind
                     }
             }
             .sorted { left, right in

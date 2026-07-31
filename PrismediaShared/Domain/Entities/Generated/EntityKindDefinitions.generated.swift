@@ -100,6 +100,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -108,6 +109,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .audioLibrary: EntityKindDefinition(
@@ -139,6 +143,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "audio",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -147,6 +152,17 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "playback"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: EntityAcquisitionProfileDefinition(
+            label: "Music (albums)",
+            displayOrder: 3,
+            libraryRootMediaCapability: "scanAudio",
+            supportedReleaseDateTypes: [.release, .digitalRelease, .physicalRelease],
+            defaultNamingTemplate: "{Artist}/{Album}",
+            namingHint: "{Artist} {Album} {Year} — 2 segments: artist/album folder (track files keep their release names)",
+            namingFamily: "music"
+        ),
         enumeratesIdentifyChildren: true
     ),
     .audioTrack: EntityKindDefinition(
@@ -178,6 +194,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "audio",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -186,6 +203,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "playback"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .book: EntityKindDefinition(
@@ -217,6 +237,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "book",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -225,6 +246,17 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "reading"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: EntityAcquisitionProfileDefinition(
+            label: "Books",
+            displayOrder: 0,
+            libraryRootMediaCapability: "scanBooks",
+            supportedReleaseDateTypes: [.publication, .digitalRelease, .physicalRelease, .release],
+            defaultNamingTemplate: "{Author}/{Title} ({Year})/{Title}{ - Volume}.{ext}",
+            namingHint: "{Author} {Title} {Year} {ext} — folder/file layout for the book payload",
+            namingFamily: "book"
+        ),
         enumeratesIdentifyChildren: true
     ),
     .bookVolume: EntityKindDefinition(
@@ -256,6 +288,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -264,6 +297,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "reading"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: true
     ),
     .bookChapter: EntityKindDefinition(
@@ -295,6 +331,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: false,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -303,6 +340,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "reading"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .bookPage: EntityKindDefinition(
@@ -334,6 +374,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: false,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -342,6 +383,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .collection: EntityKindDefinition(
@@ -373,6 +417,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: false,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: [.video, .movie, .videoSeries, .gallery, .image, .book, .musicArtist, .audioLibrary, .audioTrack],
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -381,6 +426,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .gallery: EntityKindDefinition(
@@ -412,6 +460,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: false,
         autoIdentifySelector: "gallery",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -420,6 +469,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .image: EntityKindDefinition(
@@ -451,6 +503,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: false,
         autoIdentifySelector: "image",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -459,6 +512,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .musicArtist: EntityKindDefinition(
@@ -490,6 +546,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "audio",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -498,6 +555,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "audio"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: true
     ),
     .bookAuthor: EntityKindDefinition(
@@ -529,6 +589,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -537,6 +598,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: true
     ),
     .person: EntityKindDefinition(
@@ -568,6 +632,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: false,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: true,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -576,6 +641,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .movie: EntityKindDefinition(
@@ -607,6 +675,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "video",
+        identifyPluginFallbackKind: .video,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -615,6 +684,17 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: true,
+        engagementMode: EntityEngagementMode(rawValue: "playback"),
+        aggregatesDirectChildPlayback: true,
+        acquisitionProfile: EntityAcquisitionProfileDefinition(
+            label: "Movies",
+            displayOrder: 1,
+            libraryRootMediaCapability: "scanVideos",
+            supportedReleaseDateTypes: [.premiere, .theatricalRelease, .streamingRelease, .digitalRelease, .physicalRelease, .release],
+            defaultNamingTemplate: "{Title} ({Year})/{Title} ({Year}).{ext}",
+            namingHint: "{Title} {Year} {Quality} {ext} — 2 segments: folder/file",
+            namingFamily: "movie"
+        ),
         enumeratesIdentifyChildren: false
     ),
     .studio: EntityKindDefinition(
@@ -646,6 +726,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: false,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: true,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -654,6 +735,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .tag: EntityKindDefinition(
@@ -685,6 +769,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: false,
         supportsRequests: false,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: true,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -693,6 +778,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "none"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .video: EntityKindDefinition(
@@ -724,6 +812,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "video",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -732,6 +821,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: true,
+        engagementMode: EntityEngagementMode(rawValue: "playback"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
     .videoSeries: EntityKindDefinition(
@@ -763,6 +855,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "video",
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -771,6 +864,17 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "playback"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: EntityAcquisitionProfileDefinition(
+            label: "TV (series)",
+            displayOrder: 2,
+            libraryRootMediaCapability: "scanVideos",
+            supportedReleaseDateTypes: [.premiere, .air, .firstAir, .streamingRelease, .digitalRelease, .release],
+            defaultNamingTemplate: "{Series}/Season {Season:00}/{Series} - S{Season:00}E{Episode:00}.{ext}",
+            namingHint: "{Series} {Season} {Season:00} {Episode:00} {Quality} {ext} — 3 segments: series/season/episode",
+            namingFamily: "television"
+        ),
         enumeratesIdentifyChildren: true
     ),
     .videoSeason: EntityKindDefinition(
@@ -802,6 +906,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
@@ -810,6 +915,9 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "playback"),
+        aggregatesDirectChildPlayback: false,
+        acquisitionProfile: nil,
         enumeratesIdentifyChildren: true
     ),
 ]
