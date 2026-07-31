@@ -63,28 +63,18 @@ struct MusicLibraryQueueLoader: Sendable {
     }
 
     func tracks(in albums: [EntityThumbnail], artist: String?) async throws -> [MusicTrack] {
-        var indexedTracks: [(Int, [MusicTrack])] = []
-        for batchStart in stride(from: 0, to: albums.count, by: 6) {
-            let batchEnd = min(batchStart + 6, albums.count)
-            let batch = try await withThrowingTaskGroup(
-                of: (Int, [MusicTrack]).self,
-                returning: [(Int, [MusicTrack])].self
-            ) { group in
-                for index in batchStart..<batchEnd {
-                    let album = albums[index]
-                    group.addTask {
-                        let detail = try await client.fetchEntity(id: album.id)
-                        return (index, MusicEntityProjection.tracks(in: detail, artist: artist))
-                    }
-                }
+        let childGroups = try await client.fetchEntityChildren(parentIDs: albums.map(\.id))
+        let childrenByAlbum = Dictionary(uniqueKeysWithValues: childGroups.map { ($0.parentId, $0.items) })
+        let artistIDs = artist == nil ? unique(albums.compactMap(\.parentEntityID)) : []
+        let artistsByID = Dictionary(uniqueKeysWithValues: try await thumbnails(ids: artistIDs).map { ($0.id, $0) })
 
-                var results: [(Int, [MusicTrack])] = []
-                for try await result in group { results.append(result) }
-                return results
-            }
-            indexedTracks += batch
+        return albums.flatMap { album in
+            MusicEntityProjection.tracks(
+                in: album,
+                children: childrenByAlbum[album.id] ?? [],
+                artist: artist ?? album.parentEntityID.flatMap { artistsByID[$0]?.title }
+            )
         }
-        return indexedTracks.sorted { $0.0 < $1.0 }.flatMap(\.1)
     }
 
     private func loadShuffledTrackBatches(
@@ -147,23 +137,19 @@ struct MusicLibraryQueueLoader: Sendable {
         let artists = try await thumbnails(ids: unresolvedArtistIDs)
         for artist in artists { artistsByID[artist.id] = artist }
 
-        for batchStart in stride(from: 0, to: albums.count, by: 6) {
-            let batchEnd = min(batchStart + 6, albums.count)
-            try await withThrowingTaskGroup(of: [MusicTrack].self) { group in
-                for album in albums[batchStart..<batchEnd] {
-                    let artist =
-                        album.parentEntityID.flatMap { artistsByID[$0]?.title }
-                        ?? album.musicMetadataValue(matching: ["artist", "person"])
-                    group.addTask {
-                        let detail = try await client.fetchEntity(id: album.id)
-                        return MusicEntityProjection.tracks(in: detail, artist: artist)
-                    }
-                }
-                for try await albumTracks in group {
-                    let tracks = uniqueTracks(albumTracks, seenTrackIDs: &seenTrackIDs)
-                    if !tracks.isEmpty { continuation.yield(tracks) }
-                }
-            }
+        let childGroups = try await client.fetchEntityChildren(parentIDs: albums.map(\.id))
+        let childrenByAlbum = Dictionary(uniqueKeysWithValues: childGroups.map { ($0.parentId, $0.items) })
+        for album in albums {
+            let artist =
+                album.parentEntityID.flatMap { artistsByID[$0]?.title }
+                ?? album.musicMetadataValue(matching: ["artist", "person"])
+            let albumTracks = MusicEntityProjection.tracks(
+                in: album,
+                children: childrenByAlbum[album.id] ?? [],
+                artist: artist
+            )
+            let tracks = uniqueTracks(albumTracks, seenTrackIDs: &seenTrackIDs)
+            if !tracks.isEmpty { continuation.yield(tracks) }
         }
     }
 

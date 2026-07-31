@@ -430,6 +430,27 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(body?["ids"] as? [String], [artistID.uuidString])
     }
 
+    func testFetchEntityChildrenPostsParentsAndDecodesGroups() async throws {
+        let albumID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let trackID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                #"{"groups":[{"parentId":"\#(albumID)","items":[{"id":"\#(trackID)","kind":"audio-track","title":"Track"}]}]}"#
+            )
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let groups = try await client.fetchEntityChildren(parentIDs: [albumID, albumID])
+
+        XCTAssertEqual(groups.map(\.parentId), [albumID])
+        XCTAssertEqual(groups.first?.items.map(\.id), [trackID])
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(request.url?.path, "/api/entities/children")
+        XCTAssertEqual(request.httpMethod, "POST")
+        let body = try JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+        XCTAssertEqual(body?["parentIds"] as? [String], [albumID.uuidString])
+    }
+
     func testListsCollectionsAndAddsEntityUsingExistingCollectionItemsEndpoint() async throws {
         let collectionID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
         let albumID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
@@ -592,6 +613,7 @@ final class PrismediaAPIClientTests: XCTestCase {
             .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
             .json(entityDetailJSON(id: entityID, rating: nil)),
             .json(#"{"items":[]}"#),
+            .json(#"{"groups":[]}"#),
             .json(#"{"items":[],"nextCursor":null,"totalCount":0}"#),
             .json(
                 """
@@ -617,6 +639,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         _ = try await client.listEntities(EntityListQuery())
         _ = try await client.fetchEntity(id: entityID)
         _ = try await client.fetchEntityThumbnails(ids: [entityID])
+        _ = try await client.fetchEntityChildren(parentIDs: [entityID])
         _ = try await client.listCollections()
         _ = try await client.fetchPlaybackStatistics(
             PlaybackStatisticsQuery(
@@ -625,7 +648,7 @@ final class PrismediaAPIClientTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(loader.requests.count, 5)
+        XCTAssertEqual(loader.requests.count, 6)
         XCTAssertTrue(loader.requests.allSatisfy { queryItem("hideNsfw", in: $0) == "false" })
         XCTAssertNil(queryItem("nsfw", in: loader.requests[0]))
     }

@@ -32,6 +32,26 @@ public enum MusicEntityProjection {
             .sorted { ($0.discNumber ?? 0, $0.sortOrder) < ($1.discNumber ?? 0, $1.sortOrder) }
     }
 
+    public static func tracks(
+        in album: EntityThumbnail,
+        children: [EntityThumbnail],
+        artist: String? = nil
+    ) -> [MusicTrack] {
+        children
+            .filter { ($0.kind == .audioTrack || $0.kind == .audio) && !$0.isWanted }
+            .map {
+                MusicTrack(
+                    thumbnail: $0,
+                    album: album.title,
+                    albumID: album.id,
+                    artist: artist,
+                    artistID: album.parentEntityID,
+                    artworkPath: album.bestCoverPath
+                )
+            }
+            .sorted { ($0.discNumber ?? 0, $0.sortOrder) < ($1.discNumber ?? 0, $1.sortOrder) }
+    }
+
     public static func libraryTracks(
         _ tracks: [EntityThumbnail], albumsByID: [UUID: EntityThumbnail], artistsByID: [UUID: EntityThumbnail]
     ) -> [MusicTrack] {

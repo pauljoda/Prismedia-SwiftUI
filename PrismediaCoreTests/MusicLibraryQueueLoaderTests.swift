@@ -96,7 +96,7 @@ final class MusicLibraryQueueLoaderTests: XCTestCase {
         let album = EntityThumbnail(id: albumID, kind: .audioLibrary, title: "Album")
         let loader = MockHTTPDataLoader(responses: [
             .json(
-                #"{"id":"\#(albumID)","kind":"audio-library","title":"Album","hasSourceMedia":true,"capabilities":[],"relationships":[],"childrenByKind":[{"kind":"audio-track","label":"Tracks","entities":[{"id":"\#(playableID)","kind":"audio-track","title":"Playable","sortOrder":1},{"id":"\#(wantedID)","kind":"audio-track","title":"Wanted","sortOrder":2,"isWanted":true}]}]}"#
+                #"{"groups":[{"parentId":"\#(albumID)","items":[{"id":"\#(playableID)","kind":"audio-track","title":"Playable","sortOrder":1},{"id":"\#(wantedID)","kind":"audio-track","title":"Wanted","sortOrder":2,"isWanted":true}]}]}"#
             )
         ])
         let client = PrismediaAPIClient(
@@ -187,7 +187,7 @@ final class MusicLibraryQueueLoaderTests: XCTestCase {
                 #"{"items":[{"id":"\#(artistID)","kind":"music-artist","title":"Random Artist"}]}"#
             ),
             .json(
-                #"{"id":"\#(albumID)","kind":"audio-library","title":"Random Album","hasSourceMedia":true,"capabilities":[],"relationships":[],"childrenByKind":[{"kind":"audio-track","label":"Tracks","entities":[{"id":"\#(trackID)","kind":"audio-track","title":"Random Song","hasSourceMedia":true,"capabilities":[],"childrenByKind":[],"relationships":[]}]}]}"#
+                #"{"groups":[{"parentId":"\#(albumID)","items":[{"id":"\#(trackID)","kind":"audio-track","title":"Random Song","hasSourceMedia":true}]}]}"#
             ),
         ])
         let client = PrismediaAPIClient(
@@ -212,7 +212,7 @@ final class MusicLibraryQueueLoaderTests: XCTestCase {
             [
                 "/api/entities",
                 "/api/entities/thumbnails",
-                "/api/entities/\(albumID.uuidString.lowercased())",
+                "/api/entities/children",
             ]
         )
     }

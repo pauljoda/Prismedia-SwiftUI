@@ -318,6 +318,30 @@ public struct PrismediaAPIClient: Sendable {
         return response.items
     }
 
+    /// Resolves direct child thumbnails for several Entity parents without hydrating one full
+    /// detail document per parent. The API accepts at most 250 unique parents per request.
+    public func fetchEntityChildren(parentIDs: [UUID]) async throws -> [EntityChildrenBatchGroup] {
+        var seenIDs = Set<UUID>()
+        let uniqueIDs = parentIDs.filter { seenIDs.insert($0).inserted }
+        guard !uniqueIDs.isEmpty else { return [] }
+
+        var groups: [EntityChildrenBatchGroup] = []
+        for start in stride(from: 0, to: uniqueIDs.count, by: 250) {
+            try Task.checkCancellation()
+            let end = min(start + 250, uniqueIDs.count)
+            let response = try await send(
+                EntityChildrenBatchResponse.self,
+                path: "/api/entities/children",
+                method: "POST",
+                queryItems: [nsfwVisibilityQueryItem],
+                body: EntityChildrenBatchRequest(parentIds: Array(uniqueIDs[start ..< end]))
+            )
+            groups += response.groups
+        }
+
+        return groups
+    }
+
     public func listCollections() async throws -> EntityListResponse {
         try await listEntities(
             EntityListQuery(path: "/api/collections"),
