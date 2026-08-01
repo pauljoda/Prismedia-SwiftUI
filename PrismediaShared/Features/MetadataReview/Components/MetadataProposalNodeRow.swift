@@ -72,7 +72,7 @@ import SwiftUI
                         Text(proposal.patch.title ?? "Untitled")
                             .foregroundStyle(PrismediaColor.textPrimary)
                         HStack(spacing: PrismediaSpacing.small) {
-                            Text(proposal.targetKind)
+                            Text(proposal.targetKind.rawValue)
                             Text(proposal.targetEntityID == nil ? "New" : "Match")
                                 .padding(.horizontal, PrismediaSpacing.small)
                                 .padding(.vertical, 2)

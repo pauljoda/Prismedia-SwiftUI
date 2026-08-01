@@ -7,7 +7,7 @@ final class MetadataReviewPolicyTests: XCTestCase {
         let root = AdministrativeEntityMetadataProposal(
             proposalID: "root",
             provider: "provider",
-            targetKind: "movie",
+            targetKind: .movie,
             confidence: nil,
             matchReason: nil,
             patch: AdministrativeEntityMetadataPatch(
@@ -34,7 +34,7 @@ final class MetadataReviewPolicyTests: XCTestCase {
         let root = AdministrativeEntityMetadataProposal(
             proposalID: "root",
             provider: "tmdb",
-            targetKind: "movie",
+            targetKind: .movie,
             confidence: nil,
             matchReason: nil,
             patch: AdministrativeEntityMetadataPatch(
@@ -348,7 +348,7 @@ final class MetadataReviewPolicyTests: XCTestCase {
         AdministrativeEntityMetadataProposal(
             proposalID: id,
             provider: "tmdb",
-            targetKind: kind,
+            targetKind: EntityKind(rawValue: kind),
             confidence: 1,
             matchReason: "external-id",
             patch: AdministrativeEntityMetadataPatch(

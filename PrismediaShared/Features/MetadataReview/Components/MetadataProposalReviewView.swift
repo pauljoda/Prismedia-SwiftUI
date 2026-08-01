@@ -111,7 +111,7 @@ import SwiftUI
 
         private var looseTags: [String] {
             let relationshipTitles = relationships.compactMap { relationship -> String? in
-                guard relationship.targetKind.caseInsensitiveCompare("tag") == .orderedSame else {
+                guard relationship.targetKind == .tag else {
                     return nil
                 }
                 return relationship.patch.title
@@ -128,10 +128,10 @@ import SwiftUI
             guard selection != nil else { return fields }
             if !reviewableImages.isEmpty { fields.insert(.images) }
             if !proposal.patch.tags.isEmpty { fields.insert(.tags) }
-            if relationships.contains(where: { $0.targetKind.caseInsensitiveCompare("person") == .orderedSame }) {
+            if relationships.contains(where: { $0.targetKind == .person }) {
                 fields.insert(.credits)
             }
-            if relationships.contains(where: { $0.targetKind.caseInsensitiveCompare("studio") == .orderedSame }) {
+            if relationships.contains(where: { $0.targetKind == .studio }) {
                 fields.insert(.studio)
             }
             return fields

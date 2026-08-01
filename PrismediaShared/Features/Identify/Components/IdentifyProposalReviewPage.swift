@@ -146,7 +146,7 @@ import SwiftUI
             guard let kind = displayedProposalChildren?.first?.targetKind else {
                 return "Children"
             }
-            return "New \(EntityKind(rawValue: kind).displayLabel)"
+            return "New \(kind.displayLabel)"
         }
 
         private var existingTagTitles: Set<String> {

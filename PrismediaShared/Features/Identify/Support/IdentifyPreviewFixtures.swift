@@ -5,7 +5,7 @@ import Foundation
         static let proposal = AdministrativeEntityMetadataProposal(
             proposalID: "tmdb-arrival",
             provider: "TMDB",
-            targetKind: "movie",
+            targetKind: .movie,
             confidence: 0.96,
             matchReason: "Title and year match",
             patch: AdministrativeEntityMetadataPatch(
@@ -65,7 +65,7 @@ import Foundation
         static let cascadeProposal = AdministrativeEntityMetadataProposal(
             proposalID: "openlibrary-narnia",
             provider: "Open Library",
-            targetKind: "video-series",
+            targetKind: .videoSeries,
             confidence: 0.94,
             matchReason: "Series title match",
             patch: AdministrativeEntityMetadataPatch(
@@ -256,7 +256,7 @@ import Foundation
         private static let matchedChildProposal = AdministrativeEntityMetadataProposal(
             proposalID: "narnia-child-1",
             provider: "Open Library",
-            targetKind: "video",
+            targetKind: .video,
             confidence: 0.92,
             matchReason: "Title match",
             patch: AdministrativeEntityMetadataPatch(
@@ -289,7 +289,7 @@ import Foundation
             AdministrativeEntityMetadataProposal(
                 proposalID: id,
                 provider: "Open Library",
-                targetKind: "tag",
+                targetKind: .tag,
                 confidence: 1,
                 matchReason: "Related metadata",
                 patch: AdministrativeEntityMetadataPatch(

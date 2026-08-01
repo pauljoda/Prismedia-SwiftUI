@@ -287,14 +287,14 @@ public enum MetadataReviewPolicy {
             !title.isEmpty
         else { return }
 
-        switch proposal.targetKind.lowercased() {
-        case "tag":
+        switch proposal.targetKind {
+        case .tag:
             update(
                 title,
                 selected: selected,
                 values: &selection.selectedTagsByProposal[parent.proposalID]
             )
-        case "person":
+        case .person:
             let matchingKeys = parent.patch.credits.enumerated().compactMap { index, credit in
                 credit.name.caseInsensitiveCompare(title) == .orderedSame
                     ? creditKey(credit, index: index)
@@ -307,7 +307,7 @@ public enum MetadataReviewPolicy {
                     values: &selection.selectedCreditsByProposal[parent.proposalID]
                 )
             }
-        case "studio":
+        case .studio:
             update(
                 .studio,
                 selected: selected,
@@ -335,8 +335,8 @@ public enum MetadataReviewPolicy {
         }
     }
 
-    private static func isRelationshipKind(_ kind: String) -> Bool {
-        ["person", "studio", "tag"].contains(kind.lowercased())
+    private static func isRelationshipKind(_ kind: EntityKind) -> Bool {
+        [.person, .studio, .tag].contains(kind)
     }
 
     private static func unique(
@@ -364,16 +364,16 @@ public enum MetadataReviewPolicy {
         selectedFields: Set<MetadataReviewField>,
         patch: AdministrativeEntityMetadataPatch
     ) -> Bool {
-        switch relationship.targetKind.lowercased() {
-        case "person":
+        switch relationship.targetKind {
+        case .person:
             return selectedFields.contains(.credits)
                 && patch.credits.contains {
                     $0.name.caseInsensitiveCompare(relationship.patch.title ?? "") == .orderedSame
                 }
-        case "studio":
+        case .studio:
             return selectedFields.contains(.studio)
                 && patch.studio?.caseInsensitiveCompare(relationship.patch.title ?? "") == .orderedSame
-        case "tag":
+        case .tag:
             return selectedFields.contains(.tags)
         default:
             return true

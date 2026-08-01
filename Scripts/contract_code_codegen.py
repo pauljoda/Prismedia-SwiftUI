@@ -26,7 +26,6 @@ NATIVE_ENUM_TYPES = {
     "MonitorStatus": "EntityMonitorStatus",
     "PlaybackEventKind": "PlaybackEventKind",
     "ProgressUnit": "ProgressUnit",
-    "ProposalKind": "ProposalKind",
     "ReaderMode": "ReaderMode",
     "ReleaseRejectionReason": "RequestActivityReleaseRejection",
     "AcquisitionHistoryEvent": "RequestActivityHistoryEvent",

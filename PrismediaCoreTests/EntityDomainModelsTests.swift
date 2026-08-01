@@ -3,9 +3,9 @@ import XCTest
 @testable import PrismediaCore
 
 final class EntityDomainModelsTests: XCTestCase {
-    func testProposalOnlyEpisodeKindUsesVideoPresentation() {
-        XCTAssertEqual(ProposalKind.videoEpisode.entityKind, .video)
-        XCTAssertEqual(ProposalKind(rawValue: EntityKind.movie.rawValue).entityKind, .movie)
+    func testProposalTargetKindsUseCanonicalEntityKinds() {
+        XCTAssertEqual(EntityKind.videoEpisode.rawValue, "video-episode")
+        XCTAssertEqual(EntityKind.movie.rawValue, "movie")
     }
 
     func testThumbnailArtworkUsesCanonicalAspectRatios() {

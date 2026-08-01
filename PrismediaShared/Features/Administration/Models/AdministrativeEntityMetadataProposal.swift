@@ -3,7 +3,9 @@ import Foundation
 public struct AdministrativeEntityMetadataProposal: Codable, Hashable, Sendable {
     public let proposalID: String
     public let provider: String
-    public let targetKind: String
+    /// Canonical entity kind targeted by the proposal. Unknown server values retain their raw
+    /// code through `EntityKind` so newer backends remain decodable.
+    public let targetKind: EntityKind
     public let confidence: Decimal?
     public let matchReason: String?
     public let patch: AdministrativeEntityMetadataPatch
@@ -12,11 +14,6 @@ public struct AdministrativeEntityMetadataProposal: Codable, Hashable, Sendable 
     public let candidates: [AdministrativeEntitySearchCandidate]
     public let targetEntityID: UUID?
     public let relationships: [AdministrativeEntityMetadataProposal]
-
-    /// Entity kind used when a proposal is shown through shared Entity presentation components.
-    public var presentationEntityKind: EntityKind {
-        ProposalKind(rawValue: targetKind).entityKind
-    }
 
     enum CodingKeys: String, CodingKey {
         case proposalID = "proposalId"
@@ -29,7 +26,7 @@ public struct AdministrativeEntityMetadataProposal: Codable, Hashable, Sendable 
         let container = try decoder.container(keyedBy: CodingKeys.self)
         proposalID = try container.decode(String.self, forKey: .proposalID)
         provider = try container.decode(String.self, forKey: .provider)
-        targetKind = try container.decode(String.self, forKey: .targetKind)
+        targetKind = try container.decode(EntityKind.self, forKey: .targetKind)
         confidence = try container.decodeIfPresent(Decimal.self, forKey: .confidence)
         matchReason = try container.decodeIfPresent(String.self, forKey: .matchReason)
         patch = try container.decode(AdministrativeEntityMetadataPatch.self, forKey: .patch)
@@ -48,7 +45,7 @@ public struct AdministrativeEntityMetadataProposal: Codable, Hashable, Sendable 
     public init(
         proposalID: String,
         provider: String,
-        targetKind: String,
+        targetKind: EntityKind,
         confidence: Decimal?,
         matchReason: String?,
         patch: AdministrativeEntityMetadataPatch,

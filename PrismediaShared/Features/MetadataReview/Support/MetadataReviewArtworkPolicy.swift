@@ -14,7 +14,7 @@ enum MetadataReviewArtworkPolicy {
         return ProviderImagePreviewPolicy.previewURL(
             for: image.url,
             imageKind: image.kind,
-            targetKind: proposal.targetKind
+            targetKind: proposal.targetKind.rawValue
         )
     }
 }

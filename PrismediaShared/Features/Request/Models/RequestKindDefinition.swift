@@ -70,7 +70,7 @@ public enum RequestKindDefinition: String, CaseIterable, Identifiable, Hashable,
         case .movie: return .movie
         case .series: return .videoSeries
         case .season: return .videoSeason
-        case .episode: return .video
+        case .episode: return .videoEpisode
         case .artist: return .musicArtist
         case .album: return .audioLibrary
         case .track: return .audioTrack
@@ -85,7 +85,7 @@ public enum RequestKindDefinition: String, CaseIterable, Identifiable, Hashable,
         case .movie: "movie"
         case .series: "video-series"
         case .season: "video-season"
-        case .episode: "video"
+        case .episode: "video-episode"
         case .artist: "music-artist"
         case .album: "audio-library"
         case .track: "audio-track"
@@ -100,7 +100,7 @@ public enum RequestKindDefinition: String, CaseIterable, Identifiable, Hashable,
         case .movie: return .movie
         case .series: return .videoSeason
         case .season: return .videoSeason
-        case .episode: return .video
+        case .episode: return .videoEpisode
         case .artist: return .audioLibrary
         case .album: return .audioLibrary
         case .track: return .audioTrack

@@ -5,6 +5,11 @@ import Foundation
 
 /// Complete generated snapshot of backend closed-set wire identifiers.
 public enum PrismediaContractCodes {
+    public enum AcquisitionCheckpointProtocol {
+        public static let `placement` = "placement"
+        public static let `television` = "television"
+    }
+
     public enum AcquisitionHistoryEvent {
         public static let `grabbed` = "grabbed"
         public static let `imported` = "imported"
@@ -167,6 +172,61 @@ public enum PrismediaContractCodes {
         public static let `hybrid` = "hybrid"
     }
 
+    public enum CollectionRuleField {
+        public static let `title` = "title"
+        public static let `rating` = "rating"
+        public static let `date` = "date"
+        public static let `organized` = "organized"
+        public static let `isNsfw` = "isNsfw"
+        public static let `tags` = "tags"
+        public static let `performers` = "performers"
+        public static let `studio` = "studio"
+        public static let `libraryRootId` = "libraryRootId"
+        public static let `fileSize` = "fileSize"
+        public static let `duration` = "duration"
+        public static let `height` = "height"
+        public static let `width` = "width"
+        public static let `codec` = "codec"
+        public static let `bitRate` = "bitRate"
+        public static let `bitRateLegacy` = "bit_rate"
+        public static let `channels` = "channels"
+        public static let `sampleRate` = "sampleRate"
+        public static let `sampleRateLegacy` = "sample_rate"
+        public static let `playCount` = "playCount"
+        public static let `skipCount` = "skipCount"
+        public static let `resolution` = "resolution"
+        public static let `videoSeriesId` = "videoSeriesId"
+        public static let `galleryType` = "galleryType"
+        public static let `imageCount` = "imageCount"
+        public static let `format` = "format"
+        public static let `createdAt` = "createdAt"
+        public static let `interactive` = "interactive"
+    }
+
+    public enum CollectionRuleGroupOperator {
+        public static let `and` = "and"
+        public static let `or` = "or"
+        public static let `not` = "not"
+    }
+
+    public enum CollectionRuleOperator {
+        public static let `equals` = "equals"
+        public static let `notEquals` = "not_equals"
+        public static let `contains` = "contains"
+        public static let `notContains` = "not_contains"
+        public static let `greaterThan` = "greater_than"
+        public static let `lessThan` = "less_than"
+        public static let `greaterEqual` = "greater_equal"
+        public static let `lessEqual` = "less_equal"
+        public static let `between` = "between"
+        public static let `in` = "in"
+        public static let `notIn` = "not_in"
+        public static let `isNull` = "is_null"
+        public static let `isNotNull` = "is_not_null"
+        public static let `isTrue` = "is_true"
+        public static let `isFalse` = "is_false"
+    }
+
     public enum CreditRole {
         public static let `person` = "person"
         public static let `actor` = "actor"
@@ -285,6 +345,7 @@ public enum PrismediaContractCodes {
         public static let `studio` = "studio"
         public static let `tag` = "tag"
         public static let `video` = "video"
+        public static let `videoEpisode` = "video-episode"
         public static let `videoSeries` = "video-series"
         public static let `videoSeason` = "video-season"
     }
@@ -319,6 +380,10 @@ public enum PrismediaContractCodes {
         public static let `none` = "none"
         public static let `video` = "video"
         public static let `audio` = "audio"
+    }
+
+    public enum EntitySourceCode {
+        public static let `folder` = "folder"
     }
 
     public enum EntityStorageShape {
@@ -362,6 +427,14 @@ public enum PrismediaContractCodes {
         public static let `virtual` = "virtual"
         public static let `folder` = "folder"
         public static let `zip` = "zip"
+    }
+
+    public enum GeneratedAssetFamily {
+        public static let `none` = "none"
+        public static let `video` = "video"
+        public static let `image` = "image"
+        public static let `bookPage` = "book-page"
+        public static let `audioTrack` = "audio-track"
     }
 
     public enum IdentifyAction {
@@ -563,6 +636,14 @@ public enum PrismediaContractCodes {
         public static let `one` = "one"
     }
 
+    public enum OrganizeItemStatus {
+        public static let `ready` = "ready"
+        public static let `unchanged` = "unchanged"
+        public static let `skipped` = "skipped"
+        public static let `applied` = "applied"
+        public static let `failed` = "failed"
+    }
+
     public enum PlaybackEventKind {
         public static let `completed` = "completed"
         public static let `skipped` = "skipped"
@@ -592,29 +673,6 @@ public enum PrismediaContractCodes {
         public static let `preferAndUpgrade` = "prefer-and-upgrade"
         public static let `doNotUpgrade` = "do-not-upgrade"
         public static let `doNotPrefer` = "do-not-prefer"
-    }
-
-    public enum ProposalKind {
-        public static let `audio` = "audio"
-        public static let `audioLibrary` = "audio-library"
-        public static let `audioTrack` = "audio-track"
-        public static let `book` = "book"
-        public static let `bookVolume` = "book-volume"
-        public static let `bookChapter` = "book-chapter"
-        public static let `bookPage` = "book-page"
-        public static let `collection` = "collection"
-        public static let `gallery` = "gallery"
-        public static let `image` = "image"
-        public static let `musicArtist` = "music-artist"
-        public static let `bookAuthor` = "book-author"
-        public static let `person` = "person"
-        public static let `movie` = "movie"
-        public static let `studio` = "studio"
-        public static let `tag` = "tag"
-        public static let `video` = "video"
-        public static let `videoSeries` = "video-series"
-        public static let `videoSeason` = "video-season"
-        public static let `videoEpisode` = "video-episode"
     }
 
     public enum ProviderType {
@@ -743,6 +801,7 @@ public enum PrismediaContractCodes {
     public enum VideoSeriesRenderingMode {
         public static let `flat` = "flat"
         public static let `seasons` = "seasons"
+        public static let `mixed` = "mixed"
     }
 
     public enum CapabilityKind {
@@ -764,6 +823,7 @@ public enum PrismediaContractCodes {
         public static let `links` = "links"
         public static let `markers` = "markers"
         public static let `personProfile` = "person-profile"
+        public static let `playableVideo` = "playable-video"
         public static let `playback` = "playback"
         public static let `position` = "position"
         public static let `progress` = "progress"
@@ -1015,29 +1075,6 @@ public extension ProgressUnit {
     static let `second` = Self(rawValue: PrismediaContractCodes.ProgressUnit.`second`)
 }
 
-public extension ProposalKind {
-    static let `audio` = Self(rawValue: PrismediaContractCodes.ProposalKind.`audio`)
-    static let `audioLibrary` = Self(rawValue: PrismediaContractCodes.ProposalKind.`audioLibrary`)
-    static let `audioTrack` = Self(rawValue: PrismediaContractCodes.ProposalKind.`audioTrack`)
-    static let `book` = Self(rawValue: PrismediaContractCodes.ProposalKind.`book`)
-    static let `bookVolume` = Self(rawValue: PrismediaContractCodes.ProposalKind.`bookVolume`)
-    static let `bookChapter` = Self(rawValue: PrismediaContractCodes.ProposalKind.`bookChapter`)
-    static let `bookPage` = Self(rawValue: PrismediaContractCodes.ProposalKind.`bookPage`)
-    static let `collection` = Self(rawValue: PrismediaContractCodes.ProposalKind.`collection`)
-    static let `gallery` = Self(rawValue: PrismediaContractCodes.ProposalKind.`gallery`)
-    static let `image` = Self(rawValue: PrismediaContractCodes.ProposalKind.`image`)
-    static let `musicArtist` = Self(rawValue: PrismediaContractCodes.ProposalKind.`musicArtist`)
-    static let `bookAuthor` = Self(rawValue: PrismediaContractCodes.ProposalKind.`bookAuthor`)
-    static let `person` = Self(rawValue: PrismediaContractCodes.ProposalKind.`person`)
-    static let `movie` = Self(rawValue: PrismediaContractCodes.ProposalKind.`movie`)
-    static let `studio` = Self(rawValue: PrismediaContractCodes.ProposalKind.`studio`)
-    static let `tag` = Self(rawValue: PrismediaContractCodes.ProposalKind.`tag`)
-    static let `video` = Self(rawValue: PrismediaContractCodes.ProposalKind.`video`)
-    static let `videoSeries` = Self(rawValue: PrismediaContractCodes.ProposalKind.`videoSeries`)
-    static let `videoSeason` = Self(rawValue: PrismediaContractCodes.ProposalKind.`videoSeason`)
-    static let `videoEpisode` = Self(rawValue: PrismediaContractCodes.ProposalKind.`videoEpisode`)
-}
-
 public extension ReaderMode {
     static let `paged` = Self(rawValue: PrismediaContractCodes.ReaderMode.`paged`)
     static let `webtoon` = Self(rawValue: PrismediaContractCodes.ReaderMode.`webtoon`)
@@ -1099,6 +1136,7 @@ public extension EntityCapabilityKind {
     static let `links` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`links`)
     static let `markers` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`markers`)
     static let `personProfile` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`personProfile`)
+    static let `playableVideo` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`playableVideo`)
     static let `playback` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`playback`)
     static let `position` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`position`)
     static let `progress` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`progress`)

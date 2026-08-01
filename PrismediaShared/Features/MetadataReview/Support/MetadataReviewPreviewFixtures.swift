@@ -5,7 +5,7 @@ import Foundation
         static let proposal = AdministrativeEntityMetadataProposal(
             proposalID: "movie:329865",
             provider: "tmdb",
-            targetKind: "movie",
+            targetKind: .movie,
             confidence: 1,
             matchReason: "external-id",
             patch: AdministrativeEntityMetadataPatch(
@@ -44,7 +44,7 @@ import Foundation
                 AdministrativeEntityMetadataProposal(
                     proposalID: "person:amy-adams",
                     provider: "tmdb",
-                    targetKind: "person",
+                    targetKind: .person,
                     confidence: 1,
                     matchReason: "relationship",
                     patch: AdministrativeEntityMetadataPatch(

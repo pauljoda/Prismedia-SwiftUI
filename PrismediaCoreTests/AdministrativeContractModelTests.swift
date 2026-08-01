@@ -13,7 +13,7 @@ final class AdministrativeContractModelTests: XCTestCase {
         )
 
         XCTAssertEqual(proposal.children.first?.patch.title, "Season 1")
-        XCTAssertEqual(proposal.relationships.first?.targetKind, "person")
+        XCTAssertEqual(proposal.relationships.first?.targetKind, .person)
         XCTAssertEqual(proposal.candidates.first?.externalIDs, ["tmdb": "1"])
     }
 }

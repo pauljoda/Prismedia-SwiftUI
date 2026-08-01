@@ -14,7 +14,7 @@ final class EntityChildAcquisitionActivityPolicyTests: XCTestCase {
             .musicArtist,
             .bookAuthor,
             .movie,
-            .video,
+            .videoEpisode,
             .videoSeries,
             .videoSeason,
         ]
@@ -32,7 +32,7 @@ final class EntityChildAcquisitionActivityPolicyTests: XCTestCase {
         )
         let nestedEpisode = entity(
             id: "20000000-0000-0000-0000-000000000011",
-            kind: .video,
+            kind: .videoEpisode,
             parentID: directChildren.last!.id
         )
         let groups = [
@@ -119,19 +119,19 @@ final class EntityChildAcquisitionActivityPolicyTests: XCTestCase {
     func testFailedParentDemotionRequiresFailedParentAndActiveDirectChild() {
         let activeLatest = entity(
             id: "70000000-0000-0000-0000-000000000001",
-            kind: .video,
+            kind: .videoEpisode,
             parentID: parentID,
             latestAcquisitionStatus: "downloading"
         )
         let activeWanted = entity(
             id: "70000000-0000-0000-0000-000000000002",
-            kind: .video,
+            kind: .videoEpisode,
             parentID: parentID,
             wantedStatus: "searching"
         )
         let attentionOnly = entity(
             id: "70000000-0000-0000-0000-000000000003",
-            kind: .video,
+            kind: .videoEpisode,
             parentID: parentID,
             latestAcquisitionStatus: "failed"
         )

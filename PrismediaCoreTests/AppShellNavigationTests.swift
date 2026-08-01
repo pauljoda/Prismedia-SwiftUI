@@ -356,7 +356,10 @@ final class AppShellNavigationTests: XCTestCase {
             )
 
             XCTAssertEqual(link.entityID, entityID, "\(definition.kind.rawValue) child id")
-            XCTAssertEqual(link.kind, definition.kind)
+            XCTAssertEqual(
+                link.kind,
+                definition.kind == .videoEpisode ? .video : definition.kind
+            )
             XCTAssertEqual(link.parentEntityID, template.contains("{parentId}") ? parentID : nil)
             XCTAssertEqual(
                 link.parentKind,

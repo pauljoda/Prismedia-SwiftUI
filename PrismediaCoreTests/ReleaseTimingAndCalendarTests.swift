@@ -123,7 +123,7 @@ final class ReleaseTimingAndCalendarTests: XCTestCase {
             EntityKind.movie.definition?.acquisitionProfile?.supportedReleaseDateTypes
         )
         XCTAssertEqual(
-            AdministrativeAcquisitionProfileTimingPolicy.supportedTypes(for: .video),
+            AdministrativeAcquisitionProfileTimingPolicy.supportedTypes(for: .videoEpisode),
             EntityKind.videoSeries.definition?.acquisitionProfile?.supportedReleaseDateTypes
         )
         XCTAssertEqual(

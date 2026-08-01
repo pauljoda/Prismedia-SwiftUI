@@ -159,7 +159,7 @@ final class RequestFeaturePolicyTests: XCTestCase {
         AdministrativeEntityMetadataProposal(
             proposalID: id,
             provider: "tmdb",
-            targetKind: kind,
+            targetKind: EntityKind(rawValue: kind),
             confidence: nil,
             matchReason: nil,
             patch: AdministrativeEntityMetadataPatch(

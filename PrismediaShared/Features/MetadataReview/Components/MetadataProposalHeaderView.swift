@@ -22,7 +22,7 @@ import SwiftUI
                         .foregroundStyle(PrismediaColor.textPrimary)
 
                     HStack(spacing: PrismediaSpacing.small) {
-                        Text(proposal.targetKind)
+                        Text(proposal.targetKind.rawValue)
                             .font(.caption.weight(.medium))
                             .padding(.horizontal, PrismediaSpacing.small)
                             .padding(.vertical, 2)

@@ -277,7 +277,7 @@ import XCTest
             AdministrativeEntityMetadataProposal(
                 proposalID: id,
                 provider: "tmdb",
-                targetKind: "movie",
+                targetKind: .movie,
                 confidence: 1,
                 matchReason: "test",
                 patch: AdministrativeEntityMetadataPatch(

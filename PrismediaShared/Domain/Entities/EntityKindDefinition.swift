@@ -28,8 +28,6 @@ public struct EntityKindDefinition: Hashable, Sendable {
     public let supportsAtomicMediaUpgrade: Bool
     /// Completion and filtering vocabulary declared by the backend kind definition.
     public let engagementMode: EntityEngagementMode
-    /// Whether direct-child playback contributes to this container's engagement state.
-    public let aggregatesDirectChildPlayback: Bool
     /// Acquisition profile owned by this kind, when applicable.
     public let acquisitionProfile: EntityAcquisitionProfileDefinition?
     public let enumeratesIdentifyChildren: Bool
@@ -53,7 +51,6 @@ public struct EntityKindDefinition: Hashable, Sendable {
         mediaQualityFamily: EntityMediaQualityFamily,
         supportsAtomicMediaUpgrade: Bool,
         engagementMode: EntityEngagementMode,
-        aggregatesDirectChildPlayback: Bool,
         acquisitionProfile: EntityAcquisitionProfileDefinition?,
         enumeratesIdentifyChildren: Bool
     ) {
@@ -75,7 +72,6 @@ public struct EntityKindDefinition: Hashable, Sendable {
         self.mediaQualityFamily = mediaQualityFamily
         self.supportsAtomicMediaUpgrade = supportsAtomicMediaUpgrade
         self.engagementMode = engagementMode
-        self.aggregatesDirectChildPlayback = aggregatesDirectChildPlayback
         self.acquisitionProfile = acquisitionProfile
         self.enumeratesIdentifyChildren = enumeratesIdentifyChildren
     }

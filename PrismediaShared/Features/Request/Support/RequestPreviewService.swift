@@ -166,7 +166,7 @@ import Foundation
             AdministrativeEntityMetadataProposal(
                 proposalID: id,
                 provider: "tmdb",
-                targetKind: kind,
+                targetKind: EntityKind(rawValue: kind),
                 confidence: 0.98,
                 matchReason: "Exact title and year",
                 patch: AdministrativeEntityMetadataPatch(
