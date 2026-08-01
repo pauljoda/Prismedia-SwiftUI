@@ -163,17 +163,23 @@ final class PrismediaShellUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Fixture Movies"].exists)
         app.navigationBars["Watched Libraries"].buttons.firstMatch.tap()
 
-        app.buttons["Users"].tap()
+        let users = app.buttons["Users"]
+        XCTAssertTrue(users.waitForExistence(timeout: 5))
+        users.tap()
         XCTAssertTrue(element("administration.settings.users", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Fixture Reader"].exists)
         app.navigationBars["Users"].buttons.firstMatch.tap()
 
-        app.buttons["Database Backups"].tap()
+        let databaseBackups = app.buttons["Database Backups"]
+        XCTAssertTrue(databaseBackups.waitForExistence(timeout: 5))
+        databaseBackups.tap()
         XCTAssertTrue(element("administration.settings.database-backups", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["manual-ui-fixture.sqlite"].exists)
         app.navigationBars["Database Backups"].buttons.firstMatch.tap()
 
-        app.buttons["Diagnostics"].tap()
+        let diagnostics = app.buttons["Diagnostics"]
+        XCTAssertTrue(diagnostics.waitForExistence(timeout: 5))
+        diagnostics.tap()
         XCTAssertTrue(element("administration.settings.diagnostics", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(element(containingLabel: "ui-fixture-worker", in: app).exists)
         attachScreenshot(named: "Step 3 Settings diagnostics", app: app)
@@ -431,11 +437,9 @@ final class PrismediaShellUITests: XCTestCase {
     private func submitCredentials(username: String, password: String, in app: XCUIApplication) {
         let usernameField = app.textFields["Username"]
         XCTAssertTrue(usernameField.waitForExistence(timeout: 10))
-        usernameField.tap()
-        usernameField.typeText(username)
+        replaceCredentialText(in: usernameField, with: username, placeholder: "Username")
         let passwordField = app.secureTextFields["Password"]
-        passwordField.tap()
-        passwordField.typeText(password)
+        replaceSecureText(in: passwordField, with: password, placeholder: "Password")
         app.buttons["Sign In"].firstMatch.tap()
     }
 
@@ -517,6 +521,56 @@ final class PrismediaShellUITests: XCTestCase {
             )
         }
         field.typeText(replacement)
+        if let committedValue = field.value as? String,
+           committedValue != replacement,
+           replacement.hasPrefix(committedValue)
+        {
+            field.typeText(String(replacement.dropFirst(committedValue.count)))
+        }
+        XCTAssertEqual(field.value as? String, replacement)
+    }
+
+    @MainActor
+    private func replaceSecureText(
+        in field: XCUIElement,
+        with replacement: String,
+        placeholder: String
+    ) {
+        let existingValue = field.value as? String ?? ""
+        field.tap()
+        if !existingValue.isEmpty, existingValue != placeholder {
+            field.typeText(
+                String(repeating: XCUIKeyboardKey.delete.rawValue, count: existingValue.count)
+            )
+        }
+        field.typeText(replacement + " ")
+        let committedLength = (field.value as? String).map { value in
+            value == placeholder ? 0 : value.count
+        } ?? replacement.count
+        if committedLength == replacement.count + 1 {
+            field.typeText(XCUIKeyboardKey.delete.rawValue)
+        }
+        let finalLength = (field.value as? String).map(\.count) ?? replacement.count
+        XCTAssertEqual(finalLength, replacement.count)
+    }
+
+    @MainActor
+    private func replaceCredentialText(
+        in field: XCUIElement,
+        with replacement: String,
+        placeholder: String
+    ) {
+        let existingValue = field.value as? String ?? ""
+        field.tap()
+        if !existingValue.isEmpty, existingValue != placeholder {
+            field.typeText(
+                String(repeating: XCUIKeyboardKey.delete.rawValue, count: existingValue.count)
+            )
+        }
+        field.typeText(replacement + " ")
+        if field.value as? String == replacement + " " {
+            field.typeText(XCUIKeyboardKey.delete.rawValue)
+        }
         XCTAssertEqual(field.value as? String, replacement)
     }
 
@@ -548,11 +602,17 @@ final class PrismediaShellUITests: XCTestCase {
     ) {
         if button.isHittable {
             button.tap()
+        } else if button.exists {
+            button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         } else {
             tabBar.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
         }
         if !screen.waitForExistence(timeout: 2) {
-            tabBar.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+            if button.exists {
+                button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            } else {
+                tabBar.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+            }
         }
         XCTAssertTrue(screen.waitForExistence(timeout: 5))
     }
