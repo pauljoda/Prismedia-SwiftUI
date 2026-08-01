@@ -121,7 +121,6 @@ struct AdministrativeUserEditor: View {
                         username: username.trimmingCharacters(in: .whitespacesAndNewlines),
                         displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines),
                         role: isSelf ? nil : role,
-                        allowSfw: true,
                         allowNsfw: allowNsfw,
                         canCreateLibraries: canCreateLibraries,
                         enabled: isSelf ? nil : enabled

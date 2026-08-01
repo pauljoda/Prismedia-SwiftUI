@@ -13,7 +13,6 @@ final class PrismediaAPIClientTests: XCTestCase {
             "username": "paul",
             "displayName": "Paul",
             "role": "admin",
-            "allowSfw": true,
             "allowNsfw": true,
             "canCreateLibraries": true,
             "enabled": true,

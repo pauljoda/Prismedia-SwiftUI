@@ -22,7 +22,7 @@ public struct EntityGridActionPolicy: Sendable {
         customActions: [EntityGridCustomAction] = []
     ) -> EntityGridActionPolicy {
         var actions: Set<EntityGridBuiltInAction> = [.addToCollection, .removeWanted]
-        if user.allowSfw && user.allowNsfw {
+        if user.allowNsfw {
             actions.insert(.toggleNsfw)
         }
         return EntityGridActionPolicy(

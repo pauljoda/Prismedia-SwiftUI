@@ -60,7 +60,7 @@ final class EntityGridSelectionActionTests: XCTestCase {
             kind: .book,
             isWanted: true
         )
-        let policy = EntityGridActionPolicy.library(user: user(allowSfw: true, allowNsfw: true))
+        let policy = EntityGridActionPolicy.library(user: user(allowNsfw: true))
 
         XCTAssertEqual(
             policy.collectionReferences(in: [movie, tag, wanted]).map(\.entityID),
@@ -70,14 +70,14 @@ final class EntityGridSelectionActionTests: XCTestCase {
         XCTAssertFalse(policy.availableBuiltInActions(for: [movie, wanted]).contains(.removeWanted))
     }
 
-    func testNsfwMutationRequiresRouteCapabilityAndBothVisibilityPermissions() {
+    func testNsfwMutationRequiresNsfwVisibilityPermission() {
         let item = thumbnail(id: "11111111-1111-1111-1111-111111111111", kind: .movie)
 
         let eligible = EntityGridActionPolicy.library(
-            user: user(allowSfw: true, allowNsfw: true)
+            user: user(allowNsfw: true)
         )
         let sfwOnly = EntityGridActionPolicy.library(
-            user: user(allowSfw: true, allowNsfw: false)
+            user: user(allowNsfw: false)
         )
 
         XCTAssertTrue(eligible.availableBuiltInActions(for: [item]).contains(.toggleNsfw))
@@ -163,13 +163,12 @@ final class EntityGridSelectionActionTests: XCTestCase {
         )
     }
 
-    private func user(allowSfw: Bool, allowNsfw: Bool) -> UserAccount {
+    private func user(allowNsfw: Bool) -> UserAccount {
         UserAccount(
             id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
             username: "member",
             displayName: "Member",
             role: .member,
-            allowSfw: allowSfw,
             allowNsfw: allowNsfw
         )
     }

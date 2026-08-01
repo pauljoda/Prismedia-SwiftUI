@@ -110,6 +110,10 @@ final class AdministrationAPIClientTests: XCTestCase {
         try await client.deleteAdministrativeUser(id: userID)
 
         XCTAssertEqual(loader.requests.map(\.httpMethod), ["GET", "POST", "PATCH", "POST", "PUT", "DELETE"])
+        XCTAssertNil(try jsonBody(loader.requests[1])["allowSfw"])
+        XCTAssertEqual(try jsonBody(loader.requests[1])["allowNsfw"] as? Bool, false)
+        XCTAssertNil(try jsonBody(loader.requests[2])["allowSfw"])
+        XCTAssertEqual(try jsonBody(loader.requests[2])["allowNsfw"] as? Bool, true)
         XCTAssertEqual(loader.requests[3].url?.path, "/api/users/\(userID.uuidString.lowercased())/password")
         XCTAssertEqual(loader.requests[4].url?.path, "/api/users/\(userID.uuidString.lowercased())/library-access")
     }
@@ -143,7 +147,7 @@ final class AdministrationAPIClientTests: XCTestCase {
     }
 
     private var userJSON: String {
-        #"{"id":"\#(userID)","username":"reader","displayName":"Reader","role":"member","allowSfw":true,"allowNsfw":false,"canCreateLibraries":false,"enabled":true,"lastLoginAt":null,"createdAt":"2026-07-01T12:00:00Z","updatedAt":"2026-07-01T12:00:00Z","libraryRootIds":[]}"#
+        #"{"id":"\#(userID)","username":"reader","displayName":"Reader","role":"member","allowNsfw":false,"canCreateLibraries":false,"enabled":true,"lastLoginAt":null,"createdAt":"2026-07-01T12:00:00Z","updatedAt":"2026-07-01T12:00:00Z","libraryRootIds":[]}"#
     }
 
     private var rootJSON: String {

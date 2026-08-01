@@ -5,7 +5,6 @@ public struct AdministrativeUserCreateMutation: Encodable, Hashable, Sendable {
     public let password: String
     public let displayName: String?
     public let role: UserRole
-    public let allowSfw: Bool
     public let allowNsfw: Bool
     public let canCreateLibraries: Bool
     public let enabled: Bool
@@ -15,7 +14,6 @@ public struct AdministrativeUserCreateMutation: Encodable, Hashable, Sendable {
         password: String,
         displayName: String? = nil,
         role: UserRole = .member,
-        allowSfw: Bool = true,
         allowNsfw: Bool = false,
         canCreateLibraries: Bool = false,
         enabled: Bool = true
@@ -24,7 +22,6 @@ public struct AdministrativeUserCreateMutation: Encodable, Hashable, Sendable {
         self.password = password
         self.displayName = displayName
         self.role = role
-        self.allowSfw = allowSfw
         self.allowNsfw = allowNsfw
         self.canCreateLibraries = canCreateLibraries
         self.enabled = enabled

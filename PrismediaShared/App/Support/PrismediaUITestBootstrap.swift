@@ -23,7 +23,6 @@
                     username: "test",
                     displayName: "Test User",
                     role: .admin,
-                    allowSfw: true,
                     allowNsfw: true,
                     canCreateLibraries: true
                 )
