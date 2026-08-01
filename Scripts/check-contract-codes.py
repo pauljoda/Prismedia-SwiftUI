@@ -19,6 +19,8 @@ from urllib.request import urlopen
 
 from contract_code_codegen import OUTPUT as CONTRACT_CODES_PATH
 from contract_code_codegen import render_manifest as render_contract_codes
+from entity_capability_codegen import OUTPUT as ENTITY_CAPABILITIES_PATH
+from entity_capability_codegen import render_manifest as render_entity_capabilities
 from entity_kind_definition_codegen import OUTPUT as ENTITY_KIND_DEFINITIONS_PATH
 from entity_kind_definition_codegen import render_manifest as render_entity_kind_definitions
 from request_kind_definition_codegen import OUTPUT as REQUEST_KIND_DEFINITIONS_PATH
@@ -59,6 +61,14 @@ def main() -> int:
             failures.append(
                 "Generated contract codes differ; run "
                 "`python3 Scripts/generate-contract-codes.py`"
+            )
+
+        expected_entity_capabilities = render_entity_capabilities(manifest)
+        actual_entity_capabilities = ENTITY_CAPABILITIES_PATH.read_text(encoding="utf-8")
+        if actual_entity_capabilities != expected_entity_capabilities:
+            failures.append(
+                "Generated Entity capabilities differ; run "
+                "`python3 Scripts/generate-entity-capabilities.py`"
             )
 
         expected_definitions = render_entity_kind_definitions(manifest)

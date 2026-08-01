@@ -103,12 +103,13 @@ backend's canonical code manifest:
 
 ```sh
 python3 Scripts/generate-entity-kind-definitions.py
+python3 Scripts/generate-entity-capabilities.py
 python3 Scripts/check-contract-codes.py
 ```
 
 Use `--manifest path/to/codes.json` for an exported manifest, or `PRISMEDIA_CODES_URL` to
 target another development API. This covers Entity kinds, Auto Identify selector families,
-capability discriminators, and the book/reader code families the native app models directly;
+capability discriminators and payload decoding, and the book/reader code families the native app models directly;
 UI-only and playback-local values are intentionally outside the check.
 
 UI smoke test against the deterministic mock server:
