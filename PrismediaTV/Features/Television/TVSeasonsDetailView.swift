@@ -241,24 +241,25 @@ import SwiftUI
 
         private var routeEpisodeID: UUID? {
             guard routeLink?.intent == .playback,
-                routeLink?.kind == .videoSeason
+                routeLink?.kind == .videoEpisode
             else { return nil }
-            return routeLink?.sourceThumbnail?.id
+            return routeLink?.entityID
         }
 
         private func preferredEpisodeID(in seasonID: UUID) -> UUID? {
             guard let initialFocusEpisodeID else { return nil }
-            if let source = routeLink?.sourceThumbnail,
-                source.id == initialFocusEpisodeID
+            if let routeLink,
+                routeLink.kind == .videoEpisode,
+                routeLink.entityID == initialFocusEpisodeID
             {
-                return source.parentEntityID == seasonID ? initialFocusEpisodeID : nil
+                return routeLink.parentEntityID == seasonID ? initialFocusEpisodeID : nil
             }
             return initialFocusEpisodeID
         }
 
         private func handleAdvancedEpisode(_ link: EntityLink) {
-            guard let source = link.sourceThumbnail,
-                let episode = snapshot.episodes.first(where: { $0.id == source.id })
+            guard link.kind == .videoEpisode,
+                let episode = snapshot.episodes.first(where: { $0.id == link.entityID })
             else { return }
             snapshot.fullscreenRequest = nil
             applyEpisodeSelection(episode, intent: .focus)

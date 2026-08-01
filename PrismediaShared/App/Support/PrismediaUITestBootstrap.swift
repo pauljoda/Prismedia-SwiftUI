@@ -63,7 +63,7 @@
             case .movie:
                 mode = ModeCatalog.video
                 destinationID = "movies"
-            case .video:
+            case .video, .videoEpisode:
                 mode = ModeCatalog.video
                 destinationID = "videos"
             case .videoSeries, .videoSeason:

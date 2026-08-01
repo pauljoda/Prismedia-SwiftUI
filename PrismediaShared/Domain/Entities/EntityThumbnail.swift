@@ -50,13 +50,6 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         return hoverURL
     }
 
-    /// Movie playback can be represented by its owned video entity. Present
-    /// that playable child with movie poster geometry everywhere a thumbnail
-    /// is rendered, while standalone and episodic videos remain landscape.
-    public var thumbnailPresentationKind: EntityKind {
-        kind == .video && parentKind == .movie ? .movie : kind
-    }
-
     private enum CodingKeys: String, CodingKey {
         case id
         case kind

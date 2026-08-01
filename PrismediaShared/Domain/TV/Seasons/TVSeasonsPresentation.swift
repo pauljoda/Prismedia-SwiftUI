@@ -11,7 +11,7 @@ enum TVSeasonsPresentation {
 
     static func episodes(in season: EntityDetail) -> [EntityThumbnail] {
         guard season.kind == .videoSeason else { return [] }
-        return orderedChildren(of: .video, in: season)
+        return orderedChildren(of: .videoEpisode, in: season)
     }
 
     static func paletteArtworkPath(
@@ -67,10 +67,10 @@ enum TVSeasonsPresentation {
         episodes: [EntityThumbnail]
     ) -> EntityThumbnail? {
         guard link?.intent == .playback,
-            link?.kind == .videoSeason,
-            let sourceID = link?.sourceThumbnail?.id
+            link?.kind == .videoEpisode,
+            let episodeID = link?.entityID
         else { return nil }
-        return episodes.first { $0.id == sourceID }
+        return episodes.first { $0.id == episodeID }
     }
 
     static func episodeSelection(

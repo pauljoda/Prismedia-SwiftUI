@@ -21,6 +21,7 @@ extension EntityDetail {
             case .lifetime(let value): value as? Value
             case .links(let value): value as? Value
             case .markers(let value): value as? Value
+            case .playableVideo(let value): value as? Value
             case .playback(let value): value as? Value
             case .personProfile(let value): value as? Value
             case .position(let value): value as? Value

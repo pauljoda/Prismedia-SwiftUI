@@ -3,7 +3,7 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoProgressPlaybackRouteTests: XCTestCase {
-    func testEpisodeProgressRoutesDirectlyThroughSeasonPlayback() throws {
+    func testEpisodeProgressRoutesDirectlyThroughTheEpisodeEntity() throws {
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episodeID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
         let episode = try PrismediaJSON.decoder().decode(
@@ -12,11 +12,12 @@ final class VideoProgressPlaybackRouteTests: XCTestCase {
                 """
                 {
                   "id":"\(episodeID)",
-                  "kind":"video",
+                  "kind":"video-episode",
                   "title":"The Continue Episode",
                   "parentEntityId":"\(seasonID)",
                   "hasSourceMedia":true,
                   "capabilities":[
+                    {"kind":"playable-video"},
                     {
                       "kind":"playback",
                       "playCount":2,
@@ -43,8 +44,10 @@ final class VideoProgressPlaybackRouteTests: XCTestCase {
         let route = try XCTUnwrap(VideoProgressPlaybackRoute.link(for: episode))
 
         XCTAssertEqual(route.intent, .playback)
-        XCTAssertEqual(route.entityID, seasonID)
-        XCTAssertEqual(route.kind, .videoSeason)
+        XCTAssertEqual(route.entityID, episodeID)
+        XCTAssertEqual(route.kind, .videoEpisode)
+        XCTAssertEqual(route.parentEntityID, seasonID)
+        XCTAssertEqual(route.parentKind, .videoSeason)
         XCTAssertEqual(route.sourceThumbnail?.id, episodeID)
         XCTAssertEqual(route.thumbnailPreview?.resumeSeconds, 423)
         XCTAssertEqual(route.thumbnailPreview?.artworkPath, "/episodes/continue@2x.jpg")

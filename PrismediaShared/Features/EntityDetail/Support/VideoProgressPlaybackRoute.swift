@@ -1,6 +1,8 @@
 enum VideoProgressPlaybackRoute {
     static func link(for episode: EntityDetail) -> EntityLink? {
-        guard episode.kind == .video else { return nil }
+        guard episode.kind == .videoEpisode,
+            episode.capability(EntityPlayableVideoCapability.self) != nil
+        else { return nil }
 
         let images: EntityImagesCapability? = episode.capability()
         let playback: EntityPlaybackCapability? = episode.capability()

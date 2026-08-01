@@ -193,21 +193,21 @@ final class VideoPlaybackSessionTests: XCTestCase {
         XCTAssertEqual(session.activeOwnerLink, secondLink)
     }
 
-    func testAdvancingSeasonPlaybackRetainsTheSeasonOwnerAndUpdatesItsEpisodeSource() throws {
+    func testAdvancingEpisodePlaybackTransfersOwnershipToTheNextEpisode() throws {
         let session = VideoPlaybackSession(service: SessionVideoPlaybackService())
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let firstID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
         let secondID = UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
         let first = EntityThumbnail(
             id: firstID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode One",
             parentEntityID: seasonID,
             parentKind: .videoSeason
         )
         let second = EntityThumbnail(
             id: secondID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode Two",
             parentEntityID: seasonID,
             parentKind: .videoSeason
@@ -227,8 +227,9 @@ final class VideoPlaybackSessionTests: XCTestCase {
         )
 
         XCTAssertNotNil(advancedController)
-        XCTAssertEqual(session.activeOwnerLink?.entityID, seasonID)
-        XCTAssertEqual(session.activeOwnerLink?.kind, .videoSeason)
+        XCTAssertEqual(session.activeOwnerLink?.entityID, secondID)
+        XCTAssertEqual(session.activeOwnerLink?.kind, .videoEpisode)
+        XCTAssertEqual(session.activeOwnerLink?.parentEntityID, seasonID)
         XCTAssertEqual(session.activeOwnerLink?.sourceThumbnail?.id, secondID)
     }
 
@@ -315,17 +316,14 @@ final class VideoPlaybackSessionTests: XCTestCase {
         title: String = "Page-owned Video",
         resumeSeconds: Double? = nil
     ) throws -> EntityDetail {
-        let capabilities =
-            resumeSeconds.map { seconds in
-                """
-                [{"kind":"playback","playCount":0,"skipCount":0,"playDurationSeconds":0,"resumeSeconds":\(seconds)}]
-                """
-            } ?? "[]"
+        let playback = resumeSeconds.map { seconds in
+            ",{\"kind\":\"playback\",\"playCount\":0,\"skipCount\":0,\"playDurationSeconds\":0,\"resumeSeconds\":\(seconds)}"
+        } ?? ""
         return try PrismediaJSON.decoder().decode(
             EntityDetail.self,
             from: Data(
                 """
-                {"id":"\(id.uuidString)","kind":"video","title":"\(title)","hasSourceMedia":true,"capabilities":\(capabilities),"childrenByKind":[],"relationships":[]}
+                {"id":"\(id.uuidString)","kind":"video","title":"\(title)","hasSourceMedia":true,"capabilities":[{"kind":"playable-video"}\(playback)],"childrenByKind":[],"relationships":[]}
                 """.utf8))
     }
 

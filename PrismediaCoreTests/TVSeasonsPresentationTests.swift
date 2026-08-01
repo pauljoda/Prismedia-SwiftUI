@@ -39,20 +39,20 @@ final class TVSeasonsPresentationTests: XCTestCase {
     func testSeasonEpisodesUseEpisodeOrderAndIgnoreRelationships() throws {
         let first = thumbnail(
             id: "11111111-1111-1111-1111-111111111111",
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode 1",
             order: 1
         )
         let second = thumbnail(
             id: "22222222-2222-2222-2222-222222222222",
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode 2",
             order: 2
         )
         let season = detail(
             kind: .videoSeason,
             children: [
-                EntityGroup(kind: .video, label: "Episodes", entities: [second, first], code: nil),
+                EntityGroup(kind: .videoEpisode, label: "Episodes", entities: [second, first], code: nil),
                 EntityGroup(kind: .person, label: "Cast", entities: [thumbnail(kind: .person)], code: "cast"),
             ]
         )
@@ -63,16 +63,16 @@ final class TVSeasonsPresentationTests: XCTestCase {
     }
 
     func testPlaybackRouteSelectsItsExactEpisodeWithinTheSeason() {
-        let first = thumbnail(kind: .video, order: 1)
+        let first = thumbnail(kind: .videoEpisode, order: 1)
         let requested = thumbnail(
             id: "22222222-2222-2222-2222-222222222222",
-            kind: .video,
+            kind: .videoEpisode,
             order: 2
         )
         let route = EntityLink(
             thumbnail: EntityThumbnail(
                 id: requested.id,
-                kind: .video,
+                kind: .videoEpisode,
                 title: requested.title,
                 parentEntityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
                 parentKind: .videoSeason
@@ -94,12 +94,12 @@ final class TVSeasonsPresentationTests: XCTestCase {
 
     func testHierarchyProjectionRejectsTheWrongDetailLevel() {
         let season = thumbnail(kind: .videoSeason, order: 1)
-        let episode = thumbnail(kind: .video, order: 1)
+        let episode = thumbnail(kind: .videoEpisode, order: 1)
         let movie = detail(
             kind: .movie,
             children: [
                 EntityGroup(kind: .videoSeason, label: "Seasons", entities: [season], code: nil),
-                EntityGroup(kind: .video, label: "Videos", entities: [episode], code: nil),
+                EntityGroup(kind: .videoEpisode, label: "Episodes", entities: [episode], code: nil),
             ]
         )
 
@@ -204,7 +204,7 @@ final class TVSeasonsPresentationTests: XCTestCase {
 
     func testPaletteArtworkFallsBackToTheEpisodeThumbnailWithoutParentArtwork() {
         let episode = thumbnail(
-            kind: .video,
+            kind: .videoEpisode,
             order: 1,
             coverPath: "/episode-thumbnail.jpg"
         )
@@ -252,17 +252,17 @@ final class TVSeasonsPresentationTests: XCTestCase {
     }
 
     func testInstallingASeasonSelectsThePreferredProgressEpisode() {
-        let first = thumbnail(kind: .video, order: 1)
+        let first = thumbnail(kind: .videoEpisode, order: 1)
         let progressEpisode = thumbnail(
             id: "22222222-2222-2222-2222-222222222222",
-            kind: .video,
+            kind: .videoEpisode,
             order: 2
         )
         let season = detail(
             kind: .videoSeason,
             children: [
                 EntityGroup(
-                    kind: .video,
+                    kind: .videoEpisode,
                     label: "Episodes",
                     entities: [first, progressEpisode],
                     code: nil
@@ -277,9 +277,9 @@ final class TVSeasonsPresentationTests: XCTestCase {
     }
 
     func testEpisodeDescriptionPrefersLoadedEpisodeDetail() {
-        let episode = thumbnail(kind: .video, order: 1)
+        let episode = thumbnail(kind: .videoEpisode, order: 1)
         let episodeDetail = detail(
-            kind: .video,
+            kind: .videoEpisode,
             children: [],
             description: "The episode-specific description."
         )
@@ -295,7 +295,7 @@ final class TVSeasonsPresentationTests: XCTestCase {
     }
 
     func testEpisodeDescriptionFallsBackFromThumbnailToSeries() {
-        let episode = thumbnail(kind: .video, order: 1, summary: "Episode summary")
+        let episode = thumbnail(kind: .videoEpisode, order: 1, summary: "Episode summary")
 
         XCTAssertEqual(
             TVEpisodeDescriptionPresentation.text(
@@ -307,7 +307,7 @@ final class TVSeasonsPresentationTests: XCTestCase {
         )
         XCTAssertEqual(
             TVEpisodeDescriptionPresentation.text(
-                episode: thumbnail(kind: .video, order: 1),
+                episode: thumbnail(kind: .videoEpisode, order: 1),
                 episodeDetail: nil,
                 seriesDescription: "Series description"
             ),
@@ -317,15 +317,15 @@ final class TVSeasonsPresentationTests: XCTestCase {
 
     func testRefreshingASeasonPreservesSelectionAndUpdatesEpisodeProgress() {
         let selectedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        let first = thumbnail(kind: .video, order: 1)
+        let first = thumbnail(kind: .videoEpisode, order: 1)
         let selected = thumbnail(
             id: selectedID.uuidString,
-            kind: .video,
+            kind: .videoEpisode,
             order: 2
         )
         let refreshedSelected = thumbnail(
             id: selectedID.uuidString,
-            kind: .video,
+            kind: .videoEpisode,
             order: 2,
             progress: 0.64,
             resumeSeconds: 1_800
@@ -334,7 +334,7 @@ final class TVSeasonsPresentationTests: XCTestCase {
         snapshot.installSeason(
             detail(
                 kind: .videoSeason,
-                children: [.init(kind: .video, label: "Episodes", entities: [first, selected], code: nil)]
+                children: [.init(kind: .videoEpisode, label: "Episodes", entities: [first, selected], code: nil)]
             ),
             preferredEpisodeID: selectedID
         )
@@ -343,7 +343,7 @@ final class TVSeasonsPresentationTests: XCTestCase {
             detail(
                 kind: .videoSeason,
                 children: [
-                    .init(kind: .video, label: "Episodes", entities: [first, refreshedSelected], code: nil)
+                    .init(kind: .videoEpisode, label: "Episodes", entities: [first, refreshedSelected], code: nil)
                 ]
             )
         )
@@ -415,10 +415,10 @@ final class TVSeasonsPresentationTests: XCTestCase {
         coverPath: String? = nil
     ) -> EntityThumbnail {
         let parentID =
-            kind == .video
+            kind == .videoEpisode
             ? UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
             : nil
-        let parentKind: EntityKind? = kind == .video ? .videoSeason : nil
+        let parentKind: EntityKind? = kind == .videoEpisode ? .videoSeason : nil
 
         return EntityThumbnail(
             id: UUID(uuidString: id)!,
@@ -479,7 +479,7 @@ final class TVSeasonsUseCaseTests: XCTestCase {
         )
         let episode = EntityDetail(
             id: episodeID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Current Episode",
             parentEntityID: seasonID,
             sortOrder: 5,
@@ -504,7 +504,7 @@ final class TVSeasonsUseCaseTests: XCTestCase {
         let seasonID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!
         let episode = EntityThumbnail(
             id: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode 1",
             parentEntityID: seasonID,
             parentKind: .videoSeason,
@@ -536,7 +536,7 @@ final class TVSeasonsUseCaseTests: XCTestCase {
             sortOrder: 1,
             hasSourceMedia: false,
             capabilities: [],
-            childrenByKind: [.init(kind: .video, label: "Episodes", entities: [episode], code: nil)],
+            childrenByKind: [.init(kind: .videoEpisode, label: "Episodes", entities: [episode], code: nil)],
             relationships: []
         )
         let loader = TVSeasonsLoaderStub(values: [seriesID: series])

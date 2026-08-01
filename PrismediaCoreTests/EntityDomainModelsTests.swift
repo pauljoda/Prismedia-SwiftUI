@@ -33,13 +33,11 @@ final class EntityDomainModelsTests: XCTestCase {
         }
     }
 
-    func testMovieOwnedVideoUsesMoviePosterArtworkGeometry() {
+    func testMovieUsesItsOwnPosterArtworkGeometry() {
         let thumbnail = EntityThumbnail(
             id: UUID(),
-            kind: .video,
-            title: "Movie File",
-            parentEntityID: UUID(),
-            parentKind: .movie
+            kind: .movie,
+            title: "Movie"
         )
 
         XCTAssertEqual(
@@ -47,7 +45,6 @@ final class EntityDomainModelsTests: XCTestCase {
             EntityKind.movie.thumbnailAspectRatio,
             accuracy: 0.000_001
         )
-        XCTAssertEqual(thumbnail.thumbnailPresentationKind, .movie)
     }
 
     func testBookReaderMetadataIsCapabilityBacked() throws {
@@ -96,6 +93,10 @@ final class EntityDomainModelsTests: XCTestCase {
             }),
             (#"{"kind":"gallery-metadata","galleryType":"images"}"#, {
                 if case .galleryMetadata(let value) = $0 { return value.galleryType == "images" }
+                return false
+            }),
+            (#"{"kind":"playable-video"}"#, {
+                if case .playableVideo = $0 { return true }
                 return false
             }),
             (#"{"kind":"person-profile","disambiguation":"Writer","gender":null,"country":null,"ethnicity":null,"eyeColor":null,"hairColor":null,"height":null,"weight":null,"measurements":null,"tattoos":null,"piercings":null}"#, {
@@ -305,15 +306,12 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(unknown.kind, "future-reading-mode")
     }
 
-    func testMovieOwnedVideoLinksToTheMovieDetail() {
+    func testMovieLinksDirectlyToItsOwnDetail() {
         let movieID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
-        let videoID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
         let thumbnail = EntityThumbnail(
-            id: videoID,
-            kind: .video,
-            title: "Movie File",
-            parentEntityID: movieID,
-            parentKind: .movie,
+            id: movieID,
+            kind: .movie,
+            title: "Movie",
             progress: 0.25,
             resumeSeconds: 50
         )
@@ -328,12 +326,12 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(link.thumbnailPreview?.resumeSeconds, 50)
     }
 
-    func testEpisodePlaybackLinksToItsSeasonAndPreservesTheEpisodeSource() {
+    func testEpisodePlaybackLinksDirectlyAndPreservesItsParentContext() {
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episodeID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
         let thumbnail = EntityThumbnail(
             id: episodeID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode Seven",
             parentEntityID: seasonID,
             parentKind: .videoSeason,
@@ -343,8 +341,10 @@ final class EntityDomainModelsTests: XCTestCase {
 
         let link = EntityLink(thumbnail: thumbnail, intent: .playback)
 
-        XCTAssertEqual(link.entityID, seasonID)
-        XCTAssertEqual(link.kind, .videoSeason)
+        XCTAssertEqual(link.entityID, episodeID)
+        XCTAssertEqual(link.kind, .videoEpisode)
+        XCTAssertEqual(link.parentEntityID, seasonID)
+        XCTAssertEqual(link.parentKind, .videoSeason)
         XCTAssertEqual(link.intent, .playback)
         XCTAssertEqual(link.sourceThumbnail, thumbnail)
         XCTAssertEqual(link.thumbnailPreview?.artworkPath, "/episodes/seven@2x.jpg")
@@ -356,7 +356,7 @@ final class EntityDomainModelsTests: XCTestCase {
         let episodeID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
         let thumbnail = EntityThumbnail(
             id: episodeID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode Seven",
             parentEntityID: seasonID,
             parentKind: .videoSeason
@@ -365,7 +365,7 @@ final class EntityDomainModelsTests: XCTestCase {
         let link = EntityLink(thumbnail: thumbnail, intent: .detail)
 
         XCTAssertEqual(link.entityID, episodeID)
-        XCTAssertEqual(link.kind, .video)
+        XCTAssertEqual(link.kind, .videoEpisode)
         XCTAssertEqual(link.parentEntityID, seasonID)
         XCTAssertEqual(link.parentKind, .videoSeason)
     }
@@ -376,14 +376,14 @@ final class EntityDomainModelsTests: XCTestCase {
         let secondID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
         let first = EntityThumbnail(
             id: firstID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode One",
             parentEntityID: seasonID,
             parentKind: .videoSeason
         )
         let refreshedFirst = EntityThumbnail(
             id: firstID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode One (Refreshed)",
             parentEntityID: seasonID,
             parentKind: .videoSeason,
@@ -391,7 +391,7 @@ final class EntityDomainModelsTests: XCTestCase {
         )
         let second = EntityThumbnail(
             id: secondID,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode Two",
             parentEntityID: seasonID,
             parentKind: .videoSeason

@@ -200,13 +200,11 @@ final class VideoPlaybackPreparationTests: XCTestCase {
         XCTAssertEqual(preparation.phase, .failure("Playback negotiation failed."))
     }
 
-    func testMoviePreparationResolvesPlayableChildBeforeNegotiatingAndPrefersItsResumePosition() async throws {
+    func testMoviePreparationNegotiatesTheDirectEntityAndPrefersItsResumePosition() async throws {
         let movieID = UUID(uuidString: "30303030-3030-3030-3030-303030303030")!
-        let videoID = UUID(uuidString: "31313131-3131-3131-3131-313131313131")!
-        let movie = try movieDetail(id: movieID, videoID: videoID)
-        let video = try videoDetail(id: videoID, resumeSeconds: 96)
-        let loader = DeferredPlaybackDetailLoader(result: video)
-        let service = DeferredPlaybackService(videoID: videoID)
+        let movie = try movieDetail(id: movieID, resumeSeconds: 96)
+        let loader = DeferredPlaybackDetailLoader(result: movie)
+        let service = DeferredPlaybackService(videoID: movieID)
         let factory = DeferredPlaybackControllerFactorySpy()
         let readiness = DeferredPlaybackReadinessGate()
         let preparation = VideoPlaybackPreparationCoordinator(
@@ -236,8 +234,8 @@ final class VideoPlaybackPreparationTests: XCTestCase {
 
         let loadedIDs = await loader.loadedIDs
         let negotiatedVideoIDs = await service.directNegotiatedVideoIDs
-        XCTAssertEqual(loadedIDs, [videoID])
-        XCTAssertEqual(negotiatedVideoIDs, [videoID])
+        XCTAssertEqual(loadedIDs, [])
+        XCTAssertEqual(negotiatedVideoIDs, [movieID])
         XCTAssertEqual(preparation.requestedResumeSeconds, 96)
 
         await readiness.open()
@@ -279,26 +277,23 @@ final class VideoPlaybackPreparationTests: XCTestCase {
     }
 
     private func videoDetail(id: UUID, resumeSeconds: Double? = nil) throws -> EntityDetail {
-        let capabilities =
-            resumeSeconds.map {
-                """
-                [{"kind":"playback","playCount":0,"skipCount":0,"playDurationSeconds":0,"resumeSeconds":\($0)}]
-                """
-            } ?? "[]"
+        let playback = resumeSeconds.map {
+            ",{\"kind\":\"playback\",\"playCount\":0,\"skipCount\":0,\"playDurationSeconds\":0,\"resumeSeconds\":\($0)}"
+        } ?? ""
         return try PrismediaJSON.decoder().decode(
             EntityDetail.self,
             from: Data(
                 """
-                {"id":"\(id.uuidString)","kind":"video","title":"Playable","hasSourceMedia":true,"capabilities":\(capabilities),"childrenByKind":[],"relationships":[]}
+                {"id":"\(id.uuidString)","kind":"video","title":"Playable","hasSourceMedia":true,"capabilities":[{"kind":"playable-video"}\(playback)],"childrenByKind":[],"relationships":[]}
                 """.utf8))
     }
 
-    private func movieDetail(id: UUID, videoID: UUID) throws -> EntityDetail {
+    private func movieDetail(id: UUID, resumeSeconds: Double) throws -> EntityDetail {
         try PrismediaJSON.decoder().decode(
             EntityDetail.self,
             from: Data(
                 """
-                {"id":"\(id.uuidString)","kind":"movie","title":"Feature","hasSourceMedia":true,"capabilities":[],"childrenByKind":[{"kind":"video","label":"Videos","entities":[{"id":"\(videoID.uuidString)","kind":"video","title":"Playable"}]}],"relationships":[]}
+                {"id":"\(id.uuidString)","kind":"movie","title":"Feature","hasSourceMedia":true,"capabilities":[{"kind":"playable-video"},{"kind":"playback","playCount":0,"skipCount":0,"playDurationSeconds":0,"resumeSeconds":\(resumeSeconds)}],"childrenByKind":[],"relationships":[]}
                 """.utf8))
     }
 

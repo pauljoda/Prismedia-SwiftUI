@@ -166,12 +166,12 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
-    func testRestoringEpisodePlaybackUsesTheSeriesStackAndPreservesSeasonReturn() async {
+    func testRestoringEpisodePlaybackUsesItsDefinitionOwnedDestination() async {
         let router = PrismediaAppRouter()
         let seasonID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let episode = EntityThumbnail(
             id: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode Two",
             parentEntityID: seasonID,
             parentKind: .videoSeason
@@ -180,8 +180,8 @@ final class AppShellNavigationTests: XCTestCase {
 
         await router.restoreVideoPlayback(episodeLink)
 
-        XCTAssertEqual(router.selectedTab, .destination("series"))
-        XCTAssertEqual(router.path(for: "series"), [episodeLink])
+        XCTAssertEqual(router.selectedTab, .destination("videos"))
+        XCTAssertEqual(router.path(for: "videos"), [episodeLink])
     }
 
     @MainActor

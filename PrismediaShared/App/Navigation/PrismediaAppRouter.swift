@@ -176,16 +176,7 @@ public final class PrismediaAppRouter {
     }
 
     public func restoreVideoPlayback(_ link: EntityLink) async {
-        let destinationID =
-            if link.kind == .movie {
-                "movies"
-            } else if link.kind == .videoSeason
-                || link.kind == .videoSeries
-            {
-                "series"
-            } else {
-                "videos"
-            }
+        let destinationID = link.kind.definition?.navigation?.destinationID ?? "videos"
         guard let destination = ModeCatalog.video.destination(id: destinationID) else { return }
 
         select(mode: ModeCatalog.video, destination: destination)

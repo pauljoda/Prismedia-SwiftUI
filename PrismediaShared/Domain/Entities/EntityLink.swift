@@ -40,13 +40,6 @@ public struct EntityLink: Hashable, Sendable {
         let canonicalParentKind: EntityKind?
         if thumbnail.kind == .audioTrack, thumbnail.parentEntityID != nil {
             canonicalParentKind = .audioLibrary
-        } else if thumbnail.kind == .video, thumbnail.parentKind == .movie {
-            canonicalParentKind = .movie
-        } else if thumbnail.kind == .video,
-            thumbnail.parentKind == .videoSeason,
-            intent == .playback
-        {
-            canonicalParentKind = .videoSeason
         } else {
             canonicalParentKind = nil
         }

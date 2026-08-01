@@ -6,7 +6,8 @@ public enum PlayableVideoResolver {
         sourceThumbnail: EntityThumbnail?
     ) -> UUID? {
         if let sourceThumbnail,
-            sourceThumbnail.kind == .video,
+            sourceThumbnail.hasSourceMedia,
+            sourceThumbnail.kind.definition?.mediaQualityFamily == .video,
             sourceBelongsToDetail(sourceThumbnail, detail: detail)
         {
             return sourceThumbnail.id
@@ -15,11 +16,7 @@ public enum PlayableVideoResolver {
     }
 
     public static func videoID(in detail: EntityDetail) -> UUID? {
-        if detail.kind == .video { return detail.id }
-        guard detail.kind == .movie else { return nil }
-        return detail.childrenByKind
-            .first(where: { $0.kind == .video })?
-            .entities.first?.id
+        detail.capability(EntityPlayableVideoCapability.self) == nil ? nil : detail.id
     }
 
     private static func sourceBelongsToDetail(
