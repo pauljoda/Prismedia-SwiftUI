@@ -48,7 +48,7 @@ class EntityListResponseTests(unittest.TestCase):
             ["Mock Video Beta", "Mock Video Alpha"],
             [item["title"] for item in response["items"]],
         )
-        self.assertEqual(3, response["totalCount"])
+        self.assertEqual(2, response["totalCount"])
 
     def test_added_sort_uses_fixture_order_and_honors_descending_direction(self):
         response = mock_server.build_entity_list_response(
@@ -96,7 +96,7 @@ class EntityListResponseTests(unittest.TestCase):
                 self.assertEqual(1, len(response["items"]))
                 self.assertEqual(kind, response["items"][0]["kind"])
 
-    def test_detail_document_reuses_the_thumbnail_identity_and_exposes_groups(self):
+    def test_movie_detail_reuses_the_thumbnail_identity_and_is_directly_playable(self):
         entity_id = "33333333-3333-3333-3333-333333333333"
 
         detail = mock_server.build_entity_detail_response(entity_id)
@@ -107,7 +107,8 @@ class EntityListResponseTests(unittest.TestCase):
         images = detail["capabilities"][1]
         self.assertEqual("backdrop", images["items"][0]["kind"])
         self.assertEqual(mock_server.PUBLIC_BANNER_PATH, images["items"][0]["path"])
-        self.assertEqual("Mock Video Alpha", detail["childrenByKind"][0]["entities"][0]["title"])
+        self.assertEqual([], detail["childrenByKind"])
+        self.assertIn("playable-video", [item["kind"] for item in detail["capabilities"]])
 
     def test_detail_document_returns_none_for_an_unknown_entity(self):
         self.assertIsNone(
