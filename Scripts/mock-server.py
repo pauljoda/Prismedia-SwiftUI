@@ -870,12 +870,6 @@ MOCK_AUDIO = build_mock_audio()
 ENTITIES[VIDEO_ALPHA_INDEX]["progress"] = 0.25
 ENTITIES[VIDEO_ALPHA_INDEX]["resumeSeconds"] = 15
 ENTITIES[MOVIE_ONE_INDEX]["rating"] = None
-ENTITIES[VIDEO_ALPHA_INDEX]["parentEntityId"] = ENTITIES[MOVIE_ONE_INDEX]["id"]
-ENTITIES[VIDEO_ALPHA_INDEX]["parentKind"] = "movie"
-ENTITIES[VIDEO_ALPHA_INDEX]["sortOrder"] = 0
-ENTITIES[VIDEO_BETA_INDEX]["parentEntityId"] = ENTITIES[MOVIE_ONE_INDEX]["id"]
-ENTITIES[VIDEO_BETA_INDEX]["parentKind"] = "movie"
-ENTITIES[VIDEO_BETA_INDEX]["sortOrder"] = 1
 ENTITIES[MOVIE_ONE_INDEX]["progress"] = 0.25
 ENTITIES[MOVIE_ONE_INDEX]["resumeSeconds"] = 15
 ENTITIES[MOVIE_TWO_INDEX]["playCount"] = 1
@@ -932,7 +926,7 @@ ENTITIES[SERIES_INDEX].update(
 
 def episode_thumbnail(index, season_index=0):
     title = "Mock Episode One" if index == 1 and season_index == 0 else f"Mock Episode {index:02d}"
-    episode = thumb("1", "video", title)
+    episode = thumb("1", "video-episode", title)
     short_summary = f"Episode {index} changes the focused description immediately."
     long_summary = (
         f"Episode {index} follows the crew through a long, atmospheric mystery. "
@@ -1082,14 +1076,6 @@ def build_entity_detail_response(entity_id):
         return None
 
     child_groups = []
-    if entity["kind"] == "movie":
-        child_groups.append(
-            {
-                "kind": "video",
-                "label": "Videos",
-                "entities": [ENTITIES[VIDEO_ALPHA_INDEX], ENTITIES[VIDEO_BETA_INDEX]],
-            }
-        )
     if entity["kind"] == "video-series":
         child_groups.append(
             {
@@ -1101,7 +1087,7 @@ def build_entity_detail_response(entity_id):
     if entity["kind"] == "video-season":
         child_groups.append(
             {
-                "kind": "video",
+                "kind": "video-episode",
                 "label": "Episodes",
                 "entities": SEASON_EPISODES.get(entity["id"], []),
             }
@@ -1165,7 +1151,8 @@ def build_entity_detail_response(entity_id):
             "isWanted": False,
         },
     ]
-    if entity["kind"] == "video":
+    if entity["kind"] in ("video", "movie", "video-episode"):
+        capabilities.append({"kind": "playable-video"})
         capabilities.append(
             {
                 "kind": "playback",
@@ -1246,7 +1233,7 @@ def build_entity_detail_response(entity_id):
         "title": entity["title"],
         "parentEntityId": entity["parentEntityId"],
         "sortOrder": entity["sortOrder"],
-        "hasSourceMedia": entity["kind"] in ("video", "image")
+        "hasSourceMedia": entity["kind"] in ("video", "movie", "video-episode", "image")
         or entity["id"] in (EPUB_BOOK_ID, PDF_BOOK_ID, AUDIOBOOK_ID),
         "capabilities": capabilities,
         "childrenByKind": child_groups,
