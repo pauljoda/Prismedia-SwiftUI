@@ -14,6 +14,7 @@
         @State private var searchResults: [EPUBSearchResult] = []
         @State private var isSearching = false
         @State private var chapterProgress: EPUBChapterProgress?
+        @State private var exactLocation = ""
         @State private var canGoPrevious = false
         @State private var canGoNext = false
         @State private var bookmarksState = EPUBBookmarksState()
@@ -38,6 +39,7 @@
             bookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
+            initialUpdatedAt: Date? = nil,
             progressRanges: [EPUBReadingProgressRange] = [],
             companionPlayer: MusicPlayerController? = nil,
             findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
@@ -51,6 +53,7 @@
                 locatorStore: locatorStore,
                 initialLocation: initialLocation,
                 initialProgression: initialProgression,
+                initialUpdatedAt: initialUpdatedAt,
                 progressRanges: progressRanges
             )
             _session = State(initialValue: session)
@@ -105,6 +108,7 @@
             .task {
                 bookmarksState = bookmarkStore.load(bookID: bookID)
                 session.onChapterProgressChange = { chapterProgress = $0 }
+                session.onExactLocationChange = { exactLocation = $0 }
                 session.onPageNavigationAvailabilityChange = {
                     canGoPrevious = $0
                     canGoNext = $1
@@ -163,6 +167,9 @@
                 )
                 .ignoresSafeArea()
                 .accessibilityIdentifier("epub-reader.page")
+                #if DEBUG
+                    .accessibilityValue(exactLocation)
+                #endif
 
                 if isLoading {
                     PrismediaLoadingView("Opening EPUB…")
@@ -376,6 +383,9 @@
 
         private func scheduleChromeHide() {
             chromeTask?.cancel()
+            #if DEBUG
+                guard !CommandLine.arguments.contains("-prismedia-ui-testing") else { return }
+            #endif
             guard chrome.shouldScheduleHide,
                 !isReaderPresentationActive,
                 !isLoading,

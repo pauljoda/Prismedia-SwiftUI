@@ -10,6 +10,7 @@ public struct EntityReaderView: View {
     let locatorStore: EPUBLocatorStore
     let initialEPUBLocation: String?
     let initialEPUBProgression: Double?
+    let initialEPUBUpdatedAt: Date?
     let epubProgressRanges: [EPUBReadingProgressRange]
     let companionPlayer: MusicPlayerController?
     let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
@@ -23,6 +24,7 @@ public struct EntityReaderView: View {
         locatorStore: EPUBLocatorStore = .disabled,
         initialEPUBLocation: String? = nil,
         initialEPUBProgression: Double? = nil,
+        initialEPUBUpdatedAt: Date? = nil,
         epubProgressRanges: [EPUBReadingProgressRange] = [],
         companionPlayer: MusicPlayerController? = nil,
         findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
@@ -35,6 +37,7 @@ public struct EntityReaderView: View {
         self.locatorStore = locatorStore
         self.initialEPUBLocation = initialEPUBLocation
         self.initialEPUBProgression = initialEPUBProgression
+        self.initialEPUBUpdatedAt = initialEPUBUpdatedAt
         self.epubProgressRanges = epubProgressRanges
         self.companionPlayer = companionPlayer
         self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
@@ -65,6 +68,7 @@ public struct EntityReaderView: View {
                         locatorStore: locatorStore,
                         initialLocation: initialEPUBLocation,
                         initialProgression: initialEPUBProgression,
+                        initialUpdatedAt: initialEPUBUpdatedAt,
                         progressRanges: epubProgressRanges,
                         companionPlayer: companionPlayer,
                         findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,

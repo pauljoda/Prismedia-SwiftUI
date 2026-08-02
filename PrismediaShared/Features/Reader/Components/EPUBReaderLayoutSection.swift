@@ -11,6 +11,7 @@
                     Label("Scroll", systemImage: "scroll").tag(ReaderMode.scrolled)
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("epub-reader.flow")
 
                 Picker("Columns", selection: $preferences.columnCount) {
                     Text("Automatic").tag(EPUBReaderColumnCount.automatic)

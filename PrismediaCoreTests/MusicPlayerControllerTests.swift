@@ -603,7 +603,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(store.savedProgress.last?.elapsedTime, 18)
     }
 
-    func testActiveAudiobookPlaybackReportsListeningTimeAndCanonicalProgress() async throws {
+    func testAppWideAudiobookPlaybackReportsListeningTimeAndReaderPosition() async throws {
         let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
         let track = makeTrack(idSuffix: 1, duration: 60)
         let service = MusicPlaybackServiceStub()
@@ -636,6 +636,10 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(update.request.index, 33)
         XCTAssertEqual(update.request.activitySeconds, 12)
         XCTAssertEqual(update.request.activityKind, .listening)
+        XCTAssertEqual(
+            update.request.location,
+            "Text/chapter-1.xhtml#prismedia-progress=0.0033333333333333335"
+        )
         XCTAssertEqual(controller.currentTrackDuration, 3_600)
     }
 
@@ -925,7 +929,8 @@ final class MusicPlayerControllerTests: XCTestCase {
                     startIndex: 0,
                     endIndex: 10_000,
                     total: 10_000,
-                    mode: .paged
+                    mode: .paged,
+                    readerLocation: "Text/chapter-1.xhtml"
                 )
             ]
         )
@@ -1049,7 +1054,7 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
         playbackUpdates.append((id, resumeSeconds, activitySeconds, completed))
     }
 
-    func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
+    func reportEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
         entityProgressUpdates.append((id, request))
     }
 }
@@ -1084,6 +1089,11 @@ private final class SuspendingMusicPlaybackServiceStub: MusicPlaybackServicing {
         resumeSeconds: Double?,
         activitySeconds: Double?,
         completed: Bool?
+    ) async throws {}
+
+    func reportEntityProgress(
+        id: UUID,
+        request: EntityProgressUpdateRequest
     ) async throws {}
 
     func finishRecording() {

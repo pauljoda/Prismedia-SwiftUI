@@ -225,6 +225,116 @@ final class PrismediaShellUITests: XCTestCase {
     }
 
     @MainActor
+    func testAppWideAudiobookAdvancesCombinedBookWhileReaderIsClosedAndAppIsBackgrounded() throws {
+        let app = signedInApplication(
+            initialEntityID: "edededed-eded-eded-eded-edededededed",
+            kind: "book"
+        )
+        XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 10))
+        XCTAssertTrue(element("combined-book-progress", in: app).waitForExistence(timeout: 10))
+
+        let listen = element("combined-book-progress.continue-listening", in: app)
+        XCTAssertTrue(listen.waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForHittable(listen))
+        listen.tap()
+
+        let miniPlayer = element("music.mini-player", in: app)
+        let openMiniPlayer = element("music.mini-player.track", in: app)
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
+        XCTAssertTrue(openMiniPlayer.waitForExistence(timeout: 5))
+        XCTAssertFalse(element("epub-reader.content", in: app).exists)
+
+        XCUIDevice.shared.press(.home)
+        RunLoop.current.run(until: Date().addingTimeInterval(7))
+        app.activate()
+        XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
+        openMiniPlayer.tap()
+        XCTAssertTrue(element("music.now-playing", in: app).waitForExistence(timeout: 10))
+
+        let pause = app.buttons["Pause"].firstMatch
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        pause.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(3))
+        element("music.close-player", in: app).tap()
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 10))
+        XCTAssertTrue(element("combined-book-progress", in: app).waitForExistence(timeout: 10))
+
+        let continueReading = element("combined-book-progress.continue-reading", in: app)
+        XCTAssertTrue(continueReading.waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForHittable(continueReading))
+        continueReading.tap()
+        let page = element("epub-reader.page", in: app)
+        XCTAssertTrue(page.waitForExistence(timeout: 20))
+        RunLoop.current.run(until: Date().addingTimeInterval(2))
+        let locator = try epubLocator(from: page)
+        XCTAssertTrue((locator["href"] as? String ?? "").contains("chapter-1.xhtml"))
+        let locations = try XCTUnwrap(locator["locations"] as? [String: Any])
+        XCTAssertGreaterThan(locations["progression"] as? Double ?? 0, 0.3)
+    }
+
+    @MainActor
+    func testEPUBScrollParagraphFocusResumesTheSameExactLocatorAfterTextResize() throws {
+        let app = signedInApplication(
+            initialEntityID: "edededed-eded-eded-eded-edededededed",
+            kind: "book"
+        )
+        XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 10))
+
+        let resume = element("entity-detail.action.resume", in: app)
+        XCTAssertTrue(resume.waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForHittable(resume))
+        resume.tap()
+
+        var page = element("epub-reader.page", in: app)
+        XCTAssertTrue(page.waitForExistence(timeout: 20))
+        revealReaderChrome(page: page, in: app)
+        element("epub-reader.settings-button", in: app).tap()
+        let settingsPanel = app.collectionViews["epub-reader.settings"]
+        XCTAssertTrue(settingsPanel.waitForExistence(timeout: 5))
+
+        let flow = app.segmentedControls["epub-reader.flow"]
+        revealInSettings(flow, panel: settingsPanel)
+        XCTAssertTrue(flow.waitForExistence(timeout: 5))
+        flow.buttons["Scroll"].tap()
+        let paragraphFocus = element("epub-reader.paragraph-focus", in: app)
+        revealInSettings(paragraphFocus, panel: settingsPanel)
+        XCTAssertTrue(paragraphFocus.waitForExistence(timeout: 5))
+        if paragraphFocus.value as? String != "1" { paragraphFocus.tap() }
+        app.buttons["Done"].tap()
+
+        page = element("epub-reader.page", in: app)
+        for _ in 0..<4 { page.swipeUp() }
+        RunLoop.current.run(until: Date().addingTimeInterval(2))
+        let beforeResize = try exactEPUBAnchor(from: page)
+
+        revealReaderChrome(page: page, in: app)
+        element("epub-reader.settings-button", in: app).tap()
+        let increment = app.buttons["epub-reader.text-size-Increment"]
+        XCTAssertTrue(increment.waitForExistence(timeout: 5))
+        increment.tap()
+        app.buttons["Done"].tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(2))
+
+        page = element("epub-reader.page", in: app)
+        XCTAssertEqual(beforeResize, try exactEPUBAnchor(from: page))
+        revealReaderChrome(page: page, in: app)
+        element("epub-reader.close", in: app).tap()
+        XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 10))
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(element("entity-detail.content", in: app).waitForExistence(timeout: 10))
+        element("entity-detail.action.resume", in: app).tap()
+        page = element("epub-reader.page", in: app)
+        XCTAssertTrue(page.waitForExistence(timeout: 20))
+        RunLoop.current.run(until: Date().addingTimeInterval(2))
+        XCTAssertEqual(beforeResize, try exactEPUBAnchor(from: page))
+    }
+
+    @MainActor
     func testNativePlaybackSwitchesAudioAndStyledSubtitles() throws {
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
@@ -457,6 +567,50 @@ final class PrismediaShellUITests: XCTestCase {
     @MainActor
     private func revealPlaybackChrome(in app: XCUIApplication) {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.72, dy: 0.5)).tap()
+    }
+
+    @MainActor
+    private func revealReaderChrome(page: XCUIElement, in app: XCUIApplication) {
+        let settings = element("epub-reader.settings-button", in: app)
+        if settings.exists { return }
+        page.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func revealInSettings(_ target: XCUIElement, panel: XCUIElement) {
+        for _ in 0..<5 where !target.isHittable {
+            panel.swipeUp()
+        }
+    }
+
+    @MainActor
+    private func exactEPUBAnchor(from page: XCUIElement) throws -> String {
+        let locator = try epubLocator(from: page)
+        let href = locator["href"] as? String ?? ""
+        let locations = locator["locations"] as? [String: Any]
+        let fragments = locations?["fragments"] as? [String] ?? []
+        let text = locator["text"] as? [String: Any]
+        let before = String((text?["before"] as? String ?? "").suffix(80))
+        let highlight = text?["highlight"] as? String ?? ""
+        let after = String((text?["after"] as? String ?? "").prefix(80))
+        let semanticAnchor = ([href] + fragments + [before, highlight, after])
+            .joined(separator: "|")
+        XCTAssertFalse(href.isEmpty)
+        XCTAssertTrue(
+            !fragments.isEmpty || !before.isEmpty || !highlight.isEmpty || !after.isEmpty,
+            "A Readium locator must retain a text or fragment anchor, not only a percentage."
+        )
+        return semanticAnchor
+    }
+
+    @MainActor
+    private func epubLocator(from page: XCUIElement) throws -> [String: Any] {
+        let serialized = try XCTUnwrap(page.value as? String)
+        let data = try XCTUnwrap(serialized.data(using: .utf8))
+        return try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
     }
 
     @MainActor

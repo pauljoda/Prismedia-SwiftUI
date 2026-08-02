@@ -40,7 +40,12 @@ struct BookProgressMappingResolver: Sendable {
             total: mapping.total,
             mode: mapping.mode,
             completed: completed ? true : nil,
-            location: nil,
+            location: mapping.readerLocation.map {
+                DocumentReaderProgressMapper.epubLocation(
+                    chapterLocation: $0,
+                    progress: fraction
+                )
+            },
             activitySeconds: activitySeconds,
             activityKind: .listening
         )

@@ -128,7 +128,7 @@ extension EntityDetailView {
             do {
                 await musicPlayer.flushPendingPlaybackReports()
                 musicPlayer.setAudiobookCompletionState(false)
-                try await playbackService.updateEntityProgress(
+                try await playbackService.reportEntityProgress(
                     id: detail.id,
                     request: EntityProgressUpdateRequest(
                         currentEntityID: mapping.currentEntityID,
@@ -163,7 +163,7 @@ extension EntityDetailView {
             do {
                 await musicPlayer.flushPendingPlaybackReports()
                 if isCurrent { musicPlayer.setAudiobookCompletionState(marksCompleted) }
-                try await playbackService.updateEntityProgress(
+                try await playbackService.reportEntityProgress(
                     id: detail.id,
                     request: EntityProgressUpdateRequest(
                         currentEntityID: progress.currentEntityID ?? detail.id,

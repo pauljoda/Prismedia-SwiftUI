@@ -21,4 +21,13 @@ enum EPUBReaderResumeSource: Equatable, Sendable {
             )
         }
     }
+
+    var serializedLocation: String? {
+        switch self {
+        case .explicitLocator(let location), .device(let location):
+            location
+        case .explicit:
+            nil
+        }
+    }
 }

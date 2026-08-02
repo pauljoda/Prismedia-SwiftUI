@@ -15,5 +15,10 @@
             activitySeconds: Double?,
             completed: Bool?
         ) async throws {}
+
+        func reportEntityProgress(
+            id: UUID,
+            request: EntityProgressUpdateRequest
+        ) async throws {}
     }
 #endif

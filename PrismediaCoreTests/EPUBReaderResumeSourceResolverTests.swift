@@ -78,7 +78,7 @@ final class EPUBReaderResumeSourceResolverTests: XCTestCase {
         )
     }
 
-    func testFartherSameChapterDeviceLocatorProtectsAnImmediateReopen() {
+    func testServerLocatorRemainsAuthoritativeWhenDeviceLocatorIsOnlyFarther() {
         let serverLocation = """
             {
               "href": "Text/catelyn.xhtml",
@@ -98,10 +98,10 @@ final class EPUBReaderResumeSourceResolverTests: XCTestCase {
             deviceLocation: deviceLocation
         )
 
-        XCTAssertEqual(source, .device(deviceLocation))
+        XCTAssertEqual(source, .explicitLocator(serverLocation))
     }
 
-    func testFartherServerTotalProgressWinsOverDeviceChapterProgress() {
+    func testServerCurrentLocationWinsWithoutComparingFurthestProgress() {
         let serverLocation = """
             {
               "href": "Text/catelyn.xhtml",
@@ -122,6 +122,33 @@ final class EPUBReaderResumeSourceResolverTests: XCTestCase {
         )
 
         XCTAssertEqual(source, .explicitLocator(serverLocation))
+    }
+
+    func testNewerDeviceLocatorWinsEvenWhenTheUserMovedBackward() {
+        let serverLocation = """
+            {
+              "href": "Text/catelyn.xhtml",
+              "locations": { "progression": 0.80, "totalProgression": 0.80 }
+            }
+            """
+        let deviceLocation = """
+            {
+              "href": "Text/catelyn.xhtml",
+              "locations": { "progression": 0.30, "totalProgression": 0.30 }
+            }
+            """
+        let serverDate = Date(timeIntervalSince1970: 100)
+        let deviceDate = Date(timeIntervalSince1970: 200)
+
+        let source = EPUBReaderResumeSourceResolver().resolve(
+            explicitLocation: serverLocation,
+            explicitProgression: nil,
+            explicitUpdatedAt: serverDate,
+            deviceLocation: deviceLocation,
+            deviceUpdatedAt: deviceDate
+        )
+
+        XCTAssertEqual(source, .device(deviceLocation))
     }
 
     func testOpaqueServerCFIFallsBackToTheReadableDeviceLocator() {

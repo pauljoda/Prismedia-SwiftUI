@@ -43,7 +43,8 @@ extension EntityDetailView {
             detail: detail,
             command: command,
             initialEPUBLocation: initialEPUBLocation,
-            initialEPUBProgression: initialEPUBProgression
+            initialEPUBProgression: initialEPUBProgression,
+            initialEPUBUpdatedAt: command == .resume ? progress?.updatedAt : nil
         )
     }
 
@@ -100,7 +101,13 @@ extension EntityDetailView {
 
     func presentReader(detail: EntityDetail, command: BookReaderCommand) {
         guard dependencies.readerService != nil else { return }
-        readerPresentation = .init(detail: detail, command: command)
+        let progress: EntityProgressCapability? = detail.capability()
+        readerPresentation = .init(
+            detail: detail,
+            command: command,
+            initialEPUBLocation: command == .resume ? progress?.location : nil,
+            initialEPUBUpdatedAt: command == .resume ? progress?.updatedAt : nil
+        )
     }
 
     func presentReader(
@@ -117,6 +124,7 @@ extension EntityDetailView {
             command: .read,
             initialEPUBLocation: location,
             initialEPUBProgression: progression,
+            initialEPUBUpdatedAt: detail.capability(EntityProgressCapability.self)?.updatedAt,
             companionAudiobookBookID: companionAudiobookBookID,
             companionAudiobookTrackID: companionAudiobookTrackID,
             companionAudiobookStartSeconds: companionAudiobookStartSeconds

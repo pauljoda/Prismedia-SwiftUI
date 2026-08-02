@@ -7,6 +7,7 @@
         var body: some View {
             Section {
                 Toggle("Progressive Paragraph Focus", isOn: $preferences.scrollFocusEnabled)
+                    .accessibilityIdentifier("epub-reader.paragraph-focus")
 
                 if preferences.scrollFocusEnabled {
                     VStack(alignment: .leading, spacing: 8) {

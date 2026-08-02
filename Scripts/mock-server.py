@@ -680,6 +680,27 @@ AUDIOBOOK_PARTS = [
         "duration": "00:02:00",
     },
 ]
+EPUB_AUDIO_PARTS = [
+    {
+        **thumb("e1", "audio-track", "The First Signal"),
+        "id": "e1000000-0000-0000-0000-000000000001",
+        "parentEntityId": EPUB_BOOK_ID,
+        "parentKind": "book",
+        "sortOrder": 0,
+        "meta": [{"icon": "duration", "label": "01:40"}],
+        "duration": "00:01:40",
+    },
+    {
+        **thumb("e2", "audio-track", "The Second Signal"),
+        "id": "e2000000-0000-0000-0000-000000000002",
+        "parentEntityId": EPUB_BOOK_ID,
+        "parentKind": "book",
+        "sortOrder": 1,
+        "meta": [{"icon": "duration", "label": "01:40"}],
+        "duration": "00:01:40",
+    },
+]
+ALL_AUDIOBOOK_PARTS = AUDIOBOOK_PARTS + EPUB_AUDIO_PARTS
 AUDIOBOOK_PLAYBACK = {
     "accessCount": 0,
     "completionCount": 0,
@@ -688,6 +709,31 @@ AUDIOBOOK_PLAYBACK = {
     "resumeSeconds": 145,
     "lastActiveAt": "2026-07-11T00:00:00Z",
     "completedAt": None,
+}
+EPUB_PLAYBACK = {
+    "accessCount": 0,
+    "completionCount": 0,
+    "skipCount": 0,
+    "activeSeconds": 0,
+    "resumeSeconds": 20,
+    "lastActiveAt": "2026-07-11T00:00:00Z",
+    "completedAt": None,
+}
+BOOK_PLAYBACK_BY_ID = {
+    AUDIOBOOK_ID: AUDIOBOOK_PLAYBACK,
+    EPUB_BOOK_ID: EPUB_PLAYBACK,
+}
+AUDIOBOOK_PROGRESS = {
+    "currentEntityId": AUDIOBOOK_ID,
+    "unit": "second",
+    "index": 145,
+    "total": 300,
+    "mode": None,
+    "completedAt": None,
+    "updatedAt": "2026-07-11T00:00:00Z",
+    "workIndex": 145,
+    "workTotal": 300,
+    "location": None,
 }
 CHAPTER_ID = "81818181-8181-8181-8181-818181818181"
 PAGE_IDS = [
@@ -710,12 +756,12 @@ BOOK_PROGRESS = {
 EPUB_BOOK_PROGRESS = {
     "currentEntityId": EPUB_BOOK_ID,
     "unit": "cfi",
-    "index": 2500,
+    "index": 1000,
     "total": 10000,
     "mode": "paged",
     "completedAt": None,
     "updatedAt": "2026-07-11T00:00:00Z",
-    "workIndex": 2500,
+    "workIndex": 1000,
     "workTotal": 10000,
     "location": None,
 }
@@ -735,6 +781,7 @@ BOOK_PROGRESS_BY_ID = {
     BOOK_ID: BOOK_PROGRESS,
     EPUB_BOOK_ID: EPUB_BOOK_PROGRESS,
     PDF_BOOK_ID: PDF_BOOK_PROGRESS,
+    AUDIOBOOK_ID: AUDIOBOOK_PROGRESS,
 }
 MOCK_PAGE_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL+WQAAAABJRU5ErkJggg=="
@@ -767,6 +814,14 @@ This is <i>italic</i>, <b>bold</b>, and <u>underlined</u>.
 def build_mock_epub():
     """Build a small EPUB 3 fixture with navigation, images, and searchable text."""
     container = io.BytesIO()
+    first_chapter_paragraphs = "\n".join(
+        f"<p>First signal paragraph {index:02d}. The lighthouse kept its patient watch across the quiet sea.</p>"
+        for index in range(1, 61)
+    )
+    second_chapter_paragraphs = "\n".join(
+        f"<p>Second signal paragraph {index:02d}. The native reader kept every word close at hand.</p>"
+        for index in range(1, 61)
+    )
     with zipfile.ZipFile(container, "w") as archive:
         archive.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
         archive.writestr(
@@ -804,15 +859,15 @@ def build_mock_epub():
         )
         archive.writestr(
             "OEBPS/chapter-1.xhtml",
-            """<?xml version="1.0" encoding="UTF-8"?>
+            f"""<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>The First Signal</title></head>
-<body><h1>The First Signal</h1><p>The lighthouse answered from beyond the quiet sea.</p></body></html>""",
+<body><h1>The First Signal</h1>{first_chapter_paragraphs}</body></html>""",
         )
         archive.writestr(
             "OEBPS/chapter-2.xhtml",
-            """<?xml version="1.0" encoding="UTF-8"?>
+            f"""<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>The Second Signal</title></head>
-<body><h1>The Second Signal</h1><p>A native reader keeps every word close at hand.</p></body></html>""",
+<body><h1>The Second Signal</h1>{second_chapter_paragraphs}</body></html>""",
         )
     return container.getvalue()
 
@@ -1048,7 +1103,7 @@ def load_image_media(entity_id, role):
 
 def build_entity_detail_response(entity_id):
     """Build the generic EntityCard document returned by GET /api/entities/{id}."""
-    audiobook_part = next((item for item in AUDIOBOOK_PARTS if item["id"] == entity_id), None)
+    audiobook_part = next((item for item in ALL_AUDIOBOOK_PARTS if item["id"] == entity_id), None)
     if audiobook_part is not None:
         return {
             "id": audiobook_part["id"],
@@ -1115,6 +1170,14 @@ def build_entity_detail_response(entity_id):
                 "entities": AUDIOBOOK_PARTS,
             }
         )
+    if entity["kind"] == "book" and entity["id"] == EPUB_BOOK_ID:
+        child_groups.append(
+            {
+                "kind": "audio-track",
+                "label": "Audio Tracks",
+                "entities": EPUB_AUDIO_PARTS,
+            }
+        )
 
     image_items = []
     image_kinds = ["cover"]
@@ -1150,6 +1213,23 @@ def build_entity_detail_response(entity_id):
             "isWanted": False,
         },
     ]
+    if entity["kind"] == "book":
+        if entity["id"] == BOOK_ID:
+            book_type, book_format = "comic", "image-archive"
+        elif entity["id"] == EPUB_BOOK_ID:
+            book_type, book_format = "novel", "epub"
+        elif entity["id"] == AUDIOBOOK_ID:
+            book_type, book_format = "novel", "audio"
+        else:
+            book_type, book_format = "document", "pdf"
+        capabilities.append(
+            {
+                "kind": "book-metadata",
+                "bookType": book_type,
+                "format": book_format,
+                "coverPageId": PAGE_IDS[0] if entity["id"] == BOOK_ID else None,
+            }
+        )
     if entity["kind"] in ("video", "movie", "video-episode"):
         capabilities.append({"kind": "playable-video"})
         capabilities.append(
@@ -1214,8 +1294,8 @@ def build_entity_detail_response(entity_id):
         )
     if entity["kind"] == "book" and entity["id"] in BOOK_PROGRESS_BY_ID:
         capabilities.append({"kind": "progress", **BOOK_PROGRESS_BY_ID[entity["id"]]})
-    if entity["id"] == AUDIOBOOK_ID:
-        capabilities.append({"kind": "consumption", **AUDIOBOOK_PLAYBACK})
+    if entity["id"] in BOOK_PLAYBACK_BY_ID:
+        capabilities.append({"kind": "consumption", **BOOK_PLAYBACK_BY_ID[entity["id"]]})
 
     relationships = []
     if entity["kind"] == "movie":
@@ -1580,7 +1660,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/audio-stream/"):
             track_id = path.removeprefix("/api/audio-stream/")
-            if any(item["id"] == track_id for item in AUDIOBOOK_PARTS):
+            if any(item["id"] == track_id for item in ALL_AUDIOBOOK_PARTS):
                 return self._send_audio()
             return self._send(404, {"code": "audio_track_not_found", "message": "Audio track was not found."})
 
@@ -1688,7 +1768,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_media(contents, content_type, head_only=True)
         if path.startswith("/api/audio-stream/"):
             track_id = path.removeprefix("/api/audio-stream/")
-            if any(item["id"] == track_id for item in AUDIOBOOK_PARTS):
+            if any(item["id"] == track_id for item in ALL_AUDIOBOOK_PARTS):
                 return self._send_audio(head_only=True)
         playback_parts = path.strip("/").split("/")
         if (
@@ -1747,6 +1827,11 @@ class Handler(BaseHTTPRequestHandler):
                 progress["completedAt"] = "2026-07-11T00:01:00Z"
             elif body.get("completed") is False:
                 progress["completedAt"] = None
+            activity_seconds = body.get("activitySeconds")
+            if entity["id"] in BOOK_PLAYBACK_BY_ID and activity_seconds is not None:
+                BOOK_PLAYBACK_BY_ID[entity["id"]]["activeSeconds"] += max(
+                    0, float(activity_seconds)
+                )
         elif parts[3] == "playback" and entity["id"] == AUDIOBOOK_ID:
             if body.get("resumeSeconds") is not None:
                 AUDIOBOOK_PLAYBACK["resumeSeconds"] = max(0, float(body["resumeSeconds"]))
@@ -1824,6 +1909,17 @@ class Handler(BaseHTTPRequestHandler):
             detail = build_entity_detail_response(track_id)
             if detail is not None:
                 return self._send(200, detail)
+
+        if (
+            len(playback_parts) == 5
+            and playback_parts[:2] == ["api", "entities"]
+            and playback_parts[3:] == ["playback", "events"]
+            and playback_parts[2] in BOOK_PLAYBACK_BY_ID
+        ):
+            if body.get("kind") == "accessed":
+                BOOK_PLAYBACK_BY_ID[playback_parts[2]]["accessCount"] += 1
+            entity = next(item for item in ENTITIES if item["id"] == playback_parts[2])
+            return self._send(200, entity)
 
         return self._send(404, {"code": "not_found", "message": f"No mock for {self.path}"})
 

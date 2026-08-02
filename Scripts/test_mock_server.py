@@ -146,8 +146,11 @@ class EntityListResponseTests(unittest.TestCase):
 
         self.assertEqual("epub", epub["format"])
         self.assertTrue(epub["hasSourceMedia"])
-        self.assertEqual("cfi", epub["capabilities"][-1]["unit"])
-        self.assertEqual(10000, epub["capabilities"][-1]["total"])
+        epub_progress = next(
+            capability for capability in epub["capabilities"] if capability["kind"] == "progress"
+        )
+        self.assertEqual("cfi", epub_progress["unit"])
+        self.assertEqual(10000, epub_progress["total"])
         self.assertEqual("pdf", pdf["format"])
         self.assertTrue(pdf["hasSourceMedia"])
         self.assertEqual("page", pdf["capabilities"][-1]["unit"])
@@ -256,7 +259,50 @@ class PlaybackFixtureTests(unittest.TestCase):
 
 class EntityListHTTPTests(unittest.TestCase):
     def setUp(self):
-        mock_server.AUDIOBOOK_PLAYBACK.update({"resumeSeconds": 145, "completedAt": None})
+        mock_server.AUDIOBOOK_PLAYBACK.update(
+            {
+                "accessCount": 0,
+                "activeSeconds": 0,
+                "resumeSeconds": 145,
+                "completedAt": None,
+            }
+        )
+        mock_server.AUDIOBOOK_PROGRESS.update(
+            {
+                "currentEntityId": mock_server.AUDIOBOOK_ID,
+                "unit": "second",
+                "index": 145,
+                "total": 300,
+                "mode": None,
+                "completedAt": None,
+                "updatedAt": "2026-07-11T00:00:00Z",
+                "workIndex": 145,
+                "workTotal": 300,
+                "location": None,
+            }
+        )
+        mock_server.EPUB_PLAYBACK.update(
+            {
+                "accessCount": 0,
+                "activeSeconds": 0,
+                "resumeSeconds": 20,
+                "completedAt": None,
+            }
+        )
+        mock_server.EPUB_BOOK_PROGRESS.update(
+            {
+                "currentEntityId": mock_server.EPUB_BOOK_ID,
+                "unit": "cfi",
+                "index": 1000,
+                "total": 10000,
+                "mode": "paged",
+                "completedAt": None,
+                "updatedAt": "2026-07-11T00:00:00Z",
+                "workIndex": 1000,
+                "workTotal": 10000,
+                "location": None,
+            }
+        )
         self.server = mock_server.HTTPServer(("127.0.0.1", 0), mock_server.Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -315,6 +361,90 @@ class EntityListHTTPTests(unittest.TestCase):
         )
         with urlopen(session_request) as response:
             self.assertEqual(204, response.status)
+
+    def test_app_wide_audiobook_progress_updates_cursor_activity_and_access(self):
+        port = self.server.server_address[1]
+        headers = {
+            "Authorization": f"Bearer {mock_server.TOKEN}",
+            "Content-Type": "application/json",
+        }
+        progress_request = Request(
+            f"http://127.0.0.1:{port}/api/entities/{mock_server.AUDIOBOOK_ID}/progress",
+            data=json.dumps(
+                {
+                    "currentEntityId": mock_server.AUDIOBOOK_ID,
+                    "unit": "second",
+                    "index": 152,
+                    "total": 300,
+                    "activitySeconds": 7,
+                    "activityKind": "listening",
+                }
+            ).encode(),
+            headers=headers,
+            method="PATCH",
+        )
+        with urlopen(progress_request) as response:
+            detail = json.load(response)
+
+        progress = next(item for item in detail["capabilities"] if item["kind"] == "progress")
+        consumption = next(
+            item for item in detail["capabilities"] if item["kind"] == "consumption"
+        )
+        self.assertEqual(152, progress["index"])
+        self.assertEqual(7, consumption["activeSeconds"])
+
+        access_request = Request(
+            f"http://127.0.0.1:{port}/api/entities/{mock_server.AUDIOBOOK_ID}/playback/events",
+            data=json.dumps({"kind": "accessed"}).encode(),
+            headers=headers,
+            method="POST",
+        )
+        with urlopen(access_request):
+            pass
+        self.assertEqual(1, mock_server.AUDIOBOOK_PLAYBACK["accessCount"])
+
+    def test_combined_book_listening_updates_reader_location_activity_and_access(self):
+        port = self.server.server_address[1]
+        headers = {
+            "Authorization": f"Bearer {mock_server.TOKEN}",
+            "Content-Type": "application/json",
+        }
+        location = "OEBPS/chapter-1.xhtml#prismedia-progress=0.4"
+        progress_request = Request(
+            f"http://127.0.0.1:{port}/api/entities/{mock_server.EPUB_BOOK_ID}/progress",
+            data=json.dumps(
+                {
+                    "currentEntityId": mock_server.EPUB_BOOK_ID,
+                    "unit": "cfi",
+                    "index": 2000,
+                    "total": 10000,
+                    "location": location,
+                    "activitySeconds": 7,
+                    "activityKind": "listening",
+                }
+            ).encode(),
+            headers=headers,
+            method="PATCH",
+        )
+        with urlopen(progress_request) as response:
+            detail = json.load(response)
+
+        progress = next(item for item in detail["capabilities"] if item["kind"] == "progress")
+        consumption = next(
+            item for item in detail["capabilities"] if item["kind"] == "consumption"
+        )
+        self.assertEqual(location, progress["location"])
+        self.assertEqual(7, consumption["activeSeconds"])
+
+        access_request = Request(
+            f"http://127.0.0.1:{port}/api/entities/{mock_server.EPUB_BOOK_ID}/playback/events",
+            data=json.dumps({"kind": "accessed"}).encode(),
+            headers=headers,
+            method="POST",
+        )
+        with urlopen(access_request):
+            pass
+        self.assertEqual(1, mock_server.EPUB_PLAYBACK["accessCount"])
 
     def test_subtitle_settings_and_ass_routes_support_both_player_contracts(self):
         port = self.server.server_address[1]

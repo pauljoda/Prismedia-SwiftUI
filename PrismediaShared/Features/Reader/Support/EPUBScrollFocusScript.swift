@@ -192,6 +192,41 @@ enum EPUBScrollFocusScript {
             settleGuide();
           };
 
+          const currentAnchor = () => {
+            refreshBlocks();
+            const focusTarget = focusTargetY(window.innerHeight / 2);
+            const visible = blocks
+              .map((element) => measureBlock(element, focusTarget))
+              .filter(({ isVisible }) => isVisible);
+            const active = activeMeasurement(visible)?.element;
+            if (!active) return null;
+            const text = (active.textContent ?? "").replace(/\\s+/g, " ").trim();
+            return {
+              index: blocks.indexOf(active),
+              text: text.length > 0 ? text.slice(0, 512) : null
+            };
+          };
+
+          const restoreAnchor = (anchor) => {
+            refreshBlocks();
+            const normalizedText = (value) => {
+              return typeof value === "string" ? value.replace(/\\s+/g, " ").trim() : "";
+            };
+            const requestedText = normalizedText(anchor?.text);
+            const requestedIndex = Number(anchor?.index);
+            let target = Number.isInteger(requestedIndex) && requestedIndex >= 0
+              ? blocks[requestedIndex]
+              : null;
+            if (requestedText.length > 0 && normalizedText(target?.textContent) !== requestedText) {
+              target = blocks.find((block) => normalizedText(block.textContent) === requestedText) ?? null;
+            }
+            if (!target) return false;
+            target.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
+            scheduleFocus();
+            settleGuide();
+            return true;
+          };
+
           window.prismediaReadingFocus = {
             update(configuration) {
               state = configuration;
@@ -199,7 +234,9 @@ enum EPUBScrollFocusScript {
               refreshBlocks();
               scheduleFocus();
               settleGuide();
-            }
+            },
+            currentAnchor,
+            restoreAnchor
           };
 
           window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
@@ -212,6 +249,16 @@ enum EPUBScrollFocusScript {
 
     static func update(preferences: EPUBReaderPreferences) -> String {
         "window.prismediaReadingFocus?.update(\(configuration(preferences)));"
+    }
+
+    static let currentParagraphAnchor =
+        "JSON.stringify(window.prismediaReadingFocus?.currentAnchor?.() ?? null);"
+
+    static func restoreParagraphAnchor(_ anchor: EPUBParagraphAnchor) -> String {
+        guard let data = try? JSONEncoder().encode(anchor),
+            let json = String(data: data, encoding: .utf8)
+        else { return "false;" }
+        return "window.prismediaReadingFocus?.restoreAnchor?.(\(json)) ?? false;"
     }
 
     private static func configuration(_ preferences: EPUBReaderPreferences) -> String {

@@ -19,7 +19,7 @@ struct BookProgressMappingBuilder: Sendable {
             }
 
             switch readTarget {
-            case .epub:
+            case .epub(let location):
                 guard let start = chapter.readStartFraction,
                     let end = chapter.readEndFraction,
                     start.isFinite,
@@ -33,7 +33,8 @@ struct BookProgressMappingBuilder: Sendable {
                     startIndex: Int((bounded(start) * Double(epubProgressTotal)).rounded()),
                     endIndex: Int((bounded(end) * Double(epubProgressTotal)).rounded()),
                     total: epubProgressTotal,
-                    mode: readerMode
+                    mode: readerMode,
+                    readerLocation: location
                 )
             case .entityChapter(let chapterID):
                 let pageCount = max(0, chapter.readPageCount ?? 0)

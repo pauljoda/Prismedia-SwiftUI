@@ -10,6 +10,7 @@
         private(set) var preferences: EPUBReaderPreferences
 
         var onProgressionChange: ((Double) -> Void)?
+        var onExactLocationChange: ((String) -> Void)?
         var onChapterProgressChange: ((EPUBChapterProgress) -> Void)?
         var onPageNavigationAvailabilityChange: ((Bool, Bool) -> Void)?
         var onToggleReturnAvailabilityChange: ((Bool) -> Void)?
@@ -23,6 +24,7 @@
         private let locatorStore: EPUBLocatorStore
         private let initialLocation: String?
         private let initialProgression: Double?
+        private let initialUpdatedAt: Date?
         private let progressRanges: [EPUBReadingProgressRange]
         private let progressWriter: BookReaderProgressWriter
         private var publication: Publication?
@@ -38,6 +40,13 @@
         private var pendingChapterRestoreResourceKey: String?
         private var explicitNavigationResourceKey: String?
         private var scrollFocusResourceKey: String?
+        private var latestExactParagraph: EPUBParagraphAnchor?
+        private var latestExactLocation: String?
+        private var latestExactResourceKey: String?
+        private var pendingExactParagraph: (resourceKey: String, anchor: EPUBParagraphAnchor)?
+        private var exactCaptureGeneration = 0
+        private var preferenceApplyGeneration = 0
+        private var isRestoringExactParagraph = false
         private var toggleNavigation = EPUBToggleBookmarkNavigation()
         private var isToggleNavigationInFlight = false
 
@@ -51,6 +60,7 @@
             locatorStore: EPUBLocatorStore,
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
+            initialUpdatedAt: Date? = nil,
             progressRanges: [EPUBReadingProgressRange] = []
         ) {
             self.book = book
@@ -60,6 +70,7 @@
             self.locatorStore = locatorStore
             self.initialLocation = initialLocation
             self.initialProgression = initialProgression
+            self.initialUpdatedAt = initialUpdatedAt
             self.progressRanges = progressRanges
             progressWriter = BookReaderProgressWriter(service: service)
             preferences = preferencesStore.loadEPUB()
@@ -119,15 +130,34 @@
             if let currentLocation = controller.currentLocation {
                 activeResourceKey = resourceKey(currentLocation.href)
                 updateLocation(currentLocation)
+                Task { await restorePendingExactParagraphIfNeeded(for: currentLocation) }
             }
             return tableOfContents
         }
 
         func apply(_ preferences: EPUBReaderPreferences, useDarkSystemTheme: Bool) {
+            let paragraphAnchor = latestExactParagraph
+            let resourceKey = latestExactResourceKey
+            preferenceApplyGeneration &+= 1
+            let generation = preferenceApplyGeneration
             self.preferences = preferences
             preferencesStore.save(preferences)
             navigator?.submitPreferences(readiumPreferences(useDarkSystemTheme: useDarkSystemTheme))
-            Task { await applyScrollFocus() }
+            Task {
+                await applyScrollFocus()
+                guard generation == preferenceApplyGeneration,
+                    let paragraphAnchor,
+                    resourceKey == activeResourceKey
+                else { return }
+                try? await Task.sleep(for: .milliseconds(350))
+                guard generation == preferenceApplyGeneration else { return }
+                guard await restoreParagraphAnchor(paragraphAnchor),
+                    generation == preferenceApplyGeneration,
+                    let currentLocation = navigator?.currentLocation
+                else { return }
+                updateLocation(currentLocation)
+                await captureExactLocation(for: currentLocation, persist: true)
+            }
         }
 
         func openTableOfContentsItem(_ item: EPUBTableOfContentsItem) async {
@@ -199,7 +229,7 @@
         func currentBookmark(createdAt: Date = Date()) -> EPUBBookmark? {
             guard
                 let locator = navigator?.currentLocation,
-                let location = try? locator.jsonString()
+                let location = serializedLocation(for: locator)
             else { return nil }
 
             guard
@@ -286,6 +316,9 @@
 
         func flush(closing: Bool) async {
             if shouldPersistReadingLocation {
+                if let currentLocation = navigator?.currentLocation {
+                    await captureExactLocation(for: currentLocation, persist: false)
+                }
                 saveProgress(closing: closing, stoppingActivity: closing)
             }
             await progressWriter.flush()
@@ -302,6 +335,9 @@
 
         func pauseActivity() async {
             if shouldPersistReadingLocation {
+                if let currentLocation = navigator?.currentLocation {
+                    await captureExactLocation(for: currentLocation, persist: false)
+                }
                 saveProgress(closing: false, stoppingActivity: true)
             }
             await progressWriter.flush()
@@ -325,16 +361,19 @@
             in publication: Publication,
             tableOfContentsLinks: [Link]
         ) async -> Locator? {
+            let checkpoint = command == .resume
+                ? locatorStore.loadCheckpoint(bookID: book.id)
+                : nil
             let source = EPUBReaderResumeSourceResolver().resolve(
                 explicitLocation: initialLocation,
                 explicitProgression: initialProgression,
-                deviceLocation: command == .resume
-                    ? locatorStore.load(bookID: book.id)
-                    : nil
+                explicitUpdatedAt: initialUpdatedAt,
+                deviceLocation: checkpoint?.locator,
+                deviceUpdatedAt: checkpoint?.savedAt
             )
             switch source {
             case .explicitLocator(let location):
-                guard let locator = try? Locator(jsonString: location) else { return nil }
+                guard let locator = locator(from: location) else { return nil }
                 return await publication.locate(locator)
             case .explicit(let target):
                 guard
@@ -348,7 +387,7 @@
                     $0.progression = target.progression
                 })
             case .device(let location):
-                guard let locator = try? Locator(jsonString: location) else { return nil }
+                guard let locator = locator(from: location) else { return nil }
                 return await publication.locate(locator)
             case nil:
                 return nil
@@ -514,9 +553,20 @@
         private func resolvedLocator(_ location: String) async -> Locator? {
             guard
                 let publication,
-                let locator = try? Locator(jsonString: location)
+                let locator = locator(from: location)
             else { return nil }
             return await publication.locate(locator)
+        }
+
+        private func locator(from serializedLocation: String) -> Locator? {
+            if let anchor = EPUBParagraphLocator.anchor(from: serializedLocation),
+                let href = EPUBParagraphLocator.href(from: serializedLocation)
+            {
+                pendingExactParagraph = (resourceKey(href), anchor)
+            }
+            let readiumLocation = EPUBParagraphLocator.removingAnchor(from: serializedLocation)
+                ?? serializedLocation
+            return try? Locator(jsonString: readiumLocation)
         }
 
         private func navigateExplicitly(to locator: Locator) async -> Bool {
@@ -524,6 +574,9 @@
             let destinationResourceKey = resourceKey(locator.href)
             explicitNavigationResourceKey = destinationResourceKey
             let didNavigate = await navigator?.go(to: locator, options: .animated) ?? false
+            if didNavigate {
+                await restorePendingExactParagraphIfNeeded(for: locator)
+            }
             if explicitNavigationResourceKey == destinationResourceKey {
                 explicitNavigationResourceKey = nil
             }
@@ -548,7 +601,7 @@
             if let currentLocation {
                 rememberChapterPosition(currentLocation)
             }
-            let location = currentLocation.flatMap { try? $0.jsonString() }
+            let location = currentLocation.flatMap { serializedLocation(for: $0) }
             let mappedProgression = currentLocation.flatMap {
                 DocumentReaderProgressMapper.epubBookProgression(
                     resourceLocation: $0.href.string,
@@ -579,7 +632,15 @@
             _ locator: Locator,
             viewport: NavigatorViewport? = nil
         ) {
+            if let serialized = serializedLocation(for: locator) {
+                onExactLocationChange?(serialized)
+            }
             let resourceKey = resourceKey(locator.href)
+            if latestExactResourceKey != nil, latestExactResourceKey != resourceKey {
+                latestExactParagraph = nil
+                latestExactLocation = nil
+                latestExactResourceKey = nil
+            }
             let currentViewport = viewport ?? navigator?.viewport
             if resourceKey != scrollFocusResourceKey {
                 scrollFocusResourceKey = resourceKey
@@ -608,12 +669,21 @@
                     )
                 }
             }
+            if pendingExactParagraph?.resourceKey != resourceKey {
+                Task { await captureExactLocation(for: locator, persist: true) }
+            }
         }
 
         private func recordLocationChange(_ locator: Locator) {
             let chapterLocation = resourceKey(locator.href)
             activeResourceKey = chapterLocation
             updateLocation(locator)
+            if pendingExactParagraph?.resourceKey == chapterLocation {
+                if !isRestoringExactParagraph {
+                    Task { await restorePendingExactParagraphIfNeeded(for: locator) }
+                }
+                return
+            }
             guard shouldPersistReadingLocation else { return }
             rememberChapterPosition(locator)
             saveProgress(closing: false)
@@ -631,7 +701,7 @@
         }
 
         private func rememberChapterPosition(_ locator: Locator) {
-            guard let locationDescription = try? locator.jsonString() else { return }
+            guard let locationDescription = serializedLocation(for: locator) else { return }
             let chapterLocation = resourceKey(locator.href)
             chapterLocationsByResource[chapterLocation] = locationDescription
             locatorStore.save(
@@ -683,6 +753,103 @@
                 recordLocationChange(locator)
             }
             return true
+        }
+
+        private func serializedLocation(for locator: Locator) -> String? {
+            guard let serialized = try? locator.jsonString() else { return nil }
+            let key = resourceKey(locator.href)
+            if latestExactResourceKey == key, let latestExactParagraph {
+                return EPUBParagraphLocator.enriching(serialized, with: latestExactParagraph)
+                    ?? latestExactLocation
+                    ?? serialized
+            }
+            if pendingExactParagraph?.resourceKey == key,
+                let anchor = pendingExactParagraph?.anchor
+            {
+                return EPUBParagraphLocator.enriching(serialized, with: anchor) ?? serialized
+            }
+            return serialized
+        }
+
+        private func captureExactLocation(
+            for locator: Locator,
+            persist: Bool
+        ) async {
+            let requestedResourceKey = resourceKey(locator.href)
+            guard pendingExactParagraph?.resourceKey != requestedResourceKey,
+                let navigator
+            else { return }
+
+            exactCaptureGeneration &+= 1
+            let generation = exactCaptureGeneration
+            let result = await navigator.evaluateJavaScript(
+                EPUBScrollFocusScript.currentParagraphAnchor
+            )
+            guard generation == exactCaptureGeneration,
+                let currentLocation = navigator.currentLocation,
+                resourceKey(currentLocation.href) == requestedResourceKey,
+                case .success(let value) = result,
+                let anchorJSON = value as? String,
+                anchorJSON != "null",
+                let anchorData = anchorJSON.data(using: .utf8),
+                let anchor = try? JSONDecoder().decode(
+                    EPUBParagraphAnchor.self,
+                    from: anchorData
+                ),
+                let serialized = try? currentLocation.jsonString(),
+                let exactLocation = EPUBParagraphLocator.enriching(
+                    serialized,
+                    with: anchor
+                )
+            else { return }
+
+            let didChange = exactLocation != latestExactLocation
+            latestExactParagraph = anchor
+            latestExactLocation = exactLocation
+            latestExactResourceKey = requestedResourceKey
+            onExactLocationChange?(exactLocation)
+
+            guard persist, didChange, shouldPersistReadingLocation else { return }
+            rememberChapterPosition(currentLocation)
+            saveProgress(closing: false)
+        }
+
+        private func restorePendingExactParagraphIfNeeded(for locator: Locator) async {
+            let destinationResourceKey = resourceKey(locator.href)
+            guard !isRestoringExactParagraph,
+                let pending = pendingExactParagraph,
+                pending.resourceKey == destinationResourceKey
+            else { return }
+
+            isRestoringExactParagraph = true
+            defer { isRestoringExactParagraph = false }
+            for attempt in 0..<5 {
+                guard pendingExactParagraph?.resourceKey == destinationResourceKey else { return }
+                if await restoreParagraphAnchor(pending.anchor) {
+                    pendingExactParagraph = nil
+                    try? await Task.sleep(for: .milliseconds(150))
+                    guard let currentLocation = navigator?.currentLocation,
+                        resourceKey(currentLocation.href) == destinationResourceKey
+                    else { return }
+                    updateLocation(currentLocation)
+                    await captureExactLocation(for: currentLocation, persist: true)
+                    return
+                }
+                guard attempt < 4 else { return }
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+        }
+
+        private func restoreParagraphAnchor(_ anchor: EPUBParagraphAnchor) async -> Bool {
+            guard let navigator else { return false }
+            switch await navigator.evaluateJavaScript(
+                EPUBScrollFocusScript.restoreParagraphAnchor(anchor)
+            ) {
+            case .success(let value):
+                return (value as? Bool) ?? (value as? NSNumber)?.boolValue ?? false
+            case .failure:
+                return false
+            }
         }
 
         private func applyScrollFocus() async {

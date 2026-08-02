@@ -8,6 +8,7 @@
         @State private var publication: EPUBPublication?
         @State private var currentChapter = 0
         @State private var currentChapterProgress = 0.0
+        @State private var currentParagraphAnchor: EPUBParagraphAnchor?
         @State private var errorMessage: String?
         @State private var progressWriter: BookReaderProgressWriter
         @State private var progressSaveTask: Task<Void, Never>?
@@ -22,6 +23,7 @@
         private let locatorStore: EPUBLocatorStore
         private let initialLocation: String?
         private let initialProgression: Double?
+        private let initialUpdatedAt: Date?
         private let progressRanges: [EPUBReadingProgressRange]
         private let companionPlayer: MusicPlayerController?
         private let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
@@ -35,6 +37,7 @@
             locatorStore: EPUBLocatorStore = .disabled,
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
+            initialUpdatedAt: Date? = nil,
             progressRanges: [EPUBReadingProgressRange] = [],
             companionPlayer: MusicPlayerController? = nil,
             findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
@@ -46,6 +49,7 @@
             self.locatorStore = locatorStore
             self.initialLocation = initialLocation
             self.initialProgression = initialProgression
+            self.initialUpdatedAt = initialUpdatedAt
             self.progressRanges = progressRanges
             self.companionPlayer = companionPlayer
             self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
@@ -65,6 +69,7 @@
                     bookmarkStore: bookmarkStore,
                     initialLocation: initialLocation,
                     initialProgression: initialProgression,
+                    initialUpdatedAt: initialUpdatedAt,
                     progressRanges: progressRanges,
                     companionPlayer: companionPlayer,
                     findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
@@ -212,8 +217,9 @@
                             chapter: publication.chapters[currentChapter],
                             rootURL: publication.rootURL,
                             initialScrollProgress: currentChapterProgress,
+                            initialParagraphAnchor: currentParagraphAnchor,
                             onLocalNavigation: openLocalURL,
-                            onScrollProgress: recordScrollProgress
+                            onLocationChange: recordScrollLocation
                         )
                     #else
                         EPUBWebDocumentView(
@@ -277,6 +283,7 @@
 
             currentChapter = index
             currentChapterProgress = target.progression
+            currentParagraphAnchor = nil
             readerNavigationRequestID &+= 1
             return true
         }
@@ -298,12 +305,15 @@
                 }.value
                 guard !Task.isCancelled else { return }
                 let locations = loaded.chapters.map(\.location)
+                let checkpoint = command == .resume
+                    ? locatorStore.loadCheckpoint(bookID: useCase.book.id)
+                    : nil
                 let resumeSource = EPUBReaderResumeSourceResolver().resolve(
                     explicitLocation: initialLocation,
                     explicitProgression: initialProgression,
-                    deviceLocation: command == .resume
-                        ? locatorStore.load(bookID: useCase.book.id)
-                        : nil
+                    explicitUpdatedAt: initialUpdatedAt,
+                    deviceLocation: checkpoint?.locator,
+                    deviceUpdatedAt: checkpoint?.savedAt
                 )
                 if let target = resumeSource?.fallbackTarget,
                     let initialIndex = locations.firstIndex(where: {
@@ -312,9 +322,13 @@
                 {
                     currentChapter = initialIndex
                     currentChapterProgress = target.progression
+                    currentParagraphAnchor = resumeSource?.serializedLocation.flatMap {
+                        EPUBParagraphLocator.anchor(from: $0)
+                    }
                 } else {
                     currentChapter = 0
                     currentChapterProgress = 0
+                    currentParagraphAnchor = nil
                 }
                 publication = loaded
                 await signalReady()
@@ -379,7 +393,13 @@
                 publication.chapters.indices.contains(currentChapter)
             else { return }
             let chapter = publication.chapters[currentChapter]
-            let location = DocumentReaderProgressMapper.epubLocation(
+            let location = currentParagraphAnchor.flatMap {
+                EPUBParagraphLocator.serialized(
+                    href: chapter.location,
+                    progression: currentChapterProgress,
+                    anchor: $0
+                )
+            } ?? DocumentReaderProgressMapper.epubLocation(
                 chapterLocation: chapter.location,
                 progress: currentChapterProgress
             )
@@ -427,12 +447,26 @@
             saveProgress()
             let chapter = publication.chapters[index]
             currentChapter = index
-            currentChapterProgress =
-                locatorStore.load(
-                    bookID: useCase.book.id,
-                    chapterLocation: chapter.location
-                ).flatMap(DocumentReaderProgressMapper.epubProgress) ?? 0
+            let savedLocation = locatorStore.load(
+                bookID: useCase.book.id,
+                chapterLocation: chapter.location
+            )
+            currentChapterProgress = savedLocation.flatMap {
+                EPUBProgressLocation(serialized: $0)?.resourceProgression
+                    ?? DocumentReaderProgressMapper.epubProgress(from: $0)
+            } ?? 0
+            currentParagraphAnchor = savedLocation.flatMap {
+                EPUBParagraphLocator.anchor(from: $0)
+            }
             saveProgress()
+        }
+
+        private func recordScrollLocation(
+            progress: Double,
+            paragraphAnchor: EPUBParagraphAnchor?
+        ) {
+            currentParagraphAnchor = paragraphAnchor
+            recordScrollProgress(progress)
         }
 
         private func recordScrollProgress(_ progress: Double) {

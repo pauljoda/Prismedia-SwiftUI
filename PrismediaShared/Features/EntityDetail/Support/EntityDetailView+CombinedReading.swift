@@ -99,7 +99,7 @@ extension EntityDetailView {
 
         do {
             if let playbackService = dependencies.audioPlaybackService {
-                try await playbackService.updateEntityProgress(id: detail.id, request: request)
+                try await playbackService.reportEntityProgress(id: detail.id, request: request)
             } else if let readerService = dependencies.readerService {
                 try await readerService.updateReadingProgress(id: detail.id, request: request)
             } else {
@@ -186,6 +186,7 @@ extension EntityDetailView {
                 detail: detail,
                 command: .resume,
                 initialEPUBLocation: location,
+                initialEPUBUpdatedAt: detail.capability(EntityProgressCapability.self)?.updatedAt,
                 companionAudiobookBookID: detail.id,
                 companionAudiobookTrackID: target.audioTrackID,
                 companionAudiobookStartSeconds: target.audioStartSeconds

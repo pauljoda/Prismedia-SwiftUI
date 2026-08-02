@@ -29,6 +29,10 @@ final class BookProgressMappingTests: XCTestCase {
         )
 
         XCTAssertEqual(request.index, 3_000)
+        XCTAssertEqual(
+            request.location,
+            "Text/chapter-2.xhtml#prismedia-progress=0.25"
+        )
         XCTAssertEqual(request.activitySeconds, 17.5)
         XCTAssertEqual(request.activityKind, .listening)
     }
@@ -281,7 +285,10 @@ final class BookProgressMappingTests: XCTestCase {
 
         XCTAssertEqual(request.currentEntityID, bookID)
         XCTAssertEqual(request.index, 8_750)
-        XCTAssertNil(request.location)
+        XCTAssertEqual(
+            request.location,
+            "Text/chapter-2.xhtml#prismedia-progress=0.75"
+        )
     }
 
     func testLegacyResumeDoesNotMoveAFartherReadablePositionBackward() {
@@ -348,7 +355,8 @@ final class BookProgressMappingTests: XCTestCase {
             startIndex: 10,
             endIndex: 110,
             total: 300,
-            mode: nil
+            mode: nil,
+            readerLocation: "Text/chapter-1.xhtml"
         )
 
         let data = try JSONEncoder().encode(mapping)
@@ -359,6 +367,7 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(object["startIndex"] as? Int, 10)
         XCTAssertEqual(object["endIndex"] as? Int, 110)
         XCTAssertEqual(object["total"] as? Int, 300)
+        XCTAssertEqual(object["readerLocation"] as? String, "Text/chapter-1.xhtml")
         XCTAssertEqual(try JSONDecoder().decode(BookProgressTrackMapping.self, from: data), mapping)
     }
 

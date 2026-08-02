@@ -17,6 +17,7 @@
                 Stepper(value: $preferences.fontScale, in: 0.8...2, step: 0.1) {
                     LabeledContent("Text Size", value: preferences.fontScale, format: .percent)
                 }
+                .accessibilityIdentifier("epub-reader.text-size")
 
                 Stepper(value: $preferences.fontWeight, in: 0.75...1.5, step: 0.05) {
                     LabeledContent("Text Weight", value: preferences.fontWeight, format: .percent)

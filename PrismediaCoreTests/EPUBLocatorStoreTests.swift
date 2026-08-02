@@ -57,4 +57,23 @@ final class EPUBLocatorStoreTests: XCTestCase {
             "chapter-2.xhtml#prismedia-progress=0.08"
         )
     }
+
+    func testCurrentBookLocatorRetainsItsLocalSaveTime() throws {
+        let suiteName = "EPUBLocatorStoreTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = EPUBLocatorStore(defaults: defaults)
+        let bookID = UUID()
+        let savedAt = Date(timeIntervalSince1970: 123_456)
+
+        store.save("{\"href\":\"chapter-2.xhtml\"}", bookID: bookID, savedAt: savedAt)
+
+        XCTAssertEqual(
+            store.loadCheckpoint(bookID: bookID),
+            EPUBLocatorCheckpoint(
+                locator: "{\"href\":\"chapter-2.xhtml\"}",
+                savedAt: savedAt
+            )
+        )
+    }
 }

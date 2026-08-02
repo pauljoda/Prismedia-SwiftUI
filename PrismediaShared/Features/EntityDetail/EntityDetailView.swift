@@ -227,6 +227,7 @@ public struct EntityDetailView: View {
                     locatorStore: dependencies.readerLocatorStore,
                     initialEPUBLocation: presentation.initialEPUBLocation,
                     initialEPUBProgression: presentation.initialEPUBProgression,
+                    initialEPUBUpdatedAt: presentation.initialEPUBUpdatedAt,
                     epubProgressRanges: epubReadingProgressRanges,
                     companionPlayer: companionPlayer(for: presentation),
                     findCurrentAudiobookReadingTarget: {

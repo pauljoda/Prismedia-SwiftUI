@@ -916,4 +916,11 @@ extension PrismediaAPIClient: MusicPlaybackServicing {
     public func artworkURL(for path: String?) -> URL? {
         assetURL(for: path)
     }
+
+    public func reportEntityProgress(
+        id: UUID,
+        request: EntityProgressUpdateRequest
+    ) async throws {
+        _ = try await updateEntityProgress(id: id, request: request)
+    }
 }

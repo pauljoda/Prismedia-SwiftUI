@@ -183,7 +183,7 @@ private final class AudiobookPlaybackServiceSpy: MusicPlaybackServicing {
     func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
     }
 
-    func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
+    func reportEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
         progressUpdates.append(.init(entityID: id, request: request))
     }
 }

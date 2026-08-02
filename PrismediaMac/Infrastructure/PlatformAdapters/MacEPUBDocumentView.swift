@@ -7,8 +7,9 @@ struct MacEPUBDocumentView: NSViewRepresentable {
     let chapter: EPUBChapter
     let rootURL: URL
     let initialScrollProgress: Double
+    let initialParagraphAnchor: EPUBParagraphAnchor?
     let onLocalNavigation: @MainActor (URL) -> Void
-    let onScrollProgress: @MainActor (Double) -> Void
+    let onLocationChange: @MainActor (Double, EPUBParagraphAnchor?) -> Void
     #if DEBUG
         private let previewHTML: String?
     #endif
@@ -17,14 +18,16 @@ struct MacEPUBDocumentView: NSViewRepresentable {
         chapter: EPUBChapter,
         rootURL: URL,
         initialScrollProgress: Double,
+        initialParagraphAnchor: EPUBParagraphAnchor?,
         onLocalNavigation: @escaping @MainActor (URL) -> Void,
-        onScrollProgress: @escaping @MainActor (Double) -> Void
+        onLocationChange: @escaping @MainActor (Double, EPUBParagraphAnchor?) -> Void
     ) {
         self.chapter = chapter
         self.rootURL = rootURL
         self.initialScrollProgress = initialScrollProgress
+        self.initialParagraphAnchor = initialParagraphAnchor
         self.onLocalNavigation = onLocalNavigation
-        self.onScrollProgress = onScrollProgress
+        self.onLocationChange = onLocationChange
         #if DEBUG
             previewHTML = nil
         #endif
@@ -40,8 +43,9 @@ struct MacEPUBDocumentView: NSViewRepresentable {
             )
             self.rootURL = rootURL
             initialScrollProgress = 0
+            initialParagraphAnchor = nil
             onLocalNavigation = { _ in }
-            onScrollProgress = { _ in }
+            onLocationChange = { _, _ in }
             self.previewHTML = previewHTML
         }
     #endif
@@ -50,8 +54,9 @@ struct MacEPUBDocumentView: NSViewRepresentable {
         Coordinator(
             rootURL: rootURL,
             initialScrollProgress: initialScrollProgress,
+            initialParagraphAnchor: initialParagraphAnchor,
             onLocalNavigation: onLocalNavigation,
-            onScrollProgress: onScrollProgress
+            onLocationChange: onLocationChange
         )
     }
 
@@ -84,8 +89,9 @@ struct MacEPUBDocumentView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.rootURL = rootURL
         context.coordinator.initialScrollProgress = initialScrollProgress
+        context.coordinator.initialParagraphAnchor = initialParagraphAnchor
         context.coordinator.onLocalNavigation = onLocalNavigation
-        context.coordinator.onScrollProgress = onScrollProgress
+        context.coordinator.onLocationChange = onLocationChange
         context.coordinator.render(chapter: chapter, previewHTML: previewHTMLValue)
     }
 
@@ -101,8 +107,9 @@ struct MacEPUBDocumentView: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         var rootURL: URL
         var initialScrollProgress: Double
+        var initialParagraphAnchor: EPUBParagraphAnchor?
         var onLocalNavigation: @MainActor (URL) -> Void
-        var onScrollProgress: @MainActor (Double) -> Void
+        var onLocationChange: @MainActor (Double, EPUBParagraphAnchor?) -> Void
 
         private weak var scrollView: NSScrollView?
         private weak var textView: NSTextView?
@@ -113,13 +120,15 @@ struct MacEPUBDocumentView: NSViewRepresentable {
         init(
             rootURL: URL,
             initialScrollProgress: Double,
+            initialParagraphAnchor: EPUBParagraphAnchor?,
             onLocalNavigation: @escaping @MainActor (URL) -> Void,
-            onScrollProgress: @escaping @MainActor (Double) -> Void
+            onLocationChange: @escaping @MainActor (Double, EPUBParagraphAnchor?) -> Void
         ) {
             self.rootURL = rootURL
             self.initialScrollProgress = initialScrollProgress
+            self.initialParagraphAnchor = initialParagraphAnchor
             self.onLocalNavigation = onLocalNavigation
-            self.onScrollProgress = onScrollProgress
+            self.onLocationChange = onLocationChange
         }
 
         isolated deinit {
@@ -167,7 +176,7 @@ struct MacEPUBDocumentView: NSViewRepresentable {
                 textView.string = "This chapter could not be displayed.\n\n\(error.localizedDescription)"
             }
 
-            restoreScrollProgress()
+            restoreLocation()
         }
 
         func textView(
@@ -193,7 +202,7 @@ struct MacEPUBDocumentView: NSViewRepresentable {
             return true
         }
 
-        private func restoreScrollProgress() {
+        private func restoreLocation() {
             guard let scrollView, let textView else { return }
             let progress = min(max(initialScrollProgress, 0), 1)
             textView.layoutManager?.ensureLayout(for: textView.textContainer!)
@@ -204,9 +213,29 @@ struct MacEPUBDocumentView: NSViewRepresentable {
                     0,
                     textView.bounds.height - scrollView.contentView.bounds.height
                 )
-                scrollView.contentView.scroll(
-                    to: CGPoint(x: 0, y: maximumOffset * progress)
-                )
+                if let initialParagraphAnchor,
+                    let characterIndex = EPUBTextParagraphLocator().characterIndex(
+                        for: initialParagraphAnchor,
+                        in: textView.string
+                    ),
+                    let layoutManager = textView.layoutManager,
+                    let textContainer = textView.textContainer
+                {
+                    let glyphIndex = layoutManager.glyphIndexForCharacter(at: characterIndex)
+                    let glyphRect = layoutManager.boundingRect(
+                        forGlyphRange: NSRange(location: glyphIndex, length: 1),
+                        in: textContainer
+                    )
+                    let centeredOffset = glyphRect.midY + textView.textContainerInset.height
+                        - scrollView.contentView.bounds.height / 2
+                    scrollView.contentView.scroll(
+                        to: CGPoint(x: 0, y: min(max(0, centeredOffset), maximumOffset))
+                    )
+                } else {
+                    scrollView.contentView.scroll(
+                        to: CGPoint(x: 0, y: maximumOffset * progress)
+                    )
+                }
                 scrollView.reflectScrolledClipView(scrollView.contentView)
                 self.reportScrollProgress()
             }
@@ -221,7 +250,31 @@ struct MacEPUBDocumentView: NSViewRepresentable {
             let progress = maximumOffset > 0
                 ? scrollView.contentView.bounds.origin.y / maximumOffset
                 : 0
-            onScrollProgress(min(max(progress, 0), 1))
+            let visibleCenter = CGPoint(
+                x: textView.textContainerInset.width,
+                y: scrollView.contentView.bounds.midY - textView.textContainerInset.height
+            )
+            let characterIndex: Int?
+            if let layoutManager = textView.layoutManager,
+                let textContainer = textView.textContainer,
+                !textView.string.isEmpty
+            {
+                let glyphIndex = layoutManager.glyphIndex(
+                    for: visibleCenter,
+                    in: textContainer,
+                    fractionOfDistanceThroughGlyph: nil
+                )
+                characterIndex = min(
+                    layoutManager.characterIndexForGlyph(at: glyphIndex),
+                    max(0, (textView.string as NSString).length - 1)
+                )
+            } else {
+                characterIndex = nil
+            }
+            let anchor = characterIndex.flatMap {
+                EPUBTextParagraphLocator().anchor(in: textView.string, characterIndex: $0)
+            }
+            onLocationChange(min(max(progress, 0), 1), anchor)
         }
 
         private func isInsideRoot(_ url: URL) -> Bool {

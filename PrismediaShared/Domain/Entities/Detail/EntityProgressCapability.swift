@@ -7,7 +7,7 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
     public let total: Int
     public let mode: ReaderMode?
     public let completedAt: String?
-    public let updatedAt: String?
+    public let updatedAt: Date?
     public let workIndex: Int?
     public let workTotal: Int?
     public let location: String?
@@ -39,7 +39,7 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         total = try container.decodeFlexibleInt(forKey: .total)
         mode = try container.decodeIfPresent(ReaderMode.self, forKey: .mode)
         completedAt = try container.decodeIfPresent(String.self, forKey: .completedAt)
-        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
         workIndex = try container.decodeFlexibleIntIfPresent(forKey: .workIndex)
         workTotal = try container.decodeFlexibleIntIfPresent(forKey: .workTotal)
         location = try container.decodeIfPresent(String.self, forKey: .location)
@@ -55,7 +55,7 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         total: Int,
         mode: ReaderMode?,
         completedAt: String?,
-        updatedAt: String?,
+        updatedAt: Date?,
         workIndex: Int?,
         workTotal: Int?,
         location: String?,

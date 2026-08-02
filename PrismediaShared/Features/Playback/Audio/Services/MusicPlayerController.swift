@@ -614,7 +614,7 @@ public final class MusicPlayerController {
             completed: completed
         )
         enqueuePlaybackReport { service in
-            try? await service.updateEntityProgress(
+            try? await service.reportEntityProgress(
                 id: ownerID,
                 request: request
             )
