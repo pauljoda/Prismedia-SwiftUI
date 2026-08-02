@@ -269,7 +269,7 @@ final class MusicCollectionCatalogLoaderTests: XCTestCase {
         )
 
         let response = try await loader.load(
-            query: EntityListQuery(kind: .collection, sort: "added"),
+            query: EntityListQuery(kind: .collection, sort: PrismediaContractCodes.EntityListSort.dateAdded),
             limit: 48,
             search: nil,
             cursor: nil

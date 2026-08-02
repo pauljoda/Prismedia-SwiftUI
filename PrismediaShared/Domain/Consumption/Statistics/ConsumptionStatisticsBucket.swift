@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PlaybackStatisticsBucket: Decodable, Equatable, Sendable, Identifiable {
+public struct ConsumptionStatisticsBucket: Decodable, Equatable, Sendable, Identifiable {
     public let date: String
     public let accessedCount: Int
     public let completedCount: Int

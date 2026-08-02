@@ -161,7 +161,7 @@ final class EntityImageViewerSessionTests: XCTestCase {
         loader: any EntityMediaSequenceLoading
     ) -> EntityImageViewerSession {
         let continuation = EntityMediaSequenceContinuation(
-            query: EntityListQuery(kind: .image, sort: "random", seed: 42),
+            query: EntityListQuery(kind: .image, sort: PrismediaContractCodes.EntityListSort.random, seed: 42),
             pageSize: 48,
             search: "portrait",
             cursor: cursor,

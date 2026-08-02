@@ -32,7 +32,7 @@ public enum FavoritesCatalog {
         var query = entityList.query
         query.kind = kind
         query.kinds = []
-        query.sort = EntityGridSort.lastAccessed.rawValue
+        query.sort = EntityGridSort.lastActive.rawValue
         query.sortDescending = true
         query.favorite = true
 

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PrismediaPlaybackStatisticsLoader: PlaybackStatisticsLoading, Sendable {
+public struct PrismediaConsumptionStatisticsLoader: ConsumptionStatisticsLoading, Sendable {
     private let client: PrismediaAPIClient
 
     public init(client: PrismediaAPIClient) {
@@ -8,9 +8,9 @@ public struct PrismediaPlaybackStatisticsLoader: PlaybackStatisticsLoading, Send
     }
 
     public func loadStatistics(
-        _ query: PlaybackStatisticsQuery
-    ) async throws -> PlaybackStatisticsResponse {
-        try await client.fetchPlaybackStatistics(query)
+        _ query: ConsumptionStatisticsQuery
+    ) async throws -> ConsumptionStatisticsResponse {
+        try await client.fetchConsumptionStatistics(query)
     }
 
     public func loadThumbnails(ids: [UUID]) async throws -> [EntityThumbnail] {

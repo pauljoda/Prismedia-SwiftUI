@@ -40,7 +40,7 @@ final class MusicLibraryQueueLoaderTests: XCTestCase {
         )
         let query = EntityListQuery(
             kind: .audioTrack,
-            sort: "rating",
+            sort: PrismediaContractCodes.EntityListSort.rating,
             sortDescending: true,
             favorite: true,
             ratingMin: 4
@@ -61,7 +61,7 @@ final class MusicLibraryQueueLoaderTests: XCTestCase {
             }
         )
         XCTAssertEqual(values["sort"], "rating")
-        XCTAssertEqual(values["sortDir"], "desc")
+        XCTAssertEqual(values["sortDirection"], PrismediaContractCodes.EntitySortDirection.descending)
         XCTAssertEqual(values["favorite"], "true")
         XCTAssertEqual(values["ratingMin"], "4")
         XCTAssertEqual(values["query"], "favorite")

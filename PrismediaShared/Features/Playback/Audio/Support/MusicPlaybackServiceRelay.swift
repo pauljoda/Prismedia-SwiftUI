@@ -23,18 +23,14 @@
             service?.artworkURL(for: path)
         }
 
-        func recordAudioTrackPlay(id: UUID) async throws {
-            try await service?.recordAudioTrackPlay(id: id)
-        }
-
-        func recordEntityPlaybackEvent(
+        func recordEntityConsumptionEvent(
             id: UUID,
             kind: ConsumptionEventKind,
             positionSeconds: Double?,
             durationSeconds: Double?,
             sessionID: String?
         ) async throws {
-            try await service?.recordEntityPlaybackEvent(
+            try await service?.recordEntityConsumptionEvent(
                 id: id,
                 kind: kind,
                 positionSeconds: positionSeconds,
@@ -43,15 +39,15 @@
             )
         }
 
-        func updateEntityPlayback(
+        func updateEntityConsumption(
             id: UUID,
-            resumeSeconds: Double?,
+            positionSeconds: Double?,
             activitySeconds: Double?,
             completed: Bool?
         ) async throws {
-            try await service?.updateEntityPlayback(
+            try await service?.updateEntityConsumption(
                 id: id,
-                resumeSeconds: resumeSeconds,
+                positionSeconds: positionSeconds,
                 activitySeconds: activitySeconds,
                 completed: completed
             )

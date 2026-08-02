@@ -19,7 +19,7 @@ public struct EntityListQuery: Hashable, Sendable {
     public var bookFormat: String?
     public var nsfw: Bool?
     public var hasFile: Bool?
-    public var played: Bool?
+    public var engaged: Bool?
     public var orphaned: Bool?
     public var wanted: Bool?
     public var acquisitionStatus: AcquisitionStatus?
@@ -46,7 +46,7 @@ public struct EntityListQuery: Hashable, Sendable {
         bookFormat: String? = nil,
         nsfw: Bool? = nil,
         hasFile: Bool? = nil,
-        played: Bool? = nil,
+        engaged: Bool? = nil,
         orphaned: Bool? = nil,
         wanted: Bool? = nil,
         acquisitionStatus: AcquisitionStatus? = nil,
@@ -71,7 +71,7 @@ public struct EntityListQuery: Hashable, Sendable {
         self.bookFormat = bookFormat
         self.nsfw = nsfw
         self.hasFile = hasFile
-        self.played = played
+        self.engaged = engaged
         self.orphaned = orphaned
         self.wanted = wanted
         self.acquisitionStatus = acquisitionStatus
@@ -99,7 +99,12 @@ public struct EntityListQuery: Hashable, Sendable {
         }
         if let sort {
             items.append(URLQueryItem(name: "sort", value: sort))
-            items.append(URLQueryItem(name: "sortDir", value: sortDescending ? "desc" : "asc"))
+            items.append(URLQueryItem(
+                name: "sortDirection",
+                value: sortDescending
+                    ? PrismediaContractCodes.EntitySortDirection.descending
+                    : PrismediaContractCodes.EntitySortDirection.ascending
+            ))
         }
         if let seed { items.append(URLQueryItem(name: "seed", value: String(seed))) }
         if let favorite { items.append(URLQueryItem(name: "favorite", value: String(favorite))) }
@@ -116,7 +121,7 @@ public struct EntityListQuery: Hashable, Sendable {
         }
         if let nsfw { items.append(URLQueryItem(name: "nsfw", value: String(nsfw))) }
         if let hasFile { items.append(URLQueryItem(name: "hasFile", value: String(hasFile))) }
-        if let played { items.append(URLQueryItem(name: "played", value: String(played))) }
+        if let engaged { items.append(URLQueryItem(name: "engaged", value: String(engaged))) }
         if let orphaned { items.append(URLQueryItem(name: "orphaned", value: String(orphaned))) }
         if let wanted { items.append(URLQueryItem(name: "wanted", value: String(wanted))) }
         if let acquisitionStatus {

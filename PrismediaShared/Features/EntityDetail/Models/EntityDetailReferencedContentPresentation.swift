@@ -22,7 +22,7 @@ struct EntityDetailReferencedContentPresentation: Hashable, Sendable {
         }
 
         query = EntityListQuery(
-            sort: "title",
+            sort: PrismediaContractCodes.EntityListSort.title,
             sortDescending: false,
             referencedBy: detail.id,
             relationshipCode: relationshipCode

@@ -76,7 +76,7 @@ final class PrismediaAPIClientTests: XCTestCase {
 
         let query = EntityListQuery(
             kind: .book,
-            sort: "added",
+            sort: PrismediaContractCodes.EntityListSort.dateAdded,
             seed: 42,
             favorite: true,
             organized: false,
@@ -88,7 +88,7 @@ final class PrismediaAPIClientTests: XCTestCase {
             bookFormat: "image-archive",
             nsfw: true,
             hasFile: false,
-            played: true,
+            engaged: true,
             orphaned: false,
             wanted: true,
             acquisitionStatus: AcquisitionStatus(rawValue: "downloading"),
@@ -107,8 +107,8 @@ final class PrismediaAPIClientTests: XCTestCase {
 
         let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) })
         XCTAssertEqual(items["kind"], "book")
-        XCTAssertEqual(items["sort"], "added")
-        XCTAssertEqual(items["sortDir"], "asc")
+        XCTAssertEqual(items["sort"], PrismediaContractCodes.EntityListSort.dateAdded)
+        XCTAssertEqual(items["sortDirection"], PrismediaContractCodes.EntitySortDirection.ascending)
         XCTAssertEqual(items["seed"], "42")
         XCTAssertEqual(items["favorite"], "true")
         XCTAssertEqual(items["organized"], "false")
@@ -119,7 +119,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(items["bookType"], "comic,manga")
         XCTAssertEqual(items["bookFormat"], "image-archive")
         XCTAssertEqual(items["hasFile"], "false")
-        XCTAssertEqual(items["played"], "true")
+        XCTAssertEqual(items["engaged"], "true")
         XCTAssertEqual(items["orphaned"], "false")
         XCTAssertEqual(items["wanted"], "true")
         XCTAssertEqual(items["acquisitionStatus"], "downloading")
@@ -650,8 +650,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         _ = try await client.fetchEntityThumbnails(ids: [entityID])
         _ = try await client.fetchEntityChildren(parentIDs: [entityID])
         _ = try await client.listCollections()
-        _ = try await client.fetchPlaybackStatistics(
-            PlaybackStatisticsQuery(
+        _ = try await client.fetchConsumptionStatistics(
+            ConsumptionStatisticsQuery(
                 from: Date(timeIntervalSince1970: 1_767_225_600),
                 to: Date(timeIntervalSince1970: 1_767_312_000)
             )
@@ -1046,7 +1046,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(queryItem("audioStreamIndex", in: URLRequest(url: plan.url)), "3")
     }
 
-    func testRecordAudioTrackPlayPostsToCompletionEndpoint() async throws {
+    func testRecordCompletedConsumptionUsesSharedEntityEventEndpoint() async throws {
         let trackID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let loader = MockHTTPDataLoader(responses: [
             .json(
@@ -1067,10 +1067,18 @@ final class PrismediaAPIClientTests: XCTestCase {
         let client = PrismediaAPIClient(serverURL: serverURL, loader: loader)
             .authenticated(with: "token")
 
-        try await client.recordAudioTrackPlay(id: trackID)
+        try await client.recordEntityConsumptionEvent(
+            id: trackID,
+            kind: .completed,
+            positionSeconds: 180,
+            durationSeconds: 180
+        )
 
         let request = try XCTUnwrap(loader.requests.first)
-        XCTAssertEqual(request.url?.path, "/api/audio-tracks/\(trackID.uuidString.lowercased())/play")
+        XCTAssertEqual(
+            request.url?.path,
+            "/api/entities/\(trackID.uuidString.lowercased())/consumption/events"
+        )
         XCTAssertEqual(request.httpMethod, "POST")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
     }
@@ -1080,20 +1088,20 @@ final class PrismediaAPIClientTests: XCTestCase {
         let loader = MockHTTPDataLoader(responses: [.json(entityDetailJSON(id: bookID, rating: nil))])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
 
-        try await client.updateEntityPlayback(
+        try await client.updateEntityConsumption(
             id: bookID,
-            resumeSeconds: 3_725,
+            positionSeconds: 3_725,
             activitySeconds: 15,
             completed: false
         )
 
         let request = try XCTUnwrap(loader.requests.first)
-        XCTAssertEqual(request.url?.path, "/api/entities/\(bookID.uuidString.lowercased())/playback")
+        XCTAssertEqual(request.url?.path, "/api/entities/\(bookID.uuidString.lowercased())/consumption")
         XCTAssertEqual(request.httpMethod, "PATCH")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
-        XCTAssertEqual(body["resumeSeconds"] as? Double, 3_725)
-        XCTAssertEqual(body["durationSeconds"] as? Double, 15)
+        XCTAssertEqual(body["positionSeconds"] as? Double, 3_725)
+        XCTAssertEqual(body["activitySeconds"] as? Double, 15)
         XCTAssertEqual(body["completed"] as? Bool, false)
         XCTAssertNotNil(body["utcOffsetMinutes"] as? Int)
     }
@@ -1103,7 +1111,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         let loader = MockHTTPDataLoader(responses: [.json(entityDetailJSON(id: trackID, rating: nil))])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
 
-        try await client.recordEntityPlaybackEvent(
+        try await client.recordEntityConsumptionEvent(
             id: trackID,
             kind: .skipped,
             positionSeconds: 4,
@@ -1114,7 +1122,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(
             request.url?.path,
-            "/api/entities/\(trackID.uuidString.lowercased())/playback/events"
+            "/api/entities/\(trackID.uuidString.lowercased())/consumption/events"
         )
         XCTAssertEqual(request.httpMethod, "POST")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
@@ -1139,7 +1147,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(request.httpMethod, "POST")
     }
 
-    func testFetchPlaybackStatisticsUsesTypedFiltersAndDecodesHistory() async throws {
+    func testFetchConsumptionStatisticsUsesTypedFiltersAndDecodesHistory() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json(
                 """
@@ -1211,8 +1219,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         let from = Date(timeIntervalSince1970: 1_767_225_600)
         let to = Date(timeIntervalSince1970: 1_782_864_000)
 
-        let response = try await client.fetchPlaybackStatistics(
-            PlaybackStatisticsQuery(
+        let response = try await client.fetchConsumptionStatistics(
+            ConsumptionStatisticsQuery(
                 from: from,
                 to: to,
                 kind: .audioTrack,
@@ -1230,7 +1238,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(response.rhythm.first?.totalEvents, 5)
         XCTAssertEqual(response.recentEvents.first?.positionSeconds, 180.5)
         let request = try XCTUnwrap(loader.requests.first)
-        XCTAssertEqual(request.url?.path, "/api/playback/statistics")
+        XCTAssertEqual(request.url?.path, "/api/consumption/statistics")
         XCTAssertEqual(queryItem("kind", in: request), "audio-track")
         XCTAssertEqual(queryItem("eventKind", in: request), "completed")
         XCTAssertEqual(queryItem("hideNsfw", in: request), "true")

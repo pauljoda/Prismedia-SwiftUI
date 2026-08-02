@@ -176,11 +176,14 @@ private final class AudiobookPlaybackServiceSpy: MusicPlaybackServicing {
         URL(string: "https://example.com/audio/\(trackID)")
     }
 
-    func recordAudioTrackPlay(id: UUID) async throws {
-        recordedTrackIDs.append(id)
-    }
-
-    func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
+    func recordEntityConsumptionEvent(
+        id: UUID,
+        kind: ConsumptionEventKind,
+        positionSeconds: Double?,
+        durationSeconds: Double?,
+        sessionID: String?
+    ) async throws {
+        if kind == .completed { recordedTrackIDs.append(id) }
     }
 
     func reportEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {

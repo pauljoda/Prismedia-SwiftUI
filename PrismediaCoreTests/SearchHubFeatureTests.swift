@@ -292,8 +292,12 @@ final class SearchHubFeatureTests: XCTestCase {
         }
         XCTAssertEqual(
             Set(previewQueries.compactMap { $0["kind"] }), Set(SearchHubCatalog.previewKinds.map(\.rawValue)))
-        XCTAssertTrue(previewQueries.allSatisfy { $0["sort"] == "added" })
-        XCTAssertTrue(previewQueries.allSatisfy { $0["sortDir"] == "desc" })
+        XCTAssertTrue(previewQueries.allSatisfy {
+            $0["sort"] == PrismediaContractCodes.EntityListSort.dateAdded
+        })
+        XCTAssertTrue(previewQueries.allSatisfy {
+            $0["sortDirection"] == PrismediaContractCodes.EntitySortDirection.descending
+        })
         XCTAssertTrue(previewQueries.allSatisfy { $0["limit"] == "2" })
         XCTAssertTrue(previewQueries.allSatisfy { $0["hideNsfw"] == "true" })
 

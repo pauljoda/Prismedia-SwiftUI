@@ -34,7 +34,7 @@ extension PrismediaEntityDetailLoader: BookReaderServicing {
     }
 
     public func recordReadingAccess(id: UUID, sessionID: String) async throws {
-        try await client.recordEntityPlaybackEvent(
+        try await client.recordEntityConsumptionEvent(
             id: id,
             kind: .accessed,
             positionSeconds: nil,

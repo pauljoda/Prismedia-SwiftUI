@@ -7,11 +7,9 @@
             URL(string: "https://preview.prismedia.local/audio/\(trackID).mp3")
         }
 
-        func recordAudioTrackPlay(id: UUID) async throws {}
-
-        func updateEntityPlayback(
+        func updateEntityConsumption(
             id: UUID,
-            resumeSeconds: Double?,
+            positionSeconds: Double?,
             activitySeconds: Double?,
             completed: Bool?
         ) async throws {}

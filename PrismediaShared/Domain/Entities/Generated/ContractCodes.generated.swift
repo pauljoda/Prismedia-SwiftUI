@@ -383,10 +383,24 @@ public enum PrismediaContractCodes {
         public static let `deletingFiles` = "deleting-files"
     }
 
+    public enum EntityListSort {
+        public static let `title` = "title"
+        public static let `dateAdded` = "date-added"
+        public static let `rating` = "rating"
+        public static let `random` = "random"
+        public static let `lastActive` = "last-active"
+        public static let `references` = "references"
+    }
+
     public enum EntityMediaQualityFamily {
         public static let `none` = "none"
         public static let `video` = "video"
         public static let `audio` = "audio"
+    }
+
+    public enum EntitySortDirection {
+        public static let `ascending` = "asc"
+        public static let `descending` = "desc"
     }
 
     public enum EntitySourceCode {
@@ -885,7 +899,8 @@ public enum PrismediaContractCodes {
         public static let `invalidCollection` = "invalid_collection"
         public static let `invalidCollectionItems` = "invalid_collection_items"
         public static let `invalidCollectionRules` = "invalid_collection_rules"
-        public static let `invalidConsumptionEventKind` = "invalid_playback_event_kind"
+        public static let `invalidConsumptionEventKind` = "invalid_consumption_event_kind"
+        public static let `invalidConsumptionStatisticsWindow` = "invalid_consumption_statistics_window"
         public static let `invalidCredentials` = "invalid_credentials"
         public static let `invalidEntity` = "invalid_entity"
         public static let `invalidEntityImageUpload` = "invalid_entity_image_upload"
@@ -893,7 +908,6 @@ public enum PrismediaContractCodes {
         public static let `invalidEntityMetadataPatch` = "invalid_entity_metadata_patch"
         public static let `invalidOpdsRequest` = "invalid_opds_request"
         public static let `invalidPath` = "invalid_path"
-        public static let `invalidPlaybackStatisticsWindow` = "invalid_playback_statistics_window"
         public static let `invalidUpload` = "invalid_upload"
         public static let `lastAdminRequired` = "last_admin_required"
         public static let `libraryRootPathConflict` = "library_root_path_conflict"

@@ -100,7 +100,7 @@
                     context: EntityGridTopContentContext(
                         query: EntityListQuery(
                             kind: .audioLibrary,
-                            sort: "added",
+                            sort: PrismediaContractCodes.EntityListSort.dateAdded,
                             sortDescending: true
                         ),
                         search: nil,

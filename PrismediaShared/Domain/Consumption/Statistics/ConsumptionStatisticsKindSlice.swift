@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PlaybackStatisticsKindSlice: Decodable, Equatable, Sendable, Identifiable {
+public struct ConsumptionStatisticsKindSlice: Decodable, Equatable, Sendable, Identifiable {
     public let kind: EntityKind
     public let totalEvents: Int
     public let accessedCount: Int

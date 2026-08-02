@@ -52,9 +52,9 @@ final class MusicPlayerControllerTests: XCTestCase {
         controller.updatePlaybackProgress(elapsedTime: 12, duration: 180, isAdvancing: true)
         await controller.flushPendingPlaybackReports()
 
-        let update = try XCTUnwrap(service.playbackUpdates.last)
+        let update = try XCTUnwrap(service.consumptionUpdates.last)
         XCTAssertEqual(update.id, track.id)
-        XCTAssertEqual(update.resumeSeconds, 12)
+        XCTAssertEqual(update.positionSeconds, 12)
         XCTAssertEqual(update.activitySeconds, 12)
         XCTAssertNil(update.completed)
     }
@@ -329,7 +329,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         controller.play(tracks: [completedTrack])
 
         let completion = Task { await controller.handlePlaybackEnded() }
-        await Task.yield()
+        await service.waitUntilRecordingStarts()
         controller.play(tracks: replacementTracks)
         service.finishRecording()
         await completion.value
@@ -435,7 +435,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertNil(controller.currentTrack)
         XCTAssertTrue(controller.queue.tracks.isEmpty)
         XCTAssertEqual(store.clearCallCount, 1)
-        XCTAssertTrue(service.playbackUpdates.isEmpty)
+        XCTAssertTrue(service.consumptionUpdates.isEmpty)
     }
 
     func testRestoresQueueAndElapsedPositionWithoutAutoplaying() {
@@ -1006,9 +1006,9 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private(set) var skippedTrackIDs: [UUID] = []
     private(set) var skippedPositions: [Double?] = []
     private(set) var skippedDurations: [Double?] = []
-    private(set) var playbackUpdates: [(
+    private(set) var consumptionUpdates: [(
         id: UUID,
-        resumeSeconds: Double?,
+        positionSeconds: Double?,
         activitySeconds: Double?,
         completed: Bool?
     )] = []
@@ -1024,11 +1024,7 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
         return URL(string: "https://media.example.test/api/audio-stream/\(trackID)?access_token=token")
     }
 
-    func recordAudioTrackPlay(id: UUID) async throws {
-        recordedTrackIDs.append(id)
-    }
-
-    func recordEntityPlaybackEvent(
+    func recordEntityConsumptionEvent(
         id: UUID,
         kind: ConsumptionEventKind,
         positionSeconds: Double?,
@@ -1042,16 +1038,18 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
             skippedTrackIDs.append(id)
             skippedPositions.append(positionSeconds)
             skippedDurations.append(durationSeconds)
+        } else if kind == .completed {
+            recordedTrackIDs.append(id)
         }
     }
 
-    func updateEntityPlayback(
+    func updateEntityConsumption(
         id: UUID,
-        resumeSeconds: Double?,
+        positionSeconds: Double?,
         activitySeconds: Double?,
         completed: Bool?
     ) async throws {
-        playbackUpdates.append((id, resumeSeconds, activitySeconds, completed))
+        consumptionUpdates.append((id, positionSeconds, activitySeconds, completed))
     }
 
     func reportEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
@@ -1073,20 +1071,28 @@ private final class TestMusicPlaybackClock: MusicPlaybackClock, @unchecked Senda
 @MainActor
 private final class SuspendingMusicPlaybackServiceStub: MusicPlaybackServicing {
     private var recordingContinuation: CheckedContinuation<Void, Never>?
+    private var recordingStartedContinuation: CheckedContinuation<Void, Never>?
 
     func audioStreamURL(for trackID: UUID) -> URL? {
         URL(string: "https://media.example.test/api/audio-stream/\(trackID)?access_token=token")
     }
 
-    func recordAudioTrackPlay(id: UUID) async throws {
-        await withCheckedContinuation { continuation in
-            recordingContinuation = continuation
-        }
+    func recordEntityConsumptionEvent(
+        id: UUID,
+        kind: ConsumptionEventKind,
+        positionSeconds: Double?,
+        durationSeconds: Double?,
+        sessionID: String?
+    ) async throws {
+        guard kind == .completed else { return }
+        recordingStartedContinuation?.resume()
+        recordingStartedContinuation = nil
+        await withCheckedContinuation { continuation in recordingContinuation = continuation }
     }
 
-    func updateEntityPlayback(
+    func updateEntityConsumption(
         id: UUID,
-        resumeSeconds: Double?,
+        positionSeconds: Double?,
         activitySeconds: Double?,
         completed: Bool?
     ) async throws {}
@@ -1095,6 +1101,13 @@ private final class SuspendingMusicPlaybackServiceStub: MusicPlaybackServicing {
         id: UUID,
         request: EntityProgressUpdateRequest
     ) async throws {}
+
+    func waitUntilRecordingStarts() async {
+        guard recordingContinuation == nil else { return }
+        await withCheckedContinuation { continuation in
+            recordingStartedContinuation = continuation
+        }
+    }
 
     func finishRecording() {
         recordingContinuation?.resume()

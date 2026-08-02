@@ -5,17 +5,16 @@ public protocol MusicPlaybackServicing: Sendable {
     var isPlaybackAvailable: Bool { get }
     func audioStreamURL(for trackID: UUID) -> URL?
     func artworkURL(for path: String?) -> URL?
-    func recordAudioTrackPlay(id: UUID) async throws
-    func recordEntityPlaybackEvent(
+    func recordEntityConsumptionEvent(
         id: UUID,
         kind: ConsumptionEventKind,
         positionSeconds: Double?,
         durationSeconds: Double?,
         sessionID: String?
     ) async throws
-    func updateEntityPlayback(
+    func updateEntityConsumption(
         id: UUID,
-        resumeSeconds: Double?,
+        positionSeconds: Double?,
         activitySeconds: Double?,
         completed: Bool?
     ) async throws
@@ -25,16 +24,16 @@ public protocol MusicPlaybackServicing: Sendable {
 extension MusicPlaybackServicing {
     public var isPlaybackAvailable: Bool { true }
     public func artworkURL(for path: String?) -> URL? { nil }
-    public func recordEntityPlaybackEvent(
+    public func recordEntityConsumptionEvent(
         id: UUID,
         kind: ConsumptionEventKind,
         positionSeconds: Double?,
         durationSeconds: Double?,
         sessionID: String? = nil
     ) async throws {}
-    public func updateEntityPlayback(
+    public func updateEntityConsumption(
         id: UUID,
-        resumeSeconds: Double?,
+        positionSeconds: Double?,
         activitySeconds: Double?,
         completed: Bool?
     ) async throws {}

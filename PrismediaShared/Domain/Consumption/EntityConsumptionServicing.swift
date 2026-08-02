@@ -11,7 +11,7 @@ public protocol EntityConsumptionServicing: Sendable {
 
 extension PrismediaAPIClient: EntityConsumptionServicing {
     public func recordConsumptionAccess(id: UUID, sessionID: String) async throws {
-        try await recordEntityPlaybackEvent(
+        try await recordEntityConsumptionEvent(
             id: id,
             kind: .accessed,
             positionSeconds: nil,
@@ -21,9 +21,9 @@ extension PrismediaAPIClient: EntityConsumptionServicing {
     }
 
     public func recordConsumptionActivity(id: UUID, seconds: Double) async throws {
-        try await updateEntityPlayback(
+        try await updateEntityConsumption(
             id: id,
-            resumeSeconds: nil,
+            positionSeconds: nil,
             activitySeconds: seconds,
             completed: nil
         )

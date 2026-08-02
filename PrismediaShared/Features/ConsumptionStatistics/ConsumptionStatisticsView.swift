@@ -1,25 +1,25 @@
 import SwiftUI
 
-struct PlaybackStatisticsView: View {
+struct ConsumptionStatisticsView: View {
     @Binding private var navigationPath: [EntityLink]
-    @State private var snapshot = PlaybackStatisticsSnapshot()
+    @State private var snapshot = ConsumptionStatisticsSnapshot()
     @State private var timeframe = StatisticsTimeframe.year
     @State private var eventFilter = StatisticsEventFilter.all
     @State private var kindFilter: EntityKind?
     @State private var loadedFilterKey: String?
 
-    private let service: PlaybackStatisticsService
+    private let service: ConsumptionStatisticsService
     private let detailDependencies: EntityDetailDependencies
     private let now: Date
 
     init(
-        loader: any PlaybackStatisticsLoading,
+        loader: any ConsumptionStatisticsLoading,
         detailDependencies: EntityDetailDependencies,
         navigationPath: Binding<[EntityLink]> = .constant([]),
         now: Date = Date()
     ) {
         _navigationPath = navigationPath
-        service = PlaybackStatisticsService(loader: loader)
+        service = ConsumptionStatisticsService(loader: loader)
         self.detailDependencies = detailDependencies
         self.now = now
     }
@@ -176,7 +176,7 @@ struct PlaybackStatisticsView: View {
         )
     }
 
-    private func dailyActivity(_ buckets: [PlaybackStatisticsBucket]) -> some View {
+    private func dailyActivity(_ buckets: [ConsumptionStatisticsBucket]) -> some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
             Text("Daily Activity").font(.title3.bold())
             ForEach(buckets.reversed().prefix(15)) { bucket in
@@ -217,7 +217,7 @@ struct PlaybackStatisticsView: View {
 
     private func entityList(
         title: String,
-        entities: [PlaybackStatisticsEntity]
+        entities: [ConsumptionStatisticsEntity]
     ) -> some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
             Text(title).font(.title3.bold()).padding(.bottom, PrismediaSpacing.extraSmall)
@@ -236,7 +236,7 @@ struct PlaybackStatisticsView: View {
         }
     }
 
-    private func recentEvents(_ events: [PlaybackStatisticsEvent]) -> some View {
+    private func recentEvents(_ events: [ConsumptionStatisticsEvent]) -> some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
             Text("Recent Events").font(.title3.bold()).padding(.bottom, PrismediaSpacing.extraSmall)
             ForEach(events) { event in
@@ -277,7 +277,7 @@ struct PlaybackStatisticsView: View {
         .contentShape(Rectangle())
     }
 
-    private func kindBreakdown(_ slices: [PlaybackStatisticsKindSlice]) -> some View {
+    private func kindBreakdown(_ slices: [ConsumptionStatisticsKindSlice]) -> some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
             Text("Media Breakdown").font(.title3.bold()).padding(.bottom, PrismediaSpacing.extraSmall)
             ForEach(slices) { slice in
@@ -299,7 +299,7 @@ struct PlaybackStatisticsView: View {
         }
     }
 
-    private func consumptionRhythm(_ cells: [PlaybackStatisticsRhythmCell]) -> some View {
+    private func consumptionRhythm(_ cells: [ConsumptionStatisticsRhythmCell]) -> some View {
         let busiest = cells.sorted { lhs, rhs in
             if lhs.totalEvents == rhs.totalEvents { return lhs.hour < rhs.hour }
             return lhs.totalEvents > rhs.totalEvents
@@ -347,7 +347,7 @@ struct PlaybackStatisticsView: View {
 
     private func share(
         _ value: Int,
-        in bucket: PlaybackStatisticsBucket,
+        in bucket: ConsumptionStatisticsBucket,
         width: CGFloat
     ) -> CGFloat {
         guard bucket.totalCount > 0 else { return 0 }
@@ -367,7 +367,7 @@ struct PlaybackStatisticsView: View {
             timeframe.days.flatMap {
                 Calendar(identifier: .gregorian).date(byAdding: .day, value: -$0, to: to)
             } ?? Date(timeIntervalSince1970: 0)
-        let query = PlaybackStatisticsQuery(
+        let query = ConsumptionStatisticsQuery(
             from: from,
             to: to,
             kind: kindFilter,
@@ -392,7 +392,7 @@ struct PlaybackStatisticsView: View {
     #Preview("Consumption Stats") {
         let detailLoader = StatisticsPreviewDetailLoader()
         PreviewShell(signedIn: true) {
-            PlaybackStatisticsView(
+            ConsumptionStatisticsView(
                 loader: StatisticsPreviewLoader(),
                 detailDependencies: EntityDetailDependencies(
                     detailLoader: detailLoader,

@@ -9,7 +9,7 @@ struct MusicLibraryQueueLoader: Sendable {
 
     func allTracks() async throws -> [MusicTrack] {
         try await tracks(
-            matching: EntityListQuery(kind: .audioTrack, sort: "title", sortDescending: false),
+            matching: EntityListQuery(kind: .audioTrack, sort: PrismediaContractCodes.EntityListSort.title, sortDescending: false),
             search: nil
         )
     }

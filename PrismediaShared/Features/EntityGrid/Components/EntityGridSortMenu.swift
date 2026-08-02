@@ -47,7 +47,7 @@ struct EntityGridSortMenu: View {
     #Preview("Entity Grid Sort · Standard") {
         EntityGridSortMenu(
             catalog: EntityGridControlCatalog(query: EntityListQuery(kind: .movie)),
-            controls: EntityGridControls(baselineQuery: EntityListQuery(sort: "title")),
+            controls: EntityGridControls(baselineQuery: EntityListQuery(sort: PrismediaContractCodes.EntityListSort.title)),
             onSelect: { _ in },
             onReshuffle: {},
             onReverseDirection: {}

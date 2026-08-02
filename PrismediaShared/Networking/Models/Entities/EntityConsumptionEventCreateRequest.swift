@@ -1,6 +1,6 @@
 import Foundation
 
-struct EntityPlaybackEventCreateRequest: Encodable, Sendable {
+struct EntityConsumptionEventCreateRequest: Encodable, Sendable {
     let kind: ConsumptionEventKind
     let occurredAt: Date?
     let positionSeconds: Double?

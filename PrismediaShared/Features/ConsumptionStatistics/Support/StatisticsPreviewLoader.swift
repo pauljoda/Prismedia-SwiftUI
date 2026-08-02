@@ -1,11 +1,11 @@
 import SwiftUI
 
 #if DEBUG
-    struct StatisticsPreviewLoader: PlaybackStatisticsLoading {
-        func loadStatistics(_ query: PlaybackStatisticsQuery) async throws -> PlaybackStatisticsResponse {
+    struct StatisticsPreviewLoader: ConsumptionStatisticsLoading {
+        func loadStatistics(_ query: ConsumptionStatisticsQuery) async throws -> ConsumptionStatisticsResponse {
             let item = PrismediaPreviewData.allEntities[0]
             let eventDate = Date(timeIntervalSince1970: 1_752_201_600)
-            return PlaybackStatisticsResponse(
+            return ConsumptionStatisticsResponse(
                 from: query.from,
                 to: query.to,
                 totalEvents: 18,
@@ -18,7 +18,7 @@ import SwiftUI
                 readingSeconds: 7_200,
                 listeningSeconds: 10_800,
                 topEntities: [
-                    PlaybackStatisticsEntity(
+                    ConsumptionStatisticsEntity(
                         id: item.id,
                         kind: item.kind,
                         title: item.title,
@@ -32,7 +32,7 @@ import SwiftUI
                     )
                 ],
                 recentEvents: [
-                    PlaybackStatisticsEvent(
+                    ConsumptionStatisticsEvent(
                         id: UUID(uuidString: "3B3684F3-0A12-4E05-AD5C-EFB79652F997")!,
                         entityID: item.id,
                         entityKind: item.kind,
@@ -45,7 +45,7 @@ import SwiftUI
                     )
                 ],
                 dailyEvents: [
-                    PlaybackStatisticsBucket(
+                    ConsumptionStatisticsBucket(
                         date: "2026-07-11",
                         accessedCount: 12,
                         completedCount: 15,
@@ -57,7 +57,7 @@ import SwiftUI
                     )
                 ],
                 kindBreakdown: [
-                    PlaybackStatisticsKindSlice(
+                    ConsumptionStatisticsKindSlice(
                         kind: item.kind,
                         totalEvents: 18,
                         accessedCount: 12,
@@ -68,7 +68,7 @@ import SwiftUI
                     )
                 ],
                 rhythm: [
-                    PlaybackStatisticsRhythmCell(
+                    ConsumptionStatisticsRhythmCell(
                         dayOfWeek: 6,
                         hour: 20,
                         accessedCount: 7,

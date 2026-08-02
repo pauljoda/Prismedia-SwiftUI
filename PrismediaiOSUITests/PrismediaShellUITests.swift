@@ -239,12 +239,19 @@ final class PrismediaShellUITests: XCTestCase {
         listen.tap()
 
         let miniPlayer = element("music.mini-player", in: app)
-        let openMiniPlayer = element("music.mini-player.track", in: app)
+        let openMiniPlayer = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label BEGINSWITH %@",
+                "music.mini-player",
+                "Now Playing"
+            )
+        ).firstMatch
         XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
         XCTAssertTrue(openMiniPlayer.waitForExistence(timeout: 5))
         XCTAssertFalse(element("epub-reader.content", in: app).exists)
 
-        XCUIDevice.shared.press(.home)
+        let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+        settings.launch()
         RunLoop.current.run(until: Date().addingTimeInterval(7))
         app.activate()
         XCTAssertTrue(miniPlayer.waitForExistence(timeout: 10))
@@ -270,7 +277,10 @@ final class PrismediaShellUITests: XCTestCase {
         XCTAssertTrue(page.waitForExistence(timeout: 20))
         RunLoop.current.run(until: Date().addingTimeInterval(2))
         let locator = try epubLocator(from: page)
-        XCTAssertTrue((locator["href"] as? String ?? "").contains("chapter-1.xhtml"))
+        XCTAssertTrue(
+            (locator["href"] as? String ?? "").contains("chapter-1.xhtml"),
+            "Expected audiobook progress in chapter 1, received \(locator)"
+        )
         let locations = try XCTUnwrap(locator["locations"] as? [String: Any])
         XCTAssertGreaterThan(locations["progression"] as? Double ?? 0, 0.3)
     }

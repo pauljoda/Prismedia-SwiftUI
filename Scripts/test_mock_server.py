@@ -41,7 +41,7 @@ class EntityListResponseTests(unittest.TestCase):
     def test_limit_is_applied_after_filtering_without_changing_total_count(self):
         response = mock_server.build_entity_list_response(
             "/api/entities",
-            "kind=video&query=Mock&sort=title&sortDir=desc&limit=2",
+            "kind=video&query=Mock&sort=title&sortDirection=desc&limit=2",
         )
 
         self.assertEqual(
@@ -53,7 +53,7 @@ class EntityListResponseTests(unittest.TestCase):
     def test_added_sort_uses_fixture_order_and_honors_descending_direction(self):
         response = mock_server.build_entity_list_response(
             "/api/entities",
-            "sort=added&sortDir=desc&limit=3",
+            "sort=date-added&sortDirection=desc&limit=3",
         )
 
         self.assertEqual(
@@ -315,7 +315,7 @@ class EntityListHTTPTests(unittest.TestCase):
     def test_authenticated_endpoint_applies_decoded_query_sort_and_limit(self):
         port = self.server.server_address[1]
         request = Request(
-            f"http://127.0.0.1:{port}/api/entities?query=mock%20movie&sort=title&sortDir=desc&limit=1",
+            f"http://127.0.0.1:{port}/api/entities?query=mock%20movie&sort=title&sortDirection=desc&limit=1",
             headers={"Authorization": f"Bearer {mock_server.TOKEN}"},
         )
 
@@ -394,7 +394,7 @@ class EntityListHTTPTests(unittest.TestCase):
         self.assertEqual(7, consumption["activeSeconds"])
 
         access_request = Request(
-            f"http://127.0.0.1:{port}/api/entities/{mock_server.AUDIOBOOK_ID}/playback/events",
+            f"http://127.0.0.1:{port}/api/entities/{mock_server.AUDIOBOOK_ID}/consumption/events",
             data=json.dumps({"kind": "accessed"}).encode(),
             headers=headers,
             method="POST",
@@ -437,7 +437,7 @@ class EntityListHTTPTests(unittest.TestCase):
         self.assertEqual(7, consumption["activeSeconds"])
 
         access_request = Request(
-            f"http://127.0.0.1:{port}/api/entities/{mock_server.EPUB_BOOK_ID}/playback/events",
+            f"http://127.0.0.1:{port}/api/entities/{mock_server.EPUB_BOOK_ID}/consumption/events",
             data=json.dumps({"kind": "accessed"}).encode(),
             headers=headers,
             method="POST",
@@ -639,15 +639,18 @@ class EntityListHTTPTests(unittest.TestCase):
 
         with urlopen(Request(url, headers={"Range": "bytes=10-19"})) as response:
             self.assertEqual(206, response.status)
-            self.assertEqual("bytes 10-19/400044", response.headers["Content-Range"])
+            self.assertEqual(
+                f"bytes 10-19/{len(mock_server.MOCK_AUDIO)}",
+                response.headers["Content-Range"],
+            )
             self.assertEqual(10, len(response.read()))
 
     def test_book_playback_patch_updates_durable_audiobook_cursor(self):
         port = self.server.server_address[1]
-        url = f"http://127.0.0.1:{port}/api/entities/{mock_server.AUDIOBOOK_ID}/playback"
+        url = f"http://127.0.0.1:{port}/api/entities/{mock_server.AUDIOBOOK_ID}/consumption"
         request = Request(
             url,
-            data=json.dumps({"resumeSeconds": 151, "completed": False}).encode(),
+            data=json.dumps({"positionSeconds": 151, "completed": False}).encode(),
             headers={
                 "Authorization": f"Bearer {mock_server.TOKEN}",
                 "Content-Type": "application/json",

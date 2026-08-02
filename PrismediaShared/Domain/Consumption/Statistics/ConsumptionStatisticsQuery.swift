@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PlaybackStatisticsQuery: Hashable, Sendable {
+public struct ConsumptionStatisticsQuery: Hashable, Sendable {
     public let from: Date
     public let to: Date
     public let kind: EntityKind?

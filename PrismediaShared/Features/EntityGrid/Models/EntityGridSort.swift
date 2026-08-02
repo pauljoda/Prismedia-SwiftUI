@@ -1,8 +1,8 @@
 public enum EntityGridSort: String, CaseIterable, Codable, Hashable, Sendable, Identifiable {
     case title
     case index = "sort-order"
-    case added
-    case lastAccessed = "last-played"
+    case added = "date-added"
+    case lastActive = "last-active"
     case rating
     case random
     case references
@@ -18,7 +18,7 @@ public enum EntityGridSort: String, CaseIterable, Codable, Hashable, Sendable, I
         case .title: "Title"
         case .index: "Index"
         case .added: "Date Added"
-        case .lastAccessed: "Last Accessed"
+        case .lastActive: "Last Active"
         case .rating: "Rating"
         case .random: "Random"
         case .references: "References"

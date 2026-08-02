@@ -1,14 +1,14 @@
 import Foundation
 
-public struct PlaybackStatisticsSnapshot: Sendable {
-    public var response: PlaybackStatisticsResponse?
+public struct ConsumptionStatisticsSnapshot: Sendable {
+    public var response: ConsumptionStatisticsResponse?
     public var thumbnailsByID: [UUID: EntityThumbnail]
-    public var state: PlaybackStatisticsState
+    public var state: ConsumptionStatisticsState
 
     public init(
-        response: PlaybackStatisticsResponse? = nil,
+        response: ConsumptionStatisticsResponse? = nil,
         thumbnailsByID: [UUID: EntityThumbnail] = [:],
-        state: PlaybackStatisticsState = .idle
+        state: ConsumptionStatisticsState = .idle
     ) {
         self.response = response
         self.thumbnailsByID = thumbnailsByID

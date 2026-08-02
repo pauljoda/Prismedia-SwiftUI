@@ -7,19 +7,19 @@ public enum TVAppCatalog {
             id: "movies",
             title: "Movies",
             systemImage: "movieclapper",
-            query: EntityListQuery(kind: .movie, sort: "added", sortDescending: true)
+            query: EntityListQuery(kind: .movie, sort: PrismediaContractCodes.EntityListSort.dateAdded, sortDescending: true)
         ),
         TVAppTab(
             id: "series",
             title: "Series",
             systemImage: "rectangle.stack",
-            query: EntityListQuery(kind: .videoSeries, sort: "added", sortDescending: true)
+            query: EntityListQuery(kind: .videoSeries, sort: PrismediaContractCodes.EntityListSort.dateAdded, sortDescending: true)
         ),
         TVAppTab(
             id: "collections",
             title: "Collections",
             systemImage: "square.stack.3d.up",
-            query: EntityListQuery(kind: .collection, sort: "added", sortDescending: true)
+            query: EntityListQuery(kind: .collection, sort: PrismediaContractCodes.EntityListSort.dateAdded, sortDescending: true)
         ),
         TVAppTab(
             id: "search",
@@ -27,7 +27,7 @@ public enum TVAppCatalog {
             systemImage: "magnifyingglass",
             query: EntityListQuery(
                 kinds: [.movie, .videoSeries, .collection],
-                sort: "added",
+                sort: PrismediaContractCodes.EntityListSort.dateAdded,
                 sortDescending: true
             )
         ),
@@ -45,7 +45,7 @@ public enum TVAppCatalog {
             systemImage: "play.circle",
             query: EntityListQuery(
                 kinds: [.movie, .video, .videoSeries, .videoSeason],
-                sort: "last-played",
+                sort: PrismediaContractCodes.EntityListSort.lastActive,
                 sortDescending: true,
                 status: "in-progress"
             ),
@@ -57,7 +57,7 @@ public enum TVAppCatalog {
             systemImage: "clock.arrow.circlepath",
             query: EntityListQuery(
                 kinds: [.movie, .video, .videoSeries, .videoSeason],
-                sort: "last-played",
+                sort: PrismediaContractCodes.EntityListSort.lastActive,
                 sortDescending: true,
                 status: "watched"
             ),
@@ -67,7 +67,7 @@ public enum TVAppCatalog {
             id: "movies",
             title: "Recently Added Movies",
             systemImage: "movieclapper",
-            query: EntityListQuery(kind: .movie, sort: "added", sortDescending: true),
+            query: EntityListQuery(kind: .movie, sort: PrismediaContractCodes.EntityListSort.dateAdded, sortDescending: true),
             limit: 20,
             destinationTabID: "movies"
         ),
@@ -75,7 +75,7 @@ public enum TVAppCatalog {
             id: "series",
             title: "Recently Added Series",
             systemImage: "rectangle.stack",
-            query: EntityListQuery(kind: .videoSeries, sort: "added", sortDescending: true),
+            query: EntityListQuery(kind: .videoSeries, sort: PrismediaContractCodes.EntityListSort.dateAdded, sortDescending: true),
             limit: 20,
             destinationTabID: "series"
         ),

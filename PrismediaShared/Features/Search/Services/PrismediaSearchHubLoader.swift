@@ -18,7 +18,7 @@ public struct PrismediaSearchHubLoader: SearchHubLoading, Sendable {
             for (index, kind) in SearchHubCatalog.previewKinds.enumerated() {
                 group.addTask { [client] in
                     let response = try await client.listEntities(
-                        EntityListQuery(kind: kind, sort: "added", sortDescending: true),
+                        EntityListQuery(kind: kind, sort: PrismediaContractCodes.EntityListSort.dateAdded, sortDescending: true),
                         limit: itemLimit
                     )
                     return (index, response.items)

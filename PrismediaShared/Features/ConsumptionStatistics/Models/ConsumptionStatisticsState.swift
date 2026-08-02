@@ -1,6 +1,6 @@
 import Foundation
 
-public enum PlaybackStatisticsState: Equatable, Sendable {
+public enum ConsumptionStatisticsState: Equatable, Sendable {
     case idle
     case loading
     case content

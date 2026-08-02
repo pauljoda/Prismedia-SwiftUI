@@ -210,7 +210,7 @@ public enum ModeCatalog {
         query: EntityListQuery
     ) -> AppDestination {
         var query = query
-        query.sort = "added"
+        query.sort = PrismediaContractCodes.EntityListSort.dateAdded
         query.sortDescending = true
 
         return AppDestination(

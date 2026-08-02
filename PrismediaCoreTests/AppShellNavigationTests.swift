@@ -130,7 +130,7 @@ final class AppShellNavigationTests: XCTestCase {
                 guard case .entityList(let entityList) = canonical.destination.content else {
                     return XCTFail("Canonical destination for \(kind.rawValue) must be an entity list")
                 }
-                XCTAssertEqual(entityList.query.sort, "added")
+                XCTAssertEqual(entityList.query.sort, PrismediaContractCodes.EntityListSort.dateAdded)
                 XCTAssertTrue(entityList.query.sortDescending)
             }
         }
@@ -146,12 +146,20 @@ final class AppShellNavigationTests: XCTestCase {
 
         XCTAssertFalse(rootLibraries.isEmpty)
         for (destination, entityList) in rootLibraries {
-            XCTAssertEqual(entityList.query.sort, "added", destination.id)
+            XCTAssertEqual(
+                entityList.query.sort,
+                PrismediaContractCodes.EntityListSort.dateAdded,
+                destination.id
+            )
             XCTAssertTrue(entityList.query.sortDescending, destination.id)
         }
 
         for tab in TVAppCatalog.tabs where tab.query != nil {
-            XCTAssertEqual(tab.query?.sort, "added", tab.id)
+            XCTAssertEqual(
+                tab.query?.sort,
+                PrismediaContractCodes.EntityListSort.dateAdded,
+                tab.id
+            )
             XCTAssertEqual(tab.query?.sortDescending, true, tab.id)
         }
     }

@@ -20,7 +20,7 @@ struct GalleryChildGroupsPresentation: Equatable, Sendable {
     var imageGridConfiguration: EntityGridConfiguration {
         EntityGridConfiguration(
             title: "Images",
-            query: EntityListQuery(kind: .image, sort: "added"),
+            query: EntityListQuery(kind: .image, sort: PrismediaContractCodes.EntityListSort.dateAdded),
             defaultDisplayMode: .wall,
             availableDisplayModes: [.wall, .grid, .feed],
             preferencesID: "gallery-\(galleryID.uuidString.lowercased())-images"

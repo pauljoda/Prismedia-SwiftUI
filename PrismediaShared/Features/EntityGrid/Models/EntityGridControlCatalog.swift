@@ -8,7 +8,7 @@ public struct EntityGridControlCatalog: Hashable, Sendable {
     }
 
     public var sortOptions: [EntityGridSort] {
-        var options: [EntityGridSort] = [.title, .added, .lastAccessed, .rating, .random]
+        var options: [EntityGridSort] = [.title, .added, .lastActive, .rating, .random]
         if query.sort == EntityGridSort.index.rawValue {
             options.insert(.index, at: 0)
         }

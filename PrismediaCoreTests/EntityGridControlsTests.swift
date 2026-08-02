@@ -4,7 +4,7 @@ import XCTest
 
 final class EntityGridControlsTests: XCTestCase {
     func testListAndSortControlsDefaultToAscending() {
-        let query = EntityListQuery(kind: .video, sort: "added")
+        let query = EntityListQuery(kind: .video, sort: PrismediaContractCodes.EntityListSort.dateAdded)
         let controls = EntityGridControls(baselineQuery: query)
 
         XCTAssertFalse(query.sortDescending)
@@ -24,7 +24,7 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertTrue(
             FavoritesCatalog.sections.allSatisfy { section in
                 section.query.favorite == true
-                    && section.query.sort == EntityGridSort.lastAccessed.rawValue
+                    && section.query.sort == EntityGridSort.lastActive.rawValue
                     && section.query.sortDescending
                     && section.query.kind == section.kind
             }
@@ -34,7 +34,7 @@ final class EntityGridControlsTests: XCTestCase {
     func testPersistedPreferencesRestoreControlsWithoutReplacingRouteDefaults() throws {
         let baseline = EntityListQuery(
             kind: .book,
-            sort: "added",
+            sort: PrismediaContractCodes.EntityListSort.dateAdded,
             bookType: "comic,manga"
         )
         var controls = EntityGridControls(baselineQuery: baseline)
@@ -244,7 +244,7 @@ final class EntityGridControlsTests: XCTestCase {
     func testControlsApplyServerSortAndFiltersWithoutRemovingRouteLocks() {
         let baseline = EntityListQuery(
             kind: .book,
-            sort: "added",
+            sort: PrismediaContractCodes.EntityListSort.dateAdded,
             bookType: "comic,manga",
             bookFormat: "image-archive"
         )

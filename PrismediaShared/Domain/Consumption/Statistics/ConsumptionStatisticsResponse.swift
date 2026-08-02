@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PlaybackStatisticsResponse: Decodable, Equatable, Sendable {
+public struct ConsumptionStatisticsResponse: Decodable, Equatable, Sendable {
     public let from: Date
     public let to: Date
     public let totalEvents: Int
@@ -12,9 +12,9 @@ public struct PlaybackStatisticsResponse: Decodable, Equatable, Sendable {
     public let viewingSeconds: Double
     public let readingSeconds: Double
     public let listeningSeconds: Double
-    public let topEntities: [PlaybackStatisticsEntity]
-    public let recentEvents: [PlaybackStatisticsEvent]
-    public let dailyEvents: [PlaybackStatisticsBucket]
-    public let kindBreakdown: [PlaybackStatisticsKindSlice]
-    public let rhythm: [PlaybackStatisticsRhythmCell]
+    public let topEntities: [ConsumptionStatisticsEntity]
+    public let recentEvents: [ConsumptionStatisticsEvent]
+    public let dailyEvents: [ConsumptionStatisticsBucket]
+    public let kindBreakdown: [ConsumptionStatisticsKindSlice]
+    public let rhythm: [ConsumptionStatisticsRhythmCell]
 }

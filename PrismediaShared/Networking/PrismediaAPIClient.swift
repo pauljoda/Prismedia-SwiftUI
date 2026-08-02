@@ -374,14 +374,14 @@ public struct PrismediaAPIClient: Sendable {
         }
     }
 
-    public func fetchPlaybackStatistics(
-        _ query: PlaybackStatisticsQuery
-    ) async throws -> PlaybackStatisticsResponse {
+    public func fetchConsumptionStatistics(
+        _ query: ConsumptionStatisticsQuery
+    ) async throws -> ConsumptionStatisticsResponse {
         var query = query
         query.hideNsfw = !allowsNsfwContent
         return try await send(
-            PlaybackStatisticsResponse.self,
-            path: "/api/playback/statistics",
+            ConsumptionStatisticsResponse.self,
+            path: "/api/consumption/statistics",
             queryItems: query.queryItems
         )
     }
@@ -432,15 +432,7 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
-    public func recordAudioTrackPlay(id: UUID) async throws {
-        _ = try await send(
-            EntityDetail.self,
-            path: "/api/audio-tracks/\(id.uuidString.lowercased())/play",
-            method: "POST"
-        )
-    }
-
-    public func recordEntityPlaybackEvent(
+    public func recordEntityConsumptionEvent(
         id: UUID,
         kind: ConsumptionEventKind,
         positionSeconds: Double?,
@@ -449,9 +441,9 @@ public struct PrismediaAPIClient: Sendable {
     ) async throws {
         _ = try await send(
             EntityThumbnail.self,
-            path: "/api/entities/\(id.uuidString.lowercased())/playback/events",
+            path: "/api/entities/\(id.uuidString.lowercased())/consumption/events",
             method: "POST",
-            body: EntityPlaybackEventCreateRequest(
+            body: EntityConsumptionEventCreateRequest(
                 kind: kind,
                 occurredAt: nil,
                 positionSeconds: positionSeconds,
@@ -461,19 +453,19 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
-    public func updateEntityPlayback(
+    public func updateEntityConsumption(
         id: UUID,
-        resumeSeconds: Double?,
+        positionSeconds: Double?,
         activitySeconds: Double? = nil,
         completed: Bool? = nil
     ) async throws {
         _ = try await send(
             EntityThumbnail.self,
-            path: "/api/entities/\(id.uuidString.lowercased())/playback",
+            path: "/api/entities/\(id.uuidString.lowercased())/consumption",
             method: "PATCH",
-            body: EntityPlaybackUpdateRequest(
-                resumeSeconds: resumeSeconds.map { max(0, $0.isFinite ? $0 : 0) },
-                durationSeconds: activitySeconds.flatMap {
+            body: EntityConsumptionUpdateRequest(
+                positionSeconds: positionSeconds.map { max(0, $0.isFinite ? $0 : 0) },
+                activitySeconds: activitySeconds.flatMap {
                     $0.isFinite && $0 > 0 ? min($0, 60) : nil
                 },
                 completed: completed,

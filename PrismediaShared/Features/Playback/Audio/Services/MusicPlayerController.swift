@@ -347,17 +347,27 @@ public final class MusicPlayerController {
         guard let completedTrack = currentTrack else { return }
         let isAudiobook = context?.isAudiobook == true
         let completedAudiobook = isAudiobook && queue.orderedTracks.last?.id == completedTrack.id
+        let completedDuration = reportingTrackDuration
+        let completedPosition = completedDuration ?? elapsedTime
 
         if isAudiobook {
             audiobookCompleted = completedAudiobook
-            let finishedPosition = reportingTrackDuration ?? elapsedTime
             reportAudiobookProgress(
                 completed: completedAudiobook,
-                trackOffsetSeconds: finishedPosition,
+                trackOffsetSeconds: completedPosition,
                 stopsActivity: completedAudiobook
             )
         } else {
             reportMusicProgress(track: completedTrack, stopsActivity: true)
+            enqueuePlaybackReport { service in
+                try? await service.recordEntityConsumptionEvent(
+                    id: completedTrack.id,
+                    kind: .completed,
+                    positionSeconds: completedPosition,
+                    durationSeconds: completedDuration,
+                    sessionID: nil
+                )
+            }
         }
 
         if queue.advance(reason: .playbackEnded) != nil {
@@ -369,10 +379,8 @@ public final class MusicPlayerController {
             publishNowPlayingState()
         }
 
-        if !isAudiobook {
-            try? await service.recordAudioTrackPlay(id: completedTrack.id)
-        }
         persistState()
+        if !isAudiobook { await flushPendingPlaybackReports() }
     }
 
     public func restoreIfNeeded() {
@@ -643,7 +651,7 @@ public final class MusicPlayerController {
             let position = elapsedTime
             let duration = reportingTrackDuration
             enqueuePlaybackReport { service in
-                try? await service.recordEntityPlaybackEvent(
+                try? await service.recordEntityConsumptionEvent(
                     id: entityID,
                     kind: .accessed,
                     positionSeconds: isAudiobook ? nil : position,
@@ -673,9 +681,9 @@ public final class MusicPlayerController {
                 : nil
         let position = elapsedTime
         enqueuePlaybackReport { service in
-            try? await service.updateEntityPlayback(
+            try? await service.updateEntityConsumption(
                 id: track.id,
-                resumeSeconds: position,
+                positionSeconds: position,
                 activitySeconds: activitySeconds,
                 completed: nil
             )
@@ -691,7 +699,7 @@ public final class MusicPlayerController {
         else { return }
 
         enqueuePlaybackReport { service in
-            try? await service.recordEntityPlaybackEvent(
+            try? await service.recordEntityConsumptionEvent(
                 id: track.id,
                 kind: .skipped,
                 positionSeconds: positionSeconds,

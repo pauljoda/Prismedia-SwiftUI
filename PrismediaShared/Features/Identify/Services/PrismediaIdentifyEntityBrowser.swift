@@ -10,7 +10,7 @@ import Foundation
             search: String?
         ) async throws -> [EntityThumbnail] {
             try await client.listAllEntities(
-                EntityListQuery(kind: kind, sort: "added", organized: organized),
+                EntityListQuery(kind: kind, sort: PrismediaContractCodes.EntityListSort.dateAdded, organized: organized),
                 search: search
             )
         }

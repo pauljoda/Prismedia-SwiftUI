@@ -62,7 +62,7 @@ struct StaticEntityGridLoader: EntityGridLoading {
 
     private func matchesProgress(_ item: EntityThumbnail, query: EntityListQuery) -> Bool {
         let hasEngaged = (item.accessCount ?? 0) > 0 || (item.progress ?? 0) > 0
-        if let played = query.played, hasEngaged != played { return false }
+        if let engaged = query.engaged, hasEngaged != engaged { return false }
         guard let status = query.status else { return true }
 
         return switch status {
@@ -112,7 +112,7 @@ struct StaticEntityGridLoader: EntityGridLoading {
             compare(lhs.sortOrder ?? Int.max, rhs.sortOrder ?? Int.max)
         case .added:
             compare(lhs.createdAt ?? .distantPast, rhs.createdAt ?? .distantPast)
-        case .lastAccessed:
+        case .lastActive:
             compare(lhs.createdAt ?? .distantPast, rhs.createdAt ?? .distantPast)
         case .rating:
             compare(lhs.rating ?? -1, rhs.rating ?? -1)

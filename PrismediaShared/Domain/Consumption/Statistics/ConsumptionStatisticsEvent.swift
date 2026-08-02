@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PlaybackStatisticsEvent: Decodable, Equatable, Sendable, Identifiable {
+public struct ConsumptionStatisticsEvent: Decodable, Equatable, Sendable, Identifiable {
     public let id: UUID
     public let entityID: UUID
     public let entityKind: EntityKind

@@ -9,7 +9,7 @@ import SwiftUI
             EntityGridView(
                 configuration: EntityGridConfiguration(
                     title: kind.displayLabel,
-                    query: EntityListQuery(kind: kind, sort: "added"),
+                    query: EntityListQuery(kind: kind, sort: PrismediaContractCodes.EntityListSort.dateAdded),
                     defaultFilters: browseDefaultFilters,
                     supportsSearch: true,
                     defaultDisplayMode: .grid,

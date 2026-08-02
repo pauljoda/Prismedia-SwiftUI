@@ -907,13 +907,13 @@ def build_mock_pdf():
 
 
 def build_mock_audio():
-    """Build a small, seekable 50-second mono WAV for native AVPlayer smoke tests."""
+    """Build a seekable 100-second mono WAV matching the combined-book chapter fixture."""
     container = io.BytesIO()
     with wave.open(container, "wb") as audio:
         audio.setnchannels(1)
         audio.setsampwidth(1)
         audio.setframerate(8000)
-        audio.writeframes(b"\x80" * (50 * 8000))
+        audio.writeframes(b"\x80" * (100 * 8000))
     return container.getvalue()
 
 
@@ -1453,7 +1453,7 @@ def _filter_entities(indexed_items, parameters):
 
 def _sort_entities(indexed_items, parameters):
     sort_key = _first_parameter(parameters, "sort").casefold()
-    descending = _first_parameter(parameters, "sortDir").casefold() == "desc"
+    descending = _first_parameter(parameters, "sortDirection").casefold() == "desc"
 
     if sort_key in ("random", "shuffle"):
         try:
@@ -1463,7 +1463,7 @@ def _sort_entities(indexed_items, parameters):
         shuffled = list(indexed_items)
         random.Random(seed).shuffle(shuffled)
         return shuffled
-    if sort_key in ("added", "date"):
+    if sort_key == "date-added":
         return sorted(indexed_items, key=lambda pair: pair[0], reverse=descending)
     return sorted(indexed_items, key=lambda pair: pair[1]["title"].casefold(), reverse=descending)
 
@@ -1591,6 +1591,46 @@ class Handler(BaseHTTPRequestHandler):
             current = dict(USER)
             current["libraryRootIds"] = [LIBRARY_ROOT["id"]]
             return self._send(200, {"items": [current, MEMBER_USER]})
+
+        if path == "/api/consumption/statistics":
+            return self._send(
+                200,
+                {
+                    "from": "2026-07-01T00:00:00Z",
+                    "to": "2026-08-01T00:00:00Z",
+                    "totalEvents": 2,
+                    "accessedCount": 1,
+                    "completedCount": 1,
+                    "skippedCount": 0,
+                    "distinctEntityCount": 1,
+                    "activeSeconds": 1_800,
+                    "viewingSeconds": 0,
+                    "readingSeconds": 0,
+                    "listeningSeconds": 1_800,
+                    "topEntities": [],
+                    "recentEvents": [],
+                    "dailyEvents": [{
+                        "date": "2026-07-31",
+                        "accessedCount": 1,
+                        "completedCount": 1,
+                        "skippedCount": 0,
+                        "activeSeconds": 1_800,
+                        "viewingSeconds": 0,
+                        "readingSeconds": 0,
+                        "listeningSeconds": 1_800,
+                    }],
+                    "kindBreakdown": [{
+                        "kind": "book",
+                        "totalEvents": 2,
+                        "accessedCount": 1,
+                        "completedCount": 1,
+                        "skippedCount": 0,
+                        "distinctEntityCount": 1,
+                        "activeSeconds": 1_800,
+                    }],
+                    "rhythm": [],
+                },
+            )
 
         if path == "/api/health/worker":
             return self._send(
@@ -1832,9 +1872,11 @@ class Handler(BaseHTTPRequestHandler):
                 BOOK_PLAYBACK_BY_ID[entity["id"]]["activeSeconds"] += max(
                     0, float(activity_seconds)
                 )
-        elif parts[3] == "playback" and entity["id"] == AUDIOBOOK_ID:
-            if body.get("resumeSeconds") is not None:
-                AUDIOBOOK_PLAYBACK["resumeSeconds"] = max(0, float(body["resumeSeconds"]))
+        elif parts[3] == "consumption" and entity["id"] == AUDIOBOOK_ID:
+            if body.get("positionSeconds") is not None:
+                AUDIOBOOK_PLAYBACK["resumeSeconds"] = max(0, float(body["positionSeconds"]))
+            if body.get("activitySeconds") is not None:
+                AUDIOBOOK_PLAYBACK["activeSeconds"] += max(0, float(body["activitySeconds"]))
             if body.get("completed") is True:
                 AUDIOBOOK_PLAYBACK["completedAt"] = "2026-07-11T00:01:00Z"
             elif body.get("completed") is False:
@@ -1904,21 +1946,16 @@ class Handler(BaseHTTPRequestHandler):
         ):
             return self._send(204)
 
-        if request_url.path.startswith("/api/audio-tracks/") and request_url.path.endswith("/play"):
-            track_id = request_url.path.split("/")[3]
-            detail = build_entity_detail_response(track_id)
-            if detail is not None:
-                return self._send(200, detail)
-
         if (
             len(playback_parts) == 5
             and playback_parts[:2] == ["api", "entities"]
-            and playback_parts[3:] == ["playback", "events"]
-            and playback_parts[2] in BOOK_PLAYBACK_BY_ID
+            and playback_parts[3:] == ["consumption", "events"]
         ):
-            if body.get("kind") == "accessed":
+            if body.get("kind") == "accessed" and playback_parts[2] in BOOK_PLAYBACK_BY_ID:
                 BOOK_PLAYBACK_BY_ID[playback_parts[2]]["accessCount"] += 1
-            entity = next(item for item in ENTITIES if item["id"] == playback_parts[2])
+            entity = next((item for item in ENTITIES if item["id"] == playback_parts[2]), None)
+            if entity is None:
+                return self._send(404, {"code": "not_found", "message": "Entity not found"})
             return self._send(200, entity)
 
         return self._send(404, {"code": "not_found", "message": f"No mock for {self.path}"})

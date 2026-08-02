@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PlaybackStatisticsRhythmCell: Decodable, Equatable, Sendable, Identifiable {
+public struct ConsumptionStatisticsRhythmCell: Decodable, Equatable, Sendable, Identifiable {
     public let dayOfWeek: Int
     public let hour: Int
     public let accessedCount: Int

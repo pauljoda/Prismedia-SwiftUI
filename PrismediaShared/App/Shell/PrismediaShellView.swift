@@ -260,8 +260,8 @@ public struct PrismediaShellView: View {
             )
 
         case .playbackStatistics:
-            PlaybackStatisticsView(
-                loader: PrismediaPlaybackStatisticsLoader(client: client),
+            ConsumptionStatisticsView(
+                loader: PrismediaConsumptionStatisticsLoader(client: client),
                 detailDependencies: detailDependencies,
                 navigationPath: pathBinding(
                     for: destination.id,

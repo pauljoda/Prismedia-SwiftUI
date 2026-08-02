@@ -3,12 +3,12 @@ import Foundation
 public enum DashboardCatalog {
     public static let itemLimit = 20
     public static let continueQuery = EntityListQuery(
-        sort: "last-played",
+        sort: PrismediaContractCodes.EntityListSort.lastActive,
         sortDescending: true,
         status: "in-progress"
     )
     public static let recentQuery = EntityListQuery(
-        sort: "last-played",
+        sort: PrismediaContractCodes.EntityListSort.lastActive,
         sortDescending: true,
         status: "watched"
     )

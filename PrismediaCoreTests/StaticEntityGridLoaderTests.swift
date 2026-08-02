@@ -37,7 +37,7 @@ final class StaticEntityGridLoaderTests: XCTestCase {
         let loader = StaticEntityGridLoader(items: [ordinary, otherFavorite, favorite])
 
         let response = try await loader.load(
-            query: EntityListQuery(kind: .image, sort: "title", sortDescending: false, favorite: true),
+            query: EntityListQuery(kind: .image, sort: PrismediaContractCodes.EntityListSort.title, sortDescending: false, favorite: true),
             limit: 48,
             search: "am",
             cursor: nil
