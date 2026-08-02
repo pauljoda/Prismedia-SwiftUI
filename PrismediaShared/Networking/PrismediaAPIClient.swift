@@ -442,9 +442,10 @@ public struct PrismediaAPIClient: Sendable {
 
     public func recordEntityPlaybackEvent(
         id: UUID,
-        kind: PlaybackEventKind,
+        kind: ConsumptionEventKind,
         positionSeconds: Double?,
-        durationSeconds: Double?
+        durationSeconds: Double?,
+        sessionID: String? = nil
     ) async throws {
         _ = try await send(
             EntityThumbnail.self,
@@ -454,19 +455,29 @@ public struct PrismediaAPIClient: Sendable {
                 kind: kind,
                 occurredAt: nil,
                 positionSeconds: positionSeconds,
-                durationSeconds: durationSeconds
+                durationSeconds: durationSeconds,
+                sessionID: sessionID
             )
         )
     }
 
-    public func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
+    public func updateEntityPlayback(
+        id: UUID,
+        resumeSeconds: Double?,
+        activitySeconds: Double? = nil,
+        completed: Bool? = nil
+    ) async throws {
         _ = try await send(
             EntityThumbnail.self,
             path: "/api/entities/\(id.uuidString.lowercased())/playback",
             method: "PATCH",
             body: EntityPlaybackUpdateRequest(
-                resumeSeconds: max(0, resumeSeconds.isFinite ? resumeSeconds : 0),
-                completed: completed
+                resumeSeconds: resumeSeconds.map { max(0, $0.isFinite ? $0 : 0) },
+                durationSeconds: activitySeconds.flatMap {
+                    $0.isFinite && $0 > 0 ? min($0, 60) : nil
+                },
+                completed: completed,
+                utcOffsetMinutes: TimeZone.current.secondsFromGMT() / 60
             )
         )
     }

@@ -155,7 +155,7 @@ extension EntityDetailView {
     }
 
     func videoResumeSeconds(for detail: EntityDetail) -> Double {
-        let savedResume = detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+        let savedResume = detail.capability(EntityConsumptionCapability.self)?.resumeSeconds ?? 0
         let resumeSeconds = liveVideoResumeSeconds ?? savedResume
         return resumeSeconds.isFinite ? max(0, resumeSeconds) : 0
     }

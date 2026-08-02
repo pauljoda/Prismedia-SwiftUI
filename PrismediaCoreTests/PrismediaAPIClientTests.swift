@@ -368,7 +368,9 @@ final class PrismediaAPIClientTests: XCTestCase {
             sessionID: "play-session",
             positionSeconds: 12.345,
             durationSeconds: 98.7,
-            completed: false
+            completed: false,
+            activitySeconds: 10,
+            utcOffsetMinutes: -300
         )
 
         try await client.reportVideoPlayback(.started, report: report)
@@ -394,6 +396,8 @@ final class PrismediaAPIClientTests: XCTestCase {
             XCTAssertEqual(body["positionSeconds"] as? Double, 12.345)
             XCTAssertEqual(body["durationSeconds"] as? Double, 98.7)
             XCTAssertEqual(body["completed"] as? Bool, false)
+            XCTAssertEqual(body["activitySeconds"] as? Double, 10)
+            XCTAssertEqual(body["utcOffsetMinutes"] as? Int, -300)
         }
     }
 
@@ -622,15 +626,19 @@ final class PrismediaAPIClientTests: XCTestCase {
                   "from": "2026-01-01T00:00:00Z",
                   "to": "2026-01-02T00:00:00Z",
                   "totalEvents": 0,
+                  "accessedCount": 0,
                   "completedCount": 0,
                   "skippedCount": 0,
                   "distinctEntityCount": 0,
-                  "watchSeconds": 0,
+                  "activeSeconds": 0,
+                  "viewingSeconds": 0,
                   "readingSeconds": 0,
                   "listeningSeconds": 0,
                   "topEntities": [],
                   "recentEvents": [],
-                  "dailyEvents": []
+                  "dailyEvents": [],
+                  "kindBreakdown": [],
+                  "rhythm": []
                 }
                 """),
         ])
@@ -1072,7 +1080,12 @@ final class PrismediaAPIClientTests: XCTestCase {
         let loader = MockHTTPDataLoader(responses: [.json(entityDetailJSON(id: bookID, rating: nil))])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
 
-        try await client.updateEntityPlayback(id: bookID, resumeSeconds: 3_725, completed: false)
+        try await client.updateEntityPlayback(
+            id: bookID,
+            resumeSeconds: 3_725,
+            activitySeconds: 15,
+            completed: false
+        )
 
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/api/entities/\(bookID.uuidString.lowercased())/playback")
@@ -1080,7 +1093,9 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
         let body = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
         XCTAssertEqual(body["resumeSeconds"] as? Double, 3_725)
+        XCTAssertEqual(body["durationSeconds"] as? Double, 15)
         XCTAssertEqual(body["completed"] as? Bool, false)
+        XCTAssertNotNil(body["utcOffsetMinutes"] as? Int)
     }
 
     func testRecordSkippedPlaybackEventUsesEntityHistoryEndpointAndSyncFields() async throws {
@@ -1092,7 +1107,8 @@ final class PrismediaAPIClientTests: XCTestCase {
             id: trackID,
             kind: .skipped,
             positionSeconds: 4,
-            durationSeconds: 181
+            durationSeconds: 181,
+            sessionID: "native-session"
         )
 
         let request = try XCTUnwrap(loader.requests.first)
@@ -1108,6 +1124,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(body["kind"] as? String, "skipped")
         XCTAssertEqual(body["positionSeconds"] as? Double, 4)
         XCTAssertEqual(body["durationSeconds"] as? Double, 181)
+        XCTAssertEqual(body["sessionId"] as? String, "native-session")
     }
 
     func testLogoutPostsToAuthLogout() async throws {
@@ -1129,11 +1146,13 @@ final class PrismediaAPIClientTests: XCTestCase {
                 {
                   "from": "2026-01-01T00:00:00Z",
                   "to": "2026-07-01T00:00:00Z",
-                  "totalEvents": 3,
+                  "totalEvents": 5,
+                  "accessedCount": 2,
                   "completedCount": 2,
                   "skippedCount": 1,
                   "distinctEntityCount": 1,
-                  "watchSeconds": 7200,
+                  "activeSeconds": 7200,
+                  "viewingSeconds": 0,
                   "readingSeconds": 5400,
                   "listeningSeconds": 1800,
                   "topEntities": [{
@@ -1141,8 +1160,11 @@ final class PrismediaAPIClientTests: XCTestCase {
                     "kind": "audio-track",
                     "title": "Signals",
                     "coverUrl": null,
+                    "accessedCount": 2,
                     "completedCount": 2,
                     "skippedCount": 1,
+                    "activeSeconds": 7200,
+                    "firstEventAt": "2026-06-01T12:00:00Z",
                     "lastEventAt": "2026-06-30T12:00:00Z"
                   }],
                   "recentEvents": [{
@@ -1156,7 +1178,32 @@ final class PrismediaAPIClientTests: XCTestCase {
                     "positionSeconds": 180.5,
                     "durationSeconds": 181
                   }],
-                  "dailyEvents": [{"date":"2026-06-30","completedCount":2,"skippedCount":1}]
+                  "dailyEvents": [{
+                    "date":"2026-06-30",
+                    "accessedCount":2,
+                    "completedCount":2,
+                    "skippedCount":1,
+                    "activeSeconds":7200,
+                    "viewingSeconds":0,
+                    "listeningSeconds":1800,
+                    "readingSeconds":5400
+                  }],
+                  "kindBreakdown": [{
+                    "kind":"audio-track",
+                    "totalEvents":5,
+                    "accessedCount":2,
+                    "completedCount":2,
+                    "skippedCount":1,
+                    "distinctEntityCount":1,
+                    "activeSeconds":7200
+                  }],
+                  "rhythm": [{
+                    "dayOfWeek":2,
+                    "hour":20,
+                    "accessedCount":2,
+                    "completedCount":2,
+                    "skippedCount":1
+                  }]
                 }
                 """)
         ])
@@ -1173,11 +1220,14 @@ final class PrismediaAPIClientTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(response.totalEvents, 3)
-        XCTAssertEqual(response.watchSeconds, 7_200)
+        XCTAssertEqual(response.totalEvents, 5)
+        XCTAssertEqual(response.accessedCount, 2)
+        XCTAssertEqual(response.activeSeconds, 7_200)
         XCTAssertEqual(response.readingSeconds, 5_400)
         XCTAssertEqual(response.listeningSeconds, 1_800)
-        XCTAssertEqual(response.dailyEvents.first?.totalCount, 3)
+        XCTAssertEqual(response.dailyEvents.first?.totalCount, 5)
+        XCTAssertEqual(response.kindBreakdown.first?.activeSeconds, 7_200)
+        XCTAssertEqual(response.rhythm.first?.totalEvents, 5)
         XCTAssertEqual(response.recentEvents.first?.positionSeconds, 180.5)
         let request = try XCTUnwrap(loader.requests.first)
         XCTAssertEqual(request.url?.path, "/api/playback/statistics")

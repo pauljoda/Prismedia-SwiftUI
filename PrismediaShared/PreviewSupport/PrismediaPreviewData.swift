@@ -18,7 +18,7 @@ enum PrismediaPreviewData {
             isOrganized: true,
             hasSourceMedia: true,
             progress: 0.37,
-            playCount: 2,
+            accessCount: 2,
             genres: ["Comedy", "Television"]
         ),
         EntityThumbnail(

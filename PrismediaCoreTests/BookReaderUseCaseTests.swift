@@ -4,6 +4,20 @@ import XCTest
 
 @MainActor
 final class BookReaderUseCaseTests: XCTestCase {
+    func testOpeningReaderRecordsOneAccessPerPresentation() async throws {
+        let bookID = UUID()
+        let service = OrderedProgressService(values: [:])
+        let writer = BookReaderProgressWriter(service: service)
+
+        writer.beginActivity(bookID: bookID)
+        writer.beginActivity(bookID: bookID)
+        await writer.flush()
+
+        let accesses = await service.recordedAccesses()
+        XCTAssertEqual(accesses.map(\.id), [bookID])
+        XCTAssertFalse(try XCTUnwrap(accesses.first?.sessionID).isEmpty)
+    }
+
     func testRapidPageTurnsCoalesceToTheLatestCompletedPosition() async throws {
         let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
         let chapterID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!
@@ -172,6 +186,7 @@ final class BookReaderUseCaseTests: XCTestCase {
 private actor OrderedProgressService: BookReaderServicing {
     let values: [UUID: EntityDetail]
     private var completed: [EntityProgressUpdateRequest] = []
+    private var accesses: [(id: UUID, sessionID: String)] = []
 
     init(values: [UUID: EntityDetail]) {
         self.values = values
@@ -184,12 +199,17 @@ private actor OrderedProgressService: BookReaderServicing {
 
     func loadPageData(id: UUID) async throws -> Data { Data() }
 
+    func recordReadingAccess(id: UUID, sessionID: String) async throws {
+        accesses.append((id, sessionID))
+    }
+
     func updateReadingProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
         if request.index == 1 { try await Task.sleep(for: .milliseconds(80)) }
         completed.append(request)
     }
 
     func completedRequests() -> [EntityProgressUpdateRequest] { completed }
+    func recordedAccesses() -> [(id: UUID, sessionID: String)] { accesses }
 }
 
 private enum OrderedProgressError: Error {

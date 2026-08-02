@@ -6,7 +6,7 @@ public struct PlaybackStatisticsEvent: Decodable, Equatable, Sendable, Identifia
     public let entityKind: EntityKind
     public let entityTitle: String
     public let coverURL: String?
-    public let kind: PlaybackEventKind
+    public let kind: ConsumptionEventKind
     public let occurredAt: Date
     public let positionSeconds: Double?
     public let durationSeconds: Double?

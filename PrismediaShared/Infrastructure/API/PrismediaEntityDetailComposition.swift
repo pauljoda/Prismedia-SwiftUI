@@ -34,6 +34,7 @@ enum PrismediaEntityDetailComposition {
             videoPlaybackService: adapter,
             onEntityMutated: onEntityMutated,
             audioPlaybackService: client,
+            consumptionService: client,
             acquisitionService: isAdministrator
                 ? PrismediaEntityAcquisitionService(client: client)
                 : nil,

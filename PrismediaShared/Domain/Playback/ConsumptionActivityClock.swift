@@ -1,7 +1,7 @@
 import Foundation
 
-/// Measures active wall-clock time between Book progress heartbeats.
-struct BookActivityClock: Sendable {
+/// Measures active wall-clock time between consumption heartbeats for any medium.
+struct ConsumptionActivityClock: Sendable {
     private let maximumHeartbeatSeconds: Double
     private var startedAt: TimeInterval?
 

@@ -2,11 +2,13 @@ import SwiftUI
 
 public struct EntityImageViewerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @State private var contentLoader: EntityMediaContentLoader
     @State private var exportStore: EntityImageExportStore
     @State private var chrome = EntityImageViewerChromeState()
     @State private var chromeTask: Task<Void, Never>?
     @State private var metadataLink: EntityLink?
+    @State private var consumptionReporter: EntityConsumptionReporter
     @GestureState private var dismissDragTranslation = CGSize.zero
 
     private let session: EntityImageViewerSession
@@ -46,6 +48,9 @@ public struct EntityImageViewerView: View {
             )
         )
         _exportStore = State(initialValue: exportStore)
+        _consumptionReporter = State(
+            initialValue: EntityConsumptionReporter(service: dependencies.consumptionService)
+        )
     }
 
     #if DEBUG
@@ -115,21 +120,45 @@ public struct EntityImageViewerView: View {
         .accessibilityIdentifier("image-viewer")
         .task(id: session.currentEntityID) {
             guard let currentEntityID = session.currentEntityID else { return }
+            consumptionReporter.open(id: currentEntityID, active: false)
             await session.loadNextPageIfNeeded()
             guard !Task.isCancelled else { return }
             await contentLoader.prepare(
                 activeEntityID: currentEntityID,
                 sequence: session.sequence
             )
+            guard !Task.isCancelled else { return }
+            if scenePhase == .active { consumptionReporter.resume() }
         }
-        .task { scheduleChromeHide() }
+        .task {
+            scheduleChromeHide()
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(15))
+                } catch {
+                    break
+                }
+                consumptionReporter.heartbeat()
+            }
+        }
         .onChange(of: session.currentEntityID) {
             chrome.pageChanged()
             scheduleChromeHide()
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                consumptionReporter.resume()
+            } else {
+                consumptionReporter.pause()
+            }
+        }
         .onDisappear {
             chromeTask?.cancel()
-            Task { await exportStore.removeAll() }
+            consumptionReporter.close()
+            Task {
+                await consumptionReporter.flush()
+                await exportStore.removeAll()
+            }
         }
         .prismediaEntityDestination(item: $metadataLink, dependencies: dependencies)
     }

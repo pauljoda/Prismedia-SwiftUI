@@ -61,13 +61,13 @@ struct StaticEntityGridLoader: EntityGridLoading {
     }
 
     private func matchesProgress(_ item: EntityThumbnail, query: EntityListQuery) -> Bool {
-        let hasPlayed = (item.playCount ?? 0) > 0
-        if let played = query.played, hasPlayed != played { return false }
+        let hasEngaged = (item.accessCount ?? 0) > 0 || (item.progress ?? 0) > 0
+        if let played = query.played, hasEngaged != played { return false }
         guard let status = query.status else { return true }
 
         return switch status {
-        case "watched": hasPlayed || (item.progress ?? 0) >= 1
-        case "unwatched": !hasPlayed && (item.progress ?? 0) == 0
+        case "watched": (item.progress ?? 0) >= 1
+        case "unwatched": (item.progress ?? 0) == 0
         case "in-progress": (item.progress ?? 0) > 0 && (item.progress ?? 0) < 1
         default: true
         }

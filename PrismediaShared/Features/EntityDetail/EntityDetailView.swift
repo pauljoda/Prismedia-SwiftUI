@@ -3,6 +3,7 @@ import SwiftUI
 /// Generic native detail coordinator for every Prismedia entity kind.
 public struct EntityDetailView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.scenePhase) var scenePhase
     @Environment(PrismediaAppRouter.self) var router
     @Environment(\.videoPlaybackSession) var videoPlaybackSession
     #if os(iOS) || os(macOS)
@@ -40,6 +41,7 @@ public struct EntityDetailView: View {
     @State var acquisitionStatus: AcquisitionStatus?
     @State var editPresentation: EntityDetailEditPresentation?
     @State var collectionSheetPresented = false
+    @State var consumptionReporter: EntityConsumptionReporter
     #if os(iOS) || os(macOS)
         @State var identifyAvailability = EntityIdentifyAvailability.checking
         @State var identifyPresentation: IdentifyEntryPresentation?
@@ -68,6 +70,9 @@ public struct EntityDetailView: View {
             _isVideoFullscreenLaunchActive = State(initialValue: false)
         #endif
         _pendingVideoPlaybackActionID = State(initialValue: nil)
+        _consumptionReporter = State(
+            initialValue: EntityConsumptionReporter(service: dependencies.consumptionService)
+        )
         #if os(iOS) || os(macOS)
             _acquisitionStatus = State(
                 initialValue: link.sourceThumbnail?.wantedStatus
@@ -151,6 +156,37 @@ public struct EntityDetailView: View {
             if link.intent == .editReleaseDate {
                 presentReleaseDateEditor()
             }
+        }
+        .task(id: galleryConsumptionID) {
+            guard let galleryConsumptionID else {
+                consumptionReporter.close()
+                await consumptionReporter.flush()
+                return
+            }
+            consumptionReporter.open(
+                id: galleryConsumptionID,
+                active: scenePhase == .active
+            )
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(15))
+                } catch {
+                    break
+                }
+                consumptionReporter.heartbeat()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard galleryConsumptionID != nil else { return }
+            if phase == .active {
+                consumptionReporter.resume()
+            } else {
+                consumptionReporter.pause()
+            }
+        }
+        .onDisappear {
+            consumptionReporter.close()
+            Task { await consumptionReporter.flush() }
         }
         .onDisappear {
             // Presenting this page's own fullscreen player removes the presenting
@@ -244,6 +280,11 @@ public struct EntityDetailView: View {
     var currentDetail: EntityDetail? {
         guard case .content(let detail) = state.phase else { return nil }
         return detail
+    }
+
+    var galleryConsumptionID: UUID? {
+        guard currentDetail?.kind == .gallery else { return nil }
+        return currentDetail?.id
     }
 
     var currentPresentation: EntityDetailPresentation? {

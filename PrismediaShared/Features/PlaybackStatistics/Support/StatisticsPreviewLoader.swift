@@ -9,10 +9,12 @@ import SwiftUI
                 from: query.from,
                 to: query.to,
                 totalEvents: 18,
+                accessedCount: 12,
                 completedCount: 15,
                 skippedCount: 3,
                 distinctEntityCount: 1,
-                watchSeconds: 42_300,
+                activeSeconds: 42_300,
+                viewingSeconds: 24_300,
                 readingSeconds: 7_200,
                 listeningSeconds: 10_800,
                 topEntities: [
@@ -21,8 +23,11 @@ import SwiftUI
                         kind: item.kind,
                         title: item.title,
                         coverURL: item.bestCoverPath,
+                        accessedCount: 12,
                         completedCount: 15,
                         skippedCount: 3,
+                        activeSeconds: 42_300,
+                        firstEventAt: eventDate.addingTimeInterval(-86_400),
                         lastEventAt: eventDate
                     )
                 ],
@@ -42,8 +47,33 @@ import SwiftUI
                 dailyEvents: [
                     PlaybackStatisticsBucket(
                         date: "2026-07-11",
+                        accessedCount: 12,
                         completedCount: 15,
-                        skippedCount: 3
+                        skippedCount: 3,
+                        activeSeconds: 42_300,
+                        viewingSeconds: 24_300,
+                        listeningSeconds: 10_800,
+                        readingSeconds: 7_200
+                    )
+                ],
+                kindBreakdown: [
+                    PlaybackStatisticsKindSlice(
+                        kind: item.kind,
+                        totalEvents: 18,
+                        accessedCount: 12,
+                        completedCount: 15,
+                        skippedCount: 3,
+                        distinctEntityCount: 1,
+                        activeSeconds: 42_300
+                    )
+                ],
+                rhythm: [
+                    PlaybackStatisticsRhythmCell(
+                        dayOfWeek: 6,
+                        hour: 20,
+                        accessedCount: 7,
+                        completedCount: 4,
+                        skippedCount: 1
                     )
                 ]
             )

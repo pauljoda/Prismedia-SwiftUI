@@ -5,7 +5,7 @@ enum VideoProgressPlaybackRoute {
         else { return nil }
 
         let images: EntityImagesCapability? = episode.capability()
-        let playback: EntityPlaybackCapability? = episode.capability()
+        let playback: EntityConsumptionCapability? = episode.capability()
         let thumbnail = EntityThumbnail(
             id: episode.id,
             kind: episode.kind,
@@ -18,7 +18,7 @@ enum VideoProgressPlaybackRoute {
             coverThumb2xURL: images?.thumbnail2xURL,
             hasSourceMedia: episode.hasSourceMedia,
             resumeSeconds: playback?.resumeSeconds,
-            playCount: playback?.playCount
+            accessCount: playback?.accessCount
         )
 
         return EntityLink(thumbnail: thumbnail, intent: .playback)

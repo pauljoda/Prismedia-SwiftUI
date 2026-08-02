@@ -149,7 +149,7 @@ final class EntityDomainModelsTests: XCTestCase {
               "rating": "4",
               "progress": "0.5",
               "resumeSeconds": "125.5",
-              "playCount": "2"
+              "accessCount": "2"
             }
             """.utf8)
 
@@ -172,7 +172,7 @@ final class EntityDomainModelsTests: XCTestCase {
         XCTAssertEqual(thumbnail.rating, 4)
         XCTAssertEqual(thumbnail.progress, 0.5)
         XCTAssertEqual(thumbnail.resumeSeconds, 125.5)
-        XCTAssertEqual(thumbnail.playCount, 2)
+        XCTAssertEqual(thumbnail.accessCount, 2)
 
         let link = EntityLink(thumbnail: thumbnail)
         XCTAssertEqual(link.entityID, entityID)

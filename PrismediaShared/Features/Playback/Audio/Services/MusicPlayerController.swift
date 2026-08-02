@@ -31,7 +31,8 @@ public final class MusicPlayerController {
     private var resumesWhenPlaybackBecomesAvailable = false
     private var activeQueueID = UUID()
     private var currentTrackRequestedAt: TimeInterval?
-    private var audiobookActivityClock = BookActivityClock()
+    private var consumptionActivityClock = ConsumptionActivityClock()
+    private var accessedConsumptionEntityID: UUID?
     private var isReaderPlaybackRateControlActive = false
 
     private static let quickSkipThreshold: TimeInterval = 10
@@ -113,7 +114,7 @@ public final class MusicPlayerController {
     ) -> UUID {
         let tracks = tracks.filter(\.isPlayable)
         guard !tracks.isEmpty else { return activeQueueID }
-        reportAudiobookProgress(completed: false, stopsActivity: true)
+        reportCurrentConsumption(stopsActivity: true)
         if currentTrack != nil { engine.pause() }
         var previousQueue = queue
         if previousQueue.currentTrack != nil {
@@ -132,6 +133,7 @@ public final class MusicPlayerController {
             engine.setPlaybackRate(playbackRate)
         }
         self.context = context
+        accessedConsumptionEntityID = nil
         audiobookCompleted = false
         if preferences.repeatMode == .one {
             preferences.repeatMode = .all
@@ -187,6 +189,7 @@ public final class MusicPlayerController {
         errorMessage = nil
         engine.play()
         isPlaying = true
+        beginCurrentConsumption()
         publishNowPlayingState()
         persistProgress()
     }
@@ -195,14 +198,14 @@ public final class MusicPlayerController {
         resumesWhenPlaybackBecomesAvailable = false
         engine.pause()
         isPlaying = false
-        reportAudiobookProgress(completed: false, stopsActivity: true)
+        reportCurrentConsumption(stopsActivity: true)
         isPlaybackAdvancing = false
         publishNowPlayingState()
         persistProgress()
     }
 
     public func clearPlayback() {
-        reportAudiobookProgress(completed: false, stopsActivity: true)
+        reportCurrentConsumption(stopsActivity: true)
         resetPlaybackState()
     }
 
@@ -228,7 +231,8 @@ public final class MusicPlayerController {
         loadedTrackID = nil
         currentTrackRequestedAt = nil
         resumesWhenPlaybackBecomesAvailable = false
-        audiobookActivityClock = BookActivityClock()
+        consumptionActivityClock = ConsumptionActivityClock()
+        accessedConsumptionEntityID = nil
         engine.setPlaybackRate(playbackRate)
         stateStore?.clear()
         publishNowPlayingState()
@@ -256,12 +260,12 @@ public final class MusicPlayerController {
         if context?.isAudiobook == true { audiobookCompleted = false }
         elapsedTime = max(0, seconds)
         engine.seek(to: elapsedTime)
-        reportAudiobookProgress(completed: false)
+        reportCurrentConsumption()
         persistProgress()
     }
 
     public func skipToNext() {
-        reportAudiobookProgress(completed: false)
+        reportCurrentConsumption()
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
         guard queue.advance(reason: .user) != nil else { return }
@@ -273,7 +277,7 @@ public final class MusicPlayerController {
     }
 
     public func skipToPrevious() {
-        reportAudiobookProgress(completed: false)
+        reportCurrentConsumption()
         guard queue.movePrevious() != nil else { return }
         syncRepeatPreferenceFromQueue()
         elapsedTime = 0
@@ -282,7 +286,7 @@ public final class MusicPlayerController {
     }
 
     public func skipToUpcomingTrack(id trackID: UUID) {
-        reportAudiobookProgress(completed: false)
+        reportCurrentConsumption()
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
         guard queue.moveToUpcomingTrack(id: trackID) != nil else { return }
@@ -352,6 +356,8 @@ public final class MusicPlayerController {
                 trackOffsetSeconds: finishedPosition,
                 stopsActivity: completedAudiobook
             )
+        } else {
+            reportMusicProgress(track: completedTrack, stopsActivity: true)
         }
 
         if queue.advance(reason: .playbackEnded) != nil {
@@ -400,6 +406,7 @@ public final class MusicPlayerController {
         if shouldResume {
             engine.play()
             isPlaying = true
+            beginCurrentConsumption()
         }
         publishNowPlayingState()
     }
@@ -431,19 +438,17 @@ public final class MusicPlayerController {
         }
 
         let isActivelyAdvancing = isPlaying && isAdvancing
-        if context?.isAudiobook == true {
-            if isActivelyAdvancing {
-                audiobookActivityClock.start(at: playbackClock.now)
-            } else if isPlaybackAdvancing {
-                reportAudiobookProgress(completed: false, stopsActivity: true)
-                isPlaybackAdvancing = false
-                persistProgress()
-                return
-            }
+        if isActivelyAdvancing {
+            beginCurrentConsumption(startActivity: true)
+        } else if isPlaybackAdvancing {
+            reportCurrentConsumption(stopsActivity: true)
+            isPlaybackAdvancing = false
+            persistProgress()
+            return
         }
         isPlaybackAdvancing = isActivelyAdvancing
         guard abs(seconds - lastPersistedElapsedTime) >= 5 else { return }
-        reportAudiobookProgress(completed: false)
+        reportCurrentConsumption()
         persistProgress()
     }
 
@@ -459,13 +464,13 @@ public final class MusicPlayerController {
 
     public func resumeAudiobookActivity() {
         guard isPlaybackAdvancing, context?.isAudiobook == true else { return }
-        audiobookActivityClock.start(at: playbackClock.now)
+        consumptionActivityClock.start(at: playbackClock.now)
     }
 
     public func setAudiobookCompletionState(_ completed: Bool) {
         guard context?.isAudiobook == true else { return }
         if completed {
-            reportAudiobookProgress(completed: false, stopsActivity: true)
+            reportCurrentConsumption(stopsActivity: true)
         }
         audiobookCompleted = completed
         if completed {
@@ -485,7 +490,7 @@ public final class MusicPlayerController {
         }
         resolvedTrackDuration = 0
         isPlaybackAdvancing = false
-        audiobookActivityClock = BookActivityClock()
+        consumptionActivityClock = ConsumptionActivityClock()
         loadedTrackID = nil
         currentTrackRequestedAt = nil
         guard prepareCurrentTrack() else {
@@ -499,6 +504,7 @@ public final class MusicPlayerController {
         errorMessage = nil
         engine.play()
         isPlaying = true
+        beginCurrentConsumption()
         publishNowPlayingState()
     }
 
@@ -592,13 +598,13 @@ public final class MusicPlayerController {
         }),
             let duration = reportingTrackDuration
         else {
-            if stopsActivity { _ = audiobookActivityClock.stop(at: playbackClock.now) }
+            if stopsActivity { _ = consumptionActivityClock.stop(at: playbackClock.now) }
             return
         }
         let activitySeconds = stopsActivity
-            ? audiobookActivityClock.stop(at: playbackClock.now)
+            ? consumptionActivityClock.stop(at: playbackClock.now)
             : isPlaybackAdvancing
-                ? audiobookActivityClock.take(at: playbackClock.now)
+                ? consumptionActivityClock.take(at: playbackClock.now)
                 : nil
         let request = BookProgressMappingResolver().progressRequest(
             mapping: mapping,
@@ -611,6 +617,67 @@ public final class MusicPlayerController {
             try? await service.updateEntityProgress(
                 id: ownerID,
                 request: request
+            )
+        }
+    }
+
+    private func reportCurrentConsumption(stopsActivity: Bool = false) {
+        if context?.isAudiobook == true {
+            reportAudiobookProgress(completed: false, stopsActivity: stopsActivity)
+        } else {
+            reportMusicProgress(track: currentTrack, stopsActivity: stopsActivity)
+        }
+    }
+
+    private func beginCurrentConsumption(startActivity: Bool = false) {
+        guard let currentTrack else { return }
+        let entityID = context?.isAudiobook == true
+            ? context?.playbackOwnerEntityID
+            : currentTrack.id
+        guard let entityID else { return }
+
+        if accessedConsumptionEntityID != entityID {
+            let sessionID = UUID().uuidString.lowercased()
+            accessedConsumptionEntityID = entityID
+            let isAudiobook = context?.isAudiobook == true
+            let position = elapsedTime
+            let duration = reportingTrackDuration
+            enqueuePlaybackReport { service in
+                try? await service.recordEntityPlaybackEvent(
+                    id: entityID,
+                    kind: .accessed,
+                    positionSeconds: isAudiobook ? nil : position,
+                    durationSeconds: isAudiobook ? nil : duration,
+                    sessionID: sessionID
+                )
+            }
+        }
+
+        if startActivity {
+            consumptionActivityClock.start(at: playbackClock.now)
+        }
+    }
+
+    private func reportMusicProgress(
+        track: MusicTrack?,
+        stopsActivity: Bool
+    ) {
+        guard context?.isAudiobook != true, let track else {
+            if stopsActivity { _ = consumptionActivityClock.stop(at: playbackClock.now) }
+            return
+        }
+        let activitySeconds = stopsActivity
+            ? consumptionActivityClock.stop(at: playbackClock.now)
+            : isPlaybackAdvancing
+                ? consumptionActivityClock.take(at: playbackClock.now)
+                : nil
+        let position = elapsedTime
+        enqueuePlaybackReport { service in
+            try? await service.updateEntityPlayback(
+                id: track.id,
+                resumeSeconds: position,
+                activitySeconds: activitySeconds,
+                completed: nil
             )
         }
     }
@@ -628,7 +695,8 @@ public final class MusicPlayerController {
                 id: track.id,
                 kind: .skipped,
                 positionSeconds: positionSeconds,
-                durationSeconds: track.duration
+                durationSeconds: track.duration,
+                sessionID: nil
             )
         }
     }

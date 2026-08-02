@@ -9,6 +9,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
     case bookMetadata(EntityBookMetadataCapability)
     case classification(EntityClassificationCapability)
     case collectionConfiguration(EntityCollectionConfigurationCapability)
+    case consumption(EntityConsumptionCapability)
     case coverSelection(EntityCoverSelectionCapability)
     case credits(EntityCreditsCapability)
     case dates(EntityItemsCapability<EntityDate>)
@@ -25,7 +26,6 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
     case markers(EntityItemsCapability<EntityMarker>)
     case personProfile(EntityPersonProfileCapability)
     case playableVideo(EntityPlayableVideoCapability)
-    case playback(EntityPlaybackCapability)
     case position(EntityItemsCapability<EntityPosition>)
     case progress(EntityProgressCapability)
     case providerIdentity(EntityProviderIdentityCapability)
@@ -49,6 +49,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .bookMetadata: self = .bookMetadata(try EntityBookMetadataCapability(from: decoder))
         case .classification: self = .classification(try EntityClassificationCapability(from: decoder))
         case .collectionConfiguration: self = .collectionConfiguration(try EntityCollectionConfigurationCapability(from: decoder))
+        case .consumption: self = .consumption(try EntityConsumptionCapability(from: decoder))
         case .coverSelection: self = .coverSelection(try EntityCoverSelectionCapability(from: decoder))
         case .credits: self = .credits(try EntityCreditsCapability(from: decoder))
         case .dates: self = .dates(try EntityItemsCapability<EntityDate>(from: decoder))
@@ -65,7 +66,6 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .markers: self = .markers(try EntityItemsCapability<EntityMarker>(from: decoder))
         case .personProfile: self = .personProfile(try EntityPersonProfileCapability(from: decoder))
         case .playableVideo: self = .playableVideo(try EntityPlayableVideoCapability(from: decoder))
-        case .playback: self = .playback(try EntityPlaybackCapability(from: decoder))
         case .position: self = .position(try EntityItemsCapability<EntityPosition>(from: decoder))
         case .progress: self = .progress(try EntityProgressCapability(from: decoder))
         case .providerIdentity: self = .providerIdentity(try EntityProviderIdentityCapability(from: decoder))
@@ -86,6 +86,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .bookMetadata: .bookMetadata
         case .classification: .classification
         case .collectionConfiguration: .collectionConfiguration
+        case .consumption: .consumption
         case .coverSelection: .coverSelection
         case .credits: .credits
         case .dates: .dates
@@ -102,7 +103,6 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .markers: .markers
         case .personProfile: .personProfile
         case .playableVideo: .playableVideo
-        case .playback: .playback
         case .position: .position
         case .progress: .progress
         case .providerIdentity: .providerIdentity
@@ -123,6 +123,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .bookMetadata(let value): value
         case .classification(let value): value
         case .collectionConfiguration(let value): value
+        case .consumption(let value): value
         case .coverSelection(let value): value
         case .credits(let value): value
         case .dates(let value): value
@@ -139,7 +140,6 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .markers(let value): value
         case .personProfile(let value): value
         case .playableVideo(let value): value
-        case .playback(let value): value
         case .position(let value): value
         case .progress(let value): value
         case .providerIdentity(let value): value

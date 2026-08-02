@@ -165,12 +165,14 @@ class EntityListResponseTests(unittest.TestCase):
     def test_audiobook_detail_exposes_scrambled_parts_and_book_resume(self):
         detail = mock_server.build_book_detail_response(mock_server.AUDIOBOOK_ID)
         parts = detail["childrenByKind"][0]["entities"]
-        playback = next(item for item in detail["capabilities"] if item["kind"] == "playback")
+        consumption = next(
+            item for item in detail["capabilities"] if item["kind"] == "consumption"
+        )
 
         self.assertEqual("audio", detail["format"])
         self.assertEqual(["Part Two", "Part One", "Part Three"], [item["title"] for item in parts])
         self.assertEqual([1, 0, 2], [item["sortOrder"] for item in parts])
-        self.assertEqual(145, playback["resumeSeconds"])
+        self.assertEqual(145, consumption["resumeSeconds"])
 
     def test_mixed_media_gallery_exposes_still_gif_mp4_and_webm_images(self):
         detail = mock_server.build_entity_detail_response(mock_server.IMAGE_GALLERY_ID)
@@ -526,9 +528,11 @@ class EntityListHTTPTests(unittest.TestCase):
         with urlopen(request) as response:
             payload = json.load(response)
 
-        playback = next(item for item in payload["capabilities"] if item["kind"] == "playback")
-        self.assertEqual(151, playback["resumeSeconds"])
-        self.assertIsNone(playback["completedAt"])
+        consumption = next(
+            item for item in payload["capabilities"] if item["kind"] == "consumption"
+        )
+        self.assertEqual(151, consumption["resumeSeconds"])
+        self.assertIsNone(consumption["completedAt"])
 
 
 if __name__ == "__main__":

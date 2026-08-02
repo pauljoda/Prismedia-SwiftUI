@@ -41,8 +41,8 @@
                 .task {
                     await load()
                     scheduleChromeHide()
-                    guard manifest != nil else { return }
-                    progressWriter.beginActivity()
+                    guard let manifest else { return }
+                    progressWriter.beginActivity(bookID: manifest.bookID)
                     await runActivityHeartbeats()
                 }
                 .onChange(of: chrome.isVisible) {
@@ -56,7 +56,9 @@
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
-                        progressWriter.beginActivity()
+                        if let manifest {
+                            progressWriter.beginActivity(bookID: manifest.bookID)
+                        }
                     } else {
                         queueProgressSave(
                             allowAutomaticCompletion: false,

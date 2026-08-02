@@ -36,7 +36,7 @@ CAPABILITY_PAYLOAD_TYPES = {
     "markers": "EntityItemsCapability<EntityMarker>",
     "person-profile": "EntityPersonProfileCapability",
     "playable-video": "EntityPlayableVideoCapability",
-    "playback": "EntityPlaybackCapability",
+    "consumption": "EntityConsumptionCapability",
     "position": "EntityItemsCapability<EntityPosition>",
     "progress": "EntityProgressCapability",
     "provider-identity": "EntityProviderIdentityCapability",

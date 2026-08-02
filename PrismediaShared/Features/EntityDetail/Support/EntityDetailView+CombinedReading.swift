@@ -58,7 +58,7 @@ extension EntityDetailView {
             progress: detail.capability(),
             reading: readingState.progressPresentation,
             chapterLabel: currentChapter?.title,
-            activitySeconds: detail.capability(EntityPlaybackCapability.self)?.playDurationSeconds,
+            activitySeconds: detail.capability(EntityConsumptionCapability.self)?.activeSeconds,
             isLoading: bookProgressLoadingState.isLoading,
             isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
                 || bookProgressLoadingState.isLoading || !mappingsAreReady
@@ -85,7 +85,7 @@ extension EntityDetailView {
         guard detail.kind == .book,
             let projection = audiobookProjection,
             projection.bookID == detail.id,
-            let legacyPlayback: EntityPlaybackCapability = detail.capability(),
+            let legacyPlayback: EntityConsumptionCapability = detail.capability(),
             legacyPlayback.resumeSeconds > 0
         else { return }
 

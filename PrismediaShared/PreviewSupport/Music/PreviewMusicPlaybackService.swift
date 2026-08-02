@@ -9,6 +9,11 @@
 
         func recordAudioTrackPlay(id: UUID) async throws {}
 
-        func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {}
+        func updateEntityPlayback(
+            id: UUID,
+            resumeSeconds: Double?,
+            activitySeconds: Double?,
+            completed: Bool?
+        ) async throws {}
     }
 #endif

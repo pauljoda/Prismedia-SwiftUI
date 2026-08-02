@@ -11,6 +11,9 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
     public let workIndex: Int?
     public let workTotal: Int?
     public let location: String?
+    public let consumedCount: Int
+    public let consumedTotal: Int?
+    public let consumedPercent: Double
 
     private enum CodingKeys: String, CodingKey {
         case currentEntityID = "currentEntityId"
@@ -23,6 +26,9 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         case workIndex
         case workTotal
         case location
+        case consumedCount
+        case consumedTotal
+        case consumedPercent
     }
 
     public init(from decoder: Decoder) throws {
@@ -37,6 +43,9 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         workIndex = try container.decodeFlexibleIntIfPresent(forKey: .workIndex)
         workTotal = try container.decodeFlexibleIntIfPresent(forKey: .workTotal)
         location = try container.decodeIfPresent(String.self, forKey: .location)
+        consumedCount = try container.decodeFlexibleIntIfPresent(forKey: .consumedCount) ?? 0
+        consumedTotal = try container.decodeFlexibleIntIfPresent(forKey: .consumedTotal)
+        consumedPercent = try container.decodeFlexibleDoubleIfPresent(forKey: .consumedPercent) ?? 0
     }
 
     public init(
@@ -49,7 +58,10 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         updatedAt: String?,
         workIndex: Int?,
         workTotal: Int?,
-        location: String?
+        location: String?,
+        consumedCount: Int = 0,
+        consumedTotal: Int? = nil,
+        consumedPercent: Double = 0
     ) {
         self.currentEntityID = currentEntityID
         self.unit = unit
@@ -61,5 +73,8 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         self.workIndex = workIndex
         self.workTotal = workTotal
         self.location = location
+        self.consumedCount = consumedCount
+        self.consumedTotal = consumedTotal
+        self.consumedPercent = consumedPercent
     }
 }

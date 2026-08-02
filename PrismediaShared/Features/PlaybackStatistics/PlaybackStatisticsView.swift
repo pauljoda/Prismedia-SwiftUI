@@ -28,7 +28,7 @@ struct PlaybackStatisticsView: View {
         NavigationStack(path: $navigationPath) {
             Group {
                 if snapshot.state == .idle || snapshot.state == .loading {
-                    PrismediaLoadingView("Loading playback history…")
+                    PrismediaLoadingView("Loading consumption history…")
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
@@ -41,7 +41,7 @@ struct PlaybackStatisticsView: View {
                 }
             }
             .prismediaScreenBackground()
-            .navigationTitle("Playback Stats")
+            .navigationTitle("Consumption Stats")
             .refreshable {
                 await PrismediaRefreshAction.perform {
                     _ = await reload(preservingContent: true)
@@ -92,15 +92,18 @@ struct PlaybackStatisticsView: View {
             columns: [GridItem(.adaptive(minimum: 140), spacing: PrismediaSpacing.medium)],
             spacing: PrismediaSpacing.medium
         ) {
-            metric("Total", value: response?.totalEvents, systemImage: "waveform.path.ecg")
-            durationMetric("Activity", seconds: response?.watchSeconds, systemImage: "timer")
+            metric("Opened", value: response?.accessedCount, systemImage: "play.rectangle.on.rectangle")
+            metric("Completed", value: response?.completedCount, systemImage: "checkmark.circle.fill")
+            durationMetric("Active", seconds: response?.activeSeconds, systemImage: "timer")
+            if let viewingSeconds = response?.viewingSeconds, viewingSeconds > 0 {
+                durationMetric("Viewing", seconds: viewingSeconds, systemImage: "tv.fill")
+            }
             if let readingSeconds = response?.readingSeconds, readingSeconds > 0 {
                 durationMetric("Reading", seconds: readingSeconds, systemImage: "book.fill")
             }
             if let listeningSeconds = response?.listeningSeconds, listeningSeconds > 0 {
-                durationMetric("Audiobooks", seconds: listeningSeconds, systemImage: "headphones")
+                durationMetric("Listening", seconds: listeningSeconds, systemImage: "headphones")
             }
-            metric("Plays", value: response?.completedCount, systemImage: "play.fill")
             metric("Skips", value: response?.skippedCount, systemImage: "forward.end.fill")
             metric("Items", value: response?.distinctEntityCount, systemImage: "trophy.fill")
         }
@@ -110,12 +113,12 @@ struct PlaybackStatisticsView: View {
     private var stateContent: some View {
         switch snapshot.state {
         case .idle, .loading:
-            PrismediaLoadingView("Loading playback history…")
+            PrismediaLoadingView("Loading consumption history…")
         case .empty:
             ContentUnavailableView(
                 "No Activity Yet",
                 systemImage: "clock.arrow.circlepath",
-                description: Text("Reading, listening, completed, and skipped media will appear here.")
+                description: Text("Opening, viewing, listening, reading, completing, and skipping media will appear here.")
             )
             .frame(maxWidth: .infinity, minHeight: 260)
         case .failed:
@@ -131,6 +134,8 @@ struct PlaybackStatisticsView: View {
         case .content:
             if let response = snapshot.response {
                 dailyActivity(response.dailyEvents)
+                kindBreakdown(response.kindBreakdown)
+                consumptionRhythm(response.rhythm)
                 entityList(title: "Top Entities", entities: response.topEntities)
                 recentEvents(response.recentEvents)
             }
@@ -185,13 +190,20 @@ struct PlaybackStatisticsView: View {
                         HStack(spacing: 0) {
                             Rectangle()
                                 .fill(PrismediaColor.accent)
+                                .frame(width: share(bucket.accessedCount, in: bucket, width: geometry.size.width))
+                            Rectangle()
+                                .fill(PrismediaColor.success)
                                 .frame(width: share(bucket.completedCount, in: bucket, width: geometry.size.width))
-                            Rectangle().fill(PrismediaColor.warning.opacity(0.8))
+                            Rectangle()
+                                .fill(PrismediaColor.warning.opacity(0.8))
+                                .frame(width: share(bucket.skippedCount, in: bucket, width: geometry.size.width))
                         }
                     }
                     .frame(height: 6)
                     .clipShape(Capsule())
-                    Text("\(bucket.completedCount) plays · \(bucket.skippedCount) skips")
+                    Text(
+                        "\(bucket.accessedCount) opened · \(bucket.completedCount) completed · \(bucket.skippedCount) skips · \(MusicPresentation.clockTime(bucket.activeSeconds)) active"
+                    )
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -215,7 +227,7 @@ struct PlaybackStatisticsView: View {
                         statisticRow(
                             item: item,
                             leading: "\(index + 1)",
-                            trailing: "\(entity.completedCount) plays · \(entity.skippedCount) skips"
+                            trailing: "\(entity.accessedCount) opened · \(MusicPresentation.clockTime(entity.activeSeconds)) active"
                         )
                     }
                     .buttonStyle(.plain)
@@ -232,7 +244,7 @@ struct PlaybackStatisticsView: View {
                     NavigationLink(value: EntityLink(thumbnail: item)) {
                         statisticRow(
                             item: item,
-                            leading: event.kind == .completed ? "Played" : "Skipped",
+                            leading: eventLabel(event.kind),
                             trailing: event.occurredAt.formatted(.relative(presentation: .named))
                         )
                     }
@@ -263,6 +275,74 @@ struct PlaybackStatisticsView: View {
         .padding(.vertical, PrismediaSpacing.small)
         .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
         .contentShape(Rectangle())
+    }
+
+    private func kindBreakdown(_ slices: [PlaybackStatisticsKindSlice]) -> some View {
+        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+            Text("Media Breakdown").font(.title3.bold()).padding(.bottom, PrismediaSpacing.extraSmall)
+            ForEach(slices) { slice in
+                HStack(spacing: PrismediaSpacing.medium) {
+                    Image(systemName: SearchHubKindCatalog.systemImage(for: slice.kind))
+                        .foregroundStyle(PrismediaColor.accent)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                        Text(SearchHubCatalog.sectionTitle(for: slice.kind))
+                            .font(.headline)
+                        Text("\(slice.accessedCount) opened · \(slice.completedCount) completed · \(MusicPresentation.clockTime(slice.activeSeconds)) active")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, PrismediaSpacing.small)
+            }
+        }
+    }
+
+    private func consumptionRhythm(_ cells: [PlaybackStatisticsRhythmCell]) -> some View {
+        let busiest = cells.sorted { lhs, rhs in
+            if lhs.totalEvents == rhs.totalEvents { return lhs.hour < rhs.hour }
+            return lhs.totalEvents > rhs.totalEvents
+        }.prefix(8)
+        return VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+            Text("Consumption Rhythm").font(.title3.bold()).padding(.bottom, PrismediaSpacing.extraSmall)
+            ForEach(Array(busiest)) { cell in
+                HStack {
+                    Text("\(weekdayName(cell.dayOfWeek)) · \(hourLabel(cell.hour))")
+                    Spacer()
+                    Text("\(cell.totalEvents) events")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, PrismediaSpacing.extraSmall)
+            }
+        }
+    }
+
+    private func eventLabel(_ kind: ConsumptionEventKind) -> String {
+        switch kind {
+        case .accessed: "Opened"
+        case .completed: "Completed"
+        case .skipped: "Skipped"
+        default: "Activity"
+        }
+    }
+
+    private func weekdayName(_ day: Int) -> String {
+        let symbols = Calendar(identifier: .gregorian).shortWeekdaySymbols
+        guard day >= 1, day <= symbols.count else { return "Day \(day)" }
+        return symbols[day - 1]
+    }
+
+    private func hourLabel(_ hour: Int) -> String {
+        let boundedHour = min(23, max(0, hour))
+        let date = Calendar(identifier: .gregorian).date(
+            bySettingHour: boundedHour,
+            minute: 0,
+            second: 0,
+            of: now
+        ) ?? now
+        return date.formatted(date: .omitted, time: .shortened)
     }
 
     private func share(
@@ -309,7 +389,7 @@ struct PlaybackStatisticsView: View {
 
 #if DEBUG
 
-    #Preview("Playback Stats") {
+    #Preview("Consumption Stats") {
         let detailLoader = StatisticsPreviewDetailLoader()
         PreviewShell(signedIn: true) {
             PlaybackStatisticsView(

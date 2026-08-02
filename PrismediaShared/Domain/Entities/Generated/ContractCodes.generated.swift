@@ -118,11 +118,6 @@ public enum PrismediaContractCodes {
         public static let `wrongContent` = "wrong-content"
     }
 
-    public enum BookActivityKind {
-        public static let `reading` = "reading"
-        public static let `listening` = "listening"
-    }
-
     public enum BookFormat {
         public static let `imageArchive` = "image-archive"
         public static let `epub` = "epub"
@@ -192,7 +187,7 @@ public enum PrismediaContractCodes {
         public static let `channels` = "channels"
         public static let `sampleRate` = "sampleRate"
         public static let `sampleRateLegacy` = "sample_rate"
-        public static let `playCount` = "playCount"
+        public static let `accessCount` = "accessCount"
         public static let `skipCount` = "skipCount"
         public static let `resolution` = "resolution"
         public static let `videoSeriesId` = "videoSeriesId"
@@ -225,6 +220,18 @@ public enum PrismediaContractCodes {
         public static let `isNotNull` = "is_not_null"
         public static let `isTrue` = "is_true"
         public static let `isFalse` = "is_false"
+    }
+
+    public enum ConsumptionActivityKind {
+        public static let `viewing` = "viewing"
+        public static let `listening` = "listening"
+        public static let `reading` = "reading"
+    }
+
+    public enum ConsumptionEventKind {
+        public static let `accessed` = "accessed"
+        public static let `completed` = "completed"
+        public static let `skipped` = "skipped"
     }
 
     public enum CreditRole {
@@ -644,11 +651,6 @@ public enum PrismediaContractCodes {
         public static let `failed` = "failed"
     }
 
-    public enum PlaybackEventKind {
-        public static let `completed` = "completed"
-        public static let `skipped` = "skipped"
-    }
-
     public enum PlaybackMode {
         public static let `direct` = "direct"
         public static let `hls` = "hls"
@@ -808,6 +810,7 @@ public enum PrismediaContractCodes {
         public static let `bookMetadata` = "book-metadata"
         public static let `classification` = "classification"
         public static let `collectionConfiguration` = "collection-configuration"
+        public static let `consumption` = "consumption"
         public static let `coverSelection` = "cover-selection"
         public static let `credits` = "credits"
         public static let `dates` = "dates"
@@ -824,7 +827,6 @@ public enum PrismediaContractCodes {
         public static let `markers` = "markers"
         public static let `personProfile` = "person-profile"
         public static let `playableVideo` = "playable-video"
-        public static let `playback` = "playback"
         public static let `position` = "position"
         public static let `progress` = "progress"
         public static let `providerIdentity` = "provider-identity"
@@ -883,6 +885,7 @@ public enum PrismediaContractCodes {
         public static let `invalidCollection` = "invalid_collection"
         public static let `invalidCollectionItems` = "invalid_collection_items"
         public static let `invalidCollectionRules` = "invalid_collection_rules"
+        public static let `invalidConsumptionEventKind` = "invalid_playback_event_kind"
         public static let `invalidCredentials` = "invalid_credentials"
         public static let `invalidEntity` = "invalid_entity"
         public static let `invalidEntityImageUpload` = "invalid_entity_image_upload"
@@ -890,7 +893,6 @@ public enum PrismediaContractCodes {
         public static let `invalidEntityMetadataPatch` = "invalid_entity_metadata_patch"
         public static let `invalidOpdsRequest` = "invalid_opds_request"
         public static let `invalidPath` = "invalid_path"
-        public static let `invalidPlaybackEventKind` = "invalid_playback_event_kind"
         public static let `invalidPlaybackStatisticsWindow` = "invalid_playback_statistics_window"
         public static let `invalidUpload` = "invalid_upload"
         public static let `lastAdminRequired` = "last_admin_required"
@@ -1016,11 +1018,6 @@ public extension AcquisitionStatus {
     static let `manualImportRequired` = Self(rawValue: PrismediaContractCodes.AcquisitionStatus.`manualImportRequired`)
 }
 
-public extension BookActivityKind {
-    static let `reading` = Self(rawValue: PrismediaContractCodes.BookActivityKind.`reading`)
-    static let `listening` = Self(rawValue: PrismediaContractCodes.BookActivityKind.`listening`)
-}
-
 public extension BookFormat {
     static let `imageArchive` = Self(rawValue: PrismediaContractCodes.BookFormat.`imageArchive`)
     static let `epub` = Self(rawValue: PrismediaContractCodes.BookFormat.`epub`)
@@ -1041,6 +1038,18 @@ public extension RequestActivityBlocklistReason {
     static let `wrongContent` = Self(rawValue: PrismediaContractCodes.BlocklistReason.`wrongContent`)
 }
 
+public extension ConsumptionActivityKind {
+    static let `viewing` = Self(rawValue: PrismediaContractCodes.ConsumptionActivityKind.`viewing`)
+    static let `listening` = Self(rawValue: PrismediaContractCodes.ConsumptionActivityKind.`listening`)
+    static let `reading` = Self(rawValue: PrismediaContractCodes.ConsumptionActivityKind.`reading`)
+}
+
+public extension ConsumptionEventKind {
+    static let `accessed` = Self(rawValue: PrismediaContractCodes.ConsumptionEventKind.`accessed`)
+    static let `completed` = Self(rawValue: PrismediaContractCodes.ConsumptionEventKind.`completed`)
+    static let `skipped` = Self(rawValue: PrismediaContractCodes.ConsumptionEventKind.`skipped`)
+}
+
 public extension RequestActivityDownloadProtocol {
     static let `torrent` = Self(rawValue: PrismediaContractCodes.DownloadProtocol.`torrent`)
     static let `usenet` = Self(rawValue: PrismediaContractCodes.DownloadProtocol.`usenet`)
@@ -1059,11 +1068,6 @@ public extension EntityMonitorStatus {
     static let `deletingFiles` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`deletingFiles`)
     static let `stopping` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`stopping`)
     static let `fulfilled` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`fulfilled`)
-}
-
-public extension PlaybackEventKind {
-    static let `completed` = Self(rawValue: PrismediaContractCodes.PlaybackEventKind.`completed`)
-    static let `skipped` = Self(rawValue: PrismediaContractCodes.PlaybackEventKind.`skipped`)
 }
 
 public extension ProgressUnit {
@@ -1121,6 +1125,7 @@ public extension EntityCapabilityKind {
     static let `bookMetadata` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`bookMetadata`)
     static let `classification` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`classification`)
     static let `collectionConfiguration` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`collectionConfiguration`)
+    static let `consumption` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`consumption`)
     static let `coverSelection` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`coverSelection`)
     static let `credits` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`credits`)
     static let `dates` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`dates`)
@@ -1137,7 +1142,6 @@ public extension EntityCapabilityKind {
     static let `markers` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`markers`)
     static let `personProfile` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`personProfile`)
     static let `playableVideo` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`playableVideo`)
-    static let `playback` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`playback`)
     static let `position` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`position`)
     static let `progress` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`progress`)
     static let `providerIdentity` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`providerIdentity`)

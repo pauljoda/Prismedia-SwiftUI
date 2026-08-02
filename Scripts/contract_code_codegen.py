@@ -17,14 +17,14 @@ OUTPUT = (
 # emitted here so the backend manifest, rather than each wrapper file, owns the closed vocabulary.
 NATIVE_ENUM_TYPES = {
     "AcquisitionStatus": "AcquisitionStatus",
-    "BookActivityKind": "BookActivityKind",
     "BookFormat": "BookFormat",
     "BookRendition": "RequestActivityBookRendition",
     "BlocklistReason": "RequestActivityBlocklistReason",
+    "ConsumptionActivityKind": "ConsumptionActivityKind",
+    "ConsumptionEventKind": "ConsumptionEventKind",
     "DownloadProtocol": "RequestActivityDownloadProtocol",
     "EntityEngagementMode": "EntityEngagementMode",
     "MonitorStatus": "EntityMonitorStatus",
-    "PlaybackEventKind": "PlaybackEventKind",
     "ProgressUnit": "ProgressUnit",
     "ReaderMode": "ReaderMode",
     "ReleaseRejectionReason": "RequestActivityReleaseRejection",

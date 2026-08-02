@@ -3,12 +3,13 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoContainerProgressPresentationTests: XCTestCase {
-    func testPartialEpisodeContributesItsPlaybackFractionToSeriesProgress() throws {
+    func testSeriesUsesIndependentConsumedCoverage() throws {
         let episodeID = UUID()
         let progress = progressCapability(
             currentEntityID: episodeID,
             index: 3,
-            total: 10
+            total: 10,
+            consumedPercent: 0.35
         )
         let episode = VideoProgressEpisode(
             id: episodeID,
@@ -25,17 +26,18 @@ final class VideoContainerProgressPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.episodeID, episodeID)
         XCTAssertEqual(presentation.status, .inProgress)
         XCTAssertEqual(presentation.percent, 35)
-        XCTAssertEqual(presentation.positionLabel, "Episode 4 of 10")
+        XCTAssertEqual(presentation.positionLabel, "Current · Episode 4 of 10")
         XCTAssertEqual(presentation.contextLabel, "The Long Way Home")
         XCTAssertTrue(presentation.canContinue)
     }
 
-    func testNextUnstartedEpisodeRepresentsCompletedEpisodesBeforeIt() throws {
+    func testCurrentCursorCanMoveBackwardWithoutReducingCoverage() throws {
         let episodeID = UUID()
         let progress = progressCapability(
             currentEntityID: episodeID,
-            index: 4,
-            total: 10
+            index: 2,
+            total: 10,
+            consumedPercent: 0.8
         )
         let episode = VideoProgressEpisode(
             id: episodeID,
@@ -49,7 +51,8 @@ final class VideoContainerProgressPresentationTests: XCTestCase {
             VideoContainerProgressPresentation(progress: progress, episode: episode)
         )
 
-        XCTAssertEqual(presentation.percent, 40)
+        XCTAssertEqual(presentation.percent, 80)
+        XCTAssertEqual(presentation.positionLabel, "Current · Episode 3 of 10")
         XCTAssertEqual(presentation.status, .inProgress)
         XCTAssertTrue(presentation.canContinue)
     }
@@ -60,7 +63,8 @@ final class VideoContainerProgressPresentationTests: XCTestCase {
             currentEntityID: episodeID,
             index: 9,
             total: 10,
-            completedAt: "2026-07-16T12:00:00Z"
+            completedAt: "2026-07-16T12:00:00Z",
+            consumedPercent: 1
         )
         let episode = VideoProgressEpisode(
             id: episodeID,
@@ -100,7 +104,8 @@ final class VideoContainerProgressPresentationTests: XCTestCase {
         currentEntityID: UUID,
         index: Int,
         total: Int,
-        completedAt: String? = nil
+        completedAt: String? = nil,
+        consumedPercent: Double = 0
     ) -> EntityProgressCapability {
         EntityProgressCapability(
             currentEntityID: currentEntityID,
@@ -112,7 +117,8 @@ final class VideoContainerProgressPresentationTests: XCTestCase {
             updatedAt: nil,
             workIndex: nil,
             workTotal: nil,
-            location: nil
+            location: nil,
+            consumedPercent: consumedPercent
         )
     }
 }

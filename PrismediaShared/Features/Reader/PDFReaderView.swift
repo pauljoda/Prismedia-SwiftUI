@@ -50,7 +50,7 @@
                 .task {
                     await load()
                     guard document != nil else { return }
-                    progressWriter.beginActivity()
+                    progressWriter.beginActivity(bookID: useCase.book.id)
                     await runActivityHeartbeats()
                 }
                 .onChange(of: currentPage) { _, _ in saveProgress() }
@@ -62,7 +62,7 @@
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
-                        progressWriter.beginActivity()
+                        progressWriter.beginActivity(bookID: useCase.book.id)
                     } else {
                         saveProgress(stoppingActivity: true)
                         Task { await progressWriter.flush() }

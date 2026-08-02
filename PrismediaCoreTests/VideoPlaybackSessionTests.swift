@@ -317,7 +317,7 @@ final class VideoPlaybackSessionTests: XCTestCase {
         resumeSeconds: Double? = nil
     ) throws -> EntityDetail {
         let playback = resumeSeconds.map { seconds in
-            ",{\"kind\":\"playback\",\"playCount\":0,\"skipCount\":0,\"playDurationSeconds\":0,\"resumeSeconds\":\(seconds)}"
+            ",{\"kind\":\"consumption\",\"accessCount\":0,\"completionCount\":0,\"skipCount\":0,\"activeSeconds\":0,\"resumeSeconds\":\(seconds)}"
         } ?? ""
         return try PrismediaJSON.decoder().decode(
             EntityDetail.self,

@@ -10,11 +10,12 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
     public let reset: Bool
     public let location: String?
     public let activitySeconds: Double?
-    public let activityKind: BookActivityKind?
+    public let activityKind: ConsumptionActivityKind?
+    public let utcOffsetMinutes: Int
 
     private enum CodingKeys: String, CodingKey {
         case currentEntityID = "currentEntityId"
-        case unit, index, total, mode, completed, reset, location, activitySeconds, activityKind
+        case unit, index, total, mode, completed, reset, location, activitySeconds, activityKind, utcOffsetMinutes
     }
 
     public init(
@@ -27,7 +28,8 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         reset: Bool = false,
         location: String? = nil,
         activitySeconds: Double? = nil,
-        activityKind: BookActivityKind? = nil
+        activityKind: ConsumptionActivityKind? = nil,
+        utcOffsetMinutes: Int = TimeZone.current.secondsFromGMT() / 60
     ) {
         self.currentEntityID = currentEntityID
         self.unit = unit
@@ -41,6 +43,7 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
             $0.isFinite && $0 > 0 ? min($0, 60) : nil
         }
         self.activityKind = self.activitySeconds == nil ? nil : activityKind
+        self.utcOffsetMinutes = utcOffsetMinutes
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -58,11 +61,12 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         if location == nil { try container.encodeNil(forKey: .location) }
         try container.encodeIfPresent(activitySeconds, forKey: .activitySeconds)
         try container.encodeIfPresent(activityKind, forKey: .activityKind)
+        try container.encode(utcOffsetMinutes, forKey: .utcOffsetMinutes)
     }
 
     func recordingActivity(
         seconds: Double?,
-        kind: BookActivityKind
+        kind: ConsumptionActivityKind
     ) -> Self {
         Self(
             currentEntityID: currentEntityID,
@@ -74,7 +78,8 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
             reset: reset,
             location: location,
             activitySeconds: seconds,
-            activityKind: kind
+            activityKind: kind,
+            utcOffsetMinutes: utcOffsetMinutes
         )
     }
 }

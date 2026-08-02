@@ -21,14 +21,10 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         let rawPercent: Int
         if completed {
             rawPercent = 100
+        } else if let progress {
+            rawPercent = Int((progress.consumedPercent * 100).rounded())
         } else if let reading {
             rawPercent = reading.percent
-        } else if let progress, progress.total > 0 {
-            let numerator = progress.unit == .page ? progress.index + 1 : progress.index
-            rawPercent = Int(
-                (Double(min(max(0, numerator), progress.total)) / Double(progress.total) * 100)
-                    .rounded()
-            )
         } else {
             rawPercent = 0
         }
@@ -40,9 +36,9 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         } else if let readingLabel = reading?.positionLabel {
             positionLabel = readingLabel
         } else if let progress, progress.unit == .second, progress.total > 0 {
-            positionLabel = "\(MusicPresentation.clockTime(Double(progress.index))) of \(MusicPresentation.clockTime(Double(progress.total)))"
+            positionLabel = "Current · \(MusicPresentation.clockTime(Double(progress.index))) of \(MusicPresentation.clockTime(Double(progress.total)))"
         } else if percent > 0 {
-            positionLabel = "\(percent)% complete"
+            positionLabel = "\(percent)% consumed"
         } else {
             positionLabel = nil
         }

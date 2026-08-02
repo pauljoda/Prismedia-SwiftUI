@@ -741,6 +741,8 @@ public final class VideoPlaybackController {
                     self.isWaiting = status == .waitingToPlayAtSpecifiedRate
                     if self.isPlaying {
                         self.playbackReporter.playbackStarted(positionSeconds: self.currentTime)
+                    } else {
+                        self.playbackReporter.playbackPaused(positionSeconds: self.currentTime)
                     }
                     self.scheduleRenderReadinessCheckIfNeeded()
                 }

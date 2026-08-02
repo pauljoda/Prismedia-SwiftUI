@@ -278,7 +278,7 @@ final class VideoPlaybackPreparationTests: XCTestCase {
 
     private func videoDetail(id: UUID, resumeSeconds: Double? = nil) throws -> EntityDetail {
         let playback = resumeSeconds.map {
-            ",{\"kind\":\"playback\",\"playCount\":0,\"skipCount\":0,\"playDurationSeconds\":0,\"resumeSeconds\":\($0)}"
+            ",{\"kind\":\"consumption\",\"accessCount\":0,\"completionCount\":0,\"skipCount\":0,\"activeSeconds\":0,\"resumeSeconds\":\($0)}"
         } ?? ""
         return try PrismediaJSON.decoder().decode(
             EntityDetail.self,
@@ -293,7 +293,7 @@ final class VideoPlaybackPreparationTests: XCTestCase {
             EntityDetail.self,
             from: Data(
                 """
-                {"id":"\(id.uuidString)","kind":"movie","title":"Feature","hasSourceMedia":true,"capabilities":[{"kind":"playable-video"},{"kind":"playback","playCount":0,"skipCount":0,"playDurationSeconds":0,"resumeSeconds":\(resumeSeconds)}],"childrenByKind":[],"relationships":[]}
+                {"id":"\(id.uuidString)","kind":"movie","title":"Feature","hasSourceMedia":true,"capabilities":[{"kind":"playable-video"},{"kind":"consumption","accessCount":0,"completionCount":0,"skipCount":0,"activeSeconds":0,"resumeSeconds":\(resumeSeconds)}],"childrenByKind":[],"relationships":[]}
                 """.utf8))
     }
 

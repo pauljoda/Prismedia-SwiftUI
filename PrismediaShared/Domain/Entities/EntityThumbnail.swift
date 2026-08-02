@@ -28,7 +28,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
     public let createdAt: Date?
     public let progress: Double?
     public let resumeSeconds: Double?
-    public let playCount: Int?
+    public let accessCount: Int?
     public let genres: [String]
     public let referenceCounts: [EntityKindCount]
 
@@ -80,7 +80,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         case createdAt
         case progress
         case resumeSeconds
-        case playCount
+        case accessCount
         case genres
         case referenceCounts
     }
@@ -113,7 +113,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         createdAt: Date? = nil,
         progress: Double? = nil,
         resumeSeconds: Double? = nil,
-        playCount: Int? = nil,
+        accessCount: Int? = nil,
         genres: [String] = [],
         referenceCounts: [EntityKindCount] = []
     ) {
@@ -144,7 +144,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         self.createdAt = createdAt
         self.progress = progress
         self.resumeSeconds = resumeSeconds
-        self.playCount = playCount
+        self.accessCount = accessCount
         self.genres = genres
         self.referenceCounts = referenceCounts
     }
@@ -186,7 +186,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
         progress = try container.decodeFlexibleDoubleIfPresent(forKey: .progress)
         resumeSeconds = try container.decodeFlexibleDoubleIfPresent(forKey: .resumeSeconds)
-        playCount = try container.decodeFlexibleIntIfPresent(forKey: .playCount)
+        accessCount = try container.decodeFlexibleIntIfPresent(forKey: .accessCount)
         genres = try container.decodeIfPresent([String].self, forKey: .genres) ?? []
         referenceCounts = try container.decodeIfPresent([EntityKindCount].self, forKey: .referenceCounts) ?? []
     }

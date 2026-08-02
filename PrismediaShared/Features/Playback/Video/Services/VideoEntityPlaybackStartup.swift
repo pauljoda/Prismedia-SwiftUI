@@ -36,7 +36,7 @@ enum VideoEntityPlaybackStartup {
     }
     private static func resumeSeconds(in detail: EntityDetail) -> Double? {
         detail.capabilities.compactMap { capability -> Double? in
-            guard case .playback(let playback) = capability else { return nil }
+            guard case .consumption(let playback) = capability else { return nil }
             return playback.resumeSeconds
         }.first
     }

@@ -292,7 +292,7 @@
         }
 
         func beginActivity() {
-            progressWriter.beginActivity()
+            progressWriter.beginActivity(bookID: book.id)
         }
 
         func heartbeat() {

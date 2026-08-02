@@ -18,6 +18,47 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrack, track)
     }
 
+    func testStartingMusicRecordsOneAccessForTheOpenedTrack() async {
+        let track = makeTrack(idSuffix: 1)
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service
+        )
+
+        controller.play(tracks: [track])
+        controller.pause()
+        controller.resume()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(service.accessedEntityIDs, [track.id])
+        XCTAssertEqual(service.accessSessionIDs.count, 1)
+        XCTAssertNotNil(service.accessSessionIDs.first ?? nil)
+    }
+
+    func testActiveMusicReportsWallClockListeningTime() async throws {
+        let track = makeTrack(idSuffix: 1, duration: 180)
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(tracks: [track])
+
+        controller.updatePlaybackProgress(elapsedTime: 0, duration: 180, isAdvancing: true)
+        clock.advance(by: 12)
+        controller.updatePlaybackProgress(elapsedTime: 12, duration: 180, isAdvancing: true)
+        await controller.flushPendingPlaybackReports()
+
+        let update = try XCTUnwrap(service.playbackUpdates.last)
+        XCTAssertEqual(update.id, track.id)
+        XCTAssertEqual(update.resumeSeconds, 12)
+        XCTAssertEqual(update.activitySeconds, 12)
+        XCTAssertNil(update.completed)
+    }
+
     func testPreparingShuffledQueueDefersPlaybackUntilResume() {
         let tracks = (1...12).map { makeTrack(idSuffix: $0) }
         let engine = AudioPlaybackEngineSpy()
@@ -955,10 +996,17 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private let missingStreamIDs: Set<UUID>
     private(set) var requestedStreamIDs: [UUID] = []
     private(set) var recordedTrackIDs: [UUID] = []
+    private(set) var accessedEntityIDs: [UUID] = []
+    private(set) var accessSessionIDs: [String?] = []
     private(set) var skippedTrackIDs: [UUID] = []
     private(set) var skippedPositions: [Double?] = []
     private(set) var skippedDurations: [Double?] = []
-    private(set) var playbackUpdates: [(id: UUID, resumeSeconds: Double, completed: Bool)] = []
+    private(set) var playbackUpdates: [(
+        id: UUID,
+        resumeSeconds: Double?,
+        activitySeconds: Double?,
+        completed: Bool?
+    )] = []
     private(set) var entityProgressUpdates: [(id: UUID, request: EntityProgressUpdateRequest)] = []
 
     init(missingStreamIDs: Set<UUID> = []) {
@@ -977,18 +1025,28 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
 
     func recordEntityPlaybackEvent(
         id: UUID,
-        kind: PlaybackEventKind,
+        kind: ConsumptionEventKind,
         positionSeconds: Double?,
-        durationSeconds: Double?
+        durationSeconds: Double?,
+        sessionID: String?
     ) async throws {
-        guard kind == .skipped else { return }
-        skippedTrackIDs.append(id)
-        skippedPositions.append(positionSeconds)
-        skippedDurations.append(durationSeconds)
+        if kind == .accessed {
+            accessedEntityIDs.append(id)
+            accessSessionIDs.append(sessionID)
+        } else if kind == .skipped {
+            skippedTrackIDs.append(id)
+            skippedPositions.append(positionSeconds)
+            skippedDurations.append(durationSeconds)
+        }
     }
 
-    func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
-        playbackUpdates.append((id, resumeSeconds, completed))
+    func updateEntityPlayback(
+        id: UUID,
+        resumeSeconds: Double?,
+        activitySeconds: Double?,
+        completed: Bool?
+    ) async throws {
+        playbackUpdates.append((id, resumeSeconds, activitySeconds, completed))
     }
 
     func updateEntityProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
@@ -1021,7 +1079,12 @@ private final class SuspendingMusicPlaybackServiceStub: MusicPlaybackServicing {
         }
     }
 
-    func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {}
+    func updateEntityPlayback(
+        id: UUID,
+        resumeSeconds: Double?,
+        activitySeconds: Double?,
+        completed: Bool?
+    ) async throws {}
 
     func finishRecording() {
         recordingContinuation?.resume()

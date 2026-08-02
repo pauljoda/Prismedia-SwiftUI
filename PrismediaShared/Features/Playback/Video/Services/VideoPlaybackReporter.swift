@@ -12,6 +12,7 @@ final class VideoPlaybackReporter {
     private var lastReportTime: TimeInterval?
     private var lastReportedPosition = 0.0
     private var pendingReport: Task<Void, Never>?
+    private var activityClock = ConsumptionActivityClock()
 
     init(
         service: (any VideoPlaybackReporting)?,
@@ -32,34 +33,74 @@ final class VideoPlaybackReporter {
         isTerminal = false
         lastReportTime = nil
         lastReportedPosition = max(0, positionSeconds)
+        activityClock = ConsumptionActivityClock()
     }
 
     func playbackStarted(positionSeconds: Double) {
-        guard let context, !hasStarted, !isTerminal else { return }
+        guard let context, !isTerminal else { return }
+        activityClock.start(at: clock.now)
+        guard !hasStarted else { return }
         hasStarted = true
         record(.started, context: context, positionSeconds: positionSeconds)
     }
 
     func observePlayback(positionSeconds: Double, isPlaying: Bool) {
-        guard hasStarted, !isTerminal, isPlaying, let context else { return }
+        guard hasStarted, !isTerminal, let context else { return }
+        guard isPlaying else {
+            playbackPaused(positionSeconds: positionSeconds)
+            return
+        }
+        activityClock.start(at: clock.now)
         guard heartbeatIsDue, playbackMovedMeaningfully(to: positionSeconds) else { return }
-        record(.progress, context: context, positionSeconds: positionSeconds)
+        record(
+            .progress,
+            context: context,
+            positionSeconds: positionSeconds,
+            activitySeconds: activityClock.take(at: clock.now)
+        )
+    }
+
+    func playbackPaused(positionSeconds: Double) {
+        guard hasStarted, !isTerminal, let context else { return }
+        let activitySeconds = activityClock.stop(at: clock.now)
+        guard activitySeconds != nil else { return }
+        record(
+            .progress,
+            context: context,
+            positionSeconds: positionSeconds,
+            activitySeconds: activitySeconds
+        )
     }
 
     func didSeek(positionSeconds: Double) {
         guard hasStarted, !isTerminal, let context else { return }
-        record(.progress, context: context, positionSeconds: positionSeconds)
+        record(
+            .progress,
+            context: context,
+            positionSeconds: positionSeconds,
+            activitySeconds: activityClock.take(at: clock.now)
+        )
     }
 
     func flushProgress(positionSeconds: Double) {
         guard hasStarted, !isTerminal, let context else { return }
-        record(.progress, context: context, positionSeconds: positionSeconds)
+        record(
+            .progress,
+            context: context,
+            positionSeconds: positionSeconds,
+            activitySeconds: activityClock.stop(at: clock.now)
+        )
     }
 
     func stop(positionSeconds: Double) {
         guard hasStarted, !isTerminal, let context else { return }
         isTerminal = true
-        record(.stopped, context: context, positionSeconds: positionSeconds)
+        record(
+            .stopped,
+            context: context,
+            positionSeconds: positionSeconds,
+            activitySeconds: activityClock.stop(at: clock.now)
+        )
     }
 
     func complete() {
@@ -73,7 +114,8 @@ final class VideoPlaybackReporter {
             .stopped,
             context: context,
             positionSeconds: completionPosition,
-            completed: true
+            completed: true,
+            activitySeconds: activityClock.stop(at: clock.now)
         )
     }
 
@@ -92,16 +134,26 @@ final class VideoPlaybackReporter {
 
     private func stopCurrentSessionForReplacement(positionSeconds: Double) {
         guard hasStarted, !isTerminal, let context else { return }
-        record(.stopped, context: context, positionSeconds: positionSeconds)
+        record(
+            .stopped,
+            context: context,
+            positionSeconds: positionSeconds,
+            activitySeconds: activityClock.stop(at: clock.now)
+        )
     }
 
     private func record(
         _ event: VideoPlaybackEvent,
         context: VideoPlaybackReportContext,
         positionSeconds: Double,
-        completed: Bool? = nil
+        completed: Bool? = nil,
+        activitySeconds: Double? = nil
     ) {
-        let report = context.report(positionSeconds: positionSeconds, completed: completed)
+        let report = context.report(
+            positionSeconds: positionSeconds,
+            completed: completed,
+            activitySeconds: activitySeconds
+        )
         lastReportTime = clock.now
         lastReportedPosition = max(0, positionSeconds)
         enqueue { service in

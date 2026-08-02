@@ -531,7 +531,7 @@ def thumb(id_suffix, kind, title):
         "isNsfw": False,
         "isOrganized": True,
         "progress": None,
-        "playCount": 0,
+        "accessCount": 0,
         "genres": [],
         "referenceCounts": [],
     }
@@ -681,11 +681,12 @@ AUDIOBOOK_PARTS = [
     },
 ]
 AUDIOBOOK_PLAYBACK = {
-    "playCount": 0,
+    "accessCount": 0,
+    "completionCount": 0,
     "skipCount": 0,
-    "playDurationSeconds": 0,
+    "activeSeconds": 0,
     "resumeSeconds": 145,
-    "lastPlayedAt": "2026-07-11T00:00:00Z",
+    "lastActiveAt": "2026-07-11T00:00:00Z",
     "completedAt": None,
 }
 CHAPTER_ID = "81818181-8181-8181-8181-818181818181"
@@ -870,7 +871,7 @@ ENTITIES[VIDEO_ALPHA_INDEX]["resumeSeconds"] = 15
 ENTITIES[MOVIE_ONE_INDEX]["rating"] = None
 ENTITIES[MOVIE_ONE_INDEX]["progress"] = 0.25
 ENTITIES[MOVIE_ONE_INDEX]["resumeSeconds"] = 15
-ENTITIES[MOVIE_TWO_INDEX]["playCount"] = 1
+ENTITIES[MOVIE_TWO_INDEX]["accessCount"] = 1
 
 for artwork_entity in (
     ENTITIES[VIDEO_ALPHA_INDEX],
@@ -1153,12 +1154,13 @@ def build_entity_detail_response(entity_id):
         capabilities.append({"kind": "playable-video"})
         capabilities.append(
             {
-                "kind": "playback",
-                "playCount": 0,
+                "kind": "consumption",
+                "accessCount": 0,
+                "completionCount": 0,
                 "skipCount": 0,
-                "playDurationSeconds": 15,
+                "activeSeconds": 15,
                 "resumeSeconds": entity.get("resumeSeconds") or 15,
-                "lastPlayedAt": "2026-07-11T00:00:00Z",
+                "lastActiveAt": "2026-07-11T00:00:00Z",
                 "completedAt": None,
             }
         )
@@ -1213,7 +1215,7 @@ def build_entity_detail_response(entity_id):
     if entity["kind"] == "book" and entity["id"] in BOOK_PROGRESS_BY_ID:
         capabilities.append({"kind": "progress", **BOOK_PROGRESS_BY_ID[entity["id"]]})
     if entity["id"] == AUDIOBOOK_ID:
-        capabilities.append({"kind": "playback", **AUDIOBOOK_PLAYBACK})
+        capabilities.append({"kind": "consumption", **AUDIOBOOK_PLAYBACK})
 
     relationships = []
     if entity["kind"] == "movie":
@@ -1365,7 +1367,7 @@ def _filter_entities(indexed_items, parameters):
     if status == "in-progress":
         indexed_items = [pair for pair in indexed_items if (pair[1].get("progress") or 0) > 0]
     elif status == "watched":
-        indexed_items = [pair for pair in indexed_items if (pair[1].get("playCount") or 0) > 0]
+        indexed_items = [pair for pair in indexed_items if (pair[1].get("accessCount") or 0) > 0]
     return indexed_items
 
 

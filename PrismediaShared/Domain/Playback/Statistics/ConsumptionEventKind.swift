@@ -1,6 +1,6 @@
 import Foundation
 
-public struct BookActivityKind: RawRepresentable, Codable, Hashable, Sendable {
+public struct ConsumptionEventKind: RawRepresentable, Codable, Hashable, Sendable {
     public let rawValue: String
 
     public init(rawValue: String) {

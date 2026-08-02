@@ -282,12 +282,21 @@ struct EntityDetailPresentation {
                 items += EntityDateMilestonePolicy.sorted(dates.items).map {
                     .init(label: EntityDateMilestonePolicy.label(for: $0), value: $0.value, systemImage: "calendar")
                 }
-            case .playback(let playback):
-                items.append(.init(label: "Plays", value: String(playback.playCount), systemImage: "play.circle"))
-                if playback.resumeSeconds > 0 {
+            case .consumption(let consumption):
+                items.append(.init(label: "Opened", value: String(consumption.accessCount), systemImage: "play.circle"))
+                if consumption.completionCount > 0 {
                     items.append(
                         .init(
-                            label: "Resume", value: Self.duration(playback.resumeSeconds),
+                            label: "Completed",
+                            value: String(consumption.completionCount),
+                            systemImage: "checkmark.circle"
+                        )
+                    )
+                }
+                if consumption.resumeSeconds > 0 {
+                    items.append(
+                        .init(
+                            label: "Resume", value: Self.duration(consumption.resumeSeconds),
                             systemImage: "clock.arrow.circlepath"))
                 }
             case .position(let positions):
@@ -296,8 +305,8 @@ struct EntityDetailPresentation {
                 }
             case .progress(let progress):
                 if progress.total > 0 {
-                    let percent = Int((Double(progress.index) / Double(progress.total) * 100).rounded())
-                    items.append(.init(label: "Progress", value: "\(percent)%", systemImage: "chart.bar.fill"))
+                    let percent = Int((progress.consumedPercent * 100).rounded())
+                    items.append(.init(label: "Consumed", value: "\(percent)%", systemImage: "chart.bar.fill"))
                 }
             case .stats(let stats):
                 items += stats.items.prefix(4).map {
@@ -455,7 +464,7 @@ struct EntityDetailPresentation {
         if PlayableVideoResolver.videoID(in: detail) != nil {
             let resumeSeconds = max(
                 0,
-                detail.capability(EntityPlaybackCapability.self)?.resumeSeconds ?? 0
+                detail.capability(EntityConsumptionCapability.self)?.resumeSeconds ?? 0
             )
             return action(
                 resumeSeconds > 0 ? .resume : .play,

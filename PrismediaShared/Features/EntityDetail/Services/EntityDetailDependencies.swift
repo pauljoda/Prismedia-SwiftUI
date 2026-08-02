@@ -16,6 +16,7 @@ public struct EntityDetailDependencies: Sendable {
     public let readerLocatorStore: EPUBLocatorStore
     public let videoPlaybackService: (any VideoPlaybackServicing)?
     public let audioPlaybackService: (any MusicPlaybackServicing)?
+    public let consumptionService: (any EntityConsumptionServicing)?
     public let onEntityMutated: @MainActor @Sendable () -> Void
     public let acquisitionService: (any EntityAcquisitionServicing)?
     public let requestActivityService: (any RequestActivityServicing)?
@@ -34,6 +35,7 @@ public struct EntityDetailDependencies: Sendable {
         videoPlaybackService: (any VideoPlaybackServicing)?,
         onEntityMutated: @escaping @MainActor @Sendable () -> Void,
         audioPlaybackService: (any MusicPlaybackServicing)? = nil,
+        consumptionService: (any EntityConsumptionServicing)? = nil,
         acquisitionService: (any EntityAcquisitionServicing)? = nil,
         requestActivityService: (any RequestActivityServicing)? = nil,
         imageSourceLoader: (any EntityImageSourceLoading)? = nil,
@@ -59,6 +61,7 @@ public struct EntityDetailDependencies: Sendable {
         self.readerLocatorStore = readerLocatorStore
         self.videoPlaybackService = videoPlaybackService
         self.audioPlaybackService = audioPlaybackService
+        self.consumptionService = consumptionService
         self.onEntityMutated = onEntityMutated
         self.acquisitionService = acquisitionService
         self.requestActivityService = requestActivityService

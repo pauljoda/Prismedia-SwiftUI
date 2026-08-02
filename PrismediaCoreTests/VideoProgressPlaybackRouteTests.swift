@@ -19,10 +19,11 @@ final class VideoProgressPlaybackRouteTests: XCTestCase {
                   "capabilities":[
                     {"kind":"playable-video"},
                     {
-                      "kind":"playback",
-                      "playCount":2,
+                      "kind":"consumption",
+                      "accessCount":2,
+                      "completionCount":1,
                       "skipCount":0,
-                      "playDurationSeconds":1200,
+                      "activeSeconds":1200,
                       "resumeSeconds":423,
                       "completedAt":null
                     },

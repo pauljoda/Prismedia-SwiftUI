@@ -4,14 +4,14 @@ public struct PlaybackStatisticsQuery: Hashable, Sendable {
     public let from: Date
     public let to: Date
     public let kind: EntityKind?
-    public let eventKind: PlaybackEventKind?
+    public let eventKind: ConsumptionEventKind?
     public var hideNsfw: Bool
 
     public init(
         from: Date,
         to: Date,
         kind: EntityKind? = nil,
-        eventKind: PlaybackEventKind? = nil,
+        eventKind: ConsumptionEventKind? = nil,
         hideNsfw: Bool = true
     ) {
         self.from = from

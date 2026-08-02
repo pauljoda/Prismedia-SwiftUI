@@ -266,12 +266,13 @@ final class EntityDetailServiceTests: XCTestCase {
     private func playbackCapability(resumeSeconds: Double) -> String {
         """
         [{
-          "kind": "playback",
-          "playCount": 0,
+          "kind": "consumption",
+          "accessCount": 0,
+          "completionCount": 0,
           "skipCount": 0,
-          "playDurationSeconds": 120,
+          "activeSeconds": 120,
           "resumeSeconds": \(resumeSeconds),
-          "lastPlayedAt": null,
+          "lastActiveAt": null,
           "completedAt": null
         }]
         """

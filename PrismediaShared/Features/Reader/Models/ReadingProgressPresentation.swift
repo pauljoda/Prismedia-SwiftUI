@@ -21,11 +21,8 @@ public struct ReadingProgressPresentation: Hashable, Sendable {
         let workTotal = max(0, progress.workTotal ?? progress.total)
         let workIndex = max(0, progress.workIndex ?? localIndex)
         let workPage = workTotal > 0 ? min(workIndex + 1, workTotal) : min(localIndex + 1, pageCount)
-        let rawPercent =
-            workTotal > 0
-            ? Int((Double(min(workIndex, workTotal - 1) + 1) / Double(workTotal) * 100).rounded())
-            : Int((Double(min(localIndex, pageCount - 1) + 1) / Double(pageCount) * 100).rounded())
-        let completed = progress.completedAt != nil || rawPercent >= 100
+        let rawPercent = Int((progress.consumedPercent * 100).rounded())
+        let completed = progress.completedAt != nil
 
         status = completed ? .completed : .inProgress
         percent = completed ? 100 : min(100, max(workPage > 0 ? 1 : 0, rawPercent))
@@ -42,11 +39,8 @@ public struct ReadingProgressPresentation: Hashable, Sendable {
         let total = progress.total
         let index = max(0, progress.index)
         let usesPages = progress.unit == .page
-        let rawPercent =
-            usesPages
-            ? Int((Double(min(index, total - 1) + 1) / Double(total) * 100).rounded())
-            : Int((Double(min(index, total)) / Double(total) * 100).rounded())
-        let completed = progress.completedAt != nil || rawPercent >= 100
+        let rawPercent = Int((progress.consumedPercent * 100).rounded())
+        let completed = progress.completedAt != nil
         let percent = completed ? 100 : min(100, max(rawPercent > 0 ? 1 : 0, rawPercent))
 
         status = completed ? .completed : .inProgress
@@ -56,7 +50,7 @@ public struct ReadingProgressPresentation: Hashable, Sendable {
             ? nil
             : usesPages
                 ? "Page \(min(index + 1, total)) of \(total)"
-                : "\(percent)% read"
+                : "Current · \(MusicPresentation.clockTime(Double(index))) of \(MusicPresentation.clockTime(Double(total)))"
         contextLabel = nil
         canResume = !completed
         canStartOver = true

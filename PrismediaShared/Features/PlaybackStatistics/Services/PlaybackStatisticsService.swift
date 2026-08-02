@@ -1,6 +1,6 @@
 import Foundation
 
-/// Stateless playback-statistics use case. The SwiftUI view owns the returned
+/// Stateless consumption-statistics use case. The SwiftUI view owns the returned
 /// value snapshot and decides when a newer query replaces it.
 @MainActor
 public struct PlaybackStatisticsService {
@@ -30,13 +30,13 @@ public struct PlaybackStatisticsService {
                 thumbnailsByID: Dictionary(
                     uniqueKeysWithValues: thumbnails.map { ($0.id, $0) }
                 ),
-                state: response.totalEvents == 0 && response.watchSeconds <= 0 ? .empty : .content
+                state: response.totalEvents == 0 && response.activeSeconds <= 0 ? .empty : .content
             )
         } catch is CancellationError {
             return PlaybackStatisticsSnapshot(state: .idle)
         } catch {
             return PlaybackStatisticsSnapshot(
-                state: .failed("Playback history couldn’t be loaded.")
+                state: .failed("Consumption history couldn’t be loaded.")
             )
         }
     }

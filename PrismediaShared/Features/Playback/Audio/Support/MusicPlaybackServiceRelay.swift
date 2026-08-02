@@ -29,22 +29,30 @@
 
         func recordEntityPlaybackEvent(
             id: UUID,
-            kind: PlaybackEventKind,
+            kind: ConsumptionEventKind,
             positionSeconds: Double?,
-            durationSeconds: Double?
+            durationSeconds: Double?,
+            sessionID: String?
         ) async throws {
             try await service?.recordEntityPlaybackEvent(
                 id: id,
                 kind: kind,
                 positionSeconds: positionSeconds,
-                durationSeconds: durationSeconds
+                durationSeconds: durationSeconds,
+                sessionID: sessionID
             )
         }
 
-        func updateEntityPlayback(id: UUID, resumeSeconds: Double, completed: Bool) async throws {
+        func updateEntityPlayback(
+            id: UUID,
+            resumeSeconds: Double?,
+            activitySeconds: Double?,
+            completed: Bool?
+        ) async throws {
             try await service?.updateEntityPlayback(
                 id: id,
                 resumeSeconds: resumeSeconds,
+                activitySeconds: activitySeconds,
                 completed: completed
             )
         }

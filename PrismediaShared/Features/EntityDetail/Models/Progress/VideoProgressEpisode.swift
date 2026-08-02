@@ -24,7 +24,7 @@ struct VideoProgressEpisode: Hashable, Sendable {
     }
 
     init(detail: EntityDetail) {
-        let playback: EntityPlaybackCapability? = detail.capability()
+        let playback: EntityConsumptionCapability? = detail.capability()
         let technical: EntityTechnicalCapability? = detail.capability()
         self.init(
             id: detail.id,

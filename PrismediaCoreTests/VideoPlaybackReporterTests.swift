@@ -39,9 +39,10 @@ final class VideoPlaybackReporterTests: XCTestCase {
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .progress])
         XCTAssertEqual(reports.last?.report.positionSeconds, 10)
+        XCTAssertEqual(reports.last?.report.activitySeconds, 10)
     }
 
-    func testHeartbeatDoesNotReportPausedOrUnchangedPlayback() async {
+    func testPauseFlushesActiveTimeEvenAfterUnchangedPlayback() async {
         let service = ReportingSpy()
         let clock = TestVideoPlaybackClock()
         let reporter = VideoPlaybackReporter(service: service, clock: clock)
@@ -55,7 +56,9 @@ final class VideoPlaybackReporterTests: XCTestCase {
         await reporter.waitForPendingReports()
 
         let reports = await service.reports
-        XCTAssertEqual(reports.map(\.event), [.started])
+        XCTAssertEqual(reports.map(\.event), [.started, .progress])
+        XCTAssertEqual(reports.last?.report.positionSeconds, 15)
+        XCTAssertEqual(reports.last?.report.activitySeconds, 20)
     }
 
     func testSeekReportsImmediatelyAndResetsHeartbeatWindow() async {
@@ -74,6 +77,7 @@ final class VideoPlaybackReporterTests: XCTestCase {
         let reports = await service.reports
         XCTAssertEqual(reports.map(\.event), [.started, .progress])
         XCTAssertEqual(reports.last?.report.positionSeconds, 42)
+        XCTAssertEqual(reports.last?.report.activitySeconds, 2)
     }
 
     func testBackgroundFlushReportsCurrentPositionWithoutEndingSession() async {
