@@ -60,12 +60,28 @@ final class VideoPlaybackAdvanceNavigationTests: XCTestCase {
         XCTAssertEqual(loadedIDs, [parentID])
     }
 
+    func testResolverAdvancesThroughCanonicalEpisodeGroup() async throws {
+        let parentID = UUID(uuidString: "20202020-3030-4040-5050-606060606060")!
+        let currentID = UUID(uuidString: "21212121-3030-4040-5050-606060606060")!
+        let nextID = UUID(uuidString: "22222222-3030-4040-5050-606060606060")!
+        let current = try videoDetail(id: currentID, parentID: parentID, title: "Episode One")
+        let next = try videoDetail(id: nextID, parentID: parentID, title: "Episode Two")
+        let parent = try parentDetail(id: parentID, currentID: currentID, nextID: nextID)
+        let loader = ImmediateAdvanceDetailLoader(details: [parentID: parent, nextID: next])
+        let resolver = VideoPlaybackAdvanceResolver(loader: loader)
+
+        let resolution = await resolver.resolveNext(after: current, lifecycleIsCurrent: { true })
+
+        XCTAssertEqual(resolution?.detail.id, nextID)
+        XCTAssertEqual(resolution?.link.kind, .videoEpisode)
+    }
+
     private func videoDetail(id: UUID, parentID: UUID, title: String) throws -> EntityDetail {
         try PrismediaJSON.decoder().decode(
             EntityDetail.self,
             from: Data(
                 """
-                {"id":"\(id.uuidString)","kind":"video","title":"\(title)","parentEntityId":"\(parentID.uuidString)","hasSourceMedia":true,"capabilities":[],"childrenByKind":[],"relationships":[]}
+                {"id":"\(id.uuidString)","kind":"video-episode","title":"\(title)","parentEntityId":"\(parentID.uuidString)","hasSourceMedia":true,"capabilities":[],"childrenByKind":[],"relationships":[]}
                 """.utf8))
     }
 
@@ -74,7 +90,7 @@ final class VideoPlaybackAdvanceNavigationTests: XCTestCase {
             EntityDetail.self,
             from: Data(
                 """
-                {"id":"\(id.uuidString)","kind":"video-season","title":"Season One","hasSourceMedia":false,"capabilities":[],"childrenByKind":[{"kind":"video","label":"Episodes","entities":[{"id":"\(currentID.uuidString)","kind":"video","title":"Episode One","sortOrder":1},{"id":"\(nextID.uuidString)","kind":"video","title":"Episode Two","sortOrder":2}]}],"relationships":[]}
+                {"id":"\(id.uuidString)","kind":"video-season","title":"Season One","hasSourceMedia":false,"capabilities":[],"childrenByKind":[{"kind":"video-episode","label":"Episodes","entities":[{"id":"\(currentID.uuidString)","kind":"video-episode","title":"Episode One","parentEntityId":"\(id.uuidString)","parentKind":"video-season","sortOrder":1},{"id":"\(nextID.uuidString)","kind":"video-episode","title":"Episode Two","parentEntityId":"\(id.uuidString)","parentKind":"video-season","sortOrder":2}]}],"relationships":[]}
                 """.utf8))
     }
 }
@@ -124,6 +140,21 @@ private actor DelayedAdvanceDetailLoader: EntityDetailLoading {
     func releaseParent() {
         parentRelease?.resume()
         parentRelease = nil
+    }
+}
+
+private actor ImmediateAdvanceDetailLoader: EntityDetailLoading {
+    private let details: [UUID: EntityDetail]
+
+    init(details: [UUID: EntityDetail]) {
+        self.details = details
+    }
+
+    func loadEntity(id: UUID) async throws -> EntityDetail {
+        guard let detail = details[id] else {
+            throw DelayedAdvanceTestError.unexpectedID(id)
+        }
+        return detail
     }
 }
 

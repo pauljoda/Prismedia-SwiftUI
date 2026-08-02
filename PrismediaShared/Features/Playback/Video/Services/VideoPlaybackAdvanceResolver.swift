@@ -18,7 +18,7 @@ struct VideoPlaybackAdvanceResolver {
         do {
             let parent = try await loader.loadEntity(id: parentID)
             guard !Task.isCancelled, lifecycleIsCurrent() else { return nil }
-            guard let episodeGroup = parent.childrenByKind.first(where: { $0.kind == .video }),
+            guard let episodeGroup = parent.childrenByKind.first(where: { $0.kind == .videoEpisode }),
                 let nextEpisode = VideoPlaybackSequence.nextEpisode(
                     after: completed.id,
                     in: episodeGroup

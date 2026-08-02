@@ -400,7 +400,15 @@ struct VideoEntityPlaybackView: View {
     private func playbackDidComplete(_ resolvedID: UUID) {
         let lifecycle = preparation.lifecycleToken()
         Task {
-            await advancePlayback(after: resolvedID, lifecycle: lifecycle)
+            let outcome = await advancePlayback(after: resolvedID, lifecycle: lifecycle)
+            #if os(tvOS)
+                guard outcome == .exhausted,
+                    preparation.isCurrent(lifecycle),
+                    presentedVideoDetail?.id == resolvedID,
+                    isFullscreenPresented
+                else { return }
+                tvFullscreenPresentation = nil
+            #endif
         }
     }
 
@@ -447,12 +455,12 @@ struct VideoEntityPlaybackView: View {
     private func advancePlayback(
         after completedVideoID: UUID,
         lifecycle: VideoPlaybackLifecycleToken
-    ) async {
+    ) async -> VideoPlaybackAdvanceOutcome {
         guard !isAdvancingPlayback,
             preparation.isCurrent(lifecycle),
             let completedDetail = presentedVideoDetail,
             completedDetail.id == completedVideoID
-        else { return }
+        else { return .ignored }
 
         isAdvancingPlayback = true
         defer { isAdvancingPlayback = false }
@@ -462,8 +470,13 @@ struct VideoEntityPlaybackView: View {
             let resolution = await resolver.resolveNext(
                 after: completedDetail,
                 lifecycleIsCurrent: { preparation.isCurrent(lifecycle) }
-            ), preparation.isCurrent(lifecycle)
-        else { return }
+            )
+        else {
+            return preparation.isCurrent(lifecycle) && !Task.isCancelled
+                ? .exhausted
+                : .ignored
+        }
+        guard preparation.isCurrent(lifecycle) else { return .ignored }
 
         videoDetail = resolution.detail
         let playbackOwnerLink = advancedPlaybackOwnerLink(for: resolution.link)
@@ -474,6 +487,7 @@ struct VideoEntityPlaybackView: View {
         ) {
             onAdvance(destination)
         }
+        return .advanced
     }
 
     private func advancedPlaybackOwnerLink(for successorLink: EntityLink) -> EntityLink {

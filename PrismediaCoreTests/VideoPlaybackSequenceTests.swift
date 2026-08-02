@@ -10,7 +10,12 @@ final class VideoPlaybackSequenceTests: XCTestCase {
 
         let next = VideoPlaybackSequence.nextEpisode(
             after: first.id,
-            in: EntityGroup(kind: .video, label: "Episodes", entities: [third, first, second], code: nil)
+            in: EntityGroup(
+                kind: .videoEpisode,
+                label: "Episodes",
+                entities: [third, first, second],
+                code: nil
+            )
         )
 
         XCTAssertEqual(next?.id, second.id)
@@ -22,7 +27,12 @@ final class VideoPlaybackSequenceTests: XCTestCase {
 
         let next = VideoPlaybackSequence.nextEpisode(
             after: second.id,
-            in: EntityGroup(kind: .video, label: "Episodes", entities: [first, second], code: nil)
+            in: EntityGroup(
+                kind: .videoEpisode,
+                label: "Episodes",
+                entities: [first, second],
+                code: nil
+            )
         )
 
         XCTAssertNil(next)
@@ -43,7 +53,7 @@ final class VideoPlaybackSequenceTests: XCTestCase {
     private func episode(id: String, order: Int) -> EntityThumbnail {
         EntityThumbnail(
             id: UUID(uuidString: id)!,
-            kind: .video,
+            kind: .videoEpisode,
             title: "Episode \(order)",
             sortOrder: order,
             hasSourceMedia: true
