@@ -47,6 +47,15 @@
 - Playback resolution must activate a controller/session before the loading state can complete.
 - Prefer native codec and AVKit capability first; bridge only where SwiftUI does not expose the required media behavior.
 
+## Versioning and TestFlight
+
+- `Config/Version.xcconfig` is the single source of truth for the native app marketing version. iOS, macOS, and tvOS must resolve to that same version.
+- Native versions are independent from the Prismedia web/server version and follow Semantic Versioning as plain `MAJOR.MINOR.PATCH` values. Prerelease suffixes and build metadata do not belong in `MARKETING_VERSION`.
+- MAJOR indicates a breaking native compatibility or migration requirement, MINOR introduces backward-compatible native features, and PATCH contains backward-compatible fixes or polish.
+- Change the native version only with `Scripts/set-version.sh MAJOR.MINOR.PATCH`; the script rejects malformed or non-increasing versions and verifies every app scheme.
+- Xcode Cloud owns `CURRENT_PROJECT_VERSION` for distributed builds and increments it for every Cloud build. The checked-in value is only a local-build fallback and must not be used as the release version.
+- A TestFlight handoff must report both values as `MARKETING_VERSION (CURRENT_PROJECT_VERSION)`, for example `1.0.1 (30)`.
+
 ## Validation
 
 - Keep the persistent automated suite lean. Add tests for durable data and serialization contracts, network and persistence behavior, nontrivial algorithms or state machines, playback invariants, shared cross-feature policies, and broad architecture or preview guardrails.
@@ -54,6 +63,7 @@
 - Do not add permanent tests for SwiftUI modifier sequences, exact labels, colors, spacing, layout metrics, page-specific composition, or source snippets that merely restate one implementation. Verify those changes with previews, focused builds, and manual UI review while doing the work.
 - Add a regression test for a fixed bug only when the failure can affect multiple surfaces, corrupt or lose state, break an external contract, or is otherwise expensive and plausible to repeat. Prefer extending an existing seam-level test over creating a new test file for a small tweak.
 - Keep UI automation to a small set of broad, high-value user journeys. Do not use UI tests as layout or design contracts.
+- Run `Scripts/check-version.sh` after changing project or release configuration.
 - Run `swift test` after shared behavior or architecture changes.
 - Build all shared app schemes with code signing disabled:
   - `PrismediaiOS` for a generic iOS Simulator

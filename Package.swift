@@ -54,6 +54,7 @@ let package = Package(
             exclude: [
                 "AGENTS.md",
                 "Carthage",
+                "Config",
                 "Docs",
                 "README.md",
                 "Prismedia.xcodeproj",
