@@ -116,7 +116,6 @@ final class MusicPlayerControllerTests: XCTestCase {
                 playbackOwnerEntityKind: .book
             )
         )
-        controller.setReaderPlaybackRateControlActive(true)
         controller.setPlaybackRate(1.5)
         controller.skipToNext()
 
@@ -124,7 +123,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(engine.playbackRates, [1, 1.5, 1.5])
     }
 
-    func testPlaybackRateIsReadOnlyOutsideReaderModeAndPreservedWhenReaderCloses() {
+    func testPlaybackRateIsAvailableForAudiobooksOutsideReaderMode() {
         let track = makeTrack(idSuffix: 1)
         let engine = AudioPlaybackEngineSpy()
         let controller = MusicPlayerController(
@@ -141,17 +140,12 @@ final class MusicPlayerControllerTests: XCTestCase {
         )
 
         controller.setPlaybackRate(1.5)
-        XCTAssertEqual(controller.playbackRate, 1)
-
-        controller.setReaderPlaybackRateControlActive(true)
-        controller.setPlaybackRate(1.5)
         XCTAssertEqual(controller.playbackRate, 1.5)
 
-        controller.setReaderPlaybackRateControlActive(false)
         controller.setPlaybackRate(2)
 
-        XCTAssertEqual(controller.playbackRate, 1.5)
-        XCTAssertEqual(engine.playbackRates, [1, 1.5])
+        XCTAssertEqual(controller.playbackRate, 2)
+        XCTAssertEqual(engine.playbackRates, [1, 1.5, 2])
     }
 
     func testStartingDifferentAudiobookResetsPlaybackRate() {
@@ -169,7 +163,6 @@ final class MusicPlayerControllerTests: XCTestCase {
                 playbackOwnerEntityKind: .book
             )
         )
-        controller.setReaderPlaybackRateControlActive(true)
         controller.setPlaybackRate(1.75)
 
         controller.play(
@@ -201,9 +194,9 @@ final class MusicPlayerControllerTests: XCTestCase {
                 playbackOwnerEntityKind: .book
             )
         )
-        controller.setReaderPlaybackRateControlActive(true)
         controller.setPlaybackRate(1.75)
         controller.play(tracks: [track])
+        controller.setPlaybackRate(2)
 
         XCTAssertEqual(controller.playbackRate, 1)
         XCTAssertEqual(engine.playbackRates.suffix(2), [1, 1])

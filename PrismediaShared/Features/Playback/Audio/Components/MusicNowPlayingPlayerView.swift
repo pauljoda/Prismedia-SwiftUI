@@ -5,6 +5,9 @@
         let track: MusicTrack
         let artworkNamespace: Namespace.ID
         let artworkIsSource: Bool
+        let artworkAspectRatio: Double
+        let artworkFallbackSeed: String
+        let artworkSystemImage: String
         let isActive: Bool
         let onShowQueue: () -> Void
         let onNavigate: (EntityLink) -> Void
@@ -14,6 +17,9 @@
             track: MusicTrack,
             artworkNamespace: Namespace.ID,
             artworkIsSource: Bool = true,
+            artworkAspectRatio: Double = 1,
+            artworkFallbackSeed: String? = nil,
+            artworkSystemImage: String = "music.note",
             isActive: Bool,
             onShowQueue: @escaping () -> Void,
             onNavigate: @escaping (EntityLink) -> Void,
@@ -22,6 +28,9 @@
             self.track = track
             self.artworkNamespace = artworkNamespace
             self.artworkIsSource = artworkIsSource
+            self.artworkAspectRatio = artworkAspectRatio
+            self.artworkFallbackSeed = artworkFallbackSeed ?? track.album ?? track.title
+            self.artworkSystemImage = artworkSystemImage
             self.isActive = isActive
             self.onShowQueue = onShowQueue
             self.onNavigate = onNavigate
@@ -31,14 +40,19 @@
         var body: some View {
             VStack(spacing: PrismediaSpacing.extraExtraLarge) {
                 Button(action: onShowQueue) {
-                    Color.clear
-                        .aspectRatio(1, contentMode: .fit)
-                        .containerRelativeFrame(.horizontal) { width, _ in
-                            max(min(width - (PrismediaSpacing.section * 2), 520), 1)
-                        }
-                        .overlay {
-                            if isActive {
-                                MusicNowPlayingArtwork(track: track)
+                    GeometryReader { geometry in
+                        let artworkSize = fittedArtworkSize(in: geometry.size)
+
+                        Color.clear
+                            .frame(width: artworkSize.width, height: artworkSize.height)
+                            .overlay {
+                                if isActive {
+                                    MusicNowPlayingArtwork(
+                                        track: track,
+                                        aspectRatio: artworkAspectRatio,
+                                        fallbackSeed: artworkFallbackSeed,
+                                        systemImage: artworkSystemImage
+                                    )
                                     .matchedGeometryEffect(
                                         id: "music.now-playing.artwork.\(track.id.uuidString)",
                                         in: artworkNamespace,
@@ -48,10 +62,14 @@
                                     )
                                     .zIndex(1)
                                     .shadow(color: .black.opacity(0.4), radius: 24, y: 16)
+                                }
                             }
-                        }
-                        .contentShape(Rectangle())
+                            .contentShape(Rectangle())
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .layoutPriority(1)
                 .buttonStyle(.plain)
                 .disabled(!isActive)
                 .accessibilityHidden(!isActive)
@@ -95,6 +113,14 @@
                     guard projectedDistance < -72 else { return }
                     onShowQueue()
                 }
+        }
+
+        private func fittedArtworkSize(in availableSize: CGSize) -> CGSize {
+            let horizontalInset = PrismediaSpacing.section * 2
+            let availableWidth = max(1, availableSize.width - horizontalInset)
+            let maximumWidth = artworkAspectRatio < 1 ? min(availableWidth * 0.7, 300) : 520
+            let width = max(1, min(availableWidth, maximumWidth, availableSize.height * artworkAspectRatio))
+            return CGSize(width: width, height: width / artworkAspectRatio)
         }
     }
 

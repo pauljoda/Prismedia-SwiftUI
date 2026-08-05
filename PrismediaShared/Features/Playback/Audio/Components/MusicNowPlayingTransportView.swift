@@ -25,7 +25,7 @@
 
                 transport
 
-                volumeControl
+                auxiliaryControl
             }
         }
 
@@ -74,13 +74,24 @@
         }
 
         @ViewBuilder
+        private var auxiliaryControl: some View {
+            Group {
+                if controller.context?.isAudiobook == true {
+                    MusicPlaybackRateControl(controller: controller)
+                } else {
+                    volumeControl
+                }
+            }
+            .padding(.horizontal, PrismediaSpacing.section)
+            .padding(.top, PrismediaSpacing.extraLarge)
+            .padding(.bottom, PrismediaSpacing.medium)
+        }
+
+        @ViewBuilder
         private var volumeControl: some View {
             #if os(iOS)
                 SystemVolumeSlider()
                     .frame(height: 28)
-                    .padding(.horizontal, PrismediaSpacing.section)
-                    .padding(.top, PrismediaSpacing.extraLarge)
-                    .padding(.bottom, PrismediaSpacing.medium)
             #else
                 HStack(spacing: PrismediaSpacing.small) {
                     Image(systemName: "speaker.fill")
@@ -91,9 +102,6 @@
                 }
                 .font(.caption)
                 .foregroundStyle(PrismediaColor.textSecondary)
-                .padding(.horizontal, PrismediaSpacing.section)
-                .padding(.top, PrismediaSpacing.extraLarge)
-                .padding(.bottom, PrismediaSpacing.medium)
                 .onAppear { volume = Double(engine.player.volume) }
                 .onChange(of: volume) { _, value in
                     engine.player.volume = Float(min(max(value, 0), 1))

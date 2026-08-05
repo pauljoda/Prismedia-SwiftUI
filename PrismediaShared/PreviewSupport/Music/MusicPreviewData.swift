@@ -26,12 +26,41 @@
             ),
         ]
 
+        static let audiobookTracks = [
+            MusicTrack(
+                id: UUID(uuidString: "dddddddd-dddd-dddd-dddd-ddddddddddd1")!,
+                title: "Part Two",
+                artist: "Mara Vale",
+                album: "The Glass Archive",
+                duration: 3_420,
+                trackNumber: 2
+            )
+        ]
+
         static func controller(playing: Bool = true) -> MusicPlayerController {
             let controller = MusicPlayerController(
                 engine: PreviewAudioPlaybackEngine(),
                 service: PreviewMusicPlaybackService()
             )
             if playing { controller.play(tracks: tracks) }
+            return controller
+        }
+
+        static func audiobookController(playing: Bool = true) -> MusicPlayerController {
+            let controller = MusicPlayerController(
+                engine: PreviewAudioPlaybackEngine(),
+                service: PreviewMusicPlaybackService()
+            )
+            if playing {
+                controller.play(
+                    tracks: audiobookTracks,
+                    context: MusicPlaybackContext(
+                        playbackOwnerEntityID: UUID(uuidString: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                        playbackOwnerTitle: "The Glass Archive",
+                        playbackOwnerEntityKind: .book
+                    )
+                )
+            }
             return controller
         }
     }

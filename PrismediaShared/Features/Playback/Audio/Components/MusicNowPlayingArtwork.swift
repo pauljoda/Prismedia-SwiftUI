@@ -4,24 +4,33 @@
     struct MusicNowPlayingArtwork: View {
         let track: MusicTrack
         let cornerRadius: CGFloat
+        let aspectRatio: Double
+        let fallbackSeed: String
+        let systemImage: String
 
         init(
             track: MusicTrack,
-            cornerRadius: CGFloat = PrismediaRadius.control
+            cornerRadius: CGFloat = PrismediaRadius.control,
+            aspectRatio: Double = 1,
+            fallbackSeed: String? = nil,
+            systemImage: String = "music.note"
         ) {
             self.track = track
             self.cornerRadius = cornerRadius
+            self.aspectRatio = aspectRatio
+            self.fallbackSeed = fallbackSeed ?? track.album ?? track.title
+            self.systemImage = systemImage
         }
 
         var body: some View {
             RemotePosterImage(
                 path: track.artworkPath,
-                fallbackSeed: track.album ?? track.title,
-                systemImage: "music.note",
+                fallbackSeed: fallbackSeed,
+                systemImage: systemImage,
                 contentMode: .fit,
                 imageCornerRadius: cornerRadius
             )
-            .aspectRatio(1, contentMode: .fit)
+            .aspectRatio(aspectRatio, contentMode: .fit)
         }
     }
 

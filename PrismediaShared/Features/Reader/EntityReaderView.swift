@@ -82,12 +82,6 @@ public struct EntityReaderView: View {
             #endif
         }
         .tint(artworkPrimaryAccent)
-        .onAppear {
-            companionPlayer?.setReaderPlaybackRateControlActive(true)
-        }
-        .onDisappear {
-            companionPlayer?.setReaderPlaybackRateControlActive(false)
-        }
     }
 }
 

@@ -33,7 +33,6 @@ public final class MusicPlayerController {
     private var currentTrackRequestedAt: TimeInterval?
     private var consumptionActivityClock = ConsumptionActivityClock()
     private var accessedConsumptionEntityID: UUID?
-    private var isReaderPlaybackRateControlActive = false
 
     private static let quickSkipThreshold: TimeInterval = 10
 
@@ -238,17 +237,9 @@ public final class MusicPlayerController {
         publishNowPlayingState()
     }
 
-    /// Marks whether Reader Mode currently owns variable-speed audiobook playback.
-    /// Leaving Reader Mode preserves the current rate but makes it read-only until
-    /// Reader Mode becomes active again or the playback context changes.
-    public func setReaderPlaybackRateControlActive(_ isActive: Bool) {
-        isReaderPlaybackRateControlActive = isActive
-    }
-
-    /// Applies a variable audiobook playback rate while Reader Mode is active.
+    /// Applies a variable playback rate to the active audiobook queue.
     public func setPlaybackRate(_ rate: Float) {
-        guard isReaderPlaybackRateControlActive,
-            context?.isAudiobook == true,
+        guard context?.isAudiobook == true,
             rate.isFinite
         else { return }
         playbackRate = min(max(rate, 0.5), 3)

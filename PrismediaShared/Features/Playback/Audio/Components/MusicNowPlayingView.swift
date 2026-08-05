@@ -109,6 +109,9 @@
                         track: track,
                         artworkNamespace: artworkNamespace,
                         artworkIsSource: artworkIsSource,
+                        artworkAspectRatio: artworkAspectRatio,
+                        artworkFallbackSeed: controller.context?.playbackOwnerTitle,
+                        artworkSystemImage: artworkSystemImage,
                         isActive: presentation == .player,
                         onShowQueue: showQueue,
                         onNavigate: navigate,
@@ -144,6 +147,14 @@
 
         private var artworkIsSource: Bool {
             providedArtworkNamespace == nil
+        }
+
+        private var artworkAspectRatio: Double {
+            controller.context?.playbackOwnerEntityKind?.thumbnailAspectRatio ?? 1
+        }
+
+        private var artworkSystemImage: String {
+            controller.context?.playbackOwnerEntityKind?.thumbnailFallbackSystemImage ?? "music.note"
         }
 
         #if os(macOS)
