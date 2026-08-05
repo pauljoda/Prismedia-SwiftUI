@@ -214,8 +214,10 @@ import UniformTypeIdentifiers
         private var toolbarContent: some ToolbarContent {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
+                    .prismediaToolbarActionLabelStyle()
                     .disabled(isBusy)
                 fileActionsMenu
+                    .prismediaToolbarActionLabelStyle()
             }
         }
 

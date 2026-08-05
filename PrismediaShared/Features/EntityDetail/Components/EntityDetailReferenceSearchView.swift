@@ -59,7 +59,7 @@ struct EntityDetailReferenceSearchView: View {
         .toolbar {
             if mode == .multiple {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    PrismediaToolbarActionButton("Done", systemImage: "checkmark") { dismiss() }
                 }
             }
         }

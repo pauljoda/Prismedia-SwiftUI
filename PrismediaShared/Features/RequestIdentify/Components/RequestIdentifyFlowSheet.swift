@@ -33,6 +33,7 @@ import SwiftUI
                                 Button("Search", systemImage: "chevron.left") {
                                     dismiss()
                                 }
+                                .prismediaToolbarActionLabelStyle()
                                 .disabled(phase.locksDismissal)
                                 .accessibilityHint("Returns to the preserved search results")
                             }

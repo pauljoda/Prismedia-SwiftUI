@@ -194,6 +194,7 @@
 
         private var tableOfContentsButton: some View {
             Button("Table of Contents", systemImage: "list.bullet.indent", action: openContents)
+                .prismediaToolbarActionLabelStyle()
                 .accessibilityIdentifier("pdf-reader.table-of-contents")
         }
 
@@ -205,6 +206,7 @@
             Button("Search", systemImage: "magnifyingglass") {
                 presentedSheet = .search
             }
+            .prismediaToolbarActionLabelStyle()
             .accessibilityIdentifier("pdf-reader.search")
         }
 
@@ -212,6 +214,7 @@
             Button("View Options", systemImage: "textformat.size") {
                 presentedSheet = .viewOptions
             }
+            .prismediaToolbarActionLabelStyle()
             .accessibilityLabel("PDF view options")
             .accessibilityValue(layoutMode.label)
         }

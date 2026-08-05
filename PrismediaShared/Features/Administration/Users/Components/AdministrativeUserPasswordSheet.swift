@@ -29,10 +29,14 @@ struct AdministrativeUserPasswordSheet: View {
             .prismediaScreenBackground()
             .navigationTitle("Reset Password")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Reset") { Task { await reset() } }
-                        .disabled(password.count < 8 || confirmation != password || isSaving)
+                    PrismediaToolbarActionButton("Reset", systemImage: "arrow.counterclockwise") {
+                        Task { await reset() }
+                    }
+                    .disabled(password.count < 8 || confirmation != password || isSaving)
                 }
             }
         }

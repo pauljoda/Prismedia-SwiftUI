@@ -111,8 +111,10 @@ struct AdministrativePluginsView: View {
                                     ForEach(capabilityKinds, id: \.self) { kind in Text(kind).tag(kind) }
                                 }
                             }
+                            .prismediaToolbarActionLabelStyle()
                         }
                         Button("Refresh", systemImage: "arrow.clockwise") { Task { await refreshSelected() } }
+                            .prismediaToolbarActionLabelStyle()
                             .disabled(isLoading || isRefreshingStash)
                     }
                 }
@@ -136,11 +138,13 @@ struct AdministrativePluginsView: View {
                         ForEach(capabilityKinds, id: \.self) { kind in Text(kind).tag(kind) }
                     }
                 }
+                .prismediaToolbarActionLabelStyle()
             }
 
             Button("Refresh", systemImage: "arrow.clockwise") {
                 Task { await refreshSelected() }
             }
+            .prismediaToolbarActionLabelStyle()
             .disabled(isLoading || isRefreshingStash)
         }
     }

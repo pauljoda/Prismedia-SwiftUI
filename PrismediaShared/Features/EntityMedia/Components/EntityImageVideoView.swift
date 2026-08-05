@@ -141,6 +141,7 @@ struct EntityImageVideoView: View {
             systemImage: shouldPlay ? "pause.fill" : "play.fill",
             action: togglePlayback
         )
+        .prismediaToolbarActionLabelStyle()
     }
 
     private var muteButton: some View {
@@ -151,6 +152,7 @@ struct EntityImageVideoView: View {
                 : "speaker.wave.2.fill",
             action: toggleMute
         )
+        .prismediaToolbarActionLabelStyle()
     }
 
     @ViewBuilder

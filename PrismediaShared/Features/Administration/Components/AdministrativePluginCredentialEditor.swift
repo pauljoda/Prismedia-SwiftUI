@@ -39,10 +39,14 @@ struct AdministrativePluginCredentialEditor: View {
             .prismediaScreenBackground()
             .navigationTitle("\(plugin.name) Credentials")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }
-                        .disabled(isSaving || !hasChanges)
+                    PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
+                        Task { await save() }
+                    }
+                    .disabled(isSaving || !hasChanges)
                 }
             }
             .overlay { if isSaving { ProgressView("Saving securely…") } }

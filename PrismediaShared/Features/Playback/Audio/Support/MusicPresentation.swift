@@ -15,6 +15,28 @@ public enum MusicPresentation {
         return String(format: "%d:%02d", minutes, remainingSeconds)
     }
 
+    /// Returns wall-clock time remaining after accounting for playback speed.
+    /// Invalid playback rates fall back to normal speed.
+    public static func effectiveRemainingTime(
+        duration: Double,
+        position: Double,
+        playbackRate: Float
+    ) -> Double {
+        guard duration.isFinite, duration > 0 else { return 0 }
+
+        let boundedPosition =
+            position.isFinite
+            ? min(max(position, 0), duration)
+            : 0
+        let remainingTime = duration - boundedPosition
+        let effectiveRate =
+            playbackRate.isFinite && playbackRate > 0
+            ? Double(playbackRate)
+            : 1
+
+        return remainingTime / effectiveRate
+    }
+
     public static func artist(_ value: String?) -> String {
         let normalized = value?.trimmingCharacters(in: .whitespacesAndNewlines)
         return normalized?.isEmpty == false ? normalized! : "Unknown Artist"

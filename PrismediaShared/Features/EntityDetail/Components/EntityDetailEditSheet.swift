@@ -62,11 +62,13 @@ struct EntityDetailEditSheet: View {
             .navigationTitle("Edit Entity")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
-                        .disabled(isSaving)
+                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark", role: .cancel) {
+                        dismiss()
+                    }
+                    .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
                         Task { await save() }
                     }
                     .disabled(!isDirty || isSaving)

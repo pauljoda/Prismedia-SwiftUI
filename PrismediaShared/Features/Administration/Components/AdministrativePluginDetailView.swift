@@ -71,7 +71,9 @@ struct AdministrativePluginDetailView: View {
             .prismediaScreenBackground()
             .navigationTitle(plugin.name)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    PrismediaToolbarActionButton("Done", systemImage: "checkmark") { dismiss() }
+                }
             }
             .overlay { if isWorking { ProgressView("Updating provider…") } }
             .sheet(isPresented: $showsCredentials) {

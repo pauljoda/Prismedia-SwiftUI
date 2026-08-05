@@ -26,6 +26,7 @@
 
             ToolbarItem(placement: .primaryAction) {
                 Button("Reader settings", systemImage: "ellipsis", action: onOpenSettings)
+                    .prismediaToolbarActionLabelStyle()
                     .accessibilityIdentifier("comic-reader.settings")
             }
         }

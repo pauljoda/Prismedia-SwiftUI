@@ -19,7 +19,8 @@
                 MusicPlaybackTimeline(
                     position: $scrubPosition,
                     duration: max(engine.duration, track.duration ?? 0, 1),
-                    onEditingChanged: scrubDidChange
+                    onEditingChanged: scrubDidChange,
+                    playbackRate: controller.playbackRate
                 )
                 .padding(.horizontal, PrismediaSpacing.section)
 
@@ -42,7 +43,7 @@
                 nextButton
             }
             .font(.system(size: 27, weight: .semibold))
-            .padding(.top, PrismediaSpacing.large)
+            .padding(.top, PrismediaSpacing.extraSmall)
         }
 
         private var previousButton: some View {

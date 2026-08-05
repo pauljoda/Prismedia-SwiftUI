@@ -88,7 +88,7 @@ import SwiftUI
                         #endif
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
-                                Button("Close", systemImage: "xmark") {
+                                PrismediaToolbarActionButton("Close", systemImage: "xmark") {
                                     self.previewCandidate = nil
                                 }
                             }

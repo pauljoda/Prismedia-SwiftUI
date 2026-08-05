@@ -203,6 +203,7 @@ public struct SignInView: View {
                     .foregroundStyle(PrismediaColor.textSecondary)
                 #endif
         }
+        .prismediaToolbarActionLabelStyle()
         .disabled(!state.canChangeServer)
         .accessibilityLabel("Choose a different server")
         .accessibilityIdentifier("auth.change-server")

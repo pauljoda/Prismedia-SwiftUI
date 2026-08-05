@@ -56,12 +56,19 @@ import SwiftUI
                 .navigationTitle(profile.displayName)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel", role: .cancel, action: dismiss.callAsFunction)
-                            .disabled(isSaving)
+                        PrismediaToolbarActionButton(
+                            "Cancel",
+                            systemImage: "xmark",
+                            role: .cancel,
+                            action: dismiss.callAsFunction
+                        )
+                        .disabled(isSaving)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") { Task { await save() } }
-                            .disabled(isSaving)
+                        PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
+                            Task { await save() }
+                        }
+                        .disabled(isSaving)
                     }
                 }
                 .overlay { if isSaving { ProgressView() } }

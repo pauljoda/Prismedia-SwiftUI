@@ -113,9 +113,14 @@ struct AdministrativeLibraryRootEditor: View {
             .prismediaScreenBackground()
             .navigationTitle(target.root == nil ? "Add Library" : "Edit Library")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }.disabled(!isValid || isWorking)
+                    PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
+                        Task { await save() }
+                    }
+                    .disabled(!isValid || isWorking)
                 }
             }
         }

@@ -36,7 +36,7 @@
                 .navigationTitle("Chapters")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        PrismediaToolbarActionButton("Done", systemImage: "checkmark") { dismiss() }
                     }
                 }
             }

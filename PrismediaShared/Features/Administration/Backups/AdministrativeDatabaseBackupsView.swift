@@ -55,9 +55,12 @@ struct AdministrativeDatabaseBackupsView: View {
         .navigationTitle("Database Backups")
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }.disabled(isLoading)
-                Button("Backup Now", systemImage: "archivebox.badge.plus") { Task { await create() } }.disabled(
-                    isWorking)
+                Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
+                    .prismediaToolbarActionLabelStyle()
+                    .disabled(isLoading)
+                Button("Backup Now", systemImage: "archivebox.badge.plus") { Task { await create() } }
+                    .prismediaToolbarActionLabelStyle()
+                    .disabled(isWorking)
             }
         }
         .task { await load() }

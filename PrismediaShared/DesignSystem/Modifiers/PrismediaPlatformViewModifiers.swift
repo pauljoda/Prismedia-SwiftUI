@@ -99,6 +99,17 @@ extension View {
             self.controlSize(.regular)
         #endif
     }
+
+    /// Uses compact, symbol-only toolbar chrome on iOS while preserving the
+    /// label as the control's accessible name and keeping text on other platforms.
+    @ViewBuilder
+    public func prismediaToolbarActionLabelStyle() -> some View {
+        #if os(iOS)
+            self.labelStyle(.iconOnly)
+        #else
+            self
+        #endif
+    }
 }
 
 #if DEBUG

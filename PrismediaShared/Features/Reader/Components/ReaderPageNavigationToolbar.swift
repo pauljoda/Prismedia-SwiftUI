@@ -32,12 +32,14 @@
 
         private var previousButton: some View {
             Button("Previous page", systemImage: "chevron.left", action: onPrevious)
+                .prismediaToolbarActionLabelStyle()
                 .disabled(!canGoPrevious)
                 .accessibilityIdentifier("\(accessibilityPrefix).previous")
         }
 
         private var nextButton: some View {
             Button("Next page", systemImage: "chevron.right", action: onNext)
+                .prismediaToolbarActionLabelStyle()
                 .disabled(!canGoNext)
                 .accessibilityIdentifier("\(accessibilityPrefix).next")
         }

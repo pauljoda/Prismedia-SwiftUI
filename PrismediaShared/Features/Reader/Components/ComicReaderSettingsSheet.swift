@@ -40,7 +40,7 @@ struct ComicReaderSettingsSheet: View {
             .navigationTitle("Reader Settings")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    PrismediaToolbarActionButton("Done", systemImage: "checkmark") { dismiss() }
                 }
             }
         }

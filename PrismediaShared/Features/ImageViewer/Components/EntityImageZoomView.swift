@@ -123,6 +123,7 @@ struct EntityImageZoomView: View {
         Button("Zoom Out", systemImage: "minus.magnifyingglass") {
             setZoom(scale - 0.5)
         }
+        .prismediaToolbarActionLabelStyle()
         .disabled(scale <= 1)
     }
 
@@ -130,6 +131,7 @@ struct EntityImageZoomView: View {
         Button("Actual Size", systemImage: "1.magnifyingglass") {
             setZoom(1)
         }
+        .prismediaToolbarActionLabelStyle()
         .disabled(scale == 1)
     }
 
@@ -137,6 +139,7 @@ struct EntityImageZoomView: View {
         Button("Zoom In", systemImage: "plus.magnifyingglass") {
             setZoom(scale + 0.5)
         }
+        .prismediaToolbarActionLabelStyle()
         .disabled(scale >= 6)
     }
 

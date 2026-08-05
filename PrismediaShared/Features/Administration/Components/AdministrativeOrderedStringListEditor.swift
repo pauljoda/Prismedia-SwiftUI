@@ -2,6 +2,9 @@ import SwiftUI
 
 struct AdministrativeOrderedStringListEditor: View {
     @Environment(\.dismiss) private var dismiss
+    #if os(iOS)
+        @Environment(\.editMode) private var editMode
+    #endif
     @State private var values: [String]
     @State private var newValue = ""
     @State private var isSaving = false
@@ -47,12 +50,20 @@ struct AdministrativeOrderedStringListEditor: View {
             #if os(iOS)
                 if values.count > 1 {
                     ToolbarItem(placement: .secondaryAction) {
-                        EditButton()
+                        if editMode?.wrappedValue.isEditing == true {
+                            PrismediaToolbarActionButton("Done Editing", systemImage: "checkmark") {
+                                withAnimation { editMode?.wrappedValue = .inactive }
+                            }
+                        } else {
+                            PrismediaToolbarActionButton("Edit", systemImage: "pencil") {
+                                withAnimation { editMode?.wrappedValue = .active }
+                            }
+                        }
                     }
                 }
             #endif
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
                     Task { await save() }
                 }
                 .disabled(!canSave)

@@ -27,7 +27,11 @@ import SwiftUI
                 .navigationTitle(selection.date.formatted(date: .complete, time: .omitted))
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", action: dismiss.callAsFunction)
+                        PrismediaToolbarActionButton(
+                            "Close",
+                            systemImage: "xmark",
+                            action: dismiss.callAsFunction
+                        )
                     }
                 }
             }

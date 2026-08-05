@@ -100,6 +100,7 @@ import SwiftUI
                                 session.returnToSearch()
                                 path.removeLast()
                             }
+                            .prismediaToolbarActionLabelStyle()
                             .disabled(phase.locksDismissal)
                             .accessibilityHint("Returns to the preserved identify search")
                         }

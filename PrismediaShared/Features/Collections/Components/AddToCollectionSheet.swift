@@ -63,7 +63,9 @@
                 .searchable(text: $searchText, prompt: "Filter collections")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") { dismiss() }
+                        PrismediaToolbarActionButton("Done", systemImage: "checkmark") {
+                            dismiss()
+                        }
                     }
                 }
             }

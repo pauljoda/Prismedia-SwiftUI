@@ -45,10 +45,14 @@ import SwiftUI
                 .prismediaScreenBackground()
                 .navigationTitle("Move \(entry.name)")
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .cancellationAction) {
+                        PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                    }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Move") { Task { await move() } }
-                            .disabled(isMoving)
+                        PrismediaToolbarActionButton("Move", systemImage: "checkmark") {
+                            Task { await move() }
+                        }
+                        .disabled(isMoving)
                     }
                 }
                 .overlay { if isMoving { ProgressView("Moving…") } }

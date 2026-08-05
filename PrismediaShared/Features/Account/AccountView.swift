@@ -39,7 +39,9 @@ struct AccountView: View {
             .navigationTitle("Account")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    PrismediaToolbarActionButton("Done", systemImage: "checkmark") {
+                        dismiss()
+                    }
                 }
             }
         }

@@ -2,6 +2,9 @@ import SwiftUI
 
 struct AdministrativeMultiSelectionView: View {
     @Environment(\.dismiss) private var dismiss
+    #if os(iOS)
+        @Environment(\.editMode) private var editMode
+    #endif
     @State private var selectedValues: [String]
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -64,12 +67,20 @@ struct AdministrativeMultiSelectionView: View {
             #if os(iOS)
                 if selectedValues.count > 1 {
                     ToolbarItem(placement: .secondaryAction) {
-                        EditButton()
+                        if editMode?.wrappedValue.isEditing == true {
+                            PrismediaToolbarActionButton("Done Editing", systemImage: "checkmark") {
+                                withAnimation { editMode?.wrappedValue = .inactive }
+                            }
+                        } else {
+                            PrismediaToolbarActionButton("Edit", systemImage: "pencil") {
+                                withAnimation { editMode?.wrappedValue = .active }
+                            }
+                        }
                     }
                 }
             #endif
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
                     Task { await save() }
                 }
                 .disabled(!canSave)

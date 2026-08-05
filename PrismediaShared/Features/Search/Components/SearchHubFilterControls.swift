@@ -81,7 +81,7 @@ struct SearchHubFilterControls: View {
         .navigationTitle("Search Filters")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done") {
+                PrismediaToolbarActionButton("Done", systemImage: "checkmark") {
                     dismiss()
                 }
             }

@@ -28,7 +28,7 @@ struct ComicReaderTableOfContentsSheet: View {
             .navigationTitle("Table of Contents")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    PrismediaToolbarActionButton("Done", systemImage: "checkmark") { dismiss() }
                 }
             }
         }

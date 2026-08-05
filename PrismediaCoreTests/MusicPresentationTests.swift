@@ -84,4 +84,46 @@ final class MusicPresentationTests: XCTestCase {
         XCTAssertEqual(projected.first?.artworkPath, "/assets/smoke.jpg")
         XCTAssertEqual(projected.first?.duration, 232)
     }
+
+    func testEffectiveRemainingTimeScalesWithPlaybackRate() {
+        XCTAssertEqual(
+            MusicPresentation.effectiveRemainingTime(
+                duration: 1_200,
+                position: 60,
+                playbackRate: 2
+            ),
+            570,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            MusicPresentation.effectiveRemainingTime(
+                duration: 1_200,
+                position: 60,
+                playbackRate: 0.5
+            ),
+            2_280,
+            accuracy: 0.001
+        )
+    }
+
+    func testEffectiveRemainingTimeFallsBackToNormalSpeedForInvalidRate() {
+        XCTAssertEqual(
+            MusicPresentation.effectiveRemainingTime(
+                duration: 1_200,
+                position: 60,
+                playbackRate: 0
+            ),
+            1_140,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            MusicPresentation.effectiveRemainingTime(
+                duration: 1_200,
+                position: 60,
+                playbackRate: .nan
+            ),
+            1_140,
+            accuracy: 0.001
+        )
+    }
 }

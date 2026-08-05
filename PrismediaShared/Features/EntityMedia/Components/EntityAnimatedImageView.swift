@@ -74,6 +74,7 @@ struct EntityAnimatedImageView: View {
             systemImage: shouldPlay ? "pause.fill" : "play.fill",
             action: togglePlayback
         )
+        .prismediaToolbarActionLabelStyle()
     }
 
     private var feedSurface: some View {

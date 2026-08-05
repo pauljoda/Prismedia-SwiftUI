@@ -89,9 +89,14 @@ struct AdministrativeUserEditor: View {
             .prismediaScreenBackground()
             .navigationTitle(target.user == nil ? "Add User" : "Edit User")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }.disabled(!isValid || isSaving)
+                    PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
+                        Task { await save() }
+                    }
+                    .disabled(!isValid || isSaving)
                 }
             }
         }

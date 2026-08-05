@@ -59,7 +59,9 @@
                 .prismediaInlineNavigationTitle()
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        PrismediaToolbarActionButton("Done", systemImage: "checkmark") {
+                            dismiss()
+                        }
                     }
                 }
             }
@@ -124,7 +126,8 @@
             MusicPlaybackTimeline(
                 position: $scrubPosition,
                 duration: controller.currentTrackDuration,
-                onEditingChanged: scrubDidChange
+                onEditingChanged: scrubDidChange,
+                playbackRate: controller.playbackRate
             )
         }
 
@@ -157,17 +160,19 @@
             .font(.system(size: 27, weight: .semibold))
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
-            .padding(.top, PrismediaSpacing.large)
+            .padding(.top, PrismediaSpacing.extraSmall)
         }
 
         private var readerControls: some View {
             PrismediaGlassButtonGroup(spacing: PrismediaSpacing.medium) {
-                Button("Previous Part", systemImage: "backward.end.fill", action: controller.skipToPrevious)
-                    .labelStyle(.iconOnly)
-                    .padding(PrismediaSpacing.small)
-                    .disabled(!controller.queue.canGoPrevious)
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
+                Button(action: controller.skipToPrevious) {
+                    Label("Previous Part", systemImage: "backward.end.fill")
+                        .labelStyle(.iconOnly)
+                        .frame(width: readerControlHeight, height: readerControlHeight)
+                }
+                .disabled(!controller.queue.canGoPrevious)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
 
                 if onFindReadingPosition != nil {
                     Button(action: findReadingPosition) {
@@ -183,9 +188,8 @@
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                         }
-                        .padding(.horizontal, PrismediaSpacing.small)
-                        .padding(.vertical, PrismediaSpacing.extraSmall)
                         .frame(maxWidth: .infinity)
+                        .frame(height: readerControlHeight)
                     }
                     .buttonStyle(.glassProminent)
                     .buttonBorderShape(.capsule)
@@ -201,13 +205,19 @@
                     Spacer(minLength: 0)
                 }
 
-                Button("Next Part", systemImage: "forward.end.fill", action: controller.skipToNext)
-                    .labelStyle(.iconOnly)
-                    .padding(PrismediaSpacing.small)
-                    .disabled(!controller.queue.canGoNext)
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
+                Button(action: controller.skipToNext) {
+                    Label("Next Part", systemImage: "forward.end.fill")
+                        .labelStyle(.iconOnly)
+                        .frame(width: readerControlHeight, height: readerControlHeight)
+                }
+                .disabled(!controller.queue.canGoNext)
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
             }
+        }
+
+        private var readerControlHeight: CGFloat {
+            52
         }
 
         private var artworkAspectRatio: Double {

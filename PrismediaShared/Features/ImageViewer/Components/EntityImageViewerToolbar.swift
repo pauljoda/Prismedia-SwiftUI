@@ -10,7 +10,7 @@
         @ToolbarContentBuilder
         var body: some ToolbarContent {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Close", systemImage: "xmark", action: onClose)
+                PrismediaToolbarActionButton("Close", systemImage: "xmark", action: onClose)
                     .accessibilityIdentifier("image-viewer.close")
             }
 
@@ -27,6 +27,7 @@
 
             ToolbarItem(placement: .primaryAction) {
                 Button("Show Details", systemImage: "info.circle", action: onOpenDetails)
+                    .prismediaToolbarActionLabelStyle()
                     .accessibilityIdentifier("image-viewer.details")
                     .accessibilityHint("Opens this image’s metadata and management details")
             }

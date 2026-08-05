@@ -61,27 +61,32 @@
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Reader settings", systemImage: "textformat.size", action: onOpenSettings)
+                    .prismediaToolbarActionLabelStyle()
                     .accessibilityIdentifier("epub-reader.settings-button")
             }
         }
 
         private var compactNavigationMenu: some View {
             Button("Navigate Book", systemImage: "text.book.closed", action: onOpenNavigation)
+                .prismediaToolbarActionLabelStyle()
                 .accessibilityIdentifier("epub-reader.navigation-menu")
         }
 
         private var contentsButton: some View {
             Button("Table of Contents", systemImage: "list.bullet.indent", action: onOpenContents)
+                .prismediaToolbarActionLabelStyle()
                 .accessibilityIdentifier("epub-reader.table-of-contents")
         }
 
         private var searchButton: some View {
             Button("Search book", systemImage: "magnifyingglass", action: onOpenSearch)
+                .prismediaToolbarActionLabelStyle()
                 .accessibilityIdentifier("epub-reader.search-button")
         }
 
         private var bookmarksButton: some View {
             Button("Bookmarks", systemImage: "bookmark", action: onOpenBookmarks)
+                .prismediaToolbarActionLabelStyle()
                 .accessibilityIdentifier("epub-reader.bookmarks-button")
         }
 
@@ -93,6 +98,7 @@
                 systemImage: "arrow.left.arrow.right",
                 action: onToggleBookmark
             )
+            .prismediaToolbarActionLabelStyle()
             .accessibilityIdentifier("epub-reader.toggle-bookmark")
         }
     }

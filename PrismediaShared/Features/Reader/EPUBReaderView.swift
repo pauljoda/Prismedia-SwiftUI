@@ -169,7 +169,7 @@
                         .prismediaInlineNavigationTitle()
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
-                                Button("Close", systemImage: "xmark", action: close)
+                                PrismediaToolbarActionButton("Close", systemImage: "xmark", action: close)
                             }
                             if let companionPlayer = activeCompanionPlayer,
                                 companionPlayer.currentTrack != nil
@@ -186,11 +186,13 @@
                                     Button("Previous Chapter", systemImage: "chevron.left") {
                                         selectChapter(max(0, currentChapter - 1))
                                     }
+                                    .prismediaToolbarActionLabelStyle()
                                     .disabled(currentChapter == 0)
 
                                     Button("Choose Chapter", systemImage: "text.book.closed") {
                                         presentedSheet = .chapters
                                     }
+                                    .prismediaToolbarActionLabelStyle()
                                     .accessibilityValue(
                                         "Chapter \(currentChapter + 1) of \(publication.chapters.count)"
                                     )
@@ -198,6 +200,7 @@
                                     Button("Next Chapter", systemImage: "chevron.right") {
                                         selectChapter(min(publication.chapters.count - 1, currentChapter + 1))
                                     }
+                                    .prismediaToolbarActionLabelStyle()
                                     .disabled(currentChapter >= publication.chapters.count - 1)
                                 }
                             }
