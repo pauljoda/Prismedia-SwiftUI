@@ -51,10 +51,10 @@
 ## Versioning and TestFlight
 
 - `Config/Version.xcconfig` is the single source of truth for the native app marketing version. iOS, macOS, and tvOS must resolve to that same version.
-- Native versions are independent from the Prismedia web/server version and follow Semantic Versioning as plain `MAJOR.MINOR.PATCH` values. Prerelease suffixes and build metadata do not belong in `MARKETING_VERSION`.
+- Native versions are independent from the Prismedia web/server version and follow Semantic Versioning semantics as plain `MAJOR.MINOR` or `MAJOR.MINOR.PATCH` values. A trailing zero patch may be omitted; prerelease suffixes and build metadata do not belong in `MARKETING_VERSION`.
 - MAJOR indicates a breaking native compatibility or migration requirement, MINOR introduces backward-compatible native features, and PATCH contains backward-compatible fixes or polish.
-- Change the native version only with `Scripts/set-version.sh MAJOR.MINOR.PATCH`; the script rejects malformed or non-increasing versions and verifies every app scheme.
-- Xcode Cloud owns `CURRENT_PROJECT_VERSION` for distributed builds and increments it for every Cloud build. The checked-in value is only a local-build fallback and must not be used as the release version.
+- Immediately before every commit, advance `MARKETING_VERSION` to the intended next Apple release version with `Scripts/set-version.sh MAJOR.MINOR[.PATCH]` and include that change in the commit. The script rejects malformed or non-increasing versions and verifies every app scheme.
+- Xcode Cloud owns `CURRENT_PROJECT_VERSION` for distributed builds and increments the internal build number. Do not check that number into `Config/Version.xcconfig` or advance it as part of a commit.
 - A TestFlight handoff must report both values as `MARKETING_VERSION (CURRENT_PROJECT_VERSION)`, for example `1.0.1 (30)`.
 
 ## Validation

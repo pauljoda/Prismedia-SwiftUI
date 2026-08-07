@@ -71,9 +71,10 @@ installing it. Swift package versions are separately locked by the committed
 `Package.resolved` files.
 
 The native release version is independent from the web/server release and lives
-in `Config/Version.xcconfig`. iOS, macOS, and tvOS all inherit that one strict
-Semantic Versioning value. Bump it with `Scripts/set-version.sh MAJOR.MINOR.PATCH`;
-Xcode Cloud supplies and increments the separate build number shown in TestFlight.
+in `Config/Version.xcconfig`. iOS, macOS, and tvOS all inherit that one version.
+Advance it once per commit with `Scripts/set-version.sh MAJOR.MINOR[.PATCH]`;
+Xcode Cloud separately supplies and increments the internal build number shown
+in TestFlight.
 
 `PrismediaCloud.xcworkspace` exposes the app and bootstrap schemes to Xcode
 Cloud without granting repository access to the owners of public Swift package

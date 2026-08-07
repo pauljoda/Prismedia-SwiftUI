@@ -1,2 +1,2 @@
 // Native Prismedia release version. Update only through Scripts/set-version.sh.
-MARKETING_VERSION = 1.0.1
+MARKETING_VERSION = 1.1

@@ -13,8 +13,8 @@ fi
 
 version=$(sed -n 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p' "$version_config")
 
-if ! printf '%s\n' "$version" | grep -Eq '^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$'; then
-    echo "Config/Version.xcconfig must contain one strict MAJOR.MINOR.PATCH version." >&2
+if ! printf '%s\n' "$version" | grep -Eq '^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)([.](0|[1-9][0-9]*))?$'; then
+    echo "Config/Version.xcconfig must contain one MAJOR.MINOR or MAJOR.MINOR.PATCH version." >&2
     exit 1
 fi
 

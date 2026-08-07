@@ -3,14 +3,14 @@
 set -eu
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: Scripts/set-version.sh MAJOR.MINOR.PATCH" >&2
+    echo "Usage: Scripts/set-version.sh MAJOR.MINOR[.PATCH]" >&2
     exit 2
 fi
 
 next_version=$1
 
-if ! printf '%s\n' "$next_version" | grep -Eq '^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$'; then
-    echo "Version must be a strict MAJOR.MINOR.PATCH value without suffixes." >&2
+if ! printf '%s\n' "$next_version" | grep -Eq '^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)([.](0|[1-9][0-9]*))?$'; then
+    echo "Version must be a MAJOR.MINOR or MAJOR.MINOR.PATCH value without suffixes." >&2
     exit 2
 fi
 
