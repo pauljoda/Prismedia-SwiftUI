@@ -132,6 +132,9 @@ struct DashboardView: View {
                         onSignOut: onSignOut
                     )
                 }
+                #if os(iOS) || os(macOS)
+                    .sharedBackgroundVisibility(.hidden)
+                #endif
             }
             #if os(iOS)
                 .toolbarBackground(.hidden, for: .navigationBar)

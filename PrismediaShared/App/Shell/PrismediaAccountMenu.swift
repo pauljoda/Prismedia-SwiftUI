@@ -43,6 +43,9 @@ struct PrismediaAccountMenu: View {
                 .frame(width: 34, height: 34)
                 .background(PrismediaColor.accent.gradient, in: Circle())
         }
+        #if os(iOS) || os(macOS)
+            .buttonStyle(.plain)
+        #endif
         .accessibilityLabel("Account, \(user.displayName)")
         .accessibilityIdentifier("shell.account")
     }
