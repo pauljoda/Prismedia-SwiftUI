@@ -1,0 +1,9 @@
+{
+  "id" : "da76f7a3-a196-40de-b2ba-baacde2bfc4e",
+  "targets" : [
+    {
+      "id" : "f3b466aa-c3a0-4d18-bc57-fc56a68996d1",
+      "name" : "PrismediaCloudBootstrap"
+    }
+  ]
+}
