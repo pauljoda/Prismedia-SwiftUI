@@ -28,13 +28,15 @@ struct EntityThumbnailArtworkView: View {
 
     var body: some View {
         EntityThumbnailArtworkFrame(aspectRatio: aspectRatio) {
-            EntityThumbnailMediaView(
-                item: item,
-                systemImage: item.kind.thumbnailFallbackSystemImage,
-                contentMode: artworkPresentation.contentMode,
-                restingArtworkPathOverride: artworkPathOverride,
-                onPreviewHoldChanged: onPreviewHoldChanged
-            )
+            EntityArtworkSurfaceView(surface: artworkPresentation.surface) {
+                EntityThumbnailMediaView(
+                    item: item,
+                    systemImage: item.kind.thumbnailFallbackSystemImage,
+                    contentMode: artworkPresentation.contentMode,
+                    restingArtworkPathOverride: artworkPathOverride,
+                    onPreviewHoldChanged: onPreviewHoldChanged
+                )
+            }
         } decoration: {
             decorations
         }

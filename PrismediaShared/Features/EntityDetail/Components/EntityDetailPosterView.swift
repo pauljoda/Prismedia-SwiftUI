@@ -4,16 +4,19 @@ struct EntityDetailPosterView: View {
     let posterPath: String
     let title: String
     let systemImage: String
-    let aspectRatio: Double
+    let kind: EntityKind
 
     var body: some View {
         HStack {
             EntityThumbnailArtworkFrame(aspectRatio: aspectRatio) {
-                RemotePosterImage(
-                    path: posterPath,
-                    fallbackSeed: title,
-                    systemImage: systemImage
-                )
+                EntityArtworkSurfaceView(surface: artworkPresentation.surface) {
+                    RemotePosterImage(
+                        path: posterPath,
+                        fallbackSeed: title,
+                        systemImage: systemImage,
+                        contentMode: artworkPresentation.contentMode
+                    )
+                }
             }
             .frame(width: posterWidth)
             .compositingGroup()
@@ -30,6 +33,14 @@ struct EntityDetailPosterView: View {
         .padding(.top, PrismediaSpacing.large)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Artwork for \(title)")
+    }
+
+    private var artworkPresentation: EntityThumbnailArtworkPresentation {
+        EntityThumbnailArtworkPresentation(kind: kind)
+    }
+
+    private var aspectRatio: Double {
+        artworkPresentation.aspectRatio
     }
 
     private var posterWidth: CGFloat {
@@ -56,7 +67,7 @@ struct EntityDetailPosterView: View {
                 posterPath: "/preview/poster.jpg",
                 title: "Signal in the Static",
                 systemImage: "film",
-                aspectRatio: 2.0 / 3.0
+                kind: .movie
             )
         }
     }

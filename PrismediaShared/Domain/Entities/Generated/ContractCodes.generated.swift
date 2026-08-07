@@ -294,6 +294,11 @@ public enum PrismediaContractCodes {
         public static let `contain` = "contain"
     }
 
+    public enum EntityArtworkSurface {
+        public static let `plain` = "plain"
+        public static let `brandPlate` = "brand-plate"
+    }
+
     public enum EntityDateType {
         public static let `announcement` = "announcement"
         public static let `premiere` = "premiere"
@@ -573,6 +578,7 @@ public enum PrismediaContractCodes {
         public static let `refreshCollection` = "refresh-collection"
         public static let `libraryMaintenance` = "library-maintenance"
         public static let `databaseBackup` = "database-backup"
+        public static let `updatePlugins` = "update-plugins"
         public static let `refreshEntity` = "refresh-entity"
         public static let `identifySearch` = "identify-search"
         public static let `identifyProviderCall` = "identify-provider-call"
@@ -613,6 +619,11 @@ public enum PrismediaContractCodes {
         public static let `hero` = "hero"
         public static let `thumbnail` = "thumbnail"
         public static let `profile` = "profile"
+    }
+
+    public enum MediaProcessKind {
+        public static let `playback` = "playback"
+        public static let `background` = "background"
     }
 
     public enum MetadataPatchField {
@@ -975,6 +986,7 @@ public enum PrismediaContractCodes {
         public static let `playbackAudioPreferredLanguages` = "playback.audioPreferredLanguages"
         public static let `playbackDefaultMode` = "playback.defaultMode"
         public static let `playbackShowCastControls` = "playback.showCastControls"
+        public static let `pluginsAutoUpdateEnabled` = "plugins.autoUpdateEnabled"
         public static let `scanAutoScanEnabled` = "scan.autoScanEnabled"
         public static let `scanIntervalMinutes` = "scan.intervalMinutes"
         public static let `subtitlesAutoDownloadEnabled` = "subtitles.autoDownloadEnabled"

@@ -11,6 +11,7 @@ public struct EntityKindPresentation: Hashable, Sendable {
     public let primaryAccentIndex: Int
     public let secondaryAccentIndex: Int
     public let artworkFit: EntityArtworkFit
+    public let artworkSurface: EntityArtworkSurface
 
     public init(
         icon: EntityKindIcon,
@@ -21,7 +22,8 @@ public struct EntityKindPresentation: Hashable, Sendable {
         secondaryAccent: EntityAccentHue,
         primaryAccentIndex: Int,
         secondaryAccentIndex: Int,
-        artworkFit: EntityArtworkFit
+        artworkFit: EntityArtworkFit,
+        artworkSurface: EntityArtworkSurface
     ) {
         self.icon = icon
         self.referenceIcon = referenceIcon
@@ -32,5 +34,6 @@ public struct EntityKindPresentation: Hashable, Sendable {
         self.primaryAccentIndex = primaryAccentIndex
         self.secondaryAccentIndex = secondaryAccentIndex
         self.artworkFit = artworkFit
+        self.artworkSurface = artworkSurface
     }
 }

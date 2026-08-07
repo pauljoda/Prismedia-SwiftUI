@@ -47,6 +47,35 @@ final class EntityDomainModelsTests: XCTestCase {
         )
     }
 
+    func testStudioArtworkUsesOriginalBrandPlateContract() {
+        let thumbnail = EntityThumbnail(
+            id: UUID(),
+            kind: .studio,
+            title: "Studio",
+            coverURL: "/assets/studios/logo.svg",
+            coverThumbURL: "/assets/grid-thumbs/studio.jpg",
+            coverThumb2xURL: "/assets/grid-thumbs/studio@2x.jpg"
+        )
+
+        XCTAssertEqual(thumbnail.thumbnailArtworkPresentation.surface, .brandPlate)
+        XCTAssertEqual(thumbnail.thumbnailArtworkPresentation.contentMode, .fit)
+        XCTAssertEqual(thumbnail.bestCoverPath, "/assets/studios/logo.svg")
+    }
+
+    func testPlainArtworkStillPrefersDensitySpecificGridVariant() {
+        let thumbnail = EntityThumbnail(
+            id: UUID(),
+            kind: .video,
+            title: "Video",
+            coverURL: "/assets/videos/cover.png",
+            coverThumbURL: "/assets/grid-thumbs/video.jpg",
+            coverThumb2xURL: "/assets/grid-thumbs/video@2x.jpg"
+        )
+
+        XCTAssertEqual(thumbnail.thumbnailArtworkPresentation.surface, .plain)
+        XCTAssertEqual(thumbnail.bestCoverPath, "/assets/grid-thumbs/video@2x.jpg")
+    }
+
     func testBookReaderMetadataIsCapabilityBacked() throws {
         let json = """
             {

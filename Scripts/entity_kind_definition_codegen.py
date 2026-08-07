@@ -64,6 +64,8 @@ def render_manifest(manifest: dict) -> str:
         "",
         render_extension("EntityArtworkFit", enums["EntityArtworkFit"]),
         "",
+        render_extension("EntityArtworkSurface", enums["EntityArtworkSurface"]),
+        "",
         *(
             [
                 render_extension(
@@ -101,6 +103,11 @@ def render_manifest(manifest: dict) -> str:
             entry["name"]
             for entry in enums["EntityArtworkFit"]
             if entry["code"] == kind["artworkFit"]
+        ))
+        surface_member = swift_member(next(
+            entry["name"]
+            for entry in enums["EntityArtworkSurface"]
+            if entry["code"] == kind["artworkSurface"]
         ))
         primary_hue_member = swift_member(next(
             entry["name"]
@@ -201,7 +208,8 @@ def render_manifest(manifest: dict) -> str:
             f"            secondaryAccent: .{secondary_hue_member},",
             f"            primaryAccentIndex: {accent_indexes[kind['primaryAccent']]},",
             f"            secondaryAccentIndex: {accent_indexes[kind['secondaryAccent']]},",
-            f"            artworkFit: .{fit_member}",
+            f"            artworkFit: .{fit_member},",
+            f"            artworkSurface: .{surface_member}",
             "        ),",
             *navigation_lines,
             search_line,

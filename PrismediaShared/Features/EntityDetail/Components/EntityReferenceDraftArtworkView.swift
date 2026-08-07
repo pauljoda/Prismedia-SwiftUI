@@ -13,13 +13,15 @@ struct EntityReferenceDraftArtworkView: View {
         let presentation = EntityThumbnailArtworkPresentation(kind: kind)
 
         EntityThumbnailArtworkFrame(aspectRatio: presentation.aspectRatio) {
-            RemotePosterImage(
-                path: artworkPath,
-                fallbackSeed: title,
-                systemImage: kind.thumbnailFallbackSystemImage,
-                contentMode: presentation.contentMode,
-                maxPixelSize: 512
-            )
+            EntityArtworkSurfaceView(surface: presentation.surface) {
+                RemotePosterImage(
+                    path: artworkPath,
+                    fallbackSeed: title,
+                    systemImage: kind.thumbnailFallbackSystemImage,
+                    contentMode: presentation.contentMode,
+                    maxPixelSize: 512
+                )
+            }
         }
         .frame(width: width * widthScale)
         .background(PrismediaColor.controlFill)

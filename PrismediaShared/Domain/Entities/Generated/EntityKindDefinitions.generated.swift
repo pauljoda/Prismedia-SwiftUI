@@ -64,6 +64,11 @@ public extension EntityArtworkFit {
     static let contain = Self(rawValue: "contain")
 }
 
+public extension EntityArtworkSurface {
+    static let plain = Self(rawValue: "plain")
+    static let brandPlate = Self(rawValue: "brand-plate")
+}
+
 public extension EntityMediaQualityFamily {
     static let none = Self(rawValue: "none")
     static let video = Self(rawValue: "video")
@@ -94,7 +99,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .magenta,
             primaryAccentIndex: 6,
             secondaryAccentIndex: 7,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: nil,
         search: nil,
@@ -129,7 +135,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .magenta,
             primaryAccentIndex: 6,
             secondaryAccentIndex: 7,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .audioLibrary,
@@ -179,7 +186,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .magenta,
             primaryAccentIndex: 6,
             secondaryAccentIndex: 7,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .audioTrack,
@@ -221,7 +229,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .blue,
             primaryAccentIndex: 4,
             secondaryAccentIndex: 5,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .book,
@@ -271,7 +280,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .blue,
             primaryAccentIndex: 4,
             secondaryAccentIndex: 5,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .book,
@@ -313,7 +323,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .blue,
             primaryAccentIndex: 4,
             secondaryAccentIndex: 5,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .book,
@@ -355,7 +366,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .blue,
             primaryAccentIndex: 4,
             secondaryAccentIndex: 5,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .book,
@@ -397,7 +409,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .red,
             primaryAccentIndex: 7,
             secondaryAccentIndex: 0,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .collection,
@@ -439,7 +452,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .cyan,
             primaryAccentIndex: 3,
             secondaryAccentIndex: 4,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .gallery,
@@ -481,7 +495,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .violet,
             primaryAccentIndex: 5,
             secondaryAccentIndex: 6,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .image,
@@ -523,7 +538,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .magenta,
             primaryAccentIndex: 6,
             secondaryAccentIndex: 7,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .musicArtist,
@@ -565,7 +581,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .blue,
             primaryAccentIndex: 4,
             secondaryAccentIndex: 5,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .bookAuthor,
@@ -607,7 +624,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .violet,
             primaryAccentIndex: 0,
             secondaryAccentIndex: 6,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .person,
@@ -649,7 +667,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .yellow,
             primaryAccentIndex: 1,
             secondaryAccentIndex: 2,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .movie,
@@ -699,7 +718,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .magenta,
             primaryAccentIndex: 1,
             secondaryAccentIndex: 7,
-            artworkFit: .contain
+            artworkFit: .contain,
+            artworkSurface: .brandPlate
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .studio,
@@ -741,7 +761,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .yellow,
             primaryAccentIndex: 3,
             secondaryAccentIndex: 2,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .tag,
@@ -783,7 +804,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .orange,
             primaryAccentIndex: 0,
             secondaryAccentIndex: 1,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .video,
@@ -825,7 +847,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .orange,
             primaryAccentIndex: 0,
             secondaryAccentIndex: 1,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .video,
@@ -867,7 +890,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .green,
             primaryAccentIndex: 2,
             secondaryAccentIndex: 3,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .videoSeries,
@@ -917,7 +941,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             secondaryAccent: .green,
             primaryAccentIndex: 2,
             secondaryAccentIndex: 3,
-            artworkFit: .cover
+            artworkFit: .cover,
+            artworkSurface: .plain
         ),
         navigation: EntityKindNavigation(
             canonicalBrowseKind: .videoSeries,

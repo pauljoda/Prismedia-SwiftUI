@@ -33,7 +33,10 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
     public let referenceCounts: [EntityKindCount]
 
     public var bestCoverPath: String? {
-        coverThumb2xURL ?? coverThumbURL ?? coverURL
+        if thumbnailArtworkPresentation.usesBrandPlate {
+            return coverURL ?? coverThumb2xURL ?? coverThumbURL
+        }
+        return coverThumb2xURL ?? coverThumbURL ?? coverURL
     }
 
     /// Hero artwork must remain an image. `hoverURL` is a preview descriptor

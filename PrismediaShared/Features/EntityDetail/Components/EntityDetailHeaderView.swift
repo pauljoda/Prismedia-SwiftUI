@@ -16,14 +16,14 @@ struct EntityDetailHeaderView: View {
                     posterPath: posterPath,
                     title: presentation.detail.title,
                     systemImage: presentation.systemImage,
-                    posterAspectRatio: presentation.detail.kind.thumbnailAspectRatio
+                    posterKind: presentation.detail.kind
                 )
             } else if showsArtwork, let posterPath {
                 EntityDetailPosterView(
                     posterPath: posterPath,
                     title: presentation.detail.title,
                     systemImage: presentation.systemImage,
-                    aspectRatio: presentation.detail.kind.thumbnailAspectRatio
+                    kind: presentation.detail.kind
                 )
             }
 

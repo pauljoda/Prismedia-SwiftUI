@@ -5,7 +5,7 @@ struct EntityDetailHeroView: View {
     let posterPath: String?
     let title: String
     let systemImage: String
-    let posterAspectRatio: Double
+    let posterKind: EntityKind
 
     var body: some View {
         let posterHeight = posterWidth / posterAspectRatio
@@ -52,11 +52,14 @@ struct EntityDetailHeroView: View {
 
             if let posterPath {
                 EntityThumbnailArtworkFrame(aspectRatio: posterAspectRatio) {
-                    RemotePosterImage(
-                        path: posterPath,
-                        fallbackSeed: title,
-                        systemImage: systemImage
-                    )
+                    EntityArtworkSurfaceView(surface: posterArtworkPresentation.surface) {
+                        RemotePosterImage(
+                            path: posterPath,
+                            fallbackSeed: title,
+                            systemImage: systemImage,
+                            contentMode: posterArtworkPresentation.contentMode
+                        )
+                    }
                 }
                 .frame(width: posterWidth)
                 .compositingGroup()
@@ -76,6 +79,14 @@ struct EntityDetailHeroView: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Hero artwork for \(title)")
+    }
+
+    private var posterArtworkPresentation: EntityThumbnailArtworkPresentation {
+        EntityThumbnailArtworkPresentation(kind: posterKind)
+    }
+
+    private var posterAspectRatio: Double {
+        posterArtworkPresentation.aspectRatio
     }
 
     private var posterWidth: CGFloat {
@@ -111,7 +122,7 @@ struct EntityDetailHeroView: View {
                 posterPath: "/preview/poster.jpg",
                 title: "Signal in the Static",
                 systemImage: "film",
-                posterAspectRatio: 2.0 / 3.0
+                posterKind: .movie
             )
         }
     }
