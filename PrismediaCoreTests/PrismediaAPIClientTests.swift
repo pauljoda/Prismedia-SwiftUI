@@ -482,6 +482,24 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(items?.first?["entityId"] as? String, albumID.uuidString)
     }
 
+    func testLoadsOnlyServerApprovedAddableCollectionOptions() async throws {
+        let sharedCollectionID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"items":[{"id":"\#(sharedCollectionID)","title":"Shared Picks"}]}"#),
+            .json(#"{"items":[{"id":"\#(sharedCollectionID)","kind":"collection","title":"Shared Picks"}]}"#),
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let collections = try await client.fetchAddableCollections()
+
+        XCTAssertEqual(collections.map(\.id), [sharedCollectionID])
+        XCTAssertEqual(collections.map(\.title), ["Shared Picks"])
+        XCTAssertEqual(loader.requests[0].url?.path, "/api/collections/membership-options")
+        XCTAssertEqual(loader.requests[1].url?.path, "/api/entities/thumbnails")
+        let body = try JSONSerialization.jsonObject(with: XCTUnwrap(loader.requests[1].httpBody)) as? [String: Any]
+        XCTAssertEqual(body?["ids"] as? [String], [sharedCollectionID.uuidString])
+    }
+
     func testRemovesOneCollectionMembershipUsingTheServerItemIdentifier() async throws {
         let collectionID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
         let itemID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!

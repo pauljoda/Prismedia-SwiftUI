@@ -13,6 +13,7 @@ final class EntityDomainModelsTests: XCTestCase {
             (.audioLibrary, 1),
             (.movie, 2.0 / 3.0),
             (.person, 4.0 / 5.0),
+            (.collection, 1),
             (.video, 16.0 / 9.0),
             (.studio, 21.0 / 9.0),
         ]

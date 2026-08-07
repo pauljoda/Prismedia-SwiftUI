@@ -351,6 +351,24 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
+    /// Lists manual and hybrid collections the current user may contribute items to.
+    public func fetchAddableCollections() async throws -> [EntityThumbnail] {
+        let response = try await send(
+            CollectionMembershipOptionsResponse.self,
+            path: "/api/collections/membership-options",
+            queryItems: [nsfwVisibilityQueryItem]
+        )
+        let thumbnails = try await fetchEntityThumbnails(ids: response.items.map(\.id))
+        let thumbnailsByID = Dictionary(uniqueKeysWithValues: thumbnails.map { ($0.id, $0) })
+        return response.items.map { option in
+            thumbnailsByID[option.id] ?? EntityThumbnail(
+                id: option.id,
+                kind: .collection,
+                title: option.title
+            )
+        }
+    }
+
     public func fetchCollectionItems(collectionID: UUID) async throws -> [EntityThumbnail] {
         let response = try await send(
             CollectionItemsResponse.self,

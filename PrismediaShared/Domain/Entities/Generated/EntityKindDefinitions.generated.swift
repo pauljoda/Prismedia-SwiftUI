@@ -403,8 +403,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         presentation: EntityKindPresentation(
             icon: .collection,
             referenceIcon: .collection,
-            thumbnailWidth: 16,
-            thumbnailHeight: 9,
+            thumbnailWidth: 1,
+            thumbnailHeight: 1,
             primaryAccent: .magenta,
             secondaryAccent: .red,
             primaryAccentIndex: 7,

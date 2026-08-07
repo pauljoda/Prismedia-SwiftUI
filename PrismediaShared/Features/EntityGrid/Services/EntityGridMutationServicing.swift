@@ -10,7 +10,7 @@ public protocol EntityGridMutationServicing: Sendable {
 
 extension PrismediaAPIClient: EntityGridMutationServicing {
     public func loadCollectionOptions() async throws -> [EntityThumbnail] {
-        try await listCollections().items
+        try await fetchAddableCollections()
     }
 
     public func addToCollection(
