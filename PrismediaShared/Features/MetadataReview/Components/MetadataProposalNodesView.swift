@@ -31,6 +31,19 @@ import SwiftUI
         var body: some View {
             DisclosureGroup(isExpanded: $isExpanded) {
                 LazyVStack(spacing: 0) {
+                    if !selectableIDs.isEmpty, onSetSelected != nil {
+                        HStack(spacing: PrismediaSpacing.small) {
+                            Spacer()
+                            Button("All") { setAllSelected(true) }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("Select all \(title)")
+                            Button("None") { setAllSelected(false) }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("Deselect all \(title)")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .padding(.vertical, PrismediaSpacing.small)
+                    }
                     ForEach(nodes, id: \.proposalID) { node in
                         MetadataProposalNodeRow(
                             proposal: node,
@@ -61,6 +74,13 @@ import SwiftUI
             guard !selectableIDs.isEmpty else { return nodes.count.formatted() }
             let selectedCount = selectedIDs.intersection(selectableIDs).count
             return "\(selectedCount) of \(selectableIDs.count) selected"
+        }
+
+        private func setAllSelected(_ selected: Bool) {
+            guard let onSetSelected else { return }
+            for proposalID in selectableIDs.sorted() {
+                onSetSelected(proposalID, selected)
+            }
         }
     }
 

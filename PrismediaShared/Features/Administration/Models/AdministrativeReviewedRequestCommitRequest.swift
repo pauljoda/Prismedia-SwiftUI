@@ -9,6 +9,10 @@ public struct AdministrativeReviewedRequestCommitRequest: Encodable, Hashable, S
     public let targetLibraryRootID: UUID?
     public let profileID: UUID?
     public let preset: String?
+    public let review: AdministrativeRequestReviewResponse?
+    public let proposal: AdministrativeEntityMetadataProposal?
+    public let selectedFields: [String]?
+    public let selectedImages: [String: String]?
 
     public init(
         kind: String,
@@ -18,7 +22,11 @@ public struct AdministrativeReviewedRequestCommitRequest: Encodable, Hashable, S
         selectedProposalIDs: [String],
         targetLibraryRootID: UUID? = nil,
         profileID: UUID? = nil,
-        preset: String? = nil
+        preset: String? = nil,
+        review: AdministrativeRequestReviewResponse? = nil,
+        proposal: AdministrativeEntityMetadataProposal? = nil,
+        selectedFields: [String]? = nil,
+        selectedImages: [String: String]? = nil
     ) {
         self.kind = kind
         self.pluginID = pluginID
@@ -28,6 +36,10 @@ public struct AdministrativeReviewedRequestCommitRequest: Encodable, Hashable, S
         self.targetLibraryRootID = targetLibraryRootID
         self.profileID = profileID
         self.preset = preset
+        self.review = review
+        self.proposal = proposal
+        self.selectedFields = selectedFields
+        self.selectedImages = selectedImages
     }
 
     enum CodingKeys: String, CodingKey {
@@ -38,5 +50,6 @@ public struct AdministrativeReviewedRequestCommitRequest: Encodable, Hashable, S
         case targetLibraryRootID = "targetLibraryRootId"
         case profileID = "profileId"
         case preset
+        case review, proposal, selectedFields, selectedImages
     }
 }

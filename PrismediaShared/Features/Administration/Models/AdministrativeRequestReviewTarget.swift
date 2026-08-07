@@ -1,6 +1,6 @@
 import Foundation
 
-public struct AdministrativeRequestReviewTarget: Decodable, Hashable, Sendable {
+public struct AdministrativeRequestReviewTarget: Codable, Hashable, Sendable {
     public let proposalID: String
     public let kind: String
     public let entityKind: EntityKind

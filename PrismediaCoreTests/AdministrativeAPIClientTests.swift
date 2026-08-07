@@ -170,7 +170,11 @@ final class AdministrativeAPIClientTests: XCTestCase {
                 selectedProposalIDs: ["movie-603"],
                 targetLibraryRootID: nil,
                 profileID: nil,
-                preset: nil
+                preset: nil,
+                review: review,
+                proposal: review.proposal,
+                selectedFields: ["title", "images"],
+                selectedImages: ["poster": "https://example.test/poster.jpg"]
             ))
 
         XCTAssertEqual(review.proposal.patch.title, "The Matrix")
@@ -193,6 +197,13 @@ final class AdministrativeAPIClientTests: XCTestCase {
         let commitBody = try jsonBody(loader.requests[2])
         XCTAssertEqual(commitBody["selectedProposalIds"] as? [String], ["movie-603"])
         XCTAssertEqual(commitBody["proposalRevision"] as? String, "revision-1")
+        XCTAssertNotNil(commitBody["review"] as? [String: Any])
+        XCTAssertNotNil(commitBody["proposal"] as? [String: Any])
+        XCTAssertEqual(commitBody["selectedFields"] as? [String], ["title", "images"])
+        XCTAssertEqual(
+            (commitBody["selectedImages"] as? [String: String])?["poster"],
+            "https://example.test/poster.jpg"
+        )
     }
 
     func testRequestTargetLookupsUseExactContractsAndDecodeFullShapes() async throws {

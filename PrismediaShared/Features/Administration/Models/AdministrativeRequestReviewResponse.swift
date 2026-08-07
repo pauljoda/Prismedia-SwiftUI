@@ -1,6 +1,6 @@
 import Foundation
 
-public struct AdministrativeRequestReviewResponse: Decodable, Hashable, Sendable {
+public struct AdministrativeRequestReviewResponse: Codable, Hashable, Sendable {
     public let pluginID: String
     public let externalIdentity: AdministrativeExternalIdentity
     public let entityKind: EntityKind

@@ -11,8 +11,10 @@ import SwiftUI
 
         @State private var review: AdministrativeRequestReviewResponse?
         @State private var selectedIDs: Set<String> = []
-        @State private var chosenPreset = RequestMonitorPreset.missing
+        @State private var chosenPreset = RequestMonitorPreset.all
         @State private var isCustomSelection = false
+        @State private var reviewSelection = MetadataReviewSelection()
+        @State private var proposalPath: [AdministrativeEntityMetadataProposal] = []
         @State private var roots: [AdministrativeLibraryRoot] = []
         @State private var profiles: [AdministrativeAcquisitionProfile] = []
         @State private var selectedProfileID: UUID?
@@ -85,18 +87,41 @@ import SwiftUI
 
         private func reviewContent(_ review: AdministrativeRequestReviewResponse) -> some View {
             let selection = RequestSelectionPolicy.derive(from: review)
+            let activeProposal = proposalPath.last ?? review.proposal
+            let structuralIDs = Set(
+                MetadataReviewPolicy.structuralChildren(of: activeProposal).map(\.proposalID)
+            )
+            let relationshipIDs = Set(
+                MetadataReviewPolicy.relationships(of: activeProposal).map(\.proposalID)
+            )
+            let selectableReviewIDs = structuralIDs.union(relationshipIDs)
+            let selectedReviewIDs = selectableReviewIDs.subtracting(reviewSelection.excludedProposalIDs)
+            let activeChildrenTitle = MetadataReviewPolicy.structuralChildren(of: activeProposal)
+                .first?.targetKind.groupLabel ?? childrenTitle
             return VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                 if requiresReload {
                     conflictBanner
                 }
 
+                requestPanel(selection)
+
+                if proposalPath.count > 1 {
+                    Button("Back", systemImage: "chevron.left") {
+                        proposalPath.removeLast()
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Back to previous proposal")
+                }
+
                 MetadataProposalReviewView(
-                    proposal: review.proposal,
+                    proposal: activeProposal,
                     headerSubtitle: "\(route.externalIdentity.namespace):\(route.externalIdentity.value)",
-                    selectedProposalIDs: selectedIDs,
-                    selectableProposalIDs: selection.selectableIDs,
-                    childrenTitle: childrenTitle,
-                    onSetProposalSelected: toggleProposal
+                    selection: $reviewSelection,
+                    selectedProposalIDs: selectedReviewIDs,
+                    selectableProposalIDs: selectableReviewIDs,
+                    childrenTitle: activeChildrenTitle,
+                    onSetProposalSelected: setProposalSelected,
+                    onActivateProposal: openProposal
                 )
 
                 requestPanel(selection)
@@ -202,7 +227,10 @@ import SwiftUI
                     guard preset != .custom else { return }
                     chosenPreset = preset
                     isCustomSelection = false
-                    selectedIDs = RequestPresetPolicy.selectedIDs(for: preset, children: selection.children)
+                    setSelectedChildren(
+                        RequestPresetPolicy.selectedIDs(for: preset, children: selection.children),
+                        selection: selection
+                    )
                 }
             )
         }
@@ -246,12 +274,15 @@ import SwiftUI
                 guard loadRevision.isCurrent(revision) else { return }
                 review = nextReview
                 let selection = RequestSelectionPolicy.derive(from: nextReview)
-                chosenPreset = .missing
+                reviewSelection = MetadataReviewPolicy.seededSelection(for: nextReview.proposal)
+                proposalPath = [nextReview.proposal]
+                chosenPreset = .all
                 isCustomSelection = false
-                selectedIDs =
+                let initialIDs =
                     selection.mode == .directChildren
-                    ? RequestPresetPolicy.selectedIDs(for: .missing, children: selection.children)
+                    ? RequestPresetPolicy.selectedIDs(for: .all, children: selection.children)
                     : selection.rootSelection
+                setSelectedChildren(initialIDs, selection: selection)
                 isLoading = false
             } catch {
                 guard loadRevision.isCurrent(revision) else { return }
@@ -284,7 +315,49 @@ import SwiftUI
             let selection = RequestSelectionPolicy.derive(from: review)
             guard selection.selectableIDs.contains(proposalID) else { return }
             if selected { selectedIDs.insert(proposalID) } else { selectedIDs.remove(proposalID) }
+            MetadataReviewPolicy.setProposal(
+                proposalID,
+                selected: selected,
+                within: review.proposal,
+                selection: &reviewSelection
+            )
             isCustomSelection = true
+        }
+
+        private func setSelectedChildren(
+            _ ids: Set<String>,
+            selection: RequestReviewSelection
+        ) {
+            selectedIDs = ids
+            guard let review else { return }
+            for proposalID in selection.selectableIDs {
+                MetadataReviewPolicy.setProposal(
+                    proposalID,
+                    selected: ids.contains(proposalID),
+                    within: review.proposal,
+                    selection: &reviewSelection
+                )
+            }
+        }
+
+        private func setProposalSelected(_ proposalID: String, _ selected: Bool) {
+            guard let review else { return }
+            let requestSelection = RequestSelectionPolicy.derive(from: review)
+            if requestSelection.selectableIDs.contains(proposalID) {
+                toggleProposal(proposalID, selected)
+                return
+            }
+            MetadataReviewPolicy.setProposal(
+                proposalID,
+                selected: selected,
+                within: review.proposal,
+                selection: &reviewSelection
+            )
+        }
+
+        private func openProposal(_ proposal: AdministrativeEntityMetadataProposal) {
+            guard !proposalPath.contains(where: { $0.proposalID == proposal.proposalID }) else { return }
+            proposalPath.append(proposal)
         }
 
         private func hasRequestIntent(_ selection: RequestReviewSelection) -> Bool {
@@ -306,6 +379,10 @@ import SwiftUI
                 ? selectedIDs.intersection(selection.selectableIDs).sorted()
                 : selection.rootSelection.sorted()
             guard hasRequestIntent(selection) else { return }
+            let selectedProposal = MetadataReviewPolicy.proposalForApply(
+                review.proposal,
+                selection: reviewSelection
+            )
             isSubmitting = true
             flowPhase = .committing
             errorMessage = nil
@@ -317,7 +394,17 @@ import SwiftUI
                 selectedProposalIDs: ids,
                 targetLibraryRootID: selectedRootID,
                 profileID: selectedProfileID,
-                preset: selection.mode == .directChildren ? chosenPreset.wireValue : nil
+                preset: selection.mode == .directChildren ? chosenPreset.wireValue : nil,
+                review: review,
+                proposal: selectedProposal,
+                selectedFields: MetadataReviewPolicy.selectedRootFields(
+                    for: review.proposal,
+                    selection: reviewSelection
+                ),
+                selectedImages: MetadataReviewPolicy.selectedRootImages(
+                    for: review.proposal,
+                    selection: reviewSelection
+                )
             )
             Task {
                 do {
