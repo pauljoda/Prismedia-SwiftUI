@@ -20,7 +20,7 @@ struct EntityThumbnailCaptionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-            Text(item.title)
+            Text(item.displayTitle)
                 .font(PrismediaTypography.cardTitle)
                 .foregroundStyle(PrismediaColor.textPrimary)
                 .lineLimit(1)

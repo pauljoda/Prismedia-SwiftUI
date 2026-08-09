@@ -97,7 +97,7 @@ public struct EntityThumbnailNavigationSurface: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("More actions for \(item.title)")
+        .accessibilityLabel("More actions for \(item.displayTitle)")
         .accessibilityHint("Shows playback and navigation actions")
     }
 
@@ -110,7 +110,7 @@ public struct EntityThumbnailNavigationSurface: View {
     }
 
     private var primaryAccessibilityHint: String {
-        intent == .detail ? interaction.primaryAccessibilityHint : "Opens \(item.title)"
+        intent == .detail ? interaction.primaryAccessibilityHint : "Opens \(item.displayTitle)"
     }
 
     private var showsContextMenu: Bool {

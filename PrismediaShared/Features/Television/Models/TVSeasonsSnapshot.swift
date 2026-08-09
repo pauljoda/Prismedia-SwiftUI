@@ -43,7 +43,9 @@ struct TVSeasonsSnapshot: Equatable, Sendable {
         preferredEpisodeID: UUID? = nil
     ) {
         episodes = TVSeasonsPresentation.episodes(in: detail)
-        selectedEpisode = episodes.first { $0.id == preferredEpisodeID } ?? episodes.first
+        selectedEpisode = preferredEpisodeID.flatMap { preferredID in
+            episodes.first { $0.representsEpisode(id: preferredID) }
+        } ?? episodes.first
         selectedEpisodeDetail = nil
         seasonErrorMessage = nil
     }

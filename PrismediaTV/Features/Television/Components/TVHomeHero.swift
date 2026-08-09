@@ -76,7 +76,7 @@ import SwiftUI
                     .font(.headline.weight(.bold))
                     .tracking(2)
                     .foregroundStyle(PrismediaColor.accent)
-                Text(item.title)
+                Text(item.displayTitle)
                     .font(.system(size: 64, weight: .bold))
                     .foregroundStyle(PrismediaColor.onMedia)
                     .lineLimit(2)

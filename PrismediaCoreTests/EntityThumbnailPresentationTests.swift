@@ -23,6 +23,21 @@ final class EntityThumbnailPresentationTests: XCTestCase {
         XCTAssertEqual(thumbnail.subtitle, "Example Series")
     }
 
+    func testThumbnailDecodesAndPresentsEpisodesThatShareOneSource() throws {
+        let data = Data(
+            #"{"id":"22222222-2222-2222-2222-222222222222","kind":"video-episode","title":"Friends Like","sortOrder":2,"sharedSourceEpisodes":[{"id":"22222222-2222-2222-2222-222222222222","title":"Friends Like","seasonNumber":7,"episodeNumber":2},{"id":"33333333-3333-3333-3333-333333333333","title":"Space Restaurant","seasonNumber":7,"episodeNumber":3}]}"#.utf8
+        )
+
+        let thumbnail = try PrismediaJSON.decoder().decode(EntityThumbnail.self, from: data)
+
+        XCTAssertEqual(thumbnail.sharedSourceEpisodes.map(\.episodeNumber), [2, 3])
+        XCTAssertEqual(thumbnail.displayTitle, "Friends Like + Space Restaurant")
+        XCTAssertEqual(
+            EntityThumbnailOverlayPolicy(item: thumbnail).bottomLeading.first?.label,
+            "E2 + E3"
+        )
+    }
+
     func testOverlayPolicyPlacesPositionStatusSafetyAndRatingInCanonicalCorners() {
         let item = EntityThumbnail(
             id: UUID(),

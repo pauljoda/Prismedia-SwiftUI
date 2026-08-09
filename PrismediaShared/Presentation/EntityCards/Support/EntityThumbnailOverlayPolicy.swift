@@ -39,10 +39,19 @@ public struct EntityThumbnailOverlayPolicy: Hashable, Sendable {
     }
 
     private static func positionBadge(_ item: EntityThumbnail) -> EntityThumbnailBadgePresentation? {
+        if let sharedEpisodePositionLabel = item.sharedEpisodePositionLabel {
+            return EntityThumbnailBadgePresentation(
+                kind: .position,
+                label: sharedEpisodePositionLabel,
+                systemImage: nil,
+                tone: .accent
+            )
+        }
         guard let sortOrder = item.sortOrder, sortOrder > 0 else { return nil }
         let prefix: String
         switch (item.kind, item.parentKind) {
-        case (.video, .some(.videoSeason)), (.video, .some(.videoSeries)):
+        case (.video, .some(.videoSeason)), (.video, .some(.videoSeries)),
+            (.videoEpisode, .some(.videoSeason)), (.videoEpisode, .some(.videoSeries)):
             prefix = "E"
         case (.videoSeason, .some(.videoSeries)):
             prefix = "S"

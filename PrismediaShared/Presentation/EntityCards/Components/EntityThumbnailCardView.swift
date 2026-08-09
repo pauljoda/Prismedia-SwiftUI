@@ -218,7 +218,7 @@ public struct EntityThumbnailCardView: View {
     }
 
     private var accessibilityLabel: String {
-        var components = [item.title, item.kind.displayLabel]
+        var components = [item.displayTitle, item.kind.displayLabel]
         if let subtitle = subtitle ?? item.subtitle { components.append(subtitle) }
         components.append(contentsOf: item.meta.map(\.thumbnailAccessibilityLabel))
         if item.isFavorite { components.append("Favorite") }

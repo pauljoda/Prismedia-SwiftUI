@@ -18,8 +18,9 @@ struct EntityThumbnailGrid<ItemContent: View>: View {
         density: EntityGridDensity = .standard,
         @ViewBuilder itemContent: @escaping (EntityThumbnail, EntityThumbnailLayout) -> ItemContent
     ) {
-        self.items = items
-        self.mediaSequence = mediaSequence ?? EntityMediaSequence(items: items)
+        let displayItems = EntitySharedSourceEpisodePresentation.coalesced(items)
+        self.items = displayItems
+        self.mediaSequence = mediaSequence ?? EntityMediaSequence(items: displayItems)
         self.minimumColumnWidth = minimumColumnWidth
         self.displayMode = displayMode
         self.density = density

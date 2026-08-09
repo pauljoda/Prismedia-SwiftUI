@@ -62,6 +62,53 @@ final class TVSeasonsPresentationTests: XCTestCase {
         XCTAssertEqual(EntityLink(thumbnail: first).parentEntityID, season.id)
     }
 
+    func testSeasonEpisodesCoalesceProviderEpisodesThatShareOneSource() throws {
+        let firstID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let secondID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let shared = [
+            EntitySharedSourceEpisode(id: firstID, title: "Friends Like", seasonNumber: 7, episodeNumber: 2),
+            EntitySharedSourceEpisode(id: secondID, title: "Space Restaurant", seasonNumber: 7, episodeNumber: 3),
+        ]
+        let first = thumbnail(
+            id: firstID.uuidString,
+            kind: .videoEpisode,
+            title: "Friends Like",
+            order: 2,
+            sharedSourceEpisodes: shared
+        )
+        let second = thumbnail(
+            id: secondID.uuidString,
+            kind: .videoEpisode,
+            title: "Space Restaurant",
+            order: 3,
+            sharedSourceEpisodes: shared
+        )
+        let fourth = thumbnail(kind: .videoEpisode, title: "Miss Out", order: 4)
+        let season = detail(
+            kind: .videoSeason,
+            children: [
+                EntityGroup(
+                    kind: .videoEpisode,
+                    label: "Episodes",
+                    entities: [second, fourth, first],
+                    code: nil
+                )
+            ]
+        )
+
+        let episodes = TVSeasonsPresentation.episodes(in: season)
+
+        XCTAssertEqual(episodes.map(\.id), [firstID, fourth.id])
+        XCTAssertEqual(episodes.first?.displayTitle, "Friends Like + Space Restaurant")
+        XCTAssertEqual(
+            TVSeasonsPresentation.routeEpisode(
+                from: EntityLink(thumbnail: second, intent: .playback),
+                episodes: episodes
+            )?.id,
+            firstID
+        )
+    }
+
     func testPlaybackRouteSelectsItsExactEpisodeWithinTheSeason() {
         let first = thumbnail(kind: .videoEpisode, order: 1)
         let requested = thumbnail(
@@ -412,7 +459,8 @@ final class TVSeasonsPresentationTests: XCTestCase {
         summary: String? = nil,
         progress: Double? = nil,
         resumeSeconds: Double? = nil,
-        coverPath: String? = nil
+        coverPath: String? = nil,
+        sharedSourceEpisodes: [EntitySharedSourceEpisode] = []
     ) -> EntityThumbnail {
         let parentID =
             kind == .videoEpisode
@@ -431,7 +479,8 @@ final class TVSeasonsPresentationTests: XCTestCase {
             coverThumb2xURL: coverPath,
             hasSourceMedia: true,
             progress: progress,
-            resumeSeconds: resumeSeconds
+            resumeSeconds: resumeSeconds,
+            sharedSourceEpisodes: sharedSourceEpisodes
         )
     }
 }

@@ -31,6 +31,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
     public let accessCount: Int?
     public let genres: [String]
     public let referenceCounts: [EntityKindCount]
+    public let sharedSourceEpisodes: [EntitySharedSourceEpisode]
 
     public var bestCoverPath: String? {
         if thumbnailArtworkPresentation.usesBrandPlate {
@@ -86,6 +87,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         case accessCount
         case genres
         case referenceCounts
+        case sharedSourceEpisodes
     }
 
     public init(
@@ -118,7 +120,8 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         resumeSeconds: Double? = nil,
         accessCount: Int? = nil,
         genres: [String] = [],
-        referenceCounts: [EntityKindCount] = []
+        referenceCounts: [EntityKindCount] = [],
+        sharedSourceEpisodes: [EntitySharedSourceEpisode] = []
     ) {
         self.id = id
         self.kind = kind
@@ -150,6 +153,7 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         self.accessCount = accessCount
         self.genres = genres
         self.referenceCounts = referenceCounts
+        self.sharedSourceEpisodes = sharedSourceEpisodes
     }
 
     public init(from decoder: Decoder) throws {
@@ -192,5 +196,9 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         accessCount = try container.decodeFlexibleIntIfPresent(forKey: .accessCount)
         genres = try container.decodeIfPresent([String].self, forKey: .genres) ?? []
         referenceCounts = try container.decodeIfPresent([EntityKindCount].self, forKey: .referenceCounts) ?? []
+        sharedSourceEpisodes = try container.decodeIfPresent(
+            [EntitySharedSourceEpisode].self,
+            forKey: .sharedSourceEpisodes
+        ) ?? []
     }
 }

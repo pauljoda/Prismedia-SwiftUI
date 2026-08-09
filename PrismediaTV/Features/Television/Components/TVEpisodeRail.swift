@@ -131,14 +131,17 @@ import SwiftUI
             episodeIDs: [UUID],
             proxy: ScrollViewProxy
         ) {
+            let presentedEpisodeID = initialFocusEpisodeID.flatMap { requestedID in
+                episodes.first { $0.representsEpisode(id: requestedID) }?.id
+            }
             guard !hasAppliedInitialFocus,
                 pendingBoundaryDirection == nil,
-                let initialFocusEpisodeID,
-                episodeIDs.contains(initialFocusEpisodeID)
+                let presentedEpisodeID,
+                episodeIDs.contains(presentedEpisodeID)
             else { return }
             hasAppliedInitialFocus = true
 
-            scrollAndFocus(initialFocusEpisodeID, proxy: proxy)
+            scrollAndFocus(presentedEpisodeID, proxy: proxy)
         }
 
         private func scrollAndFocus(_ episodeID: UUID, proxy: ScrollViewProxy) {

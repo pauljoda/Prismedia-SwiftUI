@@ -15,7 +15,7 @@ struct EntityThumbnailRail<ItemContent: View>: View {
         contentInsets: EdgeInsets = EdgeInsets(),
         @ViewBuilder itemContent: @escaping (EntityThumbnail, CGFloat) -> ItemContent
     ) {
-        self.items = items
+        self.items = EntitySharedSourceEpisodePresentation.coalesced(items)
         self.maximumItemCount = maximumItemCount
         self.artworkHeight = artworkHeight
         self.contentInsets = contentInsets

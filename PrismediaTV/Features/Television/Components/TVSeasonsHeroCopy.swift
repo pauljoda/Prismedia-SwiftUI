@@ -30,7 +30,7 @@ import SwiftUI
 
                 if let description {
                     TVEpisodeDescriptionView(
-                        title: selectedEpisode?.title ?? series.title,
+                        title: selectedEpisode?.displayTitle ?? series.title,
                         text: description
                     )
                     .containerRelativeFrame(.horizontal) { length, _ in
@@ -61,8 +61,12 @@ import SwiftUI
             {
                 components.append("S\(order)")
             }
-            if let order = episode.sortOrder { components.append("E\(order)") }
-            components.append(episode.title)
+            if let position = episode.sharedEpisodePositionLabel {
+                components.append(position)
+            } else if let order = episode.sortOrder {
+                components.append("E\(order)")
+            }
+            components.append(episode.displayTitle)
             return components.joined(separator: " · ")
         }
     }

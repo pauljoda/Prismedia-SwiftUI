@@ -50,13 +50,42 @@ final class VideoPlaybackSequenceTests: XCTestCase {
         XCTAssertNil(next)
     }
 
-    private func episode(id: String, order: Int) -> EntityThumbnail {
+    func testNextEpisodeSkipsTheSecondProviderEpisodeInTheCompletedSource() {
+        let firstID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let secondID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let shared = [
+            EntitySharedSourceEpisode(id: firstID, title: "Part One", seasonNumber: 7, episodeNumber: 2),
+            EntitySharedSourceEpisode(id: secondID, title: "Part Two", seasonNumber: 7, episodeNumber: 3),
+        ]
+        let first = episode(id: firstID.uuidString, order: 2, sharedSourceEpisodes: shared)
+        let second = episode(id: secondID.uuidString, order: 3, sharedSourceEpisodes: shared)
+        let nextFile = episode(id: "33333333-3333-3333-3333-333333333333", order: 4)
+
+        let next = VideoPlaybackSequence.nextEpisode(
+            after: second.id,
+            in: EntityGroup(
+                kind: .videoEpisode,
+                label: "Episodes",
+                entities: [second, nextFile, first],
+                code: nil
+            )
+        )
+
+        XCTAssertEqual(next?.id, nextFile.id)
+    }
+
+    private func episode(
+        id: String,
+        order: Int,
+        sharedSourceEpisodes: [EntitySharedSourceEpisode] = []
+    ) -> EntityThumbnail {
         EntityThumbnail(
             id: UUID(uuidString: id)!,
             kind: .videoEpisode,
             title: "Episode \(order)",
             sortOrder: order,
-            hasSourceMedia: true
+            hasSourceMedia: true,
+            sharedSourceEpisodes: sharedSourceEpisodes
         )
     }
 }
