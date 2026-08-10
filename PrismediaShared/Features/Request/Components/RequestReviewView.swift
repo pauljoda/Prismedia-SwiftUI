@@ -33,27 +33,17 @@ import SwiftUI
             Group {
                 if isLoading {
                     loadingView
+                } else if let review {
+                    reviewContent(review)
                 } else {
                     ScrollView {
-                        Group {
-                            if let review {
-                                reviewContent(review)
-                            } else {
-                                errorView
-                            }
-                        }
+                        errorView
                         .padding()
                     }
                 }
             }
-            .prismediaScreenBackground(palette: artworkPalette)
+            .prismediaScreenBackground()
             .navigationTitle("Review Request")
-            .environment(\.artworkPalette, artworkPalette)
-            .environment(\.artworkPrimaryAccent, primaryAccent)
-            .prismediaArtworkPalette(
-                for: reviewArtworkPath,
-                palette: $artworkPalette
-            )
             .task { await loadReview() }
             .alert(
                 outcome?.title ?? "Request",
@@ -98,34 +88,37 @@ import SwiftUI
             let selectedReviewIDs = selectableReviewIDs.subtracting(reviewSelection.excludedProposalIDs)
             let activeChildrenTitle = MetadataReviewPolicy.structuralChildren(of: activeProposal)
                 .first?.targetKind.groupLabel ?? childrenTitle
-            return VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                if requiresReload {
-                    conflictBanner
-                }
-
-                requestPanel(selection)
-
-                if proposalPath.count > 1 {
-                    Button("Back", systemImage: "chevron.left") {
-                        proposalPath.removeLast()
+            return RequestIdentifyReviewPage(
+                navigationTitle: "Review Request",
+                proposal: activeProposal,
+                headerSubtitle: "\(route.externalIdentity.namespace):\(route.externalIdentity.value)",
+                fallbackArtworkPath: route.artworkPath,
+                selection: $reviewSelection,
+                artworkPalette: $artworkPalette,
+                selectedProposalIDs: selectedReviewIDs,
+                selectableProposalIDs: selectableReviewIDs,
+                childrenTitle: activeChildrenTitle,
+                onSetProposalSelected: setProposalSelected,
+                onActivateProposal: openProposal,
+                leadingContent: {
+                    if requiresReload {
+                        conflictBanner
                     }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Back to previous proposal")
+
+                    requestPanel(selection)
+
+                    if proposalPath.count > 1 {
+                        Button("Back", systemImage: "chevron.left") {
+                            proposalPath.removeLast()
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Back to previous proposal")
+                    }
+                },
+                trailingContent: {
+                    requestPanel(selection)
                 }
-
-                MetadataProposalReviewView(
-                    proposal: activeProposal,
-                    headerSubtitle: "\(route.externalIdentity.namespace):\(route.externalIdentity.value)",
-                    selection: $reviewSelection,
-                    selectedProposalIDs: selectedReviewIDs,
-                    selectableProposalIDs: selectableReviewIDs,
-                    childrenTitle: activeChildrenTitle,
-                    onSetProposalSelected: setProposalSelected,
-                    onActivateProposal: openProposal
-                )
-
-                requestPanel(selection)
-            }
+            )
         }
 
         private func requestPanel(_ selection: RequestReviewSelection) -> some View {
@@ -238,14 +231,6 @@ import SwiftUI
         private var childrenTitle: String {
             guard let noun = route.kind.childNoun else { return "Items" }
             return noun.capitalized + "s"
-        }
-
-        private var reviewArtworkPath: String? {
-            guard let review else { return route.artworkPath }
-            return MetadataReviewArtworkPolicy.primaryArtworkPath(
-                for: review.proposal,
-                fallback: route.artworkPath
-            )
         }
 
         private var primaryAccent: Color {

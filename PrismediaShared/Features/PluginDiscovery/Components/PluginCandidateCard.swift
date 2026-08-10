@@ -15,15 +15,14 @@ import SwiftUI
             HStack(spacing: PrismediaSpacing.small) {
                 Button(action: onActivate) {
                     HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
-                        EntityThumbnailArtworkFrame(aspectRatio: artworkAspectRatio) {
-                            RemotePosterImage(
-                                path: ProviderImagePreviewPolicy.previewURL(for: candidate.posterURL),
-                                fallbackSeed: candidate.title,
-                                systemImage: "photo"
-                            )
-                        }
-                        .frame(width: 64)
-                        .clipShape(RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous))
+                        EntityThumbnailCardView(
+                            item: PluginCandidateThumbnailPolicy.thumbnail(
+                                for: candidate,
+                                entityKind: entityKind
+                            ),
+                            layout: .compact,
+                            preferredWidth: 64
+                        )
 
                         VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                             HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.small) {
@@ -116,17 +115,6 @@ import SwiftUI
             if let source = candidate.source, !source.isEmpty { parts.append("Provider \(source)") }
             if let matchReason = candidate.matchReason, !matchReason.isEmpty { parts.append(matchReason) }
             return parts.joined(separator: ", ")
-        }
-
-        private var artworkAspectRatio: CGFloat {
-            switch entityKind.lowercased() {
-            case "studio":
-                16.0 / 9.0
-            case "person", "book-author", "music-artist":
-                4.0 / 5.0
-            default:
-                2.0 / 3.0
-            }
         }
 
         private func confidenceLabel(_ confidence: Decimal) -> String {

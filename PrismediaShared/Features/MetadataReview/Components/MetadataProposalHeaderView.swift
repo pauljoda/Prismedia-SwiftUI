@@ -8,13 +8,14 @@ import SwiftUI
 
         var body: some View {
             HStack(alignment: .top, spacing: PrismediaSpacing.large) {
-                RemotePosterImage(
-                    path: artworkPath,
-                    fallbackSeed: proposal.patch.title ?? proposal.proposalID,
-                    systemImage: "photo"
+                EntityThumbnailCardView(
+                    item: MetadataReviewThumbnailPolicy.thumbnail(
+                        for: proposal,
+                        fallbackArtworkPath: fallbackArtworkPath
+                    ),
+                    layout: .compact,
+                    preferredWidth: 72
                 )
-                .frame(width: 72, height: 104)
-                .clipShape(.rect(cornerRadius: PrismediaRadius.compact))
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                     Text(proposal.patch.title ?? "Untitled Proposal")
@@ -55,13 +56,6 @@ import SwiftUI
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .accessibilityElement(children: .combine)
-        }
-
-        private var artworkPath: String? {
-            MetadataReviewArtworkPolicy.primaryArtworkPath(
-                for: proposal,
-                fallback: fallbackArtworkPath
-            )
         }
     }
 

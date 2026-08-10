@@ -2,7 +2,6 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct IdentifyProposalReviewPage: View {
-        @Environment(\.artworkPrimaryAccent) private var inheritedPrimaryAccent
         @Environment(\.prismediaPageIsActive) private var pageIsActive
         @Environment(\.scenePhase) private var scenePhase
         @Bindable var session: IdentifySession
@@ -15,8 +14,21 @@ import SwiftUI
         @State private var artworkPalette: ArtworkPalette?
 
         var body: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
+            RequestIdentifyReviewPage(
+                navigationTitle: isRoot
+                    ? currentItem.title
+                    : currentProposal.patch.title ?? currentItem.title,
+                proposal: currentProposal,
+                selection: $session.reviewSelection,
+                artworkPalette: $artworkPalette,
+                selectedProposalIDs: selectedProposalIDs,
+                selectableProposalIDs: selectableProposalIDs,
+                childrenTitle: newContainersTitle,
+                displayedChildren: displayedProposalChildren,
+                existingTagTitles: existingTagTitles,
+                onSetProposalSelected: setProposalSelected,
+                onActivateProposal: { childDestination = $0 },
+                leadingContent: {
                     IdentifyTargetContextBar(
                         item: currentItem,
                         thumbnail: session.selectedEntityThumbnail,
@@ -27,19 +39,8 @@ import SwiftUI
                         Label("Identifying related metadata", systemImage: "arrow.triangle.branch")
                             .foregroundStyle(PrismediaColor.warning)
                     }
-
-                    MetadataProposalReviewView(
-                        proposal: currentProposal,
-                        selection: $session.reviewSelection,
-                        selectedProposalIDs: selectedProposalIDs,
-                        selectableProposalIDs: selectableProposalIDs,
-                        childrenTitle: newContainersTitle,
-                        displayedChildren: displayedProposalChildren,
-                        existingTagTitles: existingTagTitles,
-                        onSetProposalSelected: setProposalSelected,
-                        onActivateProposal: { childDestination = $0 }
-                    )
-
+                },
+                trailingContent: {
                     if isRoot, !childReviewItems.isEmpty {
                         IdentifyChildrenReviewSection(
                             items: childReviewItems,
@@ -59,20 +60,7 @@ import SwiftUI
                         )
                     }
                 }
-                .id(currentProposal.proposalID)
-                .padding()
-            }
-            .prismediaScreenBackground(palette: artworkPalette)
-            .navigationTitle(isRoot ? currentItem.title : currentProposal.patch.title ?? currentItem.title)
-            .environment(\.artworkPalette, artworkPalette)
-            .environment(\.artworkPrimaryAccent, primaryAccent)
-            .prismediaArtworkPalette(
-                for: MetadataReviewArtworkPolicy.primaryArtworkPath(for: currentProposal),
-                palette: $artworkPalette
             )
-            #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
-            #endif
             .navigationDestination(item: $childDestination) { child in
                 IdentifyProposalReviewPage(
                     session: session,
@@ -98,10 +86,6 @@ import SwiftUI
         private var currentProposal: AdministrativeEntityMetadataProposal {
             guard let root = currentItem.proposal else { return proposal }
             return MetadataReviewPolicy.proposal(withID: proposal.proposalID, in: root) ?? proposal
-        }
-
-        private var primaryAccent: Color {
-            artworkPalette?.primary.color ?? inheritedPrimaryAccent
         }
 
         private var reviewNodes: [AdministrativeEntityMetadataProposal] {

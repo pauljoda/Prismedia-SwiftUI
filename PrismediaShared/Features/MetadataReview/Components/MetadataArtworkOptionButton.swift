@@ -3,6 +3,7 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct MetadataArtworkOptionButton: View {
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
+        let proposal: AdministrativeEntityMetadataProposal
         let image: AdministrativeImageCandidate
         let isSelected: Bool
         let onSelect: () -> Void
@@ -10,12 +11,13 @@ import SwiftUI
         var body: some View {
             Button(action: onSelect) {
                 ZStack {
-                    RemotePosterImage(
-                        path: ProviderImagePreviewPolicy.previewURL(for: image.url, imageKind: image.kind),
-                        fallbackSeed: image.url,
-                        systemImage: "photo"
+                    EntityThumbnailCardView(
+                        item: MetadataReviewThumbnailPolicy.thumbnail(
+                            for: image,
+                            in: proposal
+                        ),
+                        layout: .compact
                     )
-                    .aspectRatio(tileAspectRatio, contentMode: .fit)
                     .frame(maxWidth: .infinity)
 
                     VStack {
@@ -70,18 +72,6 @@ import SwiftUI
             RoundedRectangle(cornerRadius: PrismediaRadius.compact, style: .continuous)
         }
 
-        private var tileAspectRatio: CGFloat {
-            switch image.kind.lowercased() {
-            case "poster", "cover":
-                if let width = image.width, let height = image.height, width == height { return 1 }
-                return 2 / 3
-            case "backdrop", "thumbnail", "still":
-                return 16 / 9
-            default:
-                return 2
-            }
-        }
-
         private var dimensions: String? {
             guard let width = image.width, let height = image.height else { return nil }
             return "\(width)×\(height)"
@@ -92,6 +82,7 @@ import SwiftUI
         #Preview("Artwork Option") {
             PreviewShell {
                 MetadataArtworkOptionButton(
+                    proposal: MetadataReviewPreviewFixtures.proposal,
                     image: MetadataReviewPreviewFixtures.proposal.images[0],
                     isSelected: true,
                     onSelect: {}

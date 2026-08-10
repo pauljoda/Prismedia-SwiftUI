@@ -52,7 +52,18 @@ import SwiftUI
             }
             .prismediaScreenBackground()
             .interactiveDismissDisabled(phase.locksDismissal)
+            .onChange(of: traceState, initial: true) { _, _ in
+                RequestIdentifyFlowTrace.record(
+                    mode: mode,
+                    phase: phase,
+                    reviewDepth: path.count
+                )
+            }
             .accessibilityIdentifier("request-identify.flow")
+        }
+
+        private var traceState: String {
+            "\(String(describing: mode)):\(String(describing: phase)):\(path.count)"
         }
 
         private var closePlacement: ToolbarItemPlacement {

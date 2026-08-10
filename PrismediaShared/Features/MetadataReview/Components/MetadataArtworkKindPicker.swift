@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct MetadataArtworkKindPicker: View {
+        let proposal: AdministrativeEntityMetadataProposal
         let kind: String
         let images: [AdministrativeImageCandidate]
         @Binding var selectedURL: String?
@@ -12,7 +13,7 @@ import SwiftUI
                 LazyVGrid(
                     columns: [
                         GridItem(
-                            .adaptive(minimum: minimumTileWidth),
+                            .adaptive(minimum: 112),
                             spacing: PrismediaSpacing.medium,
                             alignment: .top
                         )
@@ -23,6 +24,7 @@ import SwiftUI
                     ForEach(images, id: \.url) { image in
                         let isSelected = selectedURL == image.url
                         MetadataArtworkOptionButton(
+                            proposal: proposal,
                             image: image,
                             isSelected: isSelected,
                             onSelect: {
@@ -49,14 +51,6 @@ import SwiftUI
                 ? "\(images.count) available"
                 : "1 of \(images.count) selected"
         }
-
-        private var minimumTileWidth: CGFloat {
-            switch kind.lowercased() {
-            case "backdrop", "header", "thumbnail", "still": 180
-            case "logo": 140
-            default: 112
-            }
-        }
     }
 
     #if DEBUG
@@ -64,6 +58,7 @@ import SwiftUI
             @Previewable @State var selectedURL: String?
             PreviewShell {
                 MetadataArtworkKindPicker(
+                    proposal: MetadataReviewPreviewFixtures.proposal,
                     kind: "poster",
                     images: MetadataReviewPolicy.reviewableImages(
                         in: MetadataReviewPreviewFixtures.proposal

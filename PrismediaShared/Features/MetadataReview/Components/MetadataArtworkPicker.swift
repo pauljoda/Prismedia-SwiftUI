@@ -11,6 +11,7 @@ import SwiftUI
                 VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
                     ForEach(imageKinds, id: \.self) { kind in
                         MetadataArtworkKindPicker(
+                            proposal: proposal,
                             kind: kind,
                             images: images(for: kind),
                             selectedURL: selectedURLBinding(for: kind)

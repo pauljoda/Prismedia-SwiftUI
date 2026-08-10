@@ -89,6 +89,48 @@ final class EntityThumbnailPresentationTests: XCTestCase {
         XCTAssertEqual(EntityGridDisplayMode.grid.thumbnailLayout(for: .video), .grid)
     }
 
+    func testMetadataReviewArtworkUsesTheProposedEntityThumbnailPresentation() {
+        let image = AdministrativeImageCandidate(
+            kind: "cover",
+            url: "https://example.test/album.jpg",
+            source: "musicbrainz",
+            rank: 1,
+            language: nil,
+            width: nil,
+            height: nil
+        )
+        let proposal = metadataProposal(kind: .audio, images: [image])
+
+        let thumbnail = MetadataReviewThumbnailPolicy.thumbnail(for: image, in: proposal)
+
+        XCTAssertEqual(thumbnail.kind, .audio)
+        XCTAssertEqual(thumbnail.thumbnailArtworkPresentation.aspectRatio, 1)
+        XCTAssertEqual(thumbnail.coverURL, image.url)
+        XCTAssertEqual(
+            thumbnail.id,
+            MetadataReviewThumbnailPolicy.thumbnail(for: image, in: proposal).id
+        )
+    }
+
+    func testPluginCandidateUsesCanonicalEntityArtworkSurface() {
+        let candidate = AdministrativeEntitySearchCandidate(
+            externalIDs: ["musicbrainz": "capitol"],
+            title: "Capitol Records",
+            posterURL: "https://example.test/capitol.png",
+            candidateID: "capitol",
+            source: "musicbrainz"
+        )
+
+        let thumbnail = PluginCandidateThumbnailPolicy.thumbnail(
+            for: candidate,
+            entityKind: EntityKind.studio.rawValue
+        )
+
+        XCTAssertEqual(thumbnail.kind, .studio)
+        XCTAssertEqual(thumbnail.thumbnailArtworkPresentation.surface, .brandPlate)
+        XCTAssertEqual(thumbnail.thumbnailArtworkPresentation.contentMode, .fit)
+    }
+
     private func decodeThumbnail(descriptionMember: String) throws -> EntityThumbnail {
         let data = Data(
             """
@@ -101,5 +143,38 @@ final class EntityThumbnailPresentationTests: XCTestCase {
             """.utf8
         )
         return try PrismediaJSON.decoder().decode(EntityThumbnail.self, from: data)
+    }
+
+    private func metadataProposal(
+        kind: EntityKind,
+        images: [AdministrativeImageCandidate]
+    ) -> AdministrativeEntityMetadataProposal {
+        AdministrativeEntityMetadataProposal(
+            proposalID: "proposal-1",
+            provider: "musicbrainz",
+            targetKind: kind,
+            confidence: 1,
+            matchReason: "external-id",
+            patch: AdministrativeEntityMetadataPatch(
+                title: "Example Album",
+                description: nil,
+                externalIDs: [:],
+                urls: [],
+                tags: [],
+                studio: nil,
+                credits: [],
+                dates: [:],
+                stats: [:],
+                positions: [:],
+                classification: "Album",
+                rating: nil,
+                flags: nil
+            ),
+            images: images,
+            children: [],
+            candidates: [],
+            targetEntityID: nil,
+            relationships: []
+        )
     }
 }

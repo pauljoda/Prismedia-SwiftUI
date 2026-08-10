@@ -60,13 +60,11 @@ import SwiftUI
         private func nodeLabel(trailingSymbol: String?) -> some View {
             FullWidthButtonLabel {
                 HStack(spacing: PrismediaSpacing.medium) {
-                    RemotePosterImage(
-                        path: artworkURL,
-                        fallbackSeed: proposal.patch.title ?? proposal.proposalID,
-                        systemImage: "photo"
+                    EntityThumbnailCardView(
+                        item: MetadataReviewThumbnailPolicy.thumbnail(for: proposal),
+                        layout: .compact,
+                        preferredWidth: 48
                     )
-                    .frame(width: 48, height: 64)
-                    .clipShape(.rect(cornerRadius: PrismediaRadius.badge))
 
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                         Text(proposal.patch.title ?? "Untitled")
@@ -101,10 +99,6 @@ import SwiftUI
                     }
                 }
             }
-        }
-
-        private var artworkURL: String? {
-            MetadataReviewPolicy.reviewableImages(in: proposal).first?.url
         }
     }
 

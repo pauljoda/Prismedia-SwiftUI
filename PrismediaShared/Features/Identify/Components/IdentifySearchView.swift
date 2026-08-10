@@ -73,13 +73,14 @@ import SwiftUI
             .sheet(isPresented: artworkPreviewPresentation) {
                 NavigationStack {
                     if let previewCandidate {
-                        RemotePosterImage(
-                            path: ProviderImagePreviewPolicy.previewURL(for: previewCandidate.posterURL),
-                            fallbackSeed: previewCandidate.title,
-                            systemImage: "photo",
-                            contentMode: .fit
+                        EntityThumbnailCardView(
+                            item: PluginCandidateThumbnailPolicy.thumbnail(
+                                for: previewCandidate,
+                                entityKind: item.entityKind.rawValue
+                            ),
+                            layout: .mediaOnly
                         )
-                        .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                        .environment(\.entityThumbnailShowsText, false)
                         .padding(PrismediaSpacing.extraLarge)
                         .background(PrismediaBackdrop())
                         .navigationTitle(previewCandidate.title)
