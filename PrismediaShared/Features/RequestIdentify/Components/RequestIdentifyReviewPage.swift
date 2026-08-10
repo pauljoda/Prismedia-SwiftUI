@@ -12,6 +12,7 @@ import SwiftUI
         let currentValues: [MetadataReviewField: String]
         let selectedProposalIDs: Set<String>
         let selectableProposalIDs: Set<String>
+        let identifyingProposalIDs: Set<String>
         let childrenTitle: String
         let displayedChildren: [AdministrativeEntityMetadataProposal]?
         let existingTagTitles: Set<String>
@@ -30,6 +31,7 @@ import SwiftUI
             currentValues: [MetadataReviewField: String] = [:],
             selectedProposalIDs: Set<String> = [],
             selectableProposalIDs: Set<String> = [],
+            identifyingProposalIDs: Set<String> = [],
             childrenTitle: String = "Items",
             displayedChildren: [AdministrativeEntityMetadataProposal]? = nil,
             existingTagTitles: Set<String> = [],
@@ -47,6 +49,7 @@ import SwiftUI
             self.currentValues = currentValues
             self.selectedProposalIDs = selectedProposalIDs
             self.selectableProposalIDs = selectableProposalIDs
+            self.identifyingProposalIDs = identifyingProposalIDs
             self.childrenTitle = childrenTitle
             self.displayedChildren = displayedChildren
             self.existingTagTitles = existingTagTitles
@@ -68,6 +71,7 @@ import SwiftUI
                         currentValues: currentValues,
                         selectedProposalIDs: selectedProposalIDs,
                         selectableProposalIDs: selectableProposalIDs,
+                        identifyingProposalIDs: identifyingProposalIDs,
                         childrenTitle: childrenTitle,
                         displayedChildren: displayedChildren,
                         existingTagTitles: existingTagTitles,

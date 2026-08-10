@@ -59,6 +59,14 @@ import Foundation
             )
         }
 
+        func review(reviewID: UUID) async throws -> AdministrativeRequestReviewResponse {
+            try await review(
+                kind: RequestKindDefinition.movie.rawValue,
+                pluginID: "tmdb",
+                externalIdentity: AdministrativeExternalIdentity(namespace: "tmdb", value: "329865")
+            )
+        }
+
         func commit(
             _ request: AdministrativeReviewedRequestCommitRequest
         ) async throws -> AdministrativeRequestCommitResponse {

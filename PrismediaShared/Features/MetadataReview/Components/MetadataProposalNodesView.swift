@@ -6,6 +6,7 @@ import SwiftUI
         let nodes: [AdministrativeEntityMetadataProposal]
         let selectedIDs: Set<String>
         let selectableIDs: Set<String>
+        let identifyingIDs: Set<String>
         let onSetSelected: ((String, Bool) -> Void)?
         let onActivate: ((AdministrativeEntityMetadataProposal) -> Void)?
         @State private var isExpanded: Bool
@@ -15,6 +16,7 @@ import SwiftUI
             nodes: [AdministrativeEntityMetadataProposal],
             selectedIDs: Set<String>,
             selectableIDs: Set<String>,
+            identifyingIDs: Set<String> = [],
             startsExpanded: Bool = true,
             onSetSelected: ((String, Bool) -> Void)?,
             onActivate: ((AdministrativeEntityMetadataProposal) -> Void)?
@@ -23,6 +25,7 @@ import SwiftUI
             self.nodes = nodes
             self.selectedIDs = selectedIDs
             self.selectableIDs = selectableIDs
+            self.identifyingIDs = identifyingIDs
             self.onSetSelected = onSetSelected
             self.onActivate = onActivate
             _isExpanded = State(initialValue: startsExpanded)
@@ -49,6 +52,7 @@ import SwiftUI
                             proposal: node,
                             isSelectable: selectableIDs.contains(node.proposalID),
                             isSelected: selectedIDs.contains(node.proposalID),
+                            isIdentifying: identifyingIDs.contains(node.proposalID),
                             onSetSelected: onSetSelected.map { callback in
                                 { callback(node.proposalID, $0) }
                             },
@@ -71,6 +75,9 @@ import SwiftUI
         }
 
         private var selectionSummary: String {
+            if nodes.contains(where: { identifyingIDs.contains($0.proposalID) }) {
+                return "identifying…"
+            }
             guard !selectableIDs.isEmpty else { return nodes.count.formatted() }
             let selectedCount = selectedIDs.intersection(selectableIDs).count
             return "\(selectedCount) of \(selectableIDs.count) selected"

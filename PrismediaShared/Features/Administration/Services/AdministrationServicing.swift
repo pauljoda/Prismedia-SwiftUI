@@ -46,6 +46,7 @@ public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable
         -> AdministrativeRequestSearchResponse
     func reviewRequest(kind: String, pluginID: String, externalIdentity: AdministrativeExternalIdentity) async throws
         -> AdministrativeRequestReviewResponse
+    func requestReview(reviewID: UUID) async throws -> AdministrativeRequestReviewResponse
     func reviewEntityRequest(entityID: UUID, kind: String) async throws -> AdministrativeRequestReviewResponse
     func commitReviewedRequest(_ request: AdministrativeReviewedRequestCommitRequest) async throws
         -> AdministrativeRequestCommitResponse

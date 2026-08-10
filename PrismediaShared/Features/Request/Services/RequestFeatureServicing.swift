@@ -7,6 +7,7 @@ public protocol RequestFeatureServicing: Sendable {
         -> AdministrativeRequestSearchResponse
     func review(kind: String, pluginID: String, externalIdentity: AdministrativeExternalIdentity) async throws
         -> AdministrativeRequestReviewResponse
+    func review(reviewID: UUID) async throws -> AdministrativeRequestReviewResponse
     func commit(_ request: AdministrativeReviewedRequestCommitRequest) async throws
         -> AdministrativeRequestCommitResponse
     func libraryRoots() async throws -> [AdministrativeLibraryRoot]

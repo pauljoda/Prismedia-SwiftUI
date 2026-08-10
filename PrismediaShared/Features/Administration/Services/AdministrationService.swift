@@ -125,6 +125,9 @@ public struct AdministrationService: AdministrationServicing {
             externalIdentity: externalIdentity
         )
     }
+    public func requestReview(reviewID: UUID) async throws -> AdministrativeRequestReviewResponse {
+        try await client.getAdministrativeRequestReview(reviewID: reviewID)
+    }
     public func reviewEntityRequest(entityID: UUID, kind: String) async throws -> AdministrativeRequestReviewResponse {
         try await client.reviewAdministrativeEntityRequest(entityID: entityID, kind: kind)
     }

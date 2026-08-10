@@ -14,7 +14,7 @@ import SwiftUI
         @State private var chosenPreset = RequestMonitorPreset.all
         @State private var isCustomSelection = false
         @State private var reviewSelection = MetadataReviewSelection()
-        @State private var proposalPath: [AdministrativeEntityMetadataProposal] = []
+        @State private var proposalPath: [String] = []
         @State private var roots: [AdministrativeLibraryRoot] = []
         @State private var profiles: [AdministrativeAcquisitionProfile] = []
         @State private var selectedProfileID: UUID?
@@ -24,6 +24,7 @@ import SwiftUI
         @State private var isSubmitting = false
         @State private var requiresReload = false
         @State private var errorMessage: String?
+        @State private var enrichmentErrorMessage: String?
         @State private var targetErrorMessage: String?
         @State private var loadRevision = RequestLoadRevision()
         @State private var outcome: RequestCommitResult?
@@ -45,6 +46,10 @@ import SwiftUI
             .prismediaScreenBackground()
             .navigationTitle("Review Request")
             .task { await loadReview() }
+            .task(id: review?.enrichment?.reviewID) {
+                guard let reviewID = review?.enrichment?.reviewID else { return }
+                await pollReview(reviewID: reviewID)
+            }
             .alert(
                 outcome?.title ?? "Request",
                 isPresented: Binding(get: { outcome != nil }, set: { if !$0 { outcome = nil } })
@@ -77,7 +82,9 @@ import SwiftUI
 
         private func reviewContent(_ review: AdministrativeRequestReviewResponse) -> some View {
             let selection = RequestSelectionPolicy.derive(from: review)
-            let activeProposal = proposalPath.last ?? review.proposal
+            let activeProposal = proposalPath.last.flatMap {
+                MetadataReviewPolicy.proposal(withID: $0, in: review.proposal)
+            } ?? review.proposal
             let structuralIDs = Set(
                 MetadataReviewPolicy.structuralChildren(of: activeProposal).map(\.proposalID)
             )
@@ -97,6 +104,7 @@ import SwiftUI
                 artworkPalette: $artworkPalette,
                 selectedProposalIDs: selectedReviewIDs,
                 selectableProposalIDs: selectableReviewIDs,
+                identifyingProposalIDs: Set(review.enrichment?.pendingProposalIDs ?? []),
                 childrenTitle: activeChildrenTitle,
                 onSetProposalSelected: setProposalSelected,
                 onActivateProposal: openProposal,
@@ -141,10 +149,21 @@ import SwiftUI
                     embedsInParentPanel: true
                 )
 
-                if let errorMessage, !requiresReload {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                if let panelError = errorMessage ?? enrichmentErrorMessage, !requiresReload {
+                    Label(panelError, systemImage: "exclamationmark.triangle")
                         .font(.callout)
                         .foregroundStyle(PrismediaColor.destructive)
+                }
+
+                if review?.enrichment?.running == true {
+                    HStack(spacing: PrismediaSpacing.small) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Identifying children and relationships… Request unlocks when finished.")
+                            .font(.caption)
+                            .foregroundStyle(PrismediaColor.textSecondary)
+                    }
+                    .accessibilityElement(children: .combine)
                 }
 
                 PrismediaButton(
@@ -156,7 +175,12 @@ import SwiftUI
                     isLoading: isSubmitting,
                     action: commit
                 )
-                .disabled(isSubmitting || requiresReload || !hasRequestIntent(selection))
+                .disabled(
+                    isSubmitting
+                        || requiresReload
+                        || review?.enrichment?.running == true
+                        || !hasRequestIntent(selection)
+                )
                 .accessibilityIdentifier("request.commit")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -244,6 +268,7 @@ import SwiftUI
             isLoadingTargets = true
             flowPhase = .reviewLoading
             errorMessage = nil
+            enrichmentErrorMessage = nil
             targetErrorMessage = nil
             requiresReload = false
             async let loadedReview = service.review(
@@ -260,7 +285,7 @@ import SwiftUI
                 review = nextReview
                 let selection = RequestSelectionPolicy.derive(from: nextReview)
                 reviewSelection = MetadataReviewPolicy.seededSelection(for: nextReview.proposal)
-                proposalPath = [nextReview.proposal]
+                proposalPath = [nextReview.proposal.proposalID]
                 chosenPreset = .all
                 isCustomSelection = false
                 let initialIDs =
@@ -341,8 +366,8 @@ import SwiftUI
         }
 
         private func openProposal(_ proposal: AdministrativeEntityMetadataProposal) {
-            guard !proposalPath.contains(where: { $0.proposalID == proposal.proposalID }) else { return }
-            proposalPath.append(proposal)
+            guard !proposalPath.contains(proposal.proposalID) else { return }
+            proposalPath.append(proposal.proposalID)
         }
 
         private func hasRequestIntent(_ selection: RequestReviewSelection) -> Bool {
@@ -357,7 +382,7 @@ import SwiftUI
         }
 
         private func commit() {
-            guard let review else { return }
+            guard let review, review.enrichment?.running != true else { return }
             let selection = RequestSelectionPolicy.derive(from: review)
             let ids =
                 selection.mode == .directChildren
@@ -413,6 +438,38 @@ import SwiftUI
                     errorMessage = error.localizedDescription
                     isSubmitting = false
                     flowPhase = .commitFailure
+                }
+            }
+        }
+
+        @MainActor
+        private func pollReview(reviewID: UUID) async {
+            while !Task.isCancelled, review?.enrichment?.reviewID == reviewID,
+                review?.enrichment?.running == true
+            {
+                do {
+                    let refreshed = try await service.review(reviewID: reviewID)
+                    guard review?.enrichment?.reviewID == reviewID else { return }
+                    let previousProposal = review?.proposal
+                    reviewSelection = MetadataReviewPolicy.mergingSeededDefaults(
+                        from: previousProposal,
+                        to: refreshed.proposal,
+                        into: reviewSelection
+                    )
+                    review = refreshed
+                    enrichmentErrorMessage = refreshed.enrichment?.error
+                    guard refreshed.enrichment?.running == true else { return }
+                    try await Task.sleep(for: .milliseconds(750))
+                } catch is CancellationError {
+                    return
+                } catch {
+                    enrichmentErrorMessage =
+                        "Request details could not be refreshed: \(error.localizedDescription)"
+                    do {
+                        try await Task.sleep(for: .milliseconds(1_500))
+                    } catch {
+                        return
+                    }
                 }
             }
         }

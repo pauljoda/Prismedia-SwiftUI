@@ -148,6 +148,7 @@ final class AdministrativeAPIClientTests: XCTestCase {
         let loader = MockHTTPDataLoader(responses: [
             .json(requestReviewJSON),
             .json(requestReviewJSON),
+            .json(requestReviewJSON),
             .json(
                 #"{"containerEntityId":null,"items":[{"externalId":"tmdb:603","title":"The Matrix","outcome":"requested","entityId":"\#(entityID)","acquisitionId":"\#(acquisitionID)"}]}"#
             ),
@@ -159,6 +160,9 @@ final class AdministrativeAPIClientTests: XCTestCase {
             kind: "movie",
             pluginID: "tmdb",
             externalIdentity: identity
+        )
+        let refreshed = try await client.getAdministrativeRequestReview(
+            reviewID: try XCTUnwrap(review.enrichment?.reviewID)
         )
         _ = try await client.reviewAdministrativeEntityRequest(entityID: entityID, kind: "movie")
         let result = try await client.commitAdministrativeReviewedRequest(
@@ -183,18 +187,27 @@ final class AdministrativeAPIClientTests: XCTestCase {
             [.theatricalRelease, .digitalRelease, .physicalRelease, .release]
         )
         XCTAssertEqual(review.targets.first?.externalIdentity, identity)
+        XCTAssertTrue(refreshed.enrichment?.running == true)
+        XCTAssertEqual(refreshed.enrichment?.pendingProposalIDs, ["movie-603"])
         XCTAssertEqual(result.items.first?.entityID, entityID)
         XCTAssertEqual(
             loader.requests.map(\.url?.path),
-            ["/api/requests/review", "/api/requests/review-entity", "/api/requests/commit-reviewed"]
+            [
+                "/api/requests/review",
+                "/api/requests/review/11111111-1111-1111-1111-111111111111",
+                "/api/requests/review-entity",
+                "/api/requests/commit-reviewed",
+            ]
         )
-        XCTAssertTrue(loader.requests.allSatisfy { queryItem("hideNsfw", in: $0) == "true" })
+        XCTAssertEqual(queryItem("hideNsfw", in: loader.requests[0]), "true")
+        XCTAssertEqual(queryItem("hideNsfw", in: loader.requests[2]), "true")
+        XCTAssertEqual(queryItem("hideNsfw", in: loader.requests[3]), "true")
         let reviewBody = try jsonBody(loader.requests[0])
         XCTAssertEqual(reviewBody["pluginId"] as? String, "tmdb")
         XCTAssertEqual((reviewBody["externalIdentity"] as? [String: String])?["value"], "603")
-        let entityReviewBody = try jsonBody(loader.requests[1])
+        let entityReviewBody = try jsonBody(loader.requests[2])
         XCTAssertEqual(entityReviewBody["entityId"] as? String, entityID.uuidString)
-        let commitBody = try jsonBody(loader.requests[2])
+        let commitBody = try jsonBody(loader.requests[3])
         XCTAssertEqual(commitBody["selectedProposalIds"] as? [String], ["movie-603"])
         XCTAssertEqual(commitBody["proposalRevision"] as? String, "revision-1")
         XCTAssertNotNil(commitBody["review"] as? [String: Any])
@@ -351,7 +364,7 @@ final class AdministrativeAPIClientTests: XCTestCase {
     }
 
     private var requestReviewJSON: String {
-        #"{"pluginId":"tmdb","externalIdentity":{"namespace":"tmdb","value":"603"},"entityKind":"movie","kind":"movie","proposal":\#(proposalJSON),"revision":"revision-1","targets":[{"proposalId":"movie-603","kind":"movie","entityKind":"movie","externalIdentity":{"namespace":"tmdb","value":"603"},"requestable":true,"position":null,"year":1999,"monitored":null}]}"#
+        #"{"pluginId":"tmdb","externalIdentity":{"namespace":"tmdb","value":"603"},"entityKind":"movie","kind":"movie","proposal":\#(proposalJSON),"revision":"revision-1","targets":[{"proposalId":"movie-603","kind":"movie","entityKind":"movie","externalIdentity":{"namespace":"tmdb","value":"603"},"requestable":true,"position":null,"year":1999,"monitored":null}],"enrichment":{"reviewId":"11111111-1111-1111-1111-111111111111","running":true,"pendingProposalIds":["movie-603"],"error":null,"updatedAt":"2026-08-09T20:00:00Z"}}"#
     }
 
     private func identifyQueueItemJSON(entityID: UUID, state: String) -> String {

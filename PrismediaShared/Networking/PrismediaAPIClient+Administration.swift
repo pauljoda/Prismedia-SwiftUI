@@ -249,6 +249,15 @@ extension PrismediaAPIClient {
         )
     }
 
+    public func getAdministrativeRequestReview(
+        reviewID: UUID
+    ) async throws -> AdministrativeRequestReviewResponse {
+        try await send(
+            AdministrativeRequestReviewResponse.self,
+            path: "/api/requests/review/\(reviewID.uuidString.lowercased())"
+        )
+    }
+
     public func reviewAdministrativeEntityRequest(
         entityID: UUID,
         kind: String

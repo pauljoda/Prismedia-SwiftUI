@@ -6,6 +6,7 @@ import SwiftUI
         let proposal: AdministrativeEntityMetadataProposal
         let isSelectable: Bool
         let isSelected: Bool
+        let isIdentifying: Bool
         let onSetSelected: ((Bool) -> Void)?
         let onActivate: ((AdministrativeEntityMetadataProposal) -> Void)?
 
@@ -71,16 +72,23 @@ import SwiftUI
                             .foregroundStyle(PrismediaColor.textPrimary)
                         HStack(spacing: PrismediaSpacing.small) {
                             Text(proposal.targetKind.rawValue)
-                            Text(proposal.targetEntityID == nil ? "New" : "Match")
-                                .padding(.horizontal, PrismediaSpacing.small)
-                                .padding(.vertical, 2)
-                                .background(PrismediaColor.controlFill)
-                                .clipShape(.capsule)
-                                .foregroundStyle(
-                                    proposal.targetEntityID == nil
-                                        ? artworkPrimaryAccent
-                                        : PrismediaColor.textSecondary
-                                )
+                            if isIdentifying {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .accessibilityHidden(true)
+                                Text("Identifying…")
+                            } else {
+                                Text(proposal.targetEntityID == nil ? "New" : "Match")
+                                    .padding(.horizontal, PrismediaSpacing.small)
+                                    .padding(.vertical, 2)
+                                    .background(PrismediaColor.controlFill)
+                                    .clipShape(.capsule)
+                                    .foregroundStyle(
+                                        proposal.targetEntityID == nil
+                                            ? artworkPrimaryAccent
+                                            : PrismediaColor.textSecondary
+                                    )
+                            }
                         }
                         .font(.caption)
                         .foregroundStyle(PrismediaColor.textSecondary)
@@ -109,6 +117,7 @@ import SwiftUI
                     proposal: MetadataReviewPreviewFixtures.proposal.relationships[0],
                     isSelectable: true,
                     isSelected: true,
+                    isIdentifying: false,
                     onSetSelected: { _ in },
                     onActivate: { _ in }
                 )

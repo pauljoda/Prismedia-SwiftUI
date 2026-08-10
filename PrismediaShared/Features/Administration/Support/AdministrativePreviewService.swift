@@ -172,6 +172,9 @@ import Foundation
             pluginID: String,
             externalIdentity: AdministrativeExternalIdentity
         ) async throws -> AdministrativeRequestReviewResponse { throw CancellationError() }
+        func requestReview(reviewID: UUID) async throws -> AdministrativeRequestReviewResponse {
+            throw CancellationError()
+        }
         func reviewEntityRequest(entityID: UUID, kind: String) async throws -> AdministrativeRequestReviewResponse {
             throw CancellationError()
         }

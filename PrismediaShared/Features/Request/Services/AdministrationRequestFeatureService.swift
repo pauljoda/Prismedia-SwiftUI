@@ -39,6 +39,10 @@ public struct AdministrationRequestFeatureService: RequestFeatureServicing {
         )
     }
 
+    public func review(reviewID: UUID) async throws -> AdministrativeRequestReviewResponse {
+        try await administration.requestReview(reviewID: reviewID)
+    }
+
     public func commit(
         _ request: AdministrativeReviewedRequestCommitRequest
     ) async throws -> AdministrativeRequestCommitResponse {
