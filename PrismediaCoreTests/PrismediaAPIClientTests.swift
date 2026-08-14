@@ -1242,7 +1242,8 @@ final class PrismediaAPIClientTests: XCTestCase {
                 from: from,
                 to: to,
                 kind: .audioTrack,
-                eventKind: .completed
+                eventKind: .completed,
+                utcOffsetMinutes: -300
             )
         )
 
@@ -1260,6 +1261,7 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(queryItem("kind", in: request), "audio-track")
         XCTAssertEqual(queryItem("eventKind", in: request), "completed")
         XCTAssertEqual(queryItem("hideNsfw", in: request), "true")
+        XCTAssertEqual(queryItem("utcOffsetMinutes", in: request), "-300")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
     }
 

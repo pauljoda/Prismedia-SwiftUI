@@ -36,7 +36,8 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         } else if let readingLabel = reading?.positionLabel {
             positionLabel = readingLabel
         } else if let progress, progress.unit == .second, progress.total > 0 {
-            positionLabel = "Current · \(MusicPresentation.clockTime(Double(progress.index))) of \(MusicPresentation.clockTime(Double(progress.total)))"
+            positionLabel =
+                "Current · \(DurationPresentation.progress(Double(progress.index))) of \(DurationPresentation.progress(Double(progress.total)))"
         } else if percent > 0 {
             positionLabel = "\(percent)% consumed"
         } else {

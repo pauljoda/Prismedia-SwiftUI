@@ -6,19 +6,22 @@ public struct ConsumptionStatisticsQuery: Hashable, Sendable {
     public let kind: EntityKind?
     public let eventKind: ConsumptionEventKind?
     public var hideNsfw: Bool
+    public let utcOffsetMinutes: Int
 
     public init(
         from: Date,
         to: Date,
         kind: EntityKind? = nil,
         eventKind: ConsumptionEventKind? = nil,
-        hideNsfw: Bool = true
+        hideNsfw: Bool = true,
+        utcOffsetMinutes: Int? = nil
     ) {
         self.from = from
         self.to = to
         self.kind = kind
         self.eventKind = eventKind
         self.hideNsfw = hideNsfw
+        self.utcOffsetMinutes = utcOffsetMinutes ?? TimeZone.current.secondsFromGMT(for: to) / 60
     }
 
     var queryItems: [URLQueryItem] {
@@ -26,6 +29,7 @@ public struct ConsumptionStatisticsQuery: Hashable, Sendable {
             URLQueryItem(name: "from", value: Self.formatter.string(from: from)),
             URLQueryItem(name: "to", value: Self.formatter.string(from: to)),
             URLQueryItem(name: "hideNsfw", value: hideNsfw ? "true" : "false"),
+            URLQueryItem(name: "utcOffsetMinutes", value: String(utcOffsetMinutes)),
         ]
         if let kind { items.append(URLQueryItem(name: "kind", value: kind.rawValue)) }
         if let eventKind { items.append(URLQueryItem(name: "eventKind", value: eventKind.rawValue)) }

@@ -95,7 +95,7 @@ struct BookCombinedProgressCard: View {
             .accessibilityHidden(presentation.chapterLabel == nil)
             Label(
                 presentation.activitySeconds.map {
-                    "\(MusicPresentation.clockTime($0)) total activity"
+                    "\(DurationPresentation.activity($0)) spent with this book"
                 } ?? "Book activity",
                 systemImage: "timer"
             )

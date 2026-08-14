@@ -41,7 +41,7 @@ struct ConsumptionStatisticsView: View {
                 }
             }
             .prismediaScreenBackground()
-            .navigationTitle("Consumption Stats")
+            .navigationTitle("Your Activity")
             .refreshable {
                 await PrismediaRefreshAction.perform {
                     _ = await reload(preservingContent: true)
@@ -94,7 +94,7 @@ struct ConsumptionStatisticsView: View {
         ) {
             metric("Opened", value: response?.accessedCount, systemImage: "play.rectangle.on.rectangle")
             metric("Completed", value: response?.completedCount, systemImage: "checkmark.circle.fill")
-            durationMetric("Active", seconds: response?.activeSeconds, systemImage: "timer")
+            durationMetric("Time Spent", seconds: response?.activeSeconds, systemImage: "timer")
             if let viewingSeconds = response?.viewingSeconds, viewingSeconds > 0 {
                 durationMetric("Viewing", seconds: viewingSeconds, systemImage: "tv.fill")
             }
@@ -165,7 +165,7 @@ struct ConsumptionStatisticsView: View {
             Label(title, systemImage: systemImage)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text(seconds.map(MusicPresentation.clockTime) ?? "—")
+            Text(seconds.map { DurationPresentation.activity($0) } ?? "—")
                 .font(.title.bold().monospacedDigit())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -182,7 +182,8 @@ struct ConsumptionStatisticsView: View {
             ForEach(buckets.reversed().prefix(15)) { bucket in
                 VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                     HStack {
-                        Text(bucket.date).font(.subheadline.weight(.medium))
+                        Text(CalendarDayPresentation.label(for: bucket.date, relativeTo: now))
+                            .font(.subheadline.weight(.medium))
                         Spacer()
                         Text("\(bucket.totalCount)").font(.headline.monospacedDigit())
                     }
@@ -202,10 +203,10 @@ struct ConsumptionStatisticsView: View {
                     .frame(height: 6)
                     .clipShape(Capsule())
                     Text(
-                        "\(bucket.accessedCount) opened · \(bucket.completedCount) completed · \(bucket.skippedCount) skips · \(MusicPresentation.clockTime(bucket.activeSeconds)) active"
+                        "\(bucket.accessedCount) opened · \(bucket.completedCount) completed · \(bucket.skippedCount) skips · \(DurationPresentation.activity(bucket.activeSeconds)) spent"
                     )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 .padding(PrismediaSpacing.medium)
                 .background(
@@ -227,7 +228,8 @@ struct ConsumptionStatisticsView: View {
                         statisticRow(
                             item: item,
                             leading: "\(index + 1)",
-                            trailing: "\(entity.accessedCount) opened · \(MusicPresentation.clockTime(entity.activeSeconds)) active"
+                            trailing:
+                                "\(entity.accessedCount) opened · \(DurationPresentation.activity(entity.activeSeconds)) spent"
                         )
                     }
                     .buttonStyle(.plain)
@@ -288,9 +290,11 @@ struct ConsumptionStatisticsView: View {
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                         Text(SearchHubCatalog.sectionTitle(for: slice.kind))
                             .font(.headline)
-                        Text("\(slice.accessedCount) opened · \(slice.completedCount) completed · \(MusicPresentation.clockTime(slice.activeSeconds)) active")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Text(
+                            "\(slice.accessedCount) opened · \(slice.completedCount) completed · \(DurationPresentation.activity(slice.activeSeconds)) spent"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
                     Spacer()
                 }

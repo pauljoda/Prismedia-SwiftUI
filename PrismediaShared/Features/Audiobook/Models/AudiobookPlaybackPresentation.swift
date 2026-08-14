@@ -36,7 +36,7 @@ public struct AudiobookPlaybackPresentation: Equatable, Sendable {
             status: status,
             percent: percent,
             positionLabel: resume > 0 && duration > 0
-                ? "\(MusicPresentation.clockTime(resume)) of \(MusicPresentation.clockTime(duration))"
+                ? "\(DurationPresentation.progress(resume)) of \(DurationPresentation.progress(duration))"
                 : nil,
             contextLabel: "\(partCount) \(partCount == 1 ? "part" : "parts")",
             showsResume: status == .inProgress && !(isCurrentAudiobook && isPlaying),

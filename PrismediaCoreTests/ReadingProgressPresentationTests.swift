@@ -62,6 +62,31 @@ final class ReadingProgressPresentationTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation.percent, 90)
-        XCTAssertEqual(presentation.positionLabel, "Current · 5:00 of 16:40")
+        XCTAssertEqual(presentation.positionLabel, "Current · 5 min of 16 min, 40 sec")
+    }
+
+    func testEPUBProgressShowsItsNormalizedCursorAsAPercentage() throws {
+        let progress = EntityProgressCapability(
+            currentEntityID: UUID(),
+            unit: .cfi,
+            index: 8_203,
+            total: 10_000,
+            mode: .scrolled,
+            completedAt: nil,
+            updatedAt: nil,
+            workIndex: nil,
+            workTotal: nil,
+            location: "epubcfi(/6/4!/4/2/2:14)",
+            consumedCount: 8_203,
+            consumedTotal: 10_000,
+            consumedPercent: 0.8203
+        )
+
+        let presentation = try XCTUnwrap(
+            ReadingProgressPresentation(singleFileProgress: progress)
+        )
+
+        XCTAssertEqual(presentation.percent, 82)
+        XCTAssertEqual(presentation.positionLabel, "Current · 82% through book")
     }
 }

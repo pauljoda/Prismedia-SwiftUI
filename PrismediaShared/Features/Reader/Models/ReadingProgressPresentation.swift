@@ -38,7 +38,6 @@ public struct ReadingProgressPresentation: Hashable, Sendable {
 
         let total = progress.total
         let index = max(0, progress.index)
-        let usesPages = progress.unit == .page
         let rawPercent = Int((progress.consumedPercent * 100).rounded())
         let completed = progress.completedAt != nil
         let percent = completed ? 100 : min(100, max(rawPercent > 0 ? 1 : 0, rawPercent))
@@ -48,12 +47,36 @@ public struct ReadingProgressPresentation: Hashable, Sendable {
         positionLabel =
             completed
             ? nil
-            : usesPages
-                ? "Page \(min(index + 1, total)) of \(total)"
-                : "Current · \(MusicPresentation.clockTime(Double(index))) of \(MusicPresentation.clockTime(Double(total)))"
+            : Self.positionLabel(unit: progress.unit, index: index, total: total)
         contextLabel = nil
         canResume = !completed
         canStartOver = true
-        readerMode = progress.mode ?? (usesPages ? .scrolled : .paged)
+        readerMode = progress.mode ?? (progress.unit == .page ? .scrolled : .paged)
+    }
+
+    private static func positionLabel(
+        unit: ProgressUnit,
+        index: Int,
+        total: Int
+    ) -> String {
+        let ordinal = min(index + 1, total)
+        switch unit {
+        case .page:
+            return "Page \(ordinal) of \(total)"
+        case .second:
+            return
+                "Current · \(DurationPresentation.progress(Double(index))) of \(DurationPresentation.progress(Double(total)))"
+        case .cfi:
+            let currentPercent = Int(
+                (Double(min(index, total)) / Double(total) * 100).rounded()
+            )
+            return "Current · \(currentPercent)% through book"
+        case .chapter:
+            return "Chapter \(ordinal) of \(total)"
+        case .track:
+            return "Track \(ordinal) of \(total)"
+        default:
+            return "Item \(ordinal) of \(total)"
+        }
     }
 }
