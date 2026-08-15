@@ -69,21 +69,24 @@ extension EntityDetailView {
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
-            if isCurrent && !completed {
-                musicPlayer.resume()
-                return
-            }
-            if completed {
+            let decision = AudiobookContinuationPlanner().decision(
+                isCompleted: completed,
+                isCurrentAudiobook: isCurrent,
+                requiresCanonicalProgress: detail.bookFormat != .audio,
+                canonicalResume: unifiedAudiobookResume(for: detail)
+            )
+            switch decision {
+            case .startOver:
                 Task { await startListeningOver(detail) }
-                return
-            }
-            if let resume = unifiedAudiobookResume(for: detail) {
+            case .resumeCurrentPlayer:
+                musicPlayer.resume()
+            case .play(let resume):
                 play(
                     projection,
                     startingAt: resume.trackID,
                     startSeconds: resume.trackOffsetSeconds
                 )
-            } else {
+            case .playFromBeginning:
                 play(projection, resumeSeconds: 0)
             }
         }

@@ -484,12 +484,14 @@
         }
 
         private func close() {
-            Task {
-                progressSaveTask?.cancel()
-                saveProgress(stoppingActivity: true)
-                await progressWriter.flush()
-                dismiss()
-            }
+            BookReaderDismissalService().close(
+                prepare: {
+                    progressSaveTask?.cancel()
+                    saveProgress(stoppingActivity: true)
+                },
+                dismiss: { dismiss() },
+                flush: { await progressWriter.flush() }
+            )
         }
     }
 

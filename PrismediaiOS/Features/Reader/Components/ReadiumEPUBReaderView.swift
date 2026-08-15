@@ -229,10 +229,10 @@
         private func close() {
             guard !isClosing else { return }
             isClosing = true
-            Task {
-                await session.flush(closing: true)
-                dismiss()
-            }
+            BookReaderDismissalService().close(
+                dismiss: { dismiss() },
+                flush: { await session.flush(closing: true) }
+            )
         }
 
         private func load() async {

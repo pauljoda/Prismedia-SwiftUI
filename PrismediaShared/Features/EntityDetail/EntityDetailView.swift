@@ -262,9 +262,10 @@ public struct EntityDetailView: View {
                 }
             #endif
             guard previous != nil, current == nil else { return }
+            let progressLoad = bookProgressLoadingState.begin()
             Task {
                 await finishCompanionAudiobookPlayback(for: previous)
-                await refreshBookProgressAfterReader()
+                await refreshBookProgressAfterReader(progressLoad)
             }
         }
         .alert("Couldn’t Update Details", isPresented: mutationErrorPresented) {

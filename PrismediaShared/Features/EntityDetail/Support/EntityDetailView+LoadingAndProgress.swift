@@ -60,10 +60,9 @@ extension EntityDetailView {
         #endif
     }
 
-    func refreshBookProgressAfterReader() async {
-        guard case .content(let detail) = state.phase else { return }
-        let progressLoad = bookProgressLoadingState.begin()
+    func refreshBookProgressAfterReader(_ progressLoad: Int) async {
         defer { bookProgressLoadingState.finish(progressLoad) }
+        guard case .content(let detail) = state.phase else { return }
 
         await loadDetail()
         guard case .content(let refreshedDetail) = state.phase,

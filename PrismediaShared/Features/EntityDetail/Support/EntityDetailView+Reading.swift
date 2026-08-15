@@ -194,6 +194,11 @@ extension EntityDetailView {
                     )
                 )
             }
+            if hasCombinedProgressCard(for: detail) {
+                actions.removeAll { action in
+                    action.id == .read || action.id == .resume || action.id == .listen
+                }
+            }
         #endif
         return actions
     }

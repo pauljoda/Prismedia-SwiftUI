@@ -48,10 +48,7 @@ extension EntityDetailView {
     func combinedProgressPresentation(
         for detail: EntityDetail
     ) -> BookCombinedProgressPresentation? {
-        guard detail.kind == .book,
-            detail.bookFormat != .audio,
-            AudiobookPlaybackProjection(detail: detail) != nil
-        else { return nil }
+        guard hasCombinedProgressCard(for: detail) else { return nil }
         let mappingsAreReady = !bookProgressMappings(for: detail).isEmpty
         let currentChapter = mappedBookChapters.first(where: \.isCurrentProgress)
         return BookCombinedProgressPresentation(
@@ -63,6 +60,12 @@ extension EntityDetailView {
             isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
                 || bookProgressLoadingState.isLoading || !mappingsAreReady
         )
+    }
+
+    func hasCombinedProgressCard(for detail: EntityDetail) -> Bool {
+        detail.kind == .book
+            && detail.bookFormat != .audio
+            && AudiobookPlaybackProjection(detail: detail) != nil
     }
 
     func combinedResumeTarget(
