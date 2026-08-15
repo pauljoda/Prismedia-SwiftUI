@@ -20,6 +20,13 @@ public enum FavoritesCatalog {
     ]
 
     public static let sections: [FavoritesSectionDefinition] = kinds.map(definition)
+    public static let overviewLimit = min(1_000, itemLimit * kinds.count)
+    public static let overviewQuery = EntityListQuery(
+        kinds: kinds,
+        sort: PrismediaContractCodes.EntityListSort.lastActive,
+        sortDescending: true,
+        favorite: true
+    )
 
     private static func definition(for kind: EntityKind) -> FavoritesSectionDefinition {
         guard

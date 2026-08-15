@@ -128,6 +128,21 @@ public struct PrismediaAPIClient: Sendable {
         )
     }
 
+    /// Reads a compact Entity shelf without total counts or aggregate thumbnail contributors.
+    public func listEntityShelf(
+        _ query: EntityListQuery,
+        limit: Int = 48,
+        search: String? = nil
+    ) async throws -> EntityListResponse {
+        var query = query
+        query.applyNsfwPreference(allowsNsfwContent: allowsNsfwContent)
+        return try await send(
+            EntityListResponse.self,
+            path: "/api/entities/shelf",
+            queryItems: query.queryItems(limit: limit, search: search)
+        )
+    }
+
     public func listAllEntities(
         _ query: EntityListQuery,
         pageSize: Int = 1_000,
@@ -699,12 +714,22 @@ public struct PrismediaAPIClient: Sendable {
         return components
     }
 
-    private func request(path: String, method: String, queryItems: [URLQueryItem], body: (some Encodable)?) throws
+    private func request(
+        path: String,
+        method: String,
+        queryItems: [URLQueryItem],
+        headers: [String: String],
+        body: (some Encodable)?
+    ) throws
         -> URLRequest
     {
         var request = URLRequest(url: try url(path: path, queryItems: queryItems))
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        for (name, value) in headers {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
 
         if method == "GET" {
             request.cachePolicy = .reloadIgnoringLocalCacheData
@@ -745,9 +770,16 @@ public struct PrismediaAPIClient: Sendable {
         path: String,
         method: String = "GET",
         queryItems: [URLQueryItem] = [],
+        headers: [String: String] = [:],
         body: (some Encodable)? = Optional<LoginRequest>.none
     ) async throws -> T {
-        let data = try await perform(path: path, method: method, queryItems: queryItems, body: body)
+        let data = try await perform(
+            path: path,
+            method: method,
+            queryItems: queryItems,
+            headers: headers,
+            body: body
+        )
 
         do {
             return try PrismediaJSON.decoder().decode(T.self, from: data)
@@ -760,9 +792,16 @@ public struct PrismediaAPIClient: Sendable {
         path: String,
         method: String,
         queryItems: [URLQueryItem] = [],
+        headers: [String: String] = [:],
         body: (some Encodable)? = Optional<LoginRequest>.none
     ) async throws {
-        _ = try await perform(path: path, method: method, queryItems: queryItems, body: body)
+        _ = try await perform(
+            path: path,
+            method: method,
+            queryItems: queryItems,
+            headers: headers,
+            body: body
+        )
     }
 
     func sendMultipart<T: Decodable>(
@@ -885,9 +924,16 @@ public struct PrismediaAPIClient: Sendable {
         path: String,
         method: String,
         queryItems: [URLQueryItem],
+        headers: [String: String] = [:],
         body: (some Encodable)?
     ) async throws -> Data {
-        let request = try request(path: path, method: method, queryItems: queryItems, body: body)
+        let request = try request(
+            path: path,
+            method: method,
+            queryItems: queryItems,
+            headers: headers,
+            body: body
+        )
         let (data, response) = try await loader.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -931,6 +977,11 @@ extension PrismediaAPIClient: MusicPlaybackServicing {
         id: UUID,
         request: EntityProgressUpdateRequest
     ) async throws {
-        _ = try await updateEntityProgress(id: id, request: request)
+        try await sendExpectingNoContent(
+            path: "/api/entities/\(id.uuidString.lowercased())/progress",
+            method: "PATCH",
+            headers: ["Prefer": "return=minimal"],
+            body: request
+        )
     }
 }

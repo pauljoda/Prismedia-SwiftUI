@@ -164,10 +164,7 @@ struct BookProgressMappingResolver: Sendable {
             let track = tracks.first(where: { $0.id == mapping.trackID })
         else { return nil }
 
-        let span = mapping.endIndex - mapping.startIndex
-        let fraction = span > 0
-            ? bounded(Double(progress.index - mapping.startIndex) / Double(span))
-            : 0
+        let fraction = fraction(for: progress, mapping: mapping)
         let duration = track.duration.flatMap { $0.isFinite ? max(0, $0) : nil } ?? 0
         return AudiobookResumePoint(
             trackID: track.id,
@@ -179,6 +176,17 @@ struct BookProgressMappingResolver: Sendable {
         for progress: EntityProgressCapability,
         mapping: BookProgressTrackMapping
     ) -> Double {
+        if mapping.unit == .cfi,
+            let readerLocation = mapping.readerLocation,
+            let savedLocation = progress.location.flatMap(EPUBProgressLocation.init(serialized:)),
+            EPUBResourceLocationMatcher().bestMatch(
+                for: savedLocation.href,
+                candidates: [readerLocation]
+            ) != nil
+        {
+            return savedLocation.resourceProgression
+        }
+
         let span = mapping.endIndex - mapping.startIndex
         guard span > 0 else { return 0 }
         return bounded(Double(progress.index - mapping.startIndex) / Double(span))

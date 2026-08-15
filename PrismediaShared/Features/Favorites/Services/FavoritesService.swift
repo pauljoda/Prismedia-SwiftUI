@@ -9,28 +9,20 @@ public struct FavoritesService {
     }
 
     public func load() async -> FavoritesSnapshot {
-        let loader = self.loader
-        var loadedSections: [String: FavoritesSection] = [:]
-
-        await withTaskGroup(of: FavoritesSection.self) { group in
-            for definition in FavoritesCatalog.sections {
-                group.addTask {
-                    let items =
-                        (try? await loader.load(
-                            definition.query,
-                            limit: FavoritesCatalog.itemLimit
-                        ).items) ?? []
-                    return FavoritesSection(definition: definition, items: items)
-                }
-            }
-
-            for await section in group {
-                loadedSections[section.id] = section
-            }
-        }
-
-        let sections = FavoritesCatalog.sections.compactMap { definition in
-            loadedSections[definition.id]
+        let items = (try? await loader.load(
+            FavoritesCatalog.overviewQuery,
+            limit: FavoritesCatalog.overviewLimit
+        ).items) ?? []
+        let sections = FavoritesCatalog.sections.map { definition in
+            FavoritesSection(
+                definition: definition,
+                items: Array(
+                    items
+                        .lazy
+                        .filter { $0.kind == definition.kind }
+                        .prefix(FavoritesCatalog.itemLimit)
+                )
+            )
         }
         return FavoritesSnapshot(
             sections: sections,

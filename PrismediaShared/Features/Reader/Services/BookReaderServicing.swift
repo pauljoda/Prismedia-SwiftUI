@@ -30,7 +30,7 @@ extension PrismediaEntityDetailLoader: BookReaderServicing {
     }
 
     public func updateReadingProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {
-        _ = try await client.updateEntityProgress(id: id, request: request)
+        try await client.reportEntityProgress(id: id, request: request)
     }
 
     public func recordReadingAccess(id: UUID, sessionID: String) async throws {

@@ -130,6 +130,31 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(items["nsfw"], "false")
     }
 
+    func testListEntityShelfUsesCompactCountFreeEndpoint() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"items":[],"nextCursor":null}"#)
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let response = try await client.listEntityShelf(
+            EntityListQuery(
+                kinds: [.book, .movie],
+                sort: PrismediaContractCodes.EntityListSort.lastActive,
+                sortDescending: true,
+                favorite: true
+            ),
+            limit: 40
+        )
+
+        XCTAssertEqual(response.items, [])
+        XCTAssertEqual(response.totalCount, 0)
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(request.url?.path, "/api/entities/shelf")
+        XCTAssertEqual(queryItem("kind", in: request), "book,movie")
+        XCTAssertEqual(queryItem("favorite", in: request), "true")
+        XCTAssertEqual(queryItem("limit", in: request), "40")
+    }
+
     func testListAllEntitiesFollowsEachCursorAndReturnsTheCompleteLibrary() async throws {
         let firstID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let secondID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
@@ -353,6 +378,29 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertTrue(body["location"] is NSNull)
         XCTAssertEqual(body["activitySeconds"] as? Double, 17.5)
         XCTAssertEqual(body["activityKind"] as? String, "reading")
+    }
+
+    func testReportEntityProgressRequestsMinimalResponse() async throws {
+        let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let loader = MockHTTPDataLoader(responses: [.json("", statusCode: 204)])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        try await client.reportEntityProgress(
+            id: bookID,
+            request: EntityProgressUpdateRequest(
+                currentEntityID: bookID,
+                unit: .cfi,
+                index: 3_856,
+                total: 10_000,
+                mode: .paged,
+                completed: nil,
+                location: "Text/C24.xhtml#prismedia-progress=0.25"
+            )
+        )
+
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(request.url?.path, "/api/entities/\(bookID.uuidString.lowercased())/progress")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Prefer"), "return=minimal")
     }
 
     func testVideoPlaybackReportsUseNativeSessionEndpointsAndExactProgress() async throws {

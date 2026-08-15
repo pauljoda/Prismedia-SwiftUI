@@ -64,6 +64,33 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         XCTAssertEqual(target.audioStartSeconds, 295, accuracy: 0.001)
     }
 
+    func testExactReadableLocationOverridesCoarseChapterBoundaryForAudioResume() throws {
+        let chapter = mappedChapter(
+            order: 0,
+            duration: 600,
+            startFraction: 0.4,
+            endFraction: 0.6
+        )
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID,
+            chapters: [chapter],
+            readerMode: .paged,
+            hasReadableRendition: true
+        )
+        let savedLocation = "Text/chapter-1.xhtml#prismedia-progress=0.25"
+
+        let target = try XCTUnwrap(
+            BookCombinedResumeResolver().resolveContinuation(
+                chapters: [chapter],
+                mappings: mappings,
+                progress: canonicalProgress(index: 4_000, location: savedLocation)
+            )
+        )
+
+        XCTAssertEqual(target.readingTarget, .savedLocation(savedLocation))
+        XCTAssertEqual(target.audioStartSeconds, 145, accuracy: 0.001)
+    }
+
     func testOpaqueFoliateCFIFallsBackToMappedChapterProgression() throws {
         let chapters = [
             mappedChapter(order: 0, duration: 300, startFraction: 0, endFraction: 0.5),

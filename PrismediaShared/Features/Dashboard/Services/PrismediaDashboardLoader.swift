@@ -8,6 +8,6 @@ public struct PrismediaDashboardLoader: DashboardLoading, Sendable {
     }
 
     public func load(_ query: EntityListQuery, limit: Int) async throws -> EntityListResponse {
-        try await client.listEntities(query, limit: limit)
+        try await client.listEntityShelf(query, limit: limit)
     }
 }

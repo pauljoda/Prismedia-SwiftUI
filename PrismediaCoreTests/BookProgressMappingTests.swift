@@ -148,6 +148,35 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(resume.trackOffsetSeconds, 95, accuracy: 0.001)
     }
 
+    func testExactEPUBLocationMapsBackToAudioWithinTheChapter() throws {
+        let track = musicTrack(number: 1, duration: 600)
+        let mapping = BookProgressTrackMapping(
+            trackID: track.id,
+            currentEntityID: bookID,
+            unit: .cfi,
+            startIndex: 4_000,
+            endIndex: 6_000,
+            total: 10_000,
+            mode: .paged,
+            readerLocation: "Text/chapter-1.xhtml"
+        )
+        let progress = canonicalProgress(
+            index: 4_000,
+            location: "Text/chapter-1.xhtml#prismedia-progress=0.25"
+        )
+
+        let resume = try XCTUnwrap(
+            BookProgressMappingResolver().audioResume(
+                tracks: [track],
+                mappings: [mapping],
+                progress: progress
+            )
+        )
+
+        XCTAssertEqual(resume.trackID, track.id)
+        XCTAssertEqual(resume.trackOffsetSeconds, 145, accuracy: 0.001)
+    }
+
     func testSharedEPUBBoundaryBelongsToTheLaterChapter() throws {
         let chapters = [
             epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
