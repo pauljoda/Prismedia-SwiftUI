@@ -84,7 +84,8 @@ final class VideoPlaybackSession {
             audioSession: SystemVideoAudioSession(),
             sidecarSubtitles: Self.subtitles(in: videoDetail),
             displayCriteria: displayCriteria,
-            preferredEngine: preferences.engine
+            preferredEngine: preferences.engine,
+            vlcNetworkCachingSeconds: preferences.vlcNetworkCachingSeconds
         )
         controller.pictureInPicture.onRestore = { [weak self] in
             guard let self, let restoreLink = self.activeRestoreLink else { return }

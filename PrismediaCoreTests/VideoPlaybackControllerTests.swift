@@ -161,7 +161,8 @@ final class VideoPlaybackControllerTests: XCTestCase {
         let controller = VideoPlaybackController(
             videoID: videoID,
             service: service,
-            audioSession: FailingVideoAudioSession()
+            audioSession: FailingVideoAudioSession(),
+            vlcNetworkCachingSeconds: 7
         )
         var playedRate: Float?
         var seekTime: Double?
@@ -182,6 +183,7 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertEqual(controller.renderer, .compatibility)
         XCTAssertNil(controller.player.currentItem)
         XCTAssertEqual(controller.compatibilityPlaybackRequest?.resumeTime, 42)
+        XCTAssertEqual(controller.compatibilityPlaybackRequest?.networkCachingSeconds, 7)
 
         controller.play()
         controller.seek(to: 73)

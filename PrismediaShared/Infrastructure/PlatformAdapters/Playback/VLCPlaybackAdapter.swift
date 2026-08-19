@@ -44,7 +44,9 @@
                 let media = VLCMedia(url: request.url)
             #endif
             media.addOption(":no-spu")
-            media.addOption(":network-caching=20000")
+            media.addOption(
+                ":network-caching=\(VLCNetworkCachingSettings.milliseconds(for: request.networkCachingSeconds))"
+            )
             #if !targetEnvironment(simulator)
                 // Prefer VLC's native Apple decoder. Simulators need VLC's
                 // software fallback because they have no device decoder.
@@ -75,7 +77,8 @@
                 media.addOption(":start-time=\(request.resumeTime)")
             }
             #if os(tvOS) && canImport(VLCKit)
-                let player = request.dolbyVisionProfile == 5
+                let player =
+                    request.dolbyVisionProfile == 5
                     ? VLCMediaPlayer(options: ["--vout=gles2", "--gl-dovi-profile5"])
                     : VLCMediaPlayer()
             #else

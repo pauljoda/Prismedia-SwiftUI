@@ -40,6 +40,7 @@ public final class VideoPlaybackController {
     private let videoID: UUID
     private let service: any VideoPlaybackServicing
     private let preferredEngine: VideoPlaybackEngine
+    private let vlcNetworkCachingSeconds: Int
     private let audioSession: any VideoAudioSessionPreparing
     private let displayCriteria: VideoDisplayCriteriaIntegration
     private let sidecarSubtitles: [EntitySubtitle]
@@ -91,7 +92,8 @@ public final class VideoPlaybackController {
             service: service,
             audioSession: SystemVideoAudioSession(),
             sidecarSubtitles: sidecarSubtitles,
-            preferredEngine: preferredEngine
+            preferredEngine: preferredEngine,
+            vlcNetworkCachingSeconds: VLCNetworkCachingSettings.defaultSeconds
         )
     }
 
@@ -101,11 +103,15 @@ public final class VideoPlaybackController {
         audioSession: any VideoAudioSessionPreparing,
         sidecarSubtitles: [EntitySubtitle] = [],
         displayCriteria: VideoDisplayCriteriaIntegration = .inactive,
-        preferredEngine: VideoPlaybackEngine = .automatic
+        preferredEngine: VideoPlaybackEngine = .automatic,
+        vlcNetworkCachingSeconds: Int = VLCNetworkCachingSettings.defaultSeconds
     ) {
         self.videoID = videoID
         self.service = service
         self.preferredEngine = preferredEngine
+        self.vlcNetworkCachingSeconds = VLCNetworkCachingSettings.normalizedSeconds(
+            vlcNetworkCachingSeconds
+        )
         self.audioSession = audioSession
         self.displayCriteria = displayCriteria
         self.sidecarSubtitles = sidecarSubtitles
@@ -606,7 +612,8 @@ public final class VideoPlaybackController {
                 resumeTime: resumeAt,
                 playbackRate: playbackRate,
                 audioStreams: plan.audioStreams,
-                dolbyVisionProfile: plan.displayMetadata?.dolbyVisionProfile
+                dolbyVisionProfile: plan.displayMetadata?.dolbyVisionProfile,
+                networkCachingSeconds: vlcNetworkCachingSeconds
             )
             pendingInitialResumeSeconds = nil
             isReadyToPlay = true

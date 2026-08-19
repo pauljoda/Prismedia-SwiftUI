@@ -56,7 +56,8 @@ struct AccountView: View {
                 user: PrismediaPreviewData.user,
                 service: AccountPreviewService(),
                 playbackPreferences: VideoPlaybackPreferences(
-                    store: InMemoryVideoPlaybackEnginePreferenceStore()
+                    store: InMemoryVideoPlaybackEnginePreferenceStore(),
+                    vlcNetworkCachingStore: InMemoryVLCNetworkCachingPreferenceStore()
                 )
             )
         }
@@ -68,7 +69,8 @@ struct AccountView: View {
                 user: PrismediaPreviewData.user,
                 service: AccountPreviewService(),
                 playbackPreferences: VideoPlaybackPreferences(
-                    store: InMemoryVideoPlaybackEnginePreferenceStore()
+                    store: InMemoryVideoPlaybackEnginePreferenceStore(),
+                    vlcNetworkCachingStore: InMemoryVLCNetworkCachingPreferenceStore()
                 )
             )
             .environment(\.dynamicTypeSize, .accessibility3)

@@ -24,7 +24,8 @@ import SwiftUI
             NavigationStack {
                 TVPlayerSettingsView(
                     playbackPreferences: VideoPlaybackPreferences(
-                        store: InMemoryVideoPlaybackEnginePreferenceStore()
+                        store: InMemoryVideoPlaybackEnginePreferenceStore(),
+                        vlcNetworkCachingStore: InMemoryVLCNetworkCachingPreferenceStore()
                     )
                 )
             }

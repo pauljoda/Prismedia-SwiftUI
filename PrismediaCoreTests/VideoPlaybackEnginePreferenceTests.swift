@@ -77,4 +77,44 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
 
         XCTAssertEqual(preferences.engine, VideoPlaybackEngine.defaultChoice)
     }
+
+    func testVLCNetworkCachingDefaultsToThreeSecondsAndConvertsToMilliseconds() {
+        XCTAssertEqual(VLCNetworkCachingSettings.defaultSeconds, 3)
+        XCTAssertEqual(VLCNetworkCachingSettings.milliseconds(for: 3), 3_000)
+    }
+
+    func testPreferencesPersistVLCNetworkCachingSeconds() {
+        let suiteName = "VideoPlaybackEnginePreferenceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let engineStore = UserDefaultsVideoPlaybackEnginePreferenceStore(defaults: defaults)
+        let cachingStore = UserDefaultsVLCNetworkCachingPreferenceStore(defaults: defaults)
+        let preferences = VideoPlaybackPreferences(
+            store: engineStore,
+            vlcNetworkCachingStore: cachingStore
+        )
+
+        XCTAssertEqual(preferences.vlcNetworkCachingSeconds, 3)
+
+        preferences.vlcNetworkCachingSeconds = 7
+
+        XCTAssertEqual(
+            VideoPlaybackPreferences(
+                store: engineStore,
+                vlcNetworkCachingStore: cachingStore
+            ).vlcNetworkCachingSeconds,
+            7
+        )
+    }
+
+    func testInvalidPersistedVLCNetworkCachingValueFallsBackToDefault() {
+        let suiteName = "VideoPlaybackEnginePreferenceTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(61, forKey: UserDefaultsVLCNetworkCachingPreferenceStore.key)
+
+        let store = UserDefaultsVLCNetworkCachingPreferenceStore(defaults: defaults)
+
+        XCTAssertEqual(store.loadSeconds(), VLCNetworkCachingSettings.defaultSeconds)
+    }
 }
