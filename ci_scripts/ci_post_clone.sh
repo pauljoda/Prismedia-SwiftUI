@@ -9,14 +9,19 @@ platform="${CI_PRODUCT_PLATFORM:-}"
 case "$platform" in
     iOS | ios | iphoneos | iphonesimulator)
         framework="MobileVLCKit"
+        destination_name="$framework"
         expected_sha256="4e792590843e33bbd422d72f3b0aff616684dc0beddc67e3cd4535e84bd804a9"
         ;;
     macOS | macos | macosx)
         framework="VLCKit"
+        destination_name="$framework"
         expected_sha256="8484dc28c0c48aa76269121591f8f3342c1bbe44497a2c53675aa36e7774e101"
         ;;
     tvOS | tvos | appletvos | appletvsimulator)
         framework="TVVLCKit"
+        # The project uses a stable outer name while the currently published
+        # fallback still exposes the legacy TVVLCKit module internally.
+        destination_name="VLCKitTV"
         expected_sha256="4f106dfb8e5d7f49bf199716434b24556a128b44ae63e6bbbc0767986d6ee88a"
         ;;
     *)
@@ -49,7 +54,7 @@ ditto -x -k "$archive" "$unpacked"
 
 source_framework="$unpacked/$framework.xcframework"
 destination_dir="$repository_path/Carthage/Build"
-destination_framework="$destination_dir/$framework.xcframework"
+destination_framework="$destination_dir/$destination_name.xcframework"
 
 if [ ! -d "$source_framework" ]; then
     echo "$asset did not contain $framework.xcframework" >&2

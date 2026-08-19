@@ -2,12 +2,12 @@
 
 ## VLCKit
 
-The iOS, macOS, and tvOS compatibility players link source builds of
-MobileVLCKit, VLCKit, and TVVLCKit 3.7.3 from VideoLAN. Prismedia's bootstrap
-applies
-`Scripts/Patches/TVVLCKit-EnableTrueHD.patch` to retain FFmpeg's MLP/TrueHD
-decoder, which VideoLAN's prebuilt tvOS artifact excludes. This lets the
-compatibility player decode the original lossless track locally while keeping
+The iOS and macOS compatibility players link source builds of MobileVLCKit and
+VLCKit 3.7.3 from VideoLAN. The tvOS player links VLCKit 4.0.0-a23 with an exact
+pinned VLC 4 source revision. Prismedia's bootstrap applies the published
+patches under `Scripts/Patches` to retain FFmpeg's MLP/TrueHD decoder and, on
+tvOS, preserve and reshape Dolby Vision Profile 5 RPU metadata. This lets the
+compatibility player decode supported original tracks locally while keeping
 the source video on the direct-play path.
 
 VLCKit is

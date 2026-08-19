@@ -1,0 +1,507 @@
+diff --git a/modules/codec/videotoolbox/decoder.c b/modules/codec/videotoolbox/decoder.c
+index d09ada7a..1f69995c 100644
+--- a/modules/codec/videotoolbox/decoder.c
++++ b/modules/codec/videotoolbox/decoder.c
+@@ -46,6 +46,8 @@
+ #import <CoreFoundation/CoreFoundation.h>
+ #import <TargetConditionals.h>
+
++#import <libavutil/dovi_meta.h>
++
+ #import <sys/types.h>
+ #import <sys/sysctl.h>
+ #import <mach/machine.h>
+@@ -53,6 +55,29 @@
+ #define VT_ALIGNMENT 16
+ #define VT_RESTART_MAX 1
+
++/* FFmpeg's RPU parser is intentionally internal, but VLC already ships and
++ * pins the same libavcodec build. Keep the private context layout local to
++ * this decoder so VideoToolbox can preserve Dolby Vision metadata while the
++ * pixels themselves remain hardware decoded. */
++typedef struct DOVIContext
++{
++    void *logctx;
++    int enable;
++    AVDOVIDecoderConfigurationRecord cfg;
++    AVDOVIRpuDataHeader header;
++    const AVDOVIDataMapping *mapping;
++    const AVDOVIColorMetadata *color;
++    void *ext_blocks;
++    AVDOVIColorMetadata *dm;
++    AVDOVIDataMapping *vdr[16];
++    uint8_t *rpu_buf;
++    unsigned rpu_buf_sz;
++} DOVIContext;
++
++int ff_dovi_rpu_parse(DOVIContext *, const uint8_t *, size_t, int);
++void ff_dovi_ctx_flush(DOVIContext *);
++void ff_dovi_ctx_unref(DOVIContext *);
++
+ #pragma mark - local prototypes
+
+ enum vtsession_status
+@@ -547,11 +572,17 @@ struct vt_hevc_context
+ {
+     struct hxxx_helper hh;
+     hevc_poc_ctx_t poc;
++    bool dovi_profile5;
++    bool dovi_parse_logged;
++    bool dovi_parse_warning_logged;
++    DOVIContext dovi;
+ };
+
+ static void CleanHEVC(void *p_codec_context)
+ {
+     struct vt_hevc_context *hevcctx = p_codec_context;
++    if (hevcctx->dovi_profile5)
++        ff_dovi_ctx_unref(&hevcctx->dovi);
+     hxxx_helper_clean(&hevcctx->hh);
+     free(hevcctx);
+ }
+@@ -559,9 +590,16 @@ static void CleanHEVC(void *p_codec_context)
+ static bool InitHEVC(decoder_t *p_dec)
+ {
+     decoder_sys_t *p_sys = p_dec->p_sys;
+-    struct vt_hevc_context *ctx = malloc(sizeof(*ctx));
++    struct vt_hevc_context *ctx = calloc(1, sizeof(*ctx));
+     if(!ctx)
+         return false;
++    ctx->dovi_profile5 = var_InheritBool(p_dec, "videotoolbox-dovi-profile5");
++    if (ctx->dovi_profile5)
++    {
++        ctx->dovi.cfg.dv_profile = 5;
++        ctx->dovi.cfg.rpu_present_flag = 1;
++        ctx->dovi.cfg.bl_present_flag = 1;
++    }
+     hevc_poc_cxt_init(&ctx->poc);
+     hxxx_helper_init(&ctx->hh, VLC_OBJECT(p_dec),
+                      p_dec->fmt_in->i_codec, 0, 4);
+@@ -620,11 +658,110 @@ static bool ParseHEVCSEI(const hxxx_sei_data_t *p_sei_data, void *priv)
+     return true;
+ }
+
++#define HEVC_NAL_DOVI_RPU 62
++
++static uint8_t *DoviRpuRbspCreate(const uint8_t *src, size_t src_size,
++                                  size_t *dst_size)
++{
++    uint8_t *dst = malloc(src_size);
++    if (!dst)
++        return NULL;
++
++    size_t out = 0;
++    unsigned zeroes = 0;
++    for (size_t i = 0; i < src_size; ++i)
++    {
++        if (zeroes >= 2 && src[i] == 0x03)
++        {
++            zeroes = 0;
++            continue;
++        }
++        dst[out++] = src[i];
++        zeroes = src[i] == 0 ? zeroes + 1 : 0;
++    }
++    *dst_size = out;
++    return dst;
++}
++
++static void MapDoviMetadata(vlc_video_dovi_metadata_t *out,
++                            const DOVIContext *dovi)
++{
++    const AVDOVIRpuDataHeader *hdr = &dovi->header;
++    const AVDOVIDataMapping *vdm = dovi->mapping;
++    const AVDOVIColorMetadata *color = dovi->color;
++
++    out->bl_bit_depth = hdr->bl_bit_depth;
++    out->el_bit_depth = hdr->el_bit_depth;
++    out->coef_log2_denom = hdr->coef_log2_denom;
++    out->nlq_method_idc = (enum vlc_dovi_nlq_method_t)vdm->nlq_method_idc;
++    for (size_t i = 0; i < ARRAY_SIZE(out->nonlinear_offset); ++i)
++        out->nonlinear_offset[i] = av_q2d(color->ycc_to_rgb_offset[i]);
++    for (size_t i = 0; i < ARRAY_SIZE(out->nonlinear_matrix); ++i)
++        out->nonlinear_matrix[i] = av_q2d(color->ycc_to_rgb_matrix[i]);
++    for (size_t i = 0; i < ARRAY_SIZE(out->linear_matrix); ++i)
++        out->linear_matrix[i] = av_q2d(color->rgb_to_lms_matrix[i]);
++    out->source_min_pq = color->source_min_pq;
++    out->source_max_pq = color->source_max_pq;
++
++    static_assert(sizeof(out->curves) == sizeof(vdm->curves), "struct mismatch");
++    static_assert(sizeof(out->nlq) == sizeof(vdm->nlq), "struct mismatch");
++    memcpy(out->curves, vdm->curves, sizeof(out->curves));
++    memcpy(out->nlq, vdm->nlq, sizeof(out->nlq));
++}
++
++static void ParseDoviMetadataHEVC(decoder_t *p_dec, const block_t *p_block,
++                                  frame_info_t *p_info)
++{
++    decoder_sys_t *p_sys = p_dec->p_sys;
++    struct vt_hevc_context *hevcctx = p_sys->p_codec_context;
++    if (!hevcctx->dovi_profile5)
++        return;
++
++    hxxx_iterator_ctx_t itctx;
++    hxxx_iterator_init(&itctx, p_block->p_buffer, p_block->i_buffer,
++                       hevcctx->hh.i_output_nal_length_size);
++
++    const uint8_t *p_nal;
++    size_t i_nal;
++    while (hxxx_iterate_next(&itctx, &p_nal, &i_nal))
++    {
++        if (i_nal <= 2 || hevc_getNALLayer(p_nal) > 0 ||
++            hevc_getNALType(p_nal) != HEVC_NAL_DOVI_RPU)
++            continue;
++
++        size_t rbsp_size;
++        uint8_t *rbsp = DoviRpuRbspCreate(p_nal + 2, i_nal - 2, &rbsp_size);
++        if (!rbsp)
++            return;
++
++        int ret = ff_dovi_rpu_parse(&hevcctx->dovi, rbsp, rbsp_size, 0);
++        free(rbsp);
++        if (ret < 0 || !hevcctx->dovi.mapping || !hevcctx->dovi.color)
++        {
++            if (!hevcctx->dovi_parse_warning_logged)
++            {
++                msg_Warn(p_dec, "failed to parse Dolby Vision Profile 5 RPU");
++                hevcctx->dovi_parse_warning_logged = true;
++            }
++            continue;
++        }
++
++        MapDoviMetadata(&p_info->dovi_metadata, &hevcctx->dovi);
++        p_info->has_dovi_metadata = true;
++        if (!hevcctx->dovi_parse_logged)
++        {
++            msg_Dbg(p_dec, "preserving Dolby Vision Profile 5 RPU on VideoToolbox frames");
++            hevcctx->dovi_parse_logged = true;
++        }
++    }
++}
++
+ static bool FillReorderInfoHEVC(decoder_t *p_dec, const block_t *p_block,
+                                 frame_info_t *p_info)
+ {
+     decoder_sys_t *p_sys = p_dec->p_sys;
+     struct vt_hevc_context *hevcctx = p_sys->p_codec_context;
++    ParseDoviMetadataHEVC(p_dec, p_block, p_info);
+     hxxx_iterator_ctx_t itctx;
+     hxxx_iterator_init(&itctx, p_block->p_buffer, p_block->i_buffer,
+                        hevcctx->hh.i_output_nal_length_size);
+@@ -782,6 +919,8 @@ static void CodecFlushHEVC(decoder_t *p_dec)
+     decoder_sys_t *p_sys = p_dec->p_sys;
+     struct vt_hevc_context *hevcctx = p_sys->p_codec_context;
+     hevc_poc_cxt_init(&hevcctx->poc);
++    if (hevcctx->dovi_profile5)
++        ff_dovi_ctx_flush(&hevcctx->dovi);
+ }
+
+ #define ConfigureVoutHEVC ConfigureVoutH264
+@@ -2180,6 +2319,14 @@ static void DecoderCallback(void *decompressionOutputRefCon,
+             p_pic->b_top_field_first = p_info->b_top_field_first;
+         }
+
++        if (p_info->has_dovi_metadata)
++        {
++            vlc_video_dovi_metadata_t *dst = picture_AttachNewAncillary(
++                p_pic, VLC_ANCILLARY_ID_DOVI, sizeof(*dst));
++            if (dst)
++                memcpy(dst, &p_info->dovi_metadata, sizeof(*dst));
++        }
++
+         if (cvpxpic_attach(p_pic, imageBuffer, p_sys->vctx,
+                            video_context_OnPicReleased) == VLC_SUCCESS)
+         {
+@@ -2230,6 +2377,9 @@ OpenDecDevice(vlc_decoder_device *device, vlc_window_t *window)
+ #define VT_FORCE_CVPX_CHROMA_LONG "Force the VideoToolbox decoder to output \
+     CVPixelBuffers in the specified pixel format instead of the default. \
+     By default, the best chroma is chosen by the VideoToolbox decoder."
++#define VT_DOVI_PROFILE5_TEXT N_("Preserve Dolby Vision Profile 5 metadata")
++#define VT_DOVI_PROFILE5_LONG N_("Parse Profile 5 RPUs and attach them to " \
++    "hardware-decoded VideoToolbox frames for renderer-side reshaping.")
+
+ static const char *const chroma_list_values[] =
+     {
+@@ -2258,6 +2408,7 @@ vlc_module_begin()
+     set_callbacks(OpenDecoder, CloseDecoder)
+
+     add_bool("videotoolbox-hw-decoder-only", true, VT_REQUIRE_HW_DEC, VT_REQUIRE_HW_DEC)
++    add_bool("videotoolbox-dovi-profile5", false, VT_DOVI_PROFILE5_TEXT, VT_DOVI_PROFILE5_LONG)
+     add_string("videotoolbox-cvpx-chroma", "", VT_FORCE_CVPX_CHROMA, VT_FORCE_CVPX_CHROMA_LONG)
+         change_string_list(chroma_list_values, chroma_list_names)
+
+diff --git a/modules/codec/videotoolbox/dpb.h b/modules/codec/videotoolbox/dpb.h
+index 4c3efb86..f08f8520 100644
+--- a/modules/codec/videotoolbox/dpb.h
++++ b/modules/codec/videotoolbox/dpb.h
+@@ -25,6 +25,7 @@
+ #include <vlc_common.h>
+ #include <vlc_tick.h>
+ #include <vlc_picture.h>
++#include <vlc_ancillary.h>
+
+ typedef struct frame_info_t frame_info_t;
+
+@@ -53,6 +54,8 @@ struct frame_info_t
+     uint8_t i_max_latency_pics;
+     uint8_t i_latency;
+     unsigned i_length;
++    bool has_dovi_metadata;
++    vlc_video_dovi_metadata_t dovi_metadata;
+     frame_info_t *p_next;
+ };
+
+diff --git a/modules/video_output/apple/VLCVideoUIView.m b/modules/video_output/apple/VLCVideoUIView.m
+index 8f5d1d08..f89071f7 100644
+--- a/modules/video_output/apple/VLCVideoUIView.m
++++ b/modules/video_output/apple/VLCVideoUIView.m
+@@ -272,9 +272,8 @@ - (void)detachFromParent
+
+ - (void)didAddSubview:(UIView*)subview
+ {
+-    assert(_enabled);
+     _subviews++;
+-    if (_subviews == 1)
++    if (_enabled && _subviews == 1)
+         [_viewContainer addSubview:self];
+
+     VLC_UNUSED(subview);
+@@ -303,9 +302,11 @@ - (void)enable
+     if (_enabled)
+         return;
+
+-    assert(_subviews == 0);
+     _enabled = YES;
+
++    if (_subviews > 0)
++        [_viewContainer addSubview:self];
++
+     /**
+      * Given -[UIView addGestureRecognizer:] can raise an exception if
+      * tapRecognizer is nil and given tapRecognizer can be nil if
+@@ -324,7 +325,6 @@ - (void)disable
+         return;
+
+     _enabled = NO;
+-    assert(_subviews == 0);
+     [self removeFromSuperview];
+
+     [_tapRecognizer.view removeGestureRecognizer:_tapRecognizer];
+diff --git a/modules/video_output/opengl/filters.c b/modules/video_output/opengl/filters.c
+index bdd7f34c..b0fbfc1a 100644
+--- a/modules/video_output/opengl/filters.c
++++ b/modules/video_output/opengl/filters.c
+@@ -255,6 +255,22 @@ vlc_gl_filters_CreateNewFilter(struct vlc_gl_filters *filters,
+         size_t size = glfmt->tex_count * sizeof(GLsizei);
+         memcpy(glfmt->tex_widths, prev_filter->plane_widths, size);
+         memcpy(glfmt->tex_heights, prev_filter->plane_heights, size);
++
++        if (prev_filter->filter.config.filter_planes)
++        {
++            size_t format_size = glfmt->tex_count * sizeof(*glfmt->formats);
++            memcpy(glfmt->formats, prev_filter->glfmt_in.formats, format_size);
++            glfmt->half_float = prev_filter->glfmt_in.half_float;
++        }
++        else
++        {
++            /* Non-plane filters always produce the RGBA textures allocated
++             * by InitPlane(). Keep the downstream sampler in sync with that
++             * output instead of leaving its GL format uninitialized. */
++            assert(glfmt->tex_count == 1);
++            glfmt->formats[0] = GL_RGBA;
++            glfmt->half_float = false;
++        }
+     }
+
+     /* By default, the output size is the same as the input size. The filter
+@@ -345,6 +361,19 @@ vlc_gl_filters_Append(struct vlc_gl_filters *filters, const char *name,
+         size_t size = glfmt->tex_count * sizeof(GLsizei);
+         memcpy(glfmt->tex_widths, prev_filter->plane_widths, size);
+         memcpy(glfmt->tex_heights, prev_filter->plane_heights, size);
++
++        if (prev_filter->filter.config.filter_planes)
++        {
++            size_t format_size = glfmt->tex_count * sizeof(*glfmt->formats);
++            memcpy(glfmt->formats, prev_filter->glfmt_in.formats, format_size);
++            glfmt->half_float = prev_filter->glfmt_in.half_float;
++        }
++        else
++        {
++            assert(glfmt->tex_count == 1);
++            glfmt->formats[0] = GL_RGBA;
++            glfmt->half_float = false;
++        }
+     }
+
+     /* By default, the output size is the same as the input size. The filter
+@@ -423,15 +452,27 @@ vlc_gl_filters_Replace(struct vlc_gl_filters *filters, struct vlc_gl_filter *old
+                        const char *name, const config_chain_t *config)
+ {
+     struct vlc_gl_filter_priv *old_priv = vlc_gl_filter_PRIV(old_filter);
+-    struct vlc_gl_filter *prev_filter = NULL;
+-    struct vlc_gl_filter_priv *priv_prev = vlc_gl_filter_PRIV(prev_filter);
++    struct vlc_gl_filter_priv *priv_prev =
++        vlc_list_prev_entry_or_null(&filters->list, old_priv,
++                                    struct vlc_gl_filter_priv, node);
++    bool has_out = !vlc_list_is_last(&old_priv->node, &filters->list);
+
+     struct vlc_gl_filter_priv *new_filter = vlc_gl_filters_CreateNewFilter(filters, priv_prev, name, config);
+     if (new_filter == NULL)
+         return NULL;
+
+     assert(!new_filter->filter.config.blend && !old_filter->config.blend);
+-    vlc_gl_filter_InitPlaneSizes(old_filter);
++
++    /* The filter chain may already own initialized framebuffers when a
++     * runtime projection/stereo change replaces its renderer. Initialize only
++     * the replacement; reinitializing the full chain asserts and, more
++     * importantly, loses the replacement's relationship to its predecessor. */
++    int ret = vlc_gl_filter_InitFramebuffers(&new_filter->filter, has_out);
++    if (ret != VLC_SUCCESS)
++    {
++        vlc_gl_filter_Delete(&new_filter->filter);
++        return NULL;
++    }
+
+     /* Move previous subfilter to the new filter */
+     struct vlc_gl_filter_priv *subfilter;
+diff --git a/modules/video_output/opengl/pl_scale.c b/modules/video_output/opengl/pl_scale.c
+index 1a90d13b..8a0f50d6 100644
+--- a/modules/video_output/opengl/pl_scale.c
++++ b/modules/video_output/opengl/pl_scale.c
+@@ -65,6 +65,7 @@ struct sys
+     struct pl_frame frame_in;
+     struct pl_frame frame_out;
+     struct pl_render_params render_params;
++    struct pl_color_map_params color_map_params;
+     struct pl_dovi_metadata dovi_metadata;
+
+     unsigned out_width;
+@@ -171,7 +172,17 @@ Draw(struct vlc_gl_filter *filter, const struct vlc_gl_picture *pic,
+         r->y1 = coords[3] * h;
+     }
+
+-    if (frame_in->repr.dovi && meta->dovi_rpu) {
++    if (meta->dovi_rpu) {
++        /* Some containers expose Dolby Vision only as per-frame RPU metadata.
++         * Initialize the representation lazily so Profile 5 still reaches the
++         * libplacebo reshaper when no track-level DOVI flags were advertised. */
++        if (!frame_in->repr.dovi) {
++            frame_in->color.primaries = PL_COLOR_PRIM_BT_2020;
++            frame_in->color.transfer = PL_COLOR_TRC_PQ;
++            frame_in->repr.sys = PL_COLOR_SYSTEM_DOLBYVISION;
++            frame_in->repr.dovi = &sys->dovi_metadata;
++        }
++
+         vlc_placebo_DoviMetadata(meta->dovi_rpu, &sys->dovi_metadata);
+         struct pl_hdr_metadata *hdr = &frame_in->color.hdr;
+         const float scale = 1.0f / ((1 << 12) - 1);
+@@ -247,6 +258,14 @@ Close(struct vlc_gl_filter *filter)
+ }
+
+ static vlc_gl_filter_open_fn Open;
++#if PL_API_VER >= 215
++static pl_voidfunc_t PlaceboGetProcAddr(void *opaque, const char *name)
++{
++    vlc_gl_t *gl = opaque;
++    return (pl_voidfunc_t) vlc_gl_GetProcAddress(gl, name);
++}
++#endif
++
+ static int
+ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
+      struct vlc_gl_sampler *sampler, struct vlc_gl_tex_size *size_out)
+@@ -290,6 +309,15 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
+     sys->pl_log = vlc_placebo_CreateLog(VLC_OBJECT(filter));
+
+     struct pl_opengl_params opengl_params = {
++        /* The VLC context is already current while this filter is open. */
++        .make_current = NULL,
++        .release_current = NULL,
++#if PL_API_VER >= 215
++        /* Apple platforms do not expose a globally loadable OpenGL ES entry
++         * point table. Resolve functions from VLC's active EAGL context. */
++        .get_proc_addr_ex = PlaceboGetProcAddr,
++        .proc_ctx = filter->gl,
++#endif
+         .debug = true,
+     };
+     sys->pl_opengl = pl_opengl_create(sys->pl_log, &opengl_params);
+@@ -341,6 +369,26 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
+
+     sys->render_params = pl_render_default_params;
+
++    if (var_InheritBool(filter, "gl-dovi-profile5")) {
++        /* tvOS exposes the active Metal-backed EAGL context as GLES 2.0. Its
++         * GLSL 100 implementation cannot represent libplacebo's default
++         * 1024-entry tone-mapping LUT, which makes pl_render_image() reject
++         * every reshaped frame. Profile 5 already carries scene-specific RPU
++         * reshape metadata, so keep that reshape and use libplacebo's direct
++         * clip shader for the final HDR-to-display mapping. This branch is
++         * enabled only by Prismedia's dedicated Profile 5 playback option. */
++        sys->color_map_params = pl_color_map_default_params;
++        sys->color_map_params.tone_mapping_function = &pl_tone_map_clip;
++        sys->color_map_params.force_tone_mapping_lut = false;
++        sys->render_params.color_map_params = &sys->color_map_params;
++
++        /* The default blue-noise dither is a second 64x64 LUT. It has the
++         * same unsupported representation on tvOS's GLSL 100 context. Leave
++         * dithering disabled for this dedicated path; the 10-bit source is
++         * still reshaped before the framebuffer conversion. */
++        sys->render_params.dither_params = NULL;
++    }
++
+     int upscaler_idx = libplacebo_scale_map[upscaler];
+     sys->render_params.upscaler = scale_config[upscaler_idx];
+
+diff --git a/modules/video_output/opengl/vout_helper.c b/modules/video_output/opengl/vout_helper.c
+index df833951..65128c0b 100644
+--- a/modules/video_output/opengl/vout_helper.c
++++ b/modules/video_output/opengl/vout_helper.c
+@@ -119,7 +119,9 @@ CreateFilters(vlc_gl_t *gl, const struct vlc_gl_api *api,
+
+     int upscaler = var_InheritInteger(gl, "gl-upscaler");
+     int downscaler = var_InheritInteger(gl, "gl-downscaler");
+-    int has_dovi = fmt_in->dovi.rpu_present && !fmt_in->dovi.el_present; /* can't handle EL yet */
++    bool force_dovi_profile5 = var_InheritBool(gl, "gl-dovi-profile5");
++    bool has_dovi = force_dovi_profile5
++                 || (fmt_in->dovi.rpu_present && !fmt_in->dovi.el_present); /* can't handle EL yet */
+
+     if (upscaler || downscaler || has_dovi)
+     {
+@@ -224,12 +226,9 @@ static int RestartRenderer(vout_display_opengl_t *vgl,
+         return VLC_EGENERIC;
+     }
+
+-    int ret = vlc_gl_filters_InitFramebuffers(vgl->filters);
+-    if (ret != VLC_SUCCESS)
+-    {
+-        msg_Err(vgl->gl, "Could not init filters framebuffers");
+-        return VLC_EGENERIC;
+-    }
++    /* The replacement renderer remains the last filter and renders directly
++     * to the display framebuffer. Reinitializing the whole chain here would
++     * allocate the already initialized scaler framebuffers a second time. */
+
+     vgl->renderer_filter = new_renderer;
+     vgl->renderer = new_renderer->sys;
+diff --git a/modules/video_output/opengl/vout_helper.h b/modules/video_output/opengl/vout_helper.h
+index 906ab932..5fb5d83b 100644
+--- a/modules/video_output/opengl/vout_helper.h
++++ b/modules/video_output/opengl/vout_helper.h
+@@ -40,9 +40,15 @@
+ #define GLSAMPLER_LONGTEXT N_( \
+     "Force an \"opengl sampler\" module.")
+
++#define GL_DOVI_PROFILE5_TEXT N_("Dolby Vision Profile 5 reshape")
++#define GL_DOVI_PROFILE5_LONGTEXT N_( \
++    "Apply Dolby Vision Profile 5 RPU reshaping even when the container does " \
++    "not advertise Dolby Vision at track level.")
++
+ #define add_glopts() \
+     add_module("glinterop", "glinterop", "any", GLINTEROP_TEXT, GLINTEROP_LONGTEXT) \
+     add_module("gl-sampler", "opengl sampler", "any", GLSAMPLER_TEXT, GLSAMPLER_LONGTEXT) \
++    add_bool("gl-dovi-profile5", false, GL_DOVI_PROFILE5_TEXT, GL_DOVI_PROFILE5_LONGTEXT) \
+     add_glscale_opts()
+
+ typedef struct vout_display_opengl_t vout_display_opengl_t;

@@ -1,13 +1,14 @@
 # Custom VLCKit builds
 
-Prismedia maintains a narrow downstream build of
-[VideoLAN VLCKit](https://code.videolan.org/videolan/VLCKit) 3.7.3. The source
-patch, reproducible build script, release workflow, binary verification, and
-published checksums all live in this repository.
+Prismedia maintains narrow downstream builds of
+[VideoLAN VLCKit](https://code.videolan.org/videolan/VLCKit). iOS and macOS use
+VLCKit 3.7.3. tvOS uses VLCKit 4.0.0-a23 with VLC pinned to commit
+`2cd8705589d3b125f236d1af695c3961fdcf6ca4`. The source patches, reproducible
+build script, release workflow, and binary verification live in this
+repository.
 
-The goal is not to fork VLCKit as a product. It is to make two compatibility
-changes transparent and reproducible while they are needed by Prismedia and
-other Apple-platform media clients.
+The goal is not to fork VLCKit as a product. It is to make the compatibility
+changes below transparent and reproducible while Prismedia needs them.
 
 ## Why this build exists
 
@@ -32,6 +33,30 @@ The patch sets `ac_cv_func_pipe2=no`, forcing VLC's existing `pipe()` fallback.
 The bootstrap script rejects any produced framework that still has `_pipe2` as
 an undefined symbol.
 
+### Dolby Vision Profile 5 direct play on tvOS
+
+Dolby Vision Profile 5 stores a Dolby-specific base layer. It is not an SDR or
+HDR10-compatible picture by itself, so presenting only the decoded HEVC planes
+produces the characteristic purple or green image even when the file is valid.
+
+The tvOS patch keeps VideoToolbox hardware decoding active, parses each frame's
+Dolby Vision RPU, attaches that metadata to the hardware picture, and routes it
+through VLC's existing libplacebo reshape filter. Apple TV's GLES texture bridge
+cannot expose VLC's P010 surface in the form this path expects, so the dedicated
+Profile 5 route requests full-range NV12 output before the RPU reshape. The
+profile-specific VLC options are off by default and Prismedia enables them only
+when probe metadata identifies Dolby Vision Profile 5.
+
+The patch also fixes two VLC 4 tvOS integration defects exercised by this path:
+the video view can receive its first renderer subview before its asynchronous
+enable callback, and an OpenGL filter replacement could initialize the wrong
+framebuffer relationship. Both fixes preserve VLC's existing behavior while
+removing the assertion and duplicated or inverted renderer output.
+
+The result is still direct play: the server sends the original media bytes and
+does not perform a video transcode. The Apple TV performs HEVC decoding and RPU
+reshaping locally.
+
 ### Deployment targets
 
 The downstream build sets these explicit framework minimums:
@@ -48,16 +73,17 @@ VLCKit's public API.
 
 ## Published artifacts
 
-Every immutable release contains:
+A complete release produced by the current workflow contains:
 
 | Asset | Architectures and environments |
 | --- | --- |
 | `MobileVLCKit.xcframework.zip` | iOS arm64 device; arm64/x86_64 Simulator |
 | `VLCKit.xcframework.zip` | macOS arm64/x86_64 |
-| `TVVLCKit.xcframework.zip` | tvOS arm64 device; arm64/x86_64 Simulator |
+| `VLCKitTV.xcframework.zip` | tvOS arm64 device; arm64/x86_64 Simulator |
 
 Each archive has a neighboring `.sha256` file. GitHub also records the archive
-digest in the release asset metadata.
+digest in the release asset metadata. Consumers pin an immutable release and
+its hashes; the repository does not silently retarget an existing release.
 
 Download and verify an artifact before unpacking it:
 
@@ -97,10 +123,14 @@ PRISMEDIA_VLCKIT_PLATFORM=tvos Scripts/bootstrap-vlckit.sh
 
 The script performs the following steps:
 
-1. Clone the upstream VLCKit 3.7.3 tag into a temporary directory.
-2. Apply `Scripts/Patches/TVVLCKit-EnableTrueHD.patch`.
-3. Run the upstream build for the requested platform.
-4. Verify the required MLP/TrueHD symbols and deployment-safe pipe fallback.
+1. Clone VLCKit 3.7.3 for iOS/macOS, or VLCKit 4.0.0-a23 and the pinned VLC 4
+   commit for tvOS.
+2. Apply `TVVLCKit-EnableTrueHD.patch` to the 3.7.3 wrapper, or VLCKit 4's
+   pinned VLC compatibility series followed by
+   `VLCKit4-tvOS-DolbyVisionProfile5.patch` to the pinned VLC 4 source.
+3. Run the matching upstream build for the requested platform.
+4. Verify MLP/TrueHD, the deployment-safe pipe fallback, and the two Profile 5
+   options in the tvOS binary.
 5. Install the accepted XCFramework under `Carthage/Build`.
 6. Remove the temporary source checkout.
 

@@ -28,15 +28,17 @@ See [Docs/Architecture.md](Docs/Architecture.md) for the dependency rules, featu
 
 ## Custom VLCKit builds
 
-Prismedia publishes reproducible, checksum-pinned VLCKit 3.7.3 XCFrameworks for
-iOS, macOS, and tvOS. These are intentionally public because the two downstream
-fixes are useful to any Apple-platform client with the same requirements:
+Prismedia maintains reproducible, checksum-pinned VLCKit XCFrameworks. iOS and
+macOS use VLCKit 3.7.3; tvOS uses VLCKit 4.0.0-a23 with an exact pinned VLC 4
+source revision. The downstream changes are intentionally auditable:
 
 - restore FFmpeg's MLP demuxer, parser, and decoder so Dolby TrueHD/MLP audio is
   available;
 - force VLC's `pipe()` fallback instead of importing `pipe2()`, which newer SDKs
   declare even though the symbol is unavailable on older supported tvOS
-  releases.
+  releases;
+- preserve and apply Dolby Vision Profile 5 RPU metadata while retaining
+  VideoToolbox hardware decoding on Apple TV.
 
 The patch also gives the frameworks explicit minimums of iOS/tvOS 15 and macOS
 12. It does not otherwise change VLCKit's public API.
@@ -45,19 +47,19 @@ The patch also gives the frameworks explicit minimums of iOS/tvOS 15 and macOS
 | --- | --- |
 | `MobileVLCKit.xcframework.zip` | iOS device and Simulator slices |
 | `VLCKit.xcframework.zip` | Universal Apple-silicon and Intel macOS framework |
-| `TVVLCKit.xcframework.zip` | tvOS device and Simulator slices |
+| `VLCKitTV.xcframework.zip` | tvOS device and Simulator slices |
 
-The [latest custom VLCKit release](https://github.com/pauljoda/Prismedia-SwiftUI/releases/latest)
-contains each archive and its SHA-256 file. The release workflow requires Xcode
-26, checks the compiled SDK with `vtool`, and refuses to publish unless the
-expected TrueHD/MLP symbols are present and `pipe2()` is not an undefined
+The [custom VLCKit releases](https://github.com/pauljoda/Prismedia-SwiftUI/releases)
+pair every archive with a SHA-256 file. The release workflow requires Xcode 26,
+checks the compiled SDK with `vtool`, and refuses to publish unless the expected
+TrueHD/MLP and Profile 5 support is present and `pipe2()` is not an undefined
 import. Release tags are immutable.
 
 To reproduce the frameworks locally, run `Scripts/bootstrap-vlckit.sh`. Set
 `PRISMEDIA_VLCKIT_PLATFORM` to `ios`, `macos`, or `tvos` to build one platform;
-omit it to build all three. The script clones the upstream 3.7.3 tag, applies
-the narrow patch in `Scripts/Patches`, validates the binaries, and installs them
-under the ignored `Carthage/Build` directory.
+omit it to build all three. The script clones the pinned upstream sources,
+applies the narrow patch in `Scripts/Patches`, validates the binaries, and
+installs them under the ignored `Carthage/Build` directory.
 
 See [Docs/CustomVLCKit.md](Docs/CustomVLCKit.md) for download examples, exact
 verification behavior, supported slices, and licensing details. These are

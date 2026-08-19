@@ -43,7 +43,8 @@
                     url: URL(fileURLWithPath: "/dev/null"),
                     resumeTime: 0,
                     playbackRate: 1,
-                    audioStreams: []
+                    audioStreams: [],
+                    dolbyVisionProfile: nil
                 ),
                 controller: VideoPlaybackController(
                     videoID: UUID(uuidString: "A57450E8-AC6C-4930-9C1E-B3995675D702")!,

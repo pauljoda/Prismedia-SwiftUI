@@ -69,7 +69,8 @@
                     url: URL(fileURLWithPath: "/dev/null"),
                     resumeTime: 42,
                     playbackRate: 1,
-                    audioStreams: []
+                    audioStreams: [],
+                    dolbyVisionProfile: nil
                 )
             )
             .aspectRatio(16.0 / 9.0, contentMode: .fit)

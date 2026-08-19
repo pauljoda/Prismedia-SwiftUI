@@ -1,0 +1,2 @@
+// VLCKit 4's build helper does not pass TVOS_DEPLOYMENT_TARGET to xcodebuild.
+TVOS_DEPLOYMENT_TARGET = 15.0

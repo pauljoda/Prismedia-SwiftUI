@@ -589,6 +589,7 @@ public struct PrismediaAPIClient: Sendable {
             audioStreamIndex == nil,
             preferredEngine == .automatic,
             delivery == .direct,
+            sourceVideo?.dolbyVisionProfile != 5,
             let nativeAudioStreamIndex = VideoNativeAudioStreamPolicy.preferredStreamIndex(
                 container: source.container,
                 streams: sourceAudioStreams

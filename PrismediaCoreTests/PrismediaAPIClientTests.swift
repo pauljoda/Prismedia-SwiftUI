@@ -1076,6 +1076,47 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(plan.audioStreams.first(where: \.isSelected)?.index, 3)
     }
 
+    func testDolbyVisionProfileFiveMatroskaStaysOnOriginalDirectStream() async throws {
+        let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                """
+                {
+                  "sessionId":"direct-session",
+                  "source":{
+                    "id":"source-1","container":"mkv","durationSeconds":90,
+                    "method":"direct","url":"/api/playback/videos/\(videoID)/stream",
+                    "supportsTranscoding":true,
+                    "streams":[
+                      {
+                        "index":0,"type":"Video","codec":"hevc","bitDepth":10,
+                        "videoRangeType":"DOVI","dvProfile":5,"isDefault":true
+                      },
+                      {
+                        "index":1,"type":"Audio","codec":"truehd","channels":8,
+                        "language":"eng","isDefault":true
+                      },
+                      {
+                        "index":2,"type":"Audio","codec":"ac3","channels":6,
+                        "language":"eng","isDefault":false
+                      }
+                    ],
+                    "transcoding":null
+                  }
+                }
+                """)
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let plan = try await client.negotiateVideoPlayback(videoID: videoID)
+
+        XCTAssertEqual(loader.requests.count, 1)
+        XCTAssertEqual(plan.delivery, .direct)
+        XCTAssertEqual(plan.displayMetadata?.dolbyVisionProfile, 5)
+        XCTAssertEqual(plan.diagnostics?.outputVideoCodec, "hevc")
+        XCTAssertEqual(plan.diagnostics?.outputAudioCodec, "truehd")
+    }
+
     func testSelectingAudioStreamIsSentToNegotiationAndDirectStreamURL() async throws {
         let videoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let loader = MockHTTPDataLoader(responses: [

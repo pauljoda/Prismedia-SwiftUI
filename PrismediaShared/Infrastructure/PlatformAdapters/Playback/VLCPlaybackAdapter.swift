@@ -1,6 +1,8 @@
 #if canImport(TVVLCKit) || canImport(MobileVLCKit) || canImport(VLCKit)
     import Foundation
-    #if canImport(TVVLCKit)
+    #if os(tvOS) && canImport(VLCKit)
+        @preconcurrency import VLCKit
+    #elseif canImport(TVVLCKit)
         @preconcurrency import TVVLCKit
     #elseif canImport(MobileVLCKit)
         @preconcurrency import MobileVLCKit
@@ -16,6 +18,8 @@
         private var openingState = VideoCompatibilityPlaybackOpeningState()
         private var stateFilter = VideoCompatibilityPlaybackStateFilter()
         private var audioSelectionState = VideoCompatibilityAudioSelectionState()
+        private var stopWasRequested = false
+        private var profile5BufferingIsActive = false
 
         init(controller: VideoPlaybackController) {
             self.controller = controller
@@ -29,21 +33,54 @@
                 initialStreamIndex: request.audioStreams.first(where: \.isSelected)?.index
             )
 
-            let media = VLCMedia(url: request.url)
+            #if os(tvOS) && canImport(VLCKit)
+                guard let media = VLCMedia(url: request.url) else {
+                    controller?.compatibilityPlaybackDidFail(
+                        "The compatibility player could not open this video."
+                    )
+                    return
+                }
+            #else
+                let media = VLCMedia(url: request.url)
+            #endif
             media.addOption(":no-spu")
             media.addOption(":network-caching=20000")
             #if !targetEnvironment(simulator)
-                // Prefer VLC's native Apple decoder, then keep VideoToolbox active
-                // if the avcodec path is selected for the source codec. Simulators
-                // need VLC's software fallback because they have no device decoder.
-                media.addOption(":codec=videotoolbox,any")
-                media.addOption(":videotoolbox-hw-decoder-only=1")
-                media.addOption(":avcodec-hw=videotoolbox")
+                // Prefer VLC's native Apple decoder. Simulators need VLC's
+                // software fallback because they have no device decoder.
+                #if os(tvOS) && canImport(VLCKit)
+                    if request.dolbyVisionProfile == 5 {
+                        // Profile 5 has no HDR10-compatible base layer. Route its
+                        // RPU metadata from VideoToolbox into libplacebo so VLC can
+                        // reshape hardware-decoded frames before display.
+                        media.addOption(":codec=videotoolbox,any")
+                        media.addOption(":videotoolbox-hw-decoder-only=1")
+                        media.addOption(":videotoolbox-dovi-profile5")
+                        // Apple TV's GLES texture cache cannot expose x420
+                        // (10-bit bi-planar) as normalized 16-bit textures.
+                        // Ask VideoToolbox for the Profile 5 full-range NV12
+                        // presentation surface while retaining hardware HEVC.
+                        media.addOption(":videotoolbox-cvpx-chroma=420f")
+                    } else {
+                        media.addOption(":codec=videotoolbox,any")
+                        media.addOption(":videotoolbox-hw-decoder-only=1")
+                    }
+                #else
+                    media.addOption(":codec=videotoolbox,any")
+                    media.addOption(":videotoolbox-hw-decoder-only=1")
+                    media.addOption(":avcodec-hw=videotoolbox")
+                #endif
             #endif
             if request.resumeTime > 0 {
                 media.addOption(":start-time=\(request.resumeTime)")
             }
-            let player = VLCMediaPlayer()
+            #if os(tvOS) && canImport(VLCKit)
+                let player = request.dolbyVisionProfile == 5
+                    ? VLCMediaPlayer(options: ["--vout=gles2", "--gl-dovi-profile5"])
+                    : VLCMediaPlayer()
+            #else
+                let player = VLCMediaPlayer()
+            #endif
             player.drawable = drawable
             player.delegate = self
             player.media = media
@@ -55,6 +92,8 @@
                 player.audio?.passthrough = false
             #endif
             mediaPlayer = player
+            stopWasRequested = false
+            profile5BufferingIsActive = false
 
             controller?.attachCompatibilityPlayback(commands(for: player))
             controller?.videoSurfaceDidAttach(isReadyForDisplay: false)
@@ -89,47 +128,134 @@
             request = nil
         }
 
-        func mediaPlayerStateChanged(_ notification: Notification) {
-            guard let player = mediaPlayer else { return }
-            disableNativeSubtitleRendering(on: player)
-            switch player.state {
-            case .playing:
-                player.rate = request?.playbackRate ?? 1
-                applyInitialAudioSelection(to: player)
-                controller?.videoSurfaceReadinessChanged(true)
-                if openingState.shouldPauseAfterOpening() {
-                    player.pause()
-                    publishState(isPlaying: false, isWaiting: false)
-                    return
+        #if os(tvOS) && canImport(VLCKit)
+            nonisolated func mediaPlayerStateChanged(_ state: VLCMediaPlayerState) {
+                Task { @MainActor [weak self] in
+                    self?.handleMediaPlayerStateChanged(state)
                 }
-                publishState(isPlaying: true, isWaiting: false)
-            case .opening, .buffering, .esAdded:
-                publishState(isPlaying: false, isWaiting: true)
-            case .paused:
-                publishState(isPlaying: false, isWaiting: false)
-            case .ended:
-                publishState(isPlaying: false, isWaiting: false)
-                controller?.compatibilityPlaybackDidFinish()
-            case .error:
-                controller?.compatibilityPlaybackDidFail(
-                    "The compatibility player could not decode this video."
-                )
-            case .stopped:
-                publishState(isPlaying: false, isWaiting: false)
-            @unknown default:
-                publishState(isPlaying: false, isWaiting: false)
             }
-        }
 
-        func mediaPlayerTimeChanged(_ notification: Notification) {
-            guard let player = mediaPlayer else { return }
-            publishState(isPlaying: player.isPlaying, isWaiting: false)
-        }
+            private func handleMediaPlayerStateChanged(_ state: VLCMediaPlayerState) {
+                guard let player = mediaPlayer else { return }
+                disableNativeSubtitleRendering(on: player)
+                switch state {
+                case .playing:
+                    player.rate = request?.playbackRate ?? 1
+                    applyInitialAudioSelection(to: player)
+                    controller?.videoSurfaceReadinessChanged(true)
+                    if openingState.shouldPauseAfterOpening() {
+                        player.pause()
+                        publishState(isPlaying: false, isWaiting: false)
+                        return
+                    }
+                    publishState(
+                        isPlaying: true,
+                        isWaiting: request?.dolbyVisionProfile == 5
+                            && profile5BufferingIsActive
+                    )
+                case .opening:
+                    if request?.dolbyVisionProfile == 5 {
+                        profile5BufferingIsActive = true
+                    }
+                    publishState(isPlaying: false, isWaiting: true)
+                case .paused:
+                    profile5BufferingIsActive = false
+                    publishState(isPlaying: false, isWaiting: false)
+                case .stopped:
+                    profile5BufferingIsActive = false
+                    publishState(isPlaying: false, isWaiting: false)
+                    if !stopWasRequested {
+                        controller?.compatibilityPlaybackDidFinish()
+                    }
+                case .error:
+                    profile5BufferingIsActive = false
+                    controller?.compatibilityPlaybackDidFail(
+                        "The compatibility player could not decode this video."
+                    )
+                case .stopping, .nothingSpecial:
+                    profile5BufferingIsActive = false
+                    publishState(isPlaying: false, isWaiting: false)
+                @unknown default:
+                    profile5BufferingIsActive = false
+                    publishState(isPlaying: false, isWaiting: false)
+                }
+            }
+
+            nonisolated func mediaPlayerBufferingChanged(_ progress: Float) {
+                Task { @MainActor [weak self] in
+                    self?.handleMediaPlayerBufferingChanged(progress)
+                }
+            }
+
+            private func handleMediaPlayerBufferingChanged(_ progress: Float) {
+                guard let player = mediaPlayer else { return }
+                let completionThreshold: Float = request?.dolbyVisionProfile == 5 ? 0.99 : 1
+                let isWaiting = VideoCompatibilityPlaybackStateFilter.isWaiting(
+                    progress: progress,
+                    completionThreshold: completionThreshold
+                )
+                if request?.dolbyVisionProfile == 5 {
+                    profile5BufferingIsActive = isWaiting
+                }
+                publishState(isPlaying: player.isPlaying, isWaiting: isWaiting)
+            }
+        #else
+            func mediaPlayerStateChanged(_ notification: Notification) {
+                guard let player = mediaPlayer else { return }
+                disableNativeSubtitleRendering(on: player)
+                switch player.state {
+                case .playing:
+                    player.rate = request?.playbackRate ?? 1
+                    applyInitialAudioSelection(to: player)
+                    controller?.videoSurfaceReadinessChanged(true)
+                    if openingState.shouldPauseAfterOpening() {
+                        player.pause()
+                        publishState(isPlaying: false, isWaiting: false)
+                        return
+                    }
+                    publishState(isPlaying: true, isWaiting: false)
+                case .opening, .buffering, .esAdded:
+                    publishState(isPlaying: false, isWaiting: true)
+                case .paused:
+                    publishState(isPlaying: false, isWaiting: false)
+                case .ended:
+                    publishState(isPlaying: false, isWaiting: false)
+                    controller?.compatibilityPlaybackDidFinish()
+                case .error:
+                    controller?.compatibilityPlaybackDidFail(
+                        "The compatibility player could not decode this video."
+                    )
+                case .stopped:
+                    publishState(isPlaying: false, isWaiting: false)
+                @unknown default:
+                    publishState(isPlaying: false, isWaiting: false)
+                }
+            }
+        #endif
+
+        #if os(tvOS) && canImport(VLCKit)
+            nonisolated func mediaPlayerTimeChanged(_ notification: Notification) {
+                Task { @MainActor [weak self] in
+                    guard let self, let player = self.mediaPlayer else { return }
+                    self.publishState(
+                        isPlaying: player.isPlaying,
+                        isWaiting: self.request?.dolbyVisionProfile == 5
+                            && self.profile5BufferingIsActive
+                    )
+                }
+            }
+        #else
+            func mediaPlayerTimeChanged(_ notification: Notification) {
+                guard let player = mediaPlayer else { return }
+                publishState(isPlaying: player.isPlaying, isWaiting: false)
+            }
+        #endif
 
         private func commands(for player: VLCMediaPlayer) -> VideoCompatibilityPlaybackCommands {
             VideoCompatibilityPlaybackCommands(
                 play: { [weak self, weak player] rate in
                     self?.openingState.requestPlayback()
+                    self?.stopWasRequested = false
                     player?.rate = rate
                     player?.play()
                 },
@@ -139,7 +265,10 @@
                     stateFilter.beginSeek(to: seconds, at: ProcessInfo.processInfo.systemUptime)
                     player.time = VLCTime(int: Int32(seconds * 1_000))
                 },
-                stop: { [weak player] in player?.stop() },
+                stop: { [weak self, weak player] in
+                    self?.stopWasRequested = true
+                    player?.stop()
+                },
                 setRate: { [weak player] rate in player?.rate = rate },
                 selectAudioStream: { [weak self, weak player] streamIndex in
                     guard let self, let player else { return }
@@ -177,17 +306,28 @@
         }
 
         private func disableNativeSubtitleRendering(on player: VLCMediaPlayer) {
-            guard player.currentVideoSubTitleIndex != -1 else { return }
-            player.currentVideoSubTitleIndex = -1
+            #if os(tvOS) && canImport(VLCKit)
+                player.deselectAllTextTracks()
+            #else
+                guard player.currentVideoSubTitleIndex != -1 else { return }
+                player.currentVideoSubTitleIndex = -1
+            #endif
         }
 
         private func selectAudioStream(_ streamIndex: Int, on player: VLCMediaPlayer) {
             guard let request,
-                let position = request.audioStreams.firstIndex(where: { $0.index == streamIndex }),
-                let trackIndexes = player.audioTrackIndexes as? [NSNumber],
-                trackIndexes.indices.contains(position + 1)
+                let position = request.audioStreams.firstIndex(where: { $0.index == streamIndex })
             else { return }
-            player.currentAudioTrackIndex = trackIndexes[position + 1].int32Value
+            #if os(tvOS) && canImport(VLCKit)
+                guard player.audioTracks.indices.contains(position) else { return }
+                player.selectTrack(at: position, type: .audio)
+            #else
+                guard
+                    let trackIndexes = player.audioTrackIndexes as? [NSNumber],
+                    trackIndexes.indices.contains(position + 1)
+                else { return }
+                player.currentAudioTrackIndex = trackIndexes[position + 1].int32Value
+            #endif
         }
 
         private func tearDownPlayer() {
@@ -198,6 +338,8 @@
             openingState = VideoCompatibilityPlaybackOpeningState()
             stateFilter = VideoCompatibilityPlaybackStateFilter()
             audioSelectionState = VideoCompatibilityAudioSelectionState()
+            stopWasRequested = false
+            profile5BufferingIsActive = false
         }
     }
 #endif

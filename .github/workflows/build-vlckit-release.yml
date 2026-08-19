@@ -6,7 +6,7 @@ on:
       release_tag:
         description: Immutable release tag for the custom VLCKit build
         required: true
-        default: vlckit-3.7.3-prismedia.3
+        default: vlckit-4.0.0-a23-prismedia.1
 
 permissions:
   contents: write
@@ -15,6 +15,8 @@ jobs:
   prepare-release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -28,7 +30,7 @@ jobs:
           gh release create "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --draft \
-            --title "Prismedia VLCKit 3.7.3 (Xcode 26)" \
+            --title "Prismedia VLCKit Apple builds (Xcode 26)" \
             --notes-file Docs/CustomVLCKit.md
 
   build-frameworks:
@@ -46,8 +48,8 @@ jobs:
             framework: VLCKit
             binary: macos-arm64_x86_64/VLCKit.framework/Versions/A/VLCKit
           - platform: tvos
-            framework: TVVLCKit
-            binary: tvos-arm64/TVVLCKit.framework/TVVLCKit
+            framework: VLCKitTV
+            binary: tvos-arm64/VLCKit.framework/VLCKit
     steps:
       - uses: actions/checkout@v4
 

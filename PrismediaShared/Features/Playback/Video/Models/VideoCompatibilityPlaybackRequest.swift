@@ -5,4 +5,5 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
     let resumeTime: Double
     let playbackRate: Float
     let audioStreams: [VideoPlaybackStreamChoice]
+    let dolbyVisionProfile: Int?
 }

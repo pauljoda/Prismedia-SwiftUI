@@ -605,7 +605,8 @@ public final class VideoPlaybackController {
                 url: plan.url,
                 resumeTime: resumeAt,
                 playbackRate: playbackRate,
-                audioStreams: plan.audioStreams
+                audioStreams: plan.audioStreams,
+                dolbyVisionProfile: plan.displayMetadata?.dolbyVisionProfile
             )
             pendingInitialResumeSeconds = nil
             isReadyToPlay = true

@@ -3,6 +3,21 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoCompatibilityPlaybackStateFilterTests: XCTestCase {
+    func testProfileFiveBufferingCanFinishAtReportedNinetyNinePercent() {
+        XCTAssertTrue(
+            VideoCompatibilityPlaybackStateFilter.isWaiting(
+                progress: 0.98,
+                completionThreshold: 0.99
+            )
+        )
+        XCTAssertFalse(
+            VideoCompatibilityPlaybackStateFilter.isWaiting(
+                progress: 0.99,
+                completionThreshold: 0.99
+            )
+        )
+    }
+
     func testFrequentTimelineCallbacksAreCoalescedToTheUIRefreshInterval() {
         var filter = VideoCompatibilityPlaybackStateFilter()
         let initial = VideoCompatibilityPlaybackState(

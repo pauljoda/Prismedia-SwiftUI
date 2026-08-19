@@ -1,6 +1,10 @@
 import Foundation
 
 struct VideoCompatibilityPlaybackStateFilter {
+    static func isWaiting(progress: Float, completionThreshold: Float = 1) -> Bool {
+        progress < completionThreshold
+    }
+
     private static let timelineRefreshInterval = 0.5
     private static let seekProtectionDuration = 2.0
     private static let seekTargetTolerance = 1.0
