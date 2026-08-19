@@ -54,6 +54,29 @@ final class AudiobookPlaybackProjectionTests: XCTestCase {
         )
     }
 
+    func testSourceLessAggregateTrackIsNotIncludedInAudiobookPlayback() throws {
+        let aggregate = makePart(
+            idSuffix: 99,
+            title: "The Long Voyage",
+            duration: "47:32:34",
+            sortOrder: 0,
+            hasSourceMedia: false
+        )
+        let playable = makePart(
+            idSuffix: 1,
+            title: "Part One",
+            duration: "1:40",
+            sortOrder: 1
+        )
+
+        let projection = try XCTUnwrap(
+            AudiobookPlaybackProjection(detail: makeBook(parts: [aggregate, playable]))
+        )
+
+        XCTAssertEqual(projection.tracks.map(\.id), [playable.id])
+        XCTAssertEqual(projection.totalDuration, 100)
+    }
+
     private func makeBook(parts: [EntityThumbnail]) -> EntityDetail {
         EntityDetail(
             id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
@@ -74,14 +97,16 @@ final class AudiobookPlaybackProjectionTests: XCTestCase {
         idSuffix: Int,
         title: String,
         duration: String?,
-        sortOrder: Int
+        sortOrder: Int,
+        hasSourceMedia: Bool = true
     ) -> EntityThumbnail {
         EntityThumbnail(
             id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", idSuffix))!,
             kind: .audioTrack,
             title: title,
             sortOrder: sortOrder,
-            meta: duration.map { [EntityThumbnailMeta(icon: "duration", label: $0)] } ?? []
+            meta: duration.map { [EntityThumbnailMeta(icon: "duration", label: $0)] } ?? [],
+            hasSourceMedia: hasSourceMedia
         )
     }
 }

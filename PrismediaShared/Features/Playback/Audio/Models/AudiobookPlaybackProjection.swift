@@ -28,7 +28,7 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
         }
         let audioParts = detail.childrenByKind
             .flatMap(\.entities)
-            .filter { $0.kind == .audioTrack && !$0.isWanted }
+            .filter { $0.kind == .audioTrack && !$0.isWanted && $0.hasSourceMedia }
             .sorted { lhs, rhs in
                 (lhs.sortOrder ?? 0, lhs.title, lhs.id.uuidString)
                     < (rhs.sortOrder ?? 0, rhs.title, rhs.id.uuidString)
