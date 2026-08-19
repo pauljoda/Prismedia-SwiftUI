@@ -34,7 +34,41 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         XCTAssertEqual(rows.first?.audioTrack?.id, tracks.first?.id)
     }
 
-    func testUsesPositionOnlyWhenUnmatchedCountsAgree() {
+    func testMatchesDelimitedTrailingChapterNumbersWithoutUsingTrackOrder() {
+        let chapters = [
+            chapter(id: "one", title: "Chapter 1", order: 0),
+            chapter(id: "two", title: "Chapter 2", order: 1),
+        ]
+        let tracks = [
+            track(id: 2, title: "George R. R. Martin - SFI03 Storm of Swords - 2", order: 0),
+            track(id: 1, title: "George R. R. Martin - SFI03 Storm of Swords - 1", order: 1),
+        ]
+
+        let rows = BookChapterMappingBuilder().build(
+            readableChapters: chapters,
+            audioTracks: tracks
+        )
+
+        XCTAssertEqual(rows.map(\.audioTrack?.id), [tracks[1].id, tracks[0].id])
+    }
+
+    func testDoesNotMistakeBookNumberForChapterNumber() {
+        let chapters = [chapter(id: "three", title: "Chapter 3", order: 0)]
+        let tracks = [track(
+            id: 3,
+            title: "A Storm of Swords: A Song of Ice and Fire, Book 3",
+            order: 0
+        )]
+
+        let rows = BookChapterMappingBuilder().build(
+            readableChapters: chapters,
+            audioTracks: tracks
+        )
+
+        XCTAssertNil(rows.first?.audioTrack)
+    }
+
+    func testDoesNotInferChapterNumbersFromTrackOrder() {
         let chapters = [
             chapter(id: "a", title: "Prologue", order: 0),
             chapter(id: "b", title: "Epilogue", order: 1),
@@ -49,7 +83,8 @@ final class BookChapterMappingBuilderTests: XCTestCase {
             audioTracks: tracks
         )
 
-        XCTAssertEqual(rows.map(\.audioTrack?.id), tracks.map(\.id))
+        XCTAssertTrue(rows.prefix(2).allSatisfy { $0.audioTrack == nil })
+        XCTAssertEqual(rows.dropFirst(2).compactMap(\.audioTrack?.id), tracks.map(\.id))
     }
 
     func testLeavesAmbiguousReadableRowsUnmatchedAndAppendsExtraAudio() {

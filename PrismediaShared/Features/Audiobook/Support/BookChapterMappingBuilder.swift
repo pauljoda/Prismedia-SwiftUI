@@ -35,15 +35,6 @@ struct BookChapterMappingBuilder: Sendable {
             consumedTrackIndexes.insert(index)
         }
 
-        let unmatchedChapters = readable.filter { matches[$0.id] == nil }
-        let unmatchedTrackIndexes = tracks.indices.filter { !consumedTrackIndexes.contains($0) }
-        if !unmatchedChapters.isEmpty, unmatchedChapters.count == unmatchedTrackIndexes.count {
-            for (chapter, index) in zip(unmatchedChapters, unmatchedTrackIndexes) {
-                matches[chapter.id] = index
-                consumedTrackIndexes.insert(index)
-            }
-        }
-
         var rows = readable.map { chapter in
             let track = matches[chapter.id].map { tracks[$0] }
             return BookChapterMapping(
@@ -124,6 +115,7 @@ struct BookChapterMappingBuilder: Sendable {
         let patterns = [
             #"\b(?:chapter|ch\.?|track|part)\s*0*(\d+)\b"#,
             #"^\s*0*(\d+)\s*(?:[.\-–—:_]|\s)"#,
+            #"(?:^|\s)[.\-–—:_]\s*0*(\d+)\s*$"#,
         ]
         let range = NSRange(value.startIndex..<value.endIndex, in: value)
         for pattern in patterns {
