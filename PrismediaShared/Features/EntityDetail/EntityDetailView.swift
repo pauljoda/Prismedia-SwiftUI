@@ -31,6 +31,7 @@ public struct EntityDetailView: View {
     @State var areBookChaptersLoading = false
     @State var bookChaptersErrorMessage: String?
     @State var mappedBookChapters: [BookChapterMapping] = []
+    @State var bookChapterMappingState = BookChapterMappingState()
     @State var bookProgressLoadingState = BookProgressLoadingState()
     @State var videoProgressEpisode: EntityDetail?
     @State var liveVideoResumeSeconds: Double?
@@ -298,7 +299,8 @@ public struct EntityDetailView: View {
                 identifyActionSystemImage: identifyActionSystemImage,
                 acquisitionStatus: acquisitionStatus,
                 mediaDetail: resolvedVideoTechnicalDetail,
-                mediaThumbnail: link.sourceThumbnail
+                mediaThumbnail: link.sourceThumbnail,
+                supportsChapterMapping: supportsBookChapterMapping
             )
         }
     }

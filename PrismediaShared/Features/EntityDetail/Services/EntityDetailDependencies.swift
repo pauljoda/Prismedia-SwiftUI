@@ -12,6 +12,7 @@ public struct EntityDetailDependencies: Sendable {
     public let collectionItemsLoader: (any CollectionItemsLoading)?
     public let entityGridLoader: (any EntityGridLoading)?
     public let readerService: (any BookReaderServicing)?
+    public let chapterMappingService: (any BookChapterMappingServicing)?
     public let readerBookmarkStore: any EPUBBookmarkStoring
     public let readerLocatorStore: EPUBLocatorStore
     public let videoPlaybackService: (any VideoPlaybackServicing)?
@@ -48,7 +49,8 @@ public struct EntityDetailDependencies: Sendable {
         progressMutator: (any EntityProgressMutating)? = nil,
         readerBookmarkStore: any EPUBBookmarkStoring = EPUBBookmarkStore.disabled,
         readerLocatorStore: EPUBLocatorStore = .disabled,
-        identify: EntityIdentifyDependencies? = nil
+        identify: EntityIdentifyDependencies? = nil,
+        chapterMappingService: (any BookChapterMappingServicing)? = nil
     ) {
         self.detailLoader = detailLoader
         self.mutator = mutator
@@ -57,6 +59,7 @@ public struct EntityDetailDependencies: Sendable {
         self.collectionItemsLoader = collectionItemsLoader
         self.entityGridLoader = entityGridLoader
         self.readerService = readerService
+        self.chapterMappingService = chapterMappingService
         self.readerBookmarkStore = readerBookmarkStore
         self.readerLocatorStore = readerLocatorStore
         self.videoPlaybackService = videoPlaybackService

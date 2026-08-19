@@ -155,7 +155,14 @@ extension EntityDetailView {
                                                 dependencies: dependencies,
                                                 onAcquisitionMutated: refreshAfterAcquisitionMutation,
                                                 onEntityPruned: handlePrunedEntity,
-                                                onEnterReleaseDate: presentReleaseDateEditor
+                                                onEnterReleaseDate: presentReleaseDateEditor,
+                                                chapterMapping: bookChapterMappingEditorPresentation(for: detail),
+                                                onSaveChapterMappings: { mappings in
+                                                    try await saveBookChapterMappings(
+                                                        mappings,
+                                                        for: detail
+                                                    )
+                                                }
                                             ),
                                             actions: {
                                                 EntityDetailPlatformActionsView(
@@ -203,6 +210,7 @@ extension EntityDetailView {
                     await loadCollectionMembers(for: detail)
                     await loadAudiobook(for: detail)
                     await loadBookChapters(for: detail)
+                    await loadBookChapterMappings(for: detail)
                     #if os(iOS) || os(macOS)
                         if let currentDetail, currentDetail.id == detail.id {
                             await promoteLegacyAudiobookProgressIfNeeded(for: currentDetail)

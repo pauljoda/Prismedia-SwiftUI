@@ -5,7 +5,8 @@ extension EntityDetailView {
     func refreshBookChapterMappings(for detail: EntityDetail) {
         var chapters = BookChapterMappingBuilder().build(
             readableChapters: readableBookChapters,
-            audioTracks: audiobookProjection?.tracks ?? []
+            audioTracks: audiobookProjection?.tracks ?? [],
+            explicitMappings: bookChapterMappingState.mappings
         )
         let mappings = BookProgressMappingBuilder().build(
             bookID: detail.id,

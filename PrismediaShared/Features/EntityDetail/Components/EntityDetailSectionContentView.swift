@@ -42,9 +42,11 @@ struct EntityDetailSectionContentView<Actions: View>: View {
             acquisitionService: support.acquisitionService,
             requestActivityService: support.requestActivityService,
             transcriptSourceLoader: support.transcriptSourceLoader,
+            chapterMapping: support.chapterMapping,
             onAcquisitionMutated: support.onAcquisitionMutated,
             onEntityPruned: support.onEntityPruned,
-            onEnterReleaseDate: support.onEnterReleaseDate
+            onEnterReleaseDate: support.onEnterReleaseDate,
+            onSaveChapterMappings: support.onSaveChapterMappings
         )
     }
 }

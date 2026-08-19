@@ -45,7 +45,8 @@ extension EntityDetailView {
             canEditMetadata: dependencies.metadataMutator != nil,
             acquisitionStatus: acquisitionStatus,
             mediaDetail: resolvedVideoTechnicalDetail,
-            mediaThumbnail: link.sourceThumbnail
+            mediaThumbnail: link.sourceThumbnail,
+            supportsChapterMapping: supportsBookChapterMapping
         )
 
         return EntityDetailPlatformSurface(

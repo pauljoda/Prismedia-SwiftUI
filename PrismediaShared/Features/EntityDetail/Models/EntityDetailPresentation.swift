@@ -8,6 +8,7 @@ struct EntityDetailPresentation {
     let acquisitionStatus: AcquisitionStatus?
     let mediaDetail: EntityDetail?
     let mediaThumbnail: EntityThumbnail?
+    let supportsChapterMapping: Bool
 
     init(
         detail: EntityDetail,
@@ -16,7 +17,8 @@ struct EntityDetailPresentation {
         identifyActionSystemImage: String = "doc.viewfinder",
         acquisitionStatus: AcquisitionStatus? = nil,
         mediaDetail: EntityDetail? = nil,
-        mediaThumbnail: EntityThumbnail? = nil
+        mediaThumbnail: EntityThumbnail? = nil,
+        supportsChapterMapping: Bool = false
     ) {
         self.detail = detail
         self.canEditMetadata = canEditMetadata
@@ -25,6 +27,7 @@ struct EntityDetailPresentation {
         self.acquisitionStatus = acquisitionStatus
         self.mediaDetail = mediaDetail
         self.mediaThumbnail = mediaThumbnail
+        self.supportsChapterMapping = supportsChapterMapping
     }
 
     var sections: [EntityDetailSection] {
@@ -38,6 +41,9 @@ struct EntityDetailPresentation {
         var values = [section(.details, mainTitle, mainSystemImage)]
         if !metadata.isEmpty || hasMetadataCapability || canEditMetadata {
             values.append(section(.metadata, "Metadata", "info.circle"))
+        }
+        if supportsChapterMapping {
+            values.append(section(.chapterMapping, "Chapter Mapping", "list.number"))
         }
         if !markers.isEmpty {
             values.append(section(.markers, "Markers", "bookmark", count: markers.count))

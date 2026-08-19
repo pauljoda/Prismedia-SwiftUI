@@ -3,32 +3,33 @@ import Foundation
 struct BookChapterMappingBuilder: Sendable {
     func build(
         readableChapters: [ReadableBookChapter],
-        audioTracks: [MusicTrack]
+        audioTracks: [MusicTrack],
+        explicitMappings: [BookChapterAudioMapping] = []
     ) -> [BookChapterMapping] {
         let readable = readableChapters.sorted(by: readableChapterSort)
         let tracks = audioTracks.sorted(by: audioTrackSort)
         var consumedTrackIndexes = Set<Int>()
         var matches: [String: Int] = [:]
 
-        for chapter in readable {
+        let readableIDs = Set(readable.map(\.id))
+        let trackIndexByID = Dictionary(uniqueKeysWithValues: tracks.enumerated().map { ($1.id, $0) })
+        for mapping in explicitMappings {
+            guard readableIDs.contains(mapping.readableChapterKey),
+                matches[mapping.readableChapterKey] == nil,
+                let index = trackIndexByID[mapping.audioTrackID],
+                !consumedTrackIndexes.contains(index)
+            else { continue }
+            matches[mapping.readableChapterKey] = index
+            consumedTrackIndexes.insert(index)
+        }
+
+        for chapter in readable where matches[chapter.id] == nil {
             let key = matchKey(chapter.title)
             guard !key.isEmpty,
                 let index = firstAvailableTrackIndex(
                     in: tracks,
                     consumed: consumedTrackIndexes,
                     matching: { matchKey($0.title) == key }
-                )
-            else { continue }
-            matches[chapter.id] = index
-            consumedTrackIndexes.insert(index)
-        }
-
-        for chapter in readable where matches[chapter.id] == nil {
-            guard let number = chapterNumber(chapter.title),
-                let index = firstAvailableTrackIndex(
-                    in: tracks,
-                    consumed: consumedTrackIndexes,
-                    matching: { chapterNumber($0.title) == number }
                 )
             else { continue }
             matches[chapter.id] = index
@@ -72,6 +73,26 @@ struct BookChapterMappingBuilder: Sendable {
         return rows
     }
 
+    /// Creates the explicit one-to-one map produced by the “Mark first chapter” workflow.
+    func sequentialMappings(
+        readableChapters: [ReadableBookChapter],
+        audioTracks: [MusicTrack],
+        firstReadableChapterKey: String
+    ) -> [BookChapterAudioMapping] {
+        let readable = readableChapters.sorted(by: readableChapterSort)
+        let tracks = audioTracks.sorted(by: audioTrackSort)
+        guard let firstIndex = readable.firstIndex(where: { $0.id == firstReadableChapterKey }) else {
+            return []
+        }
+
+        return tracks.prefix(readable.count - firstIndex).enumerated().map { offset, track in
+            BookChapterAudioMapping(
+                readableChapterKey: readable[firstIndex + offset].id,
+                audioTrackID: track.id
+            )
+        }
+    }
+
     func matchKey(_ value: String) -> String {
         value
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
@@ -111,22 +132,4 @@ struct BookChapterMappingBuilder: Sendable {
         tracks.indices.first { !consumed.contains($0) && predicate(tracks[$0]) }
     }
 
-    private func chapterNumber(_ value: String) -> Int? {
-        let patterns = [
-            #"\b(?:chapter|ch\.?|track|part)\s*0*(\d+)\b"#,
-            #"^\s*0*(\d+)\s*(?:[.\-–—:_]|\s)"#,
-            #"(?:^|\s)[.\-–—:_]\s*0*(\d+)\s*$"#,
-        ]
-        let range = NSRange(value.startIndex..<value.endIndex, in: value)
-        for pattern in patterns {
-            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-                let match = regex.firstMatch(in: value, range: range),
-                let captureRange = Range(match.range(at: 1), in: value),
-                let number = Int(value[captureRange]),
-                number > 0
-            else { continue }
-            return number
-        }
-        return nil
-    }
 }

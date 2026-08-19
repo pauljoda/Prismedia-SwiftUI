@@ -11,9 +11,11 @@ struct EntityDetailSectionPanel: View {
     let acquisitionService: (any EntityAcquisitionServicing)?
     let requestActivityService: (any RequestActivityServicing)?
     let transcriptSourceLoader: (any EntityTranscriptSourceLoading)?
+    let chapterMapping: BookChapterMappingEditorPresentation?
     let onAcquisitionMutated: @MainActor () async -> Void
     let onEntityPruned: @MainActor () -> Void
     let onEnterReleaseDate: @MainActor @Sendable () -> Void
+    let onSaveChapterMappings: @MainActor ([BookChapterAudioMapping]) async throws -> [BookChapterAudioMapping]
 
     init(
         presentation: EntityDetailPresentation,
@@ -23,9 +25,12 @@ struct EntityDetailSectionPanel: View {
         acquisitionService: (any EntityAcquisitionServicing)? = nil,
         requestActivityService: (any RequestActivityServicing)? = nil,
         transcriptSourceLoader: (any EntityTranscriptSourceLoading)? = nil,
+        chapterMapping: BookChapterMappingEditorPresentation? = nil,
         onAcquisitionMutated: @escaping @MainActor () async -> Void = {},
         onEntityPruned: @escaping @MainActor () -> Void = {},
-        onEnterReleaseDate: @escaping @MainActor @Sendable () -> Void = {}
+        onEnterReleaseDate: @escaping @MainActor @Sendable () -> Void = {},
+        onSaveChapterMappings: @escaping @MainActor ([BookChapterAudioMapping]) async throws
+            -> [BookChapterAudioMapping] = { _ in [] }
     ) {
         self.presentation = presentation
         self.section = section
@@ -34,9 +39,11 @@ struct EntityDetailSectionPanel: View {
         self.acquisitionService = acquisitionService
         self.requestActivityService = requestActivityService
         self.transcriptSourceLoader = transcriptSourceLoader
+        self.chapterMapping = chapterMapping
         self.onAcquisitionMutated = onAcquisitionMutated
         self.onEntityPruned = onEntityPruned
         self.onEnterReleaseDate = onEnterReleaseDate
+        self.onSaveChapterMappings = onSaveChapterMappings
     }
 
     var body: some View {
@@ -46,6 +53,14 @@ struct EntityDetailSectionPanel: View {
                 detailsContent
             case .metadata:
                 EntityDetailMetadataView(items: presentation.metadata)
+            case .chapterMapping:
+                if let chapterMapping {
+                    BookChapterMappingEditor(
+                        presentation: chapterMapping,
+                        onSave: onSaveChapterMappings
+                    )
+                    .id("\(presentation.detail.id.uuidString):\(chapterMapping.revision)")
+                }
             case .markers:
                 markersContent
             case .transcript:

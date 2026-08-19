@@ -11,7 +11,7 @@ struct EntityDetailSectionSwitcher<MainContent: View>: View {
         switch selection {
         case .details:
             mainContent()
-        case .metadata, .markers, .transcript, .acquisition:
+        case .metadata, .chapterMapping, .markers, .transcript, .acquisition:
             #if os(tvOS)
                 sectionPanel
             #else
@@ -32,9 +32,11 @@ struct EntityDetailSectionSwitcher<MainContent: View>: View {
             acquisitionService: support.acquisitionService,
             requestActivityService: support.requestActivityService,
             transcriptSourceLoader: support.transcriptSourceLoader,
+            chapterMapping: support.chapterMapping,
             onAcquisitionMutated: support.onAcquisitionMutated,
             onEntityPruned: support.onEntityPruned,
-            onEnterReleaseDate: support.onEnterReleaseDate
+            onEnterReleaseDate: support.onEnterReleaseDate,
+            onSaveChapterMappings: support.onSaveChapterMappings
         )
     }
 }

@@ -57,7 +57,8 @@ enum PrismediaEntityDetailComposition {
                 client: client,
                 isAdministrator: isAdministrator,
                 onOpenProviders: onOpenIdentifyProviders
-            )
+            ),
+            chapterMappingService: client
         )
     }
 
