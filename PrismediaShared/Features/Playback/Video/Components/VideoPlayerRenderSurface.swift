@@ -6,7 +6,7 @@
 
         var body: some View {
             if let request = controller.compatibilityPlaybackRequest {
-                #if canImport(MobileVLCKit) || canImport(VLCKit)
+                #if canImport(VLCKit)
                     CompatibilityVideoSurface(
                         controller: controller,
                         request: request

@@ -1,4 +1,4 @@
-#if !os(tvOS) && (canImport(MobileVLCKit) || canImport(VLCKit))
+#if !os(tvOS) && canImport(VLCKit)
     import SwiftUI
 
     #if canImport(UIKit)

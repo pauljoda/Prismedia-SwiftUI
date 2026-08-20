@@ -109,7 +109,29 @@ ditto -x -k "$VLCKIT_ASSET" .
 ```
 
 Use the immutable tag you intend to consume rather than a moving `latest` URL
-in automation.
+in automation. Prismedia pins the release and all three archive hashes in
+`Scripts/vlckit-release-manifest.sh`.
+
+## Install a published build
+
+The shared Xcode schemes run the release installer for their platform before
+building, and Xcode Cloud delegates to the same installer from
+`ci_scripts/ci_post_clone.sh`. The installer downloads only the requested
+archive, verifies its pinned SHA-256 and compiled binary contract, then records
+the exact release receipt under the ignored `Carthage/Build` directory.
+
+Install a platform explicitly with:
+
+```sh
+Scripts/install-vlckit-release.sh ios
+Scripts/install-vlckit-release.sh macos
+Scripts/install-vlckit-release.sh tvos
+```
+
+Every app target has a build guard that requires both the pinned receipt and
+the patched binary markers. The outer XCFramework names differ only so all
+three platform artifacts can coexist in `Carthage/Build`; each artifact exports
+the same `VLCKit` module built from the same source and patch set.
 
 ## Reproduce from source
 

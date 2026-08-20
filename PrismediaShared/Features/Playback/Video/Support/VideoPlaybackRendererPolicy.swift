@@ -47,7 +47,7 @@ enum VideoPlaybackRendererPolicy {
     }
 
     static var platformSupportsCompatibilityRenderer: Bool {
-        #if canImport(TVVLCKit) || canImport(MobileVLCKit) || canImport(VLCKit)
+        #if canImport(VLCKit)
             true
         #else
             false

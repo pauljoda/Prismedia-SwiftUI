@@ -17,10 +17,10 @@
 		AA0000000000000000000906 /* ReadiumNavigator in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000933 /* ReadiumNavigator */; };
 		AA0000000000000000000907 /* Carthage/Build/VLCKitTV.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000810 /* Carthage/Build/VLCKitTV.xcframework */; };
 		AA0000000000000000000908 /* Carthage/Build/VLCKitTV.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000810 /* Carthage/Build/VLCKitTV.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		AA0000000000000000000990 /* Carthage/Build/MobileVLCKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */; };
-		AA0000000000000000000991 /* Carthage/Build/MobileVLCKit.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		AA0000000000000000000992 /* Carthage/Build/VLCKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */; };
-		AA0000000000000000000993 /* Carthage/Build/VLCKit.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0000000000000000000990 /* Carthage/Build/VLCKitiOS.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000881 /* Carthage/Build/VLCKitiOS.xcframework */; };
+		AA0000000000000000000991 /* Carthage/Build/VLCKitiOS.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000881 /* Carthage/Build/VLCKitiOS.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0000000000000000000992 /* Carthage/Build/VLCKitMac.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000882 /* Carthage/Build/VLCKitMac.xcframework */; };
+		AA0000000000000000000993 /* Carthage/Build/VLCKitMac.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000882 /* Carthage/Build/VLCKitMac.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,7 +58,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				AA0000000000000000000991 /* Carthage/Build/MobileVLCKit.xcframework in Embed Frameworks */,
+				AA0000000000000000000991 /* Carthage/Build/VLCKitiOS.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -69,7 +69,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				AA0000000000000000000993 /* Carthage/Build/VLCKit.xcframework in Embed Frameworks */,
+				AA0000000000000000000993 /* Carthage/Build/VLCKitMac.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -84,8 +84,8 @@
 		AA0000000000000000000005 /* PrismediaTVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PrismediaTVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000801 /* PrismediaAppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer; path = PrismediaAppIcon.icon; sourceTree = "<group>"; };
 		AA0000000000000000000810 /* Carthage/Build/VLCKitTV.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/VLCKitTV.xcframework; sourceTree = "<group>"; };
-		AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/MobileVLCKit.xcframework; sourceTree = "<group>"; };
-		AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/VLCKit.xcframework; sourceTree = "<group>"; };
+		AA0000000000000000000881 /* Carthage/Build/VLCKitiOS.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/VLCKitiOS.xcframework; sourceTree = "<group>"; };
+		AA0000000000000000000882 /* Carthage/Build/VLCKitMac.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Carthage/Build/VLCKitMac.xcframework; sourceTree = "<group>"; };
 		AA0000000000000000000883 /* Config/Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -160,7 +160,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA0000000000000000000990 /* Carthage/Build/MobileVLCKit.xcframework in Frameworks */,
+				AA0000000000000000000990 /* Carthage/Build/VLCKitiOS.xcframework in Frameworks */,
 				AA0000000000000000000901 /* SwiftAssRenderer in Frameworks */,
 				AA0000000000000000000904 /* ReadiumShared in Frameworks */,
 				AA0000000000000000000905 /* ReadiumStreamer in Frameworks */,
@@ -172,7 +172,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA0000000000000000000992 /* Carthage/Build/VLCKit.xcframework in Frameworks */,
+				AA0000000000000000000992 /* Carthage/Build/VLCKitMac.xcframework in Frameworks */,
 				AA0000000000000000000902 /* SwiftAssRenderer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -208,8 +208,8 @@
 			children = (
 				AA0000000000000000000801 /* PrismediaAppIcon.icon */,
 				AA0000000000000000000883 /* Config/Version.xcconfig */,
-				AA0000000000000000000881 /* Carthage/Build/MobileVLCKit.xcframework */,
-				AA0000000000000000000882 /* Carthage/Build/VLCKit.xcframework */,
+				AA0000000000000000000881 /* Carthage/Build/VLCKitiOS.xcframework */,
+				AA0000000000000000000882 /* Carthage/Build/VLCKitMac.xcframework */,
 				AA0000000000000000000810 /* Carthage/Build/VLCKitTV.xcframework */,
 				AA0000000000000000000020 /* PrismediaShared */,
 				AA0000000000000000000021 /* PrismediaiOS */,
@@ -240,6 +240,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AA0000000000000000000501 /* Build configuration list for PBXNativeTarget "PrismediaiOS" */;
 			buildPhases = (
+				AA0000000000000000000071 /* Verify patched VLCKit 4 for iOS */,
 				AA0000000000000000000201 /* Sources */,
 				AA0000000000000000000031 /* Frameworks */,
 				AA0000000000000000000281 /* Embed Frameworks */,
@@ -268,6 +269,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AA0000000000000000000502 /* Build configuration list for PBXNativeTarget "PrismediaMac" */;
 			buildPhases = (
+				AA0000000000000000000072 /* Verify patched VLCKit 4 for macOS */,
 				AA0000000000000000000202 /* Sources */,
 				AA0000000000000000000032 /* Frameworks */,
 				AA0000000000000000000282 /* Embed Frameworks */,
@@ -293,6 +295,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AA0000000000000000000503 /* Build configuration list for PBXNativeTarget "PrismediaTV" */;
 			buildPhases = (
+				AA0000000000000000000073 /* Verify patched VLCKit 4 for tvOS */,
 				AA0000000000000000000203 /* Sources */,
 				AA0000000000000000000033 /* Frameworks */,
 				AA0000000000000000000205 /* Embed Frameworks */,
@@ -455,6 +458,71 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AA0000000000000000000071 /* Verify patched VLCKit 4 for iOS */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/verify-vlckit.sh",
+				"$(SRCROOT)/Scripts/vlckit-binary-contract.sh",
+				"$(SRCROOT)/Scripts/vlckit-release-manifest.sh",
+				"$(SRCROOT)/Carthage/Build/.VLCKitiOS.release",
+				"$(SRCROOT)/Carthage/Build/VLCKitiOS.xcframework/ios-arm64/VLCKit.framework/VLCKit",
+				"$(SRCROOT)/Carthage/Build/VLCKitiOS.xcframework/ios-arm64_x86_64-simulator/VLCKit.framework/VLCKit",
+			);
+			name = "Verify patched VLCKit 4 for iOS";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/verify-vlckit.sh\" ios\n";
+		};
+		AA0000000000000000000072 /* Verify patched VLCKit 4 for macOS */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/verify-vlckit.sh",
+				"$(SRCROOT)/Scripts/vlckit-binary-contract.sh",
+				"$(SRCROOT)/Scripts/vlckit-release-manifest.sh",
+				"$(SRCROOT)/Carthage/Build/.VLCKitMac.release",
+				"$(SRCROOT)/Carthage/Build/VLCKitMac.xcframework/macos-arm64_x86_64/VLCKit.framework/Versions/A/VLCKit",
+			);
+			name = "Verify patched VLCKit 4 for macOS";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/verify-vlckit.sh\" macos\n";
+		};
+		AA0000000000000000000073 /* Verify patched VLCKit 4 for tvOS */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/verify-vlckit.sh",
+				"$(SRCROOT)/Scripts/vlckit-binary-contract.sh",
+				"$(SRCROOT)/Scripts/vlckit-release-manifest.sh",
+				"$(SRCROOT)/Carthage/Build/.VLCKitTV.release",
+				"$(SRCROOT)/Carthage/Build/VLCKitTV.xcframework/tvos-arm64/VLCKit.framework/VLCKit",
+				"$(SRCROOT)/Carthage/Build/VLCKitTV.xcframework/tvos-arm64_x86_64-simulator/VLCKit.framework/VLCKit",
+			);
+			name = "Verify patched VLCKit 4 for tvOS";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/Scripts/verify-vlckit.sh\" tvos\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AA0000000000000000000201 /* Sources */ = {

@@ -28,9 +28,9 @@ See [Docs/Architecture.md](Docs/Architecture.md) for the dependency rules, featu
 
 ## Custom VLCKit builds
 
-Prismedia maintains reproducible, checksum-pinned VLCKit XCFrameworks. iOS and
-macOS use VLCKit 3.7.3; tvOS uses VLCKit 4.0.0-a23 with an exact pinned VLC 4
-source revision. The downstream changes are intentionally auditable:
+Prismedia maintains reproducible, checksum-pinned VLCKit XCFrameworks. iOS,
+macOS, and tvOS all use VLCKit 4.0.0-a23 with one exact pinned VLC 4 source
+revision and patch set. The downstream changes are intentionally auditable:
 
 - restore FFmpeg's MLP demuxer, parser, and decoder so Dolby TrueHD/MLP audio is
   available;
@@ -49,8 +49,8 @@ The patch also gives the frameworks explicit minimums of iOS/tvOS 15 and macOS
 
 | Release asset | Contents |
 | --- | --- |
-| `MobileVLCKit.xcframework.zip` | iOS device and Simulator slices |
-| `VLCKit.xcframework.zip` | Universal Apple-silicon and Intel macOS framework |
+| `VLCKitiOS.xcframework.zip` | iOS device and Simulator slices |
+| `VLCKitMac.xcframework.zip` | Universal Apple-silicon and Intel macOS framework |
 | `VLCKitTV.xcframework.zip` | tvOS device and Simulator slices |
 
 The [custom VLCKit releases](https://github.com/pauljoda/Prismedia-SwiftUI/releases)
@@ -59,11 +59,18 @@ checks the compiled SDK with `vtool`, and refuses to publish unless the expected
 TrueHD/MLP and Profile 5 support is present and `pipe2()` is not an undefined
 import. Release tags are immutable.
 
-To reproduce the frameworks locally, run `Scripts/bootstrap-vlckit.sh`. Set
-`PRISMEDIA_VLCKIT_PLATFORM` to `ios`, `macos`, or `tvos` to build one platform;
-omit it to build all three. The script clones the pinned upstream sources,
-applies the narrow patch in `Scripts/Patches`, validates the binaries, and
-installs them under the ignored `Carthage/Build` directory.
+The shared Xcode schemes automatically run `Scripts/install-vlckit-release.sh`
+for their platform before a local build. The installer downloads the immutable
+release only when needed, verifies the pinned archive SHA-256, validates the
+compiled capabilities, and installs it under the ignored `Carthage/Build`
+directory. A target-level build guard rejects missing, stock, or stale binaries
+even when a build bypasses the shared scheme.
+
+To reproduce the frameworks from source instead, run
+`Scripts/bootstrap-vlckit.sh`. Set `PRISMEDIA_VLCKIT_PLATFORM` to `ios`,
+`macos`, or `tvos` to build one platform; omit it to build all three. The script
+clones the pinned upstream sources, applies the narrow patches in
+`Scripts/Patches`, and accepts the results through the same binary contract.
 
 See [Docs/CustomVLCKit.md](Docs/CustomVLCKit.md) for download examples, exact
 verification behavior, supported slices, and licensing details. These are
@@ -71,10 +78,12 @@ downstream community builds, not official VideoLAN releases.
 
 ### Xcode Cloud integration
 
-Xcode Cloud runs `ci_scripts/ci_post_clone.sh` to download only the XCFramework
-for the current action. The script verifies its hard-coded SHA-256 before
-installing it. Swift package versions are separately locked by the committed
-`Package.resolved` files.
+Xcode Cloud runs `ci_scripts/ci_post_clone.sh`, which delegates to the same
+release installer used by local shared schemes and downloads only the
+XCFramework for the current action. Release coordinates and hard-coded SHA-256
+values have one source of truth in `Scripts/vlckit-release-manifest.sh`. Swift
+package versions are separately locked by the committed `Package.resolved`
+files.
 
 The native release version is independent from the web/server release and lives
 in `Config/Version.xcconfig`. iOS, macOS, and tvOS all inherit that one version.
