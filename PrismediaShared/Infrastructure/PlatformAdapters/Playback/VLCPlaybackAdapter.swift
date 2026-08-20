@@ -88,6 +88,15 @@
             #else
                 let player = VLCMediaPlayer()
             #endif
+            #if DEBUG
+                // Narrate libvlc internals to the console while a device is attached:
+                // the mkv demuxer logs whether cues loaded and which seek path ran,
+                // and the vout/decoder log why frames stop rendering. Debug builds
+                // only — the logger costs real overhead on every message.
+                let consoleLogger = VLCConsoleLogger()
+                consoleLogger.level = .debug
+                player.libraryInstance.loggers = [consoleLogger]
+            #endif
             player.drawable = drawable
             player.delegate = self
             player.media = media
