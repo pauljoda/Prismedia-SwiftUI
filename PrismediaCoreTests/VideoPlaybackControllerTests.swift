@@ -184,6 +184,7 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertNil(controller.player.currentItem)
         XCTAssertEqual(controller.compatibilityPlaybackRequest?.resumeTime, 42)
         XCTAssertEqual(controller.compatibilityPlaybackRequest?.networkCachingSeconds, 7)
+        XCTAssertEqual(controller.compatibilityPlaybackRequest?.trustMatroskaCues, true)
         XCTAssertEqual(
             controller.compatibilityPlaybackRequest?.httpBearerToken,
             "compatibility-token"
@@ -213,6 +214,39 @@ final class VideoPlaybackControllerTests: XCTestCase {
 
         XCTAssertEqual(controller.currentTime, 0)
         XCTAssertEqual(controller.compatibilityPlaybackRequest?.resumeTime, 0)
+    }
+
+    func testCompatibilityPlaybackKeepsLoadingVisibleUntilVideoOutputIsReady() async {
+        let videoID = UUID(uuidString: "68686868-6868-6868-6868-686868686868")!
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: CompatibilityVideoPlaybackService(videoID: videoID),
+            audioSession: FailingVideoAudioSession()
+        )
+
+        await controller.load(resumeAt: 42)
+        controller.attachCompatibilityPlayback(
+            VideoCompatibilityPlaybackCommands(
+                play: { _ in },
+                pause: {},
+                seek: { _ in },
+                stop: {},
+                setRate: { _ in },
+                selectAudioStream: { _ in }
+            )
+        )
+        controller.play()
+        controller.videoSurfaceDidAttach(isReadyForDisplay: false)
+
+        XCTAssertTrue(controller.isAwaitingVideoFrame)
+
+        controller.videoSurfaceReadinessChanged(true)
+
+        XCTAssertFalse(controller.isAwaitingVideoFrame)
+
+        controller.seek(to: 73)
+
+        XCTAssertTrue(controller.isAwaitingVideoFrame)
     }
 
     func testCompatibilityPlaybackReportsItsFinalResumePosition() async {
@@ -305,6 +339,7 @@ private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing, VideoPl
             delivery: .direct,
             sessionID: "compatibility-session",
             durationSeconds: 120,
+            sourceContainer: "mkv",
             httpHeaders: ["authorization": "bearer compatibility-token"],
             renderer: .compatibility
         )

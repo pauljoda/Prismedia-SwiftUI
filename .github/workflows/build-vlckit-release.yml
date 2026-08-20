@@ -6,7 +6,7 @@ on:
       release_tag:
         description: Immutable release tag for the custom VLCKit build
         required: true
-        default: vlckit-4.0.0-a23-prismedia.2
+        default: vlckit-4.0.0-a23-prismedia.3
 
 permissions:
   contents: write

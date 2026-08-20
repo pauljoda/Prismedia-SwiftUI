@@ -78,18 +78,15 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
         XCTAssertEqual(preferences.engine, VideoPlaybackEngine.defaultChoice)
     }
 
-    func testVLCNetworkCachingDefaultsToValidatedTwentySecondsAndConvertsToMilliseconds() {
-        // 20 seconds is the value the compatibility engine was validated with; a
-        // smaller default regressed Dolby Vision Profile 5 into a permanent
-        // loading overlay while playback ran underneath.
-        XCTAssertEqual(VLCNetworkCachingSettings.defaultSeconds, 20)
+    func testVLCNetworkCachingDefaultsToThreeSecondsAndConvertsToMilliseconds() {
+        XCTAssertEqual(VLCNetworkCachingSettings.defaultSeconds, 3)
         XCTAssertEqual(VLCNetworkCachingSettings.milliseconds(for: 3), 3_000)
     }
 
-    func testDolbyVisionProfile5FloorsNetworkCachingAtTwentySeconds() {
+    func testDolbyVisionProfile5HonorsConfiguredNetworkCaching() {
         XCTAssertEqual(
             VLCNetworkCachingSettings.milliseconds(for: 3, dolbyVisionProfile: 5),
-            20_000
+            3_000
         )
         XCTAssertEqual(
             VLCNetworkCachingSettings.milliseconds(for: 45, dolbyVisionProfile: 5),
@@ -105,11 +102,8 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
         )
     }
 
-    func testProfile5UsesPatchedDecoderAndRendererOnMobileApplePlatforms() {
-        for platform in [
-            VLCCompatibilityPlaybackPlatform.iOS,
-            VLCCompatibilityPlaybackPlatform.tvOS,
-        ] {
+    func testProfile5UsesPatchedDecoderAndRendererOnEveryApplePlatform() {
+        for platform in VLCCompatibilityPlaybackPlatform.allCases {
             let mediaOptions = VLCCompatibilityPlaybackOptions.mediaOptions(
                 dolbyVisionProfile: 5,
                 platform: platform,
@@ -120,23 +114,48 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
                 platform: platform
             )
 
-            XCTAssertEqual(
-                mediaOptions,
-                [
-                    VLCCompatibilityPlaybackOptions.videoToolboxCodec,
-                    VLCCompatibilityPlaybackOptions.hardwareDecoderOnly,
-                    VLCCompatibilityPlaybackOptions.profile5Metadata,
-                    VLCCompatibilityPlaybackOptions.profile5FullRangeSurface,
-                ]
+            XCTAssertTrue(mediaOptions.contains(VLCCompatibilityPlaybackOptions.videoToolboxCodec))
+            XCTAssertTrue(mediaOptions.contains(VLCCompatibilityPlaybackOptions.hardwareDecoderOnly))
+            XCTAssertTrue(mediaOptions.contains(VLCCompatibilityPlaybackOptions.profile5Metadata))
+            XCTAssertTrue(playerOptions.contains(VLCCompatibilityPlaybackOptions.quietLogging))
+            XCTAssertTrue(playerOptions.contains(VLCCompatibilityPlaybackOptions.quietVerbosity))
+            XCTAssertTrue(playerOptions.contains(VLCCompatibilityPlaybackOptions.profile5Reshape))
+        }
+    }
+
+    func testProfile5UsesEachPlatformsNativeOpenGLSurfacePath() {
+        for platform in [
+            VLCCompatibilityPlaybackPlatform.iOS,
+            VLCCompatibilityPlaybackPlatform.tvOS,
+        ] {
+            XCTAssertTrue(
+                VLCCompatibilityPlaybackOptions.mediaOptions(
+                    dolbyVisionProfile: 5,
+                    platform: platform,
+                    hardwareDecoderAvailable: true
+                ).contains(VLCCompatibilityPlaybackOptions.profile5FullRangeSurface)
             )
-            XCTAssertEqual(
-                playerOptions,
-                [
-                    VLCCompatibilityPlaybackOptions.glesVideoOutput,
-                    VLCCompatibilityPlaybackOptions.profile5Reshape,
-                ]
+            XCTAssertTrue(
+                VLCCompatibilityPlaybackOptions.playerOptions(
+                    dolbyVisionProfile: 5,
+                    platform: platform
+                ).contains(VLCCompatibilityPlaybackOptions.glesVideoOutput)
             )
         }
+
+        XCTAssertFalse(
+            VLCCompatibilityPlaybackOptions.mediaOptions(
+                dolbyVisionProfile: 5,
+                platform: .macOS,
+                hardwareDecoderAvailable: true
+            ).contains(VLCCompatibilityPlaybackOptions.profile5FullRangeSurface)
+        )
+        XCTAssertFalse(
+            VLCCompatibilityPlaybackOptions.playerOptions(
+                dolbyVisionProfile: 5,
+                platform: .macOS
+            ).contains(VLCCompatibilityPlaybackOptions.glesVideoOutput)
+        )
     }
 
     func testProfile5OptionsRemainScopedToProfileFive() {
@@ -152,11 +171,15 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
                 VLCCompatibilityPlaybackOptions.avcodecVideoToolbox,
             ]
         )
-        XCTAssertTrue(
+        XCTAssertEqual(
             VLCCompatibilityPlaybackOptions.playerOptions(
                 dolbyVisionProfile: 8,
                 platform: .iOS
-            ).isEmpty
+            ),
+            [
+                VLCCompatibilityPlaybackOptions.quietLogging,
+                VLCCompatibilityPlaybackOptions.quietVerbosity,
+            ]
         )
         XCTAssertTrue(
             VLCCompatibilityPlaybackOptions.mediaOptions(
@@ -164,6 +187,33 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
                 platform: .iOS,
                 hardwareDecoderAvailable: false
             ).isEmpty
+        )
+    }
+
+    func testCompatibilityPlaybackSuppressesVLCKitConsoleLoggingOnEveryPlatform() {
+        for platform in VLCCompatibilityPlaybackPlatform.allCases {
+            XCTAssertTrue(
+                VLCCompatibilityPlaybackOptions.playerOptions(
+                    dolbyVisionProfile: nil,
+                    platform: platform
+                ).contains(VLCCompatibilityPlaybackOptions.quietLogging)
+            )
+            XCTAssertTrue(
+                VLCCompatibilityPlaybackOptions.playerOptions(
+                    dolbyVisionProfile: nil,
+                    platform: platform
+                ).contains(VLCCompatibilityPlaybackOptions.quietVerbosity)
+            )
+        }
+    }
+
+    func testTrustedMatroskaDemuxIsScopedToValidatedDirectMatroskaRequests() {
+        XCTAssertEqual(
+            VLCCompatibilityPlaybackOptions.containerOptions(trustMatroskaCues: true),
+            [VLCCompatibilityPlaybackOptions.trustedMatroskaDemux]
+        )
+        XCTAssertTrue(
+            VLCCompatibilityPlaybackOptions.containerOptions(trustMatroskaCues: false).isEmpty
         )
     }
 

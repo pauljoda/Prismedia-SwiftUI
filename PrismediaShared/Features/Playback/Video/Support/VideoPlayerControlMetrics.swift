@@ -1,7 +1,6 @@
 import CoreGraphics
 
 enum VideoPlayerControlMetrics {
-    static let bottomVisualWidth: CGFloat = 34
-    static let bottomVisualHeight: CGFloat = 30
-    static let bottomHitSize: CGFloat = 44
+    static let utilityVisualSize: CGFloat = 38
+    static let utilityHitSize: CGFloat = 44
 }

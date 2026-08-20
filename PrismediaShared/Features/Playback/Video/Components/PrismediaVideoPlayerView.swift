@@ -39,6 +39,19 @@ import SwiftUI
                     additionalBottomInset: controlsVisible && showsExpandedChrome ? 16 : 0
                 )
 
+                if isInteractive && (controller.isWaiting || controller.isAwaitingVideoFrame) {
+                    VStack(spacing: PrismediaSpacing.medium) {
+                        ProgressView()
+                            .tint(artworkPrimaryAccent)
+                        Text("Loading video…")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(PrismediaColor.onMedia.opacity(0.82))
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("video-player.loading")
+                }
+
                 chrome
                     .opacity(controlsVisible || !isInteractive ? 1 : 0)
                     .allowsHitTesting(controlsVisible || !isInteractive)
@@ -185,7 +198,10 @@ import SwiftUI
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
                             .font(.headline.bold())
-                            .frame(width: 38, height: 38)
+                            .frame(
+                                width: VideoPlayerControlMetrics.utilityVisualSize,
+                                height: VideoPlayerControlMetrics.utilityVisualSize
+                            )
                     }
                     .buttonStyle(.plain)
                     .glassEffect(.regular.interactive(), in: .circle)
@@ -311,15 +327,16 @@ import SwiftUI
 
         private func bottomChromeIcon(systemImage: String) -> some View {
             Image(systemName: systemImage)
-                .font(.caption.bold())
+                .font(.headline.bold())
+                .foregroundStyle(PrismediaColor.onMedia)
                 .frame(
-                    width: VideoPlayerControlMetrics.bottomVisualWidth,
-                    height: VideoPlayerControlMetrics.bottomVisualHeight
+                    width: VideoPlayerControlMetrics.utilityVisualSize,
+                    height: VideoPlayerControlMetrics.utilityVisualSize
                 )
-                .glassEffect(.regular.interactive(), in: .capsule)
+                .glassEffect(.regular.interactive(), in: .circle)
                 .frame(
-                    width: VideoPlayerControlMetrics.bottomHitSize,
-                    height: VideoPlayerControlMetrics.bottomHitSize
+                    width: VideoPlayerControlMetrics.utilityHitSize,
+                    height: VideoPlayerControlMetrics.utilityHitSize
                 )
                 .contentShape(Rectangle())
         }

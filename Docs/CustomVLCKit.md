@@ -29,21 +29,28 @@ The patch sets `ac_cv_func_pipe2=no`, forcing VLC's existing `pipe()` fallback.
 The bootstrap script rejects any produced framework that still has `_pipe2` as
 an undefined symbol.
 
-### Dolby Vision Profile 5 direct play on tvOS
+### Dolby Vision Profile 5 direct play on Apple platforms
 
 Dolby Vision Profile 5 stores a Dolby-specific base layer. It is not an SDR or
 HDR10-compatible picture by itself, so presenting only the decoded HEVC planes
 produces the characteristic purple or green image even when the file is valid.
 
-The tvOS patch keeps VideoToolbox hardware decoding active, parses each frame's
+The shared patch keeps VideoToolbox hardware decoding active, parses each frame's
 Dolby Vision RPU, attaches that metadata to the hardware picture, and routes it
-through VLC's existing libplacebo reshape filter. Apple TV's GLES texture bridge
-cannot expose VLC's P010 surface in the form this path expects, so the dedicated
-Profile 5 route requests full-range NV12 output before the RPU reshape. The
-profile-specific VLC options are off by default and Prismedia enables them only
-when probe metadata identifies Dolby Vision Profile 5.
+through VLC's existing libplacebo reshape filter on iOS, tvOS, and macOS. The
+iOS and tvOS GLES texture bridge cannot expose VLC's P010 surface in the form
+this path expects, so those platforms request full-range NV12 output before the
+RPU reshape. macOS stays on VLC's native CGL output and its supported 10-bit
+P010 surface. The profile-specific VLC options are off by default and Prismedia
+enables them only when probe metadata identifies Dolby Vision Profile 5.
 
-The patch also fixes two VLC 4 tvOS integration defects exercised by this path:
+On macOS, VLC exposes those VideoToolbox surfaces as OpenGL rectangle textures.
+The shared patch makes libplacebo's GLSL 120 shader use `texture2DRect` for that
+sampler and describes the CGL intermediate framebuffer's inverse Y origin when
+Profile 5 reshaping is active. Those two corrections prevent a black shader
+output and keep the reshaped frame upright without changing other video paths.
+
+The patch also fixes two VLC 4 Apple-view integration defects exercised by this path:
 the video view can receive its first renderer subview before its asynchronous
 enable callback, and an OpenGL filter replacement could initialize the wrong
 framebuffer relationship. Both fixes preserve VLC's existing behavior while
@@ -53,16 +60,16 @@ Apple TV exposes this renderer as GLES 2.0 with GLSL 100. A separate libplacebo
 patch selects a vector type that GLSL 100 accepts for Dolby Vision reshaping,
 instead of emitting a boolean-vector `mix` overload that the platform compiler
 rejects. The bootstrap script requires the compiled marker for this path in
-both tvOS slices.
+every iOS, tvOS, and macOS binary slice.
 
 The result is still direct play: the server sends the original media bytes and
-does not perform a video transcode. The Apple TV performs HEVC decoding and RPU
-reshaping locally.
+does not perform a video transcode. The Apple device performs HEVC decoding and
+RPU reshaping locally.
 
 ### Authenticated adaptive HLS
 
 VLC's standard HTTP access applies `http-token`, but its adaptive HLS access
-creates separate HTTP sources for child playlists and segments. The tvOS patch
+creates separate HTTP sources for child playlists and segments. The shared patch
 forwards the inherited bearer token to those child requests. Prismedia supplies
 the option only when a playback plan contains an `Authorization: Bearer` header,
 so public and non-bearer playback behavior is unchanged.
@@ -98,7 +105,7 @@ its hashes; the repository does not silently retarget an existing release.
 Download and verify an artifact before unpacking it:
 
 ```sh
-VLCKIT_RELEASE=vlckit-4.0.0-a23-prismedia.2
+VLCKIT_RELEASE=vlckit-4.0.0-a23-prismedia.3
 VLCKIT_ASSET=VLCKitiOS.xcframework.zip
 VLCKIT_BASE=https://github.com/pauljoda/Prismedia-SwiftUI/releases/download/$VLCKIT_RELEASE
 

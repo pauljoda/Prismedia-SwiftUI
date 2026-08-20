@@ -7,6 +7,7 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
     let audioStreams: [VideoPlaybackStreamChoice]
     let dolbyVisionProfile: Int?
     let networkCachingSeconds: Int
+    let trustMatroskaCues: Bool
     let httpHeaders: [String: String]
 
     var httpBearerToken: String? {
@@ -35,6 +36,7 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
         audioStreams: [VideoPlaybackStreamChoice],
         dolbyVisionProfile: Int?,
         networkCachingSeconds: Int = VLCNetworkCachingSettings.defaultSeconds,
+        trustMatroskaCues: Bool = false,
         httpHeaders: [String: String] = [:]
     ) {
         self.url = url
@@ -45,6 +47,7 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
         self.networkCachingSeconds = VLCNetworkCachingSettings.normalizedSeconds(
             networkCachingSeconds
         )
+        self.trustMatroskaCues = trustMatroskaCues
         self.httpHeaders = httpHeaders
     }
 
@@ -56,6 +59,7 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
             audioStreams: audioStreams,
             dolbyVisionProfile: dolbyVisionProfile,
             networkCachingSeconds: networkCachingSeconds,
+            trustMatroskaCues: trustMatroskaCues,
             httpHeaders: httpHeaders
         )
     }

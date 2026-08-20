@@ -71,7 +71,10 @@ struct VideoFullscreenPreparationView: View {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
                             .font(.headline.bold())
-                            .frame(width: 38, height: 38)
+                            .frame(
+                                width: VideoPlayerControlMetrics.utilityVisualSize,
+                                height: VideoPlayerControlMetrics.utilityVisualSize
+                            )
                     }
                     .buttonStyle(.plain)
                     .glassEffect(.regular.interactive(), in: .circle)

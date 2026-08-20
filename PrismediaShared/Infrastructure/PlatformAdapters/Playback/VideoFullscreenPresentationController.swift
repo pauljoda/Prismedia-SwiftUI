@@ -108,9 +108,6 @@
             isDismissing = false
             guard !deliveredDismissal else { return }
             deliveredDismissal = true
-            #if DEBUG
-                print("Video fullscreen dismissed by \(source).")
-            #endif
             onDismiss?()
         }
     }

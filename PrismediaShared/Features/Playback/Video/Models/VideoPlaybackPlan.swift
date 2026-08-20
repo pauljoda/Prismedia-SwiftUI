@@ -6,6 +6,7 @@ public struct VideoPlaybackPlan: Sendable {
     public let delivery: VideoPlaybackDelivery
     public let sessionID: String
     public let durationSeconds: Double
+    public let sourceContainer: String?
     public let badges: [VideoPlaybackBadge]
     public let audioStreams: [VideoPlaybackStreamChoice]
     public let httpHeaders: [String: String]
@@ -16,7 +17,8 @@ public struct VideoPlaybackPlan: Sendable {
 
     public init(
         videoID: UUID, url: URL, delivery: VideoPlaybackDelivery, sessionID: String,
-        durationSeconds: Double, badges: [VideoPlaybackBadge] = [], audioStreams: [VideoPlaybackStreamChoice] = [],
+        durationSeconds: Double, sourceContainer: String? = nil,
+        badges: [VideoPlaybackBadge] = [], audioStreams: [VideoPlaybackStreamChoice] = [],
         httpHeaders: [String: String] = [:], diagnostics: VideoPlaybackDiagnostics? = nil,
         displayMetadata: VideoPlaybackDisplayMetadata? = nil,
         requiresNativePlayabilityCheck: Bool = false,
@@ -27,6 +29,7 @@ public struct VideoPlaybackPlan: Sendable {
         self.delivery = delivery
         self.sessionID = sessionID
         self.durationSeconds = durationSeconds
+        self.sourceContainer = sourceContainer
         self.badges = badges
         self.audioStreams = audioStreams
         self.httpHeaders = httpHeaders

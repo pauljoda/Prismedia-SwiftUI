@@ -63,15 +63,24 @@ public final class VideoPlaybackController {
     @ObservationIgnored private var activeSubtitleCues: [VideoSubtitleCue] = []
     @ObservationIgnored private var pendingInitialResumeSeconds: Double?
     @ObservationIgnored private var renderReadinessTask: Task<Void, Never>?
-    @ObservationIgnored private var isVideoSurfaceAttached = false
-    @ObservationIgnored private var isVideoReadyForDisplay = false
+    private var isVideoSurfaceAttached = false
+    private var isVideoReadyForDisplay = false
     @ObservationIgnored private var negotiationMode: VideoPlaybackNegotiationMode = .automatic
-    @ObservationIgnored private(set) var hasRequestedPlayback = false
+    private(set) var hasRequestedPlayback = false
     @ObservationIgnored private var pendingTransportFailure: Error?
     @ObservationIgnored private var compatibilityPlaybackCommands: VideoCompatibilityPlaybackCommands?
     private(set) var compatibilityPlaybackRequest: VideoCompatibilityPlaybackRequest?
     var hasInstalledPlayback: Bool {
         player.currentItem != nil || compatibilityPlaybackRequest != nil
+    }
+    /// True while compatibility playback has been requested but VLCKit has not
+    /// produced a video output for the current start position or seek target.
+    public var isAwaitingVideoFrame: Bool {
+        renderer == .compatibility
+            && isVideoSurfaceAttached
+            && hasRequestedPlayback
+            && !isVideoReadyForDisplay
+            && errorMessage == nil
     }
     @ObservationIgnored private var transportRetryTask: Task<Void, Never>?
     @ObservationIgnored private var subtitleSettings: VideoSubtitleSettings = .default
@@ -192,13 +201,7 @@ public final class VideoPlaybackController {
     }
 
     private func prepareAudioSession() async {
-        do {
-            try await audioSession.prepare()
-        } catch {
-            #if DEBUG
-                print("Video audio session activation failed: \(error)")
-            #endif
-        }
+        try? await audioSession.prepare()
     }
 
     public func seek(to seconds: Double) {
@@ -211,6 +214,7 @@ public final class VideoPlaybackController {
     ) {
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
         if renderer == .compatibility {
+            videoSurfaceReadinessChanged(false)
             if let compatibilityPlaybackCommands {
                 compatibilityPlaybackCommands.seek(target)
             } else if let compatibilityPlaybackRequest {
@@ -622,6 +626,8 @@ public final class VideoPlaybackController {
                 audioStreams: plan.audioStreams,
                 dolbyVisionProfile: plan.displayMetadata?.dolbyVisionProfile,
                 networkCachingSeconds: vlcNetworkCachingSeconds,
+                trustMatroskaCues: plan.delivery == .direct
+                    && VideoPlaybackRendererPolicy.isMatroskaContainer(plan.sourceContainer),
                 httpHeaders: plan.httpHeaders
             )
             pendingInitialResumeSeconds = nil
@@ -666,9 +672,6 @@ public final class VideoPlaybackController {
         guard isPlayable else {
             let detail = "AVFoundation rejected the direct source during its native playability check."
             playbackFailureDetails.append(detail)
-            #if DEBUG
-                print("Video playback recovery: \(detail)")
-            #endif
             let fallbackPlan = try await service.negotiateVideoPlayback(
                 videoID: videoID,
                 mode: .directStream,
@@ -1026,11 +1029,6 @@ public final class VideoPlaybackController {
             )
         }
         playbackFailureDetails += details
-        #if DEBUG
-            for detail in details {
-                print("Video playback recovery: \(detail)")
-            }
-        #endif
     }
 
     private var nextRecoveryMode: VideoPlaybackNegotiationMode? {

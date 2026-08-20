@@ -1,0 +1,83 @@
+diff --git a/contrib/src/libplacebo/0002-prismedia-fix-glsl120-rectangle-sampling.patch b/contrib/src/libplacebo/0002-prismedia-fix-glsl120-rectangle-sampling.patch
+new file mode 100644
+index 00000000..8f7fb2bc
+--- /dev/null
++++ b/contrib/src/libplacebo/0002-prismedia-fix-glsl120-rectangle-sampling.patch
+@@ -0,0 +1,34 @@
++From 3b49f345952d4f2a9b1a2fbfbd04d818adbb9b74 Mon Sep 17 00:00:00 2001
++From: Prismedia <noreply@prismedia.local>
++Date: Thu, 20 Aug 2026 14:00:00 -0500
++Subject: [PATCH] shaders: use the GLSL 120 rectangle sampling function
++
++OpenGL rectangle textures use sampler2DRect. GLSL versions before 1.30 also
++require texture2DRect() rather than texture2D(); mixing the two makes the
++macOS CGL shader fail compilation and leaves decoded video frames black.
++---
++ src/shaders/sampling.c | 11 +++++++++--
++ 1 file changed, 9 insertions(+), 2 deletions(-)
++
++diff --git a/src/shaders/sampling.c b/src/shaders/sampling.c
++index 3346440..4657440 100644
++--- a/src/shaders/sampling.c
+++++ b/src/shaders/sampling.c
++@@ -138,8 +138,15 @@ static bool setup_src(pl_shader sh, const struct pl_sample_src *src,
++             .y1 = src->rect.y0 + src_h,
++         };
++ 
++-        if (fn)
++-            *fn = sh_tex_fn(sh, src->tex->params);
+++        if (fn) {
+++            /* GLSL before 1.30 uses a distinct sampling function for rectangle
+++             * textures. The descriptor already becomes sampler2DRect, so using
+++             * texture2D() here makes the generated macOS CGL shader invalid. */
+++            *fn = src->tex->sampler_type == PL_SAMPLER_RECT &&
+++                  sh_glsl(sh).version < 130
+++                ? "texture2DRect"
+++                : sh_tex_fn(sh, src->tex->params);
+++        }
++ 
++         *src_tex = sh_bind(sh, src->tex, src->address_mode, sample_mode,
++                            "src_tex", &rect, pos, size, pt);
+diff --git a/contrib/src/libplacebo/rules.mak b/contrib/src/libplacebo/rules.mak
+index 99bd6cce..01c71242 100644
+--- a/contrib/src/libplacebo/rules.mak
++++ b/contrib/src/libplacebo/rules.mak
+@@ -42,6 +42,7 @@ libplacebo: $(PLACEBO_ARCHIVE) .sum-libplacebo
+ 	$(APPLY) $(SRC)/libplacebo/0001-meson-allow-forcing-the-path-to-look-for-libraries.patch
+ 	$(APPLY) $(SRC)/libplacebo/0001-vulkan-utils_gen-fix-for-python-3.14.patch
+ 	$(APPLY) $(SRC)/libplacebo/0001-shaders-use-glsl100-compatible-dovi-reshape-selector.patch
++	$(APPLY) $(SRC)/libplacebo/0002-prismedia-fix-glsl120-rectangle-sampling.patch
+ 	$(MOVE)
+ 
+ .libplacebo: libplacebo crossfile.meson .python-venv
+diff --git a/modules/video_output/opengl/pl_scale.c b/modules/video_output/opengl/pl_scale.c
+index 8a0f50d6..073476a5 100644
+--- a/modules/video_output/opengl/pl_scale.c
++++ b/modules/video_output/opengl/pl_scale.c
+@@ -328,6 +328,9 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
+     if (!sys->pl_opengl)
+         goto error;
+ 
++    if (sampler->tex_target == GL_TEXTURE_RECTANGLE)
++        msg_Dbg(filter, "glsl120-rectangle-sampler");
++
+     pl_gpu gpu = sys->pl_opengl->gpu;
+     sys->pl_renderer = pl_renderer_create(sys->pl_log, gpu);
+     if (!sys->pl_renderer)
+@@ -359,6 +362,16 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
+         },
+     };
+ 
++    if (sampler->tex_target == GL_TEXTURE_RECTANGLE &&
++        var_InheritBool(filter, "gl-dovi-profile5"))
++    {
++        /* The following VLC OpenGL renderer samples this CGL framebuffer with
++         * ordinary GL coordinates. Describe its inverse Y origin so libplacebo
++         * stores the logical Profile 5 frame upright in the intermediate texture. */
++        sys->frame_out.planes[0].flipped = true;
++        msg_Dbg(filter, "glsl120-rectangle-sampler-vflip");
++    }
++
+     sys->render_params = pl_render_default_params;
+ 
+     if (var_InheritBool(filter, "gl-dovi-profile5")) {

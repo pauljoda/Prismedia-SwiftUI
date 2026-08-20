@@ -9,6 +9,7 @@ prismedia_vlckit_binary_is_compatible() {
         && strings "$binary" | grep -q -- 'videotoolbox-dovi-profile5' \
         && strings "$binary" | grep -q -- 'gl-dovi-profile5' \
         && strings "$binary" | grep -q -- 'glsl100-dovi-reshape' \
+        && strings "$binary" | grep -q -- 'glsl120-rectangle-sampler-vflip' \
         && strings "$binary" | grep -q -- 'adaptive HTTP bearer forwarding enabled' \
         && ! strings "$binary" | grep -q -- '--disable-decoder=mlp' \
         && strings "$binary" | grep -q -- 'MLP (Meridian Lossless Packing)' \

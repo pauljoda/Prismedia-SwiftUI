@@ -874,6 +874,7 @@ final class PrismediaAPIClientTests: XCTestCase {
 
         XCTAssertEqual(plan.delivery, .remux)
         XCTAssertEqual(plan.url.path, "/api/playback/videos/\(videoID)/hls/v/remux/stream.m3u8")
+        XCTAssertEqual(plan.sourceContainer, "mkv")
         XCTAssertEqual(plan.httpHeaders["Authorization"], "Bearer token")
         XCTAssertEqual(plan.diagnostics?.sourceContainer, "mkv")
         XCTAssertEqual(plan.diagnostics?.sourceVideoCodec, "hevc")

@@ -13,6 +13,7 @@
         private var stopWasRequested = false
         private var profile5BufferingIsActive = false
         private var pendingResumeSeekSeconds: Double?
+        private var pendingVideoOutputTargetSeconds: Double?
 
         init(controller: VideoPlaybackController) {
             self.controller = controller
@@ -42,6 +43,9 @@
             if let httpBearerToken = request.httpBearerToken {
                 media.addOption(":http-token=\(httpBearerToken)")
             }
+            VLCCompatibilityPlaybackOptions.containerOptions(
+                trustMatroskaCues: request.trustMatroskaCues
+            ).forEach(media.addOption)
             VLCCompatibilityPlaybackOptions.mediaOptions(
                 dolbyVisionProfile: request.dolbyVisionProfile,
                 platform: playbackPlatform,
@@ -53,14 +57,12 @@
             // deferred `player.time` seek issued once playback opens takes the indexed path — the
             // same one interactive scrubbing uses.
             pendingResumeSeekSeconds = request.resumeTime > 0 ? request.resumeTime : nil
+            pendingVideoOutputTargetSeconds = request.resumeTime
             let playerOptions = VLCCompatibilityPlaybackOptions.playerOptions(
                 dolbyVisionProfile: request.dolbyVisionProfile,
                 platform: playbackPlatform
             )
-            let player =
-                playerOptions.isEmpty
-                ? VLCMediaPlayer()
-                : VLCMediaPlayer(options: playerOptions)
+            let player = VLCMediaPlayer(options: playerOptions)
             player.drawable = drawable
             player.delegate = self
             player.media = media
@@ -122,7 +124,7 @@
                 player.rate = request?.playbackRate ?? 1
                 applyInitialAudioSelection(to: player)
                 applyPendingResumeSeekIfNeeded(on: player)
-                controller?.videoSurfaceReadinessChanged(true)
+                publishVideoOutputReadiness(on: player)
                 if openingState.shouldPauseAfterOpening() {
                     player.pause()
                     publishState(isPlaying: false, isWaiting: false)
@@ -177,12 +179,14 @@
             if request?.dolbyVisionProfile == 5 {
                 profile5BufferingIsActive = isWaiting
             }
+            publishVideoOutputReadiness(on: player)
             publishState(isPlaying: player.isPlaying, isWaiting: isWaiting)
         }
 
         nonisolated func mediaPlayerTimeChanged(_ notification: Notification) {
             Task { @MainActor [weak self] in
                 guard let self, let player = self.mediaPlayer else { return }
+                self.publishVideoOutputReadiness(on: player)
                 self.publishState(
                     isPlaying: player.isPlaying,
                     isWaiting: self.request?.dolbyVisionProfile == 5
@@ -202,6 +206,8 @@
                 pause: { [weak player] in player?.pause() },
                 seek: { [weak self, weak player] seconds in
                     guard let self, let player else { return }
+                    self.pendingVideoOutputTargetSeconds = seconds
+                    self.controller?.videoSurfaceReadinessChanged(false)
                     stateFilter.beginSeek(to: seconds, at: ProcessInfo.processInfo.systemUptime)
                     player.time = VLCTime(int: Int32(seconds * 1_000))
                 },
@@ -262,6 +268,22 @@
             player.time = VLCTime(int: Int32(target * 1_000))
         }
 
+        /// A playing state means VLC's clock and audio pipeline have started; it
+        /// does not mean a decoded video frame exists. `hasVideoOut` becomes true
+        /// only once the video output is established. Keep the player visibly
+        /// loading until that output is at the requested start/seek position.
+        private func publishVideoOutputReadiness(on player: VLCMediaPlayer) {
+            guard player.hasVideoOut else { return }
+            let size = player.videoSize
+            guard size.width > 0, size.height > 0 else { return }
+            if let target = pendingVideoOutputTargetSeconds {
+                let current = Double(player.time.intValue) / 1_000
+                guard abs(current - target) <= 3 else { return }
+            }
+            pendingVideoOutputTargetSeconds = nil
+            controller?.videoSurfaceReadinessChanged(true)
+        }
+
         private func disableNativeSubtitleRendering(on player: VLCMediaPlayer) {
             player.deselectAllTextTracks()
         }
@@ -303,6 +325,7 @@
             stopWasRequested = false
             profile5BufferingIsActive = false
             pendingResumeSeekSeconds = nil
+            pendingVideoOutputTargetSeconds = nil
         }
     }
 #endif

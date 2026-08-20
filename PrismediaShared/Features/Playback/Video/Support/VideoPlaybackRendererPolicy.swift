@@ -16,10 +16,7 @@ enum VideoPlaybackRendererPolicy {
         case .vlc:
             return .compatibility
         case .automatic:
-            let container = sourceContainer?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-            if delivery == .direct, container == "mkv" || container == "matroska" {
+            if delivery == .direct, isMatroskaContainer(sourceContainer) {
                 return .compatibility
             }
             return renderer(
@@ -29,6 +26,13 @@ enum VideoPlaybackRendererPolicy {
                 supportsCompatibilityRenderer: supportsCompatibilityRenderer
             )
         }
+    }
+
+    static func isMatroskaContainer(_ sourceContainer: String?) -> Bool {
+        let container = sourceContainer?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return container == "mkv" || container == "matroska"
     }
 
     static func renderer(

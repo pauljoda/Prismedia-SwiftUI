@@ -203,9 +203,6 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
                 onResume: onResume,
                 onRestart: onRestart,
                 onRequestDismiss: { [orientationController, fullscreenPresentationController] in
-                    #if DEBUG
-                        print("Video fullscreen received an explicit dismiss action.")
-                    #endif
                     orientationController.beginDismissal()
                     fullscreenPresentationController.requestDismissal()
                 }
@@ -214,9 +211,6 @@ struct VideoFullscreenPresentationModifier: ViewModifier {
     #endif
 
     private func requestDismissal() {
-        #if DEBUG
-            print("Video fullscreen received an explicit dismiss action.")
-        #endif
         orientationController.beginDismissal()
         isPresented = false
     }

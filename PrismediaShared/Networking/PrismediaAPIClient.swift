@@ -613,6 +613,7 @@ public struct PrismediaAPIClient: Sendable {
             delivery: delivery,
             sessionID: response.sessionID,
             durationSeconds: source.durationSeconds ?? 0,
+            sourceContainer: source.container,
             badges: source.playbackBadges(delivery: delivery),
             audioStreams: source.playbackAudioStreams,
             httpHeaders:

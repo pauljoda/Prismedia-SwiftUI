@@ -9,6 +9,7 @@ repository_dir=$(dirname -- "$script_dir")
 destination_dir="$repository_dir/Carthage/Build"
 profile5_patch="$script_dir/Patches/VLCKit4-DolbyVisionProfile5.patch"
 profile5_glsl100_patch="$script_dir/Patches/VLCKit4-DolbyVisionProfile5-GLSL100.patch"
+libplacebo_glsl120_rectangle_patch="$script_dir/Patches/VLCKit4-LibplaceboGLSL120Rectangle.patch"
 adaptive_http_bearer_patch="$script_dir/Patches/VLCKit4-AdaptiveHTTPBearer.patch"
 apple_xcconfig="$script_dir/VLCKit4-Apple.xcconfig"
 requested_platform="${PRISMEDIA_VLCKIT_PLATFORM:-all}"
@@ -71,6 +72,7 @@ git -C "$temporary_dir/VLC" am \
     "$temporary_dir/VLCKit"/libvlc/patches/*.patch
 git -C "$temporary_dir/VLC" apply "$profile5_patch"
 git -C "$temporary_dir/VLC" apply "$profile5_glsl100_patch"
+git -C "$temporary_dir/VLC" apply "$libplacebo_glsl120_rectangle_patch"
 git -C "$temporary_dir/VLC" apply "$adaptive_http_bearer_patch"
 
 # The wrapper still resolves headers and static libraries through libvlc/vlc
