@@ -42,55 +42,25 @@
             if let httpBearerToken = request.httpBearerToken {
                 media.addOption(":http-token=\(httpBearerToken)")
             }
-            #if !targetEnvironment(simulator)
-                // Prefer VLC's native Apple decoder. Simulators need VLC's
-                // software fallback because they have no device decoder.
-                #if os(tvOS)
-                    if request.dolbyVisionProfile == 5 {
-                        // Profile 5 has no HDR10-compatible base layer. Route its
-                        // RPU metadata from VideoToolbox into libplacebo so VLC can
-                        // reshape hardware-decoded frames before display.
-                        media.addOption(":codec=videotoolbox,any")
-                        media.addOption(":videotoolbox-hw-decoder-only=1")
-                        media.addOption(":videotoolbox-dovi-profile5")
-                        // Apple TV's GLES texture cache cannot expose x420
-                        // (10-bit bi-planar) as normalized 16-bit textures.
-                        // Ask VideoToolbox for the Profile 5 full-range NV12
-                        // presentation surface while retaining hardware HEVC.
-                        media.addOption(":videotoolbox-cvpx-chroma=420f")
-                    } else {
-                        media.addOption(":codec=videotoolbox,any")
-                        media.addOption(":videotoolbox-hw-decoder-only=1")
-                    }
-                #else
-                    media.addOption(":codec=videotoolbox,any")
-                    media.addOption(":videotoolbox-hw-decoder-only=1")
-                    media.addOption(":avcodec-hw=videotoolbox")
-                #endif
-            #endif
+            VLCCompatibilityPlaybackOptions.mediaOptions(
+                dolbyVisionProfile: request.dolbyVisionProfile,
+                platform: playbackPlatform,
+                hardwareDecoderAvailable: hardwareDecoderAvailable
+            ).forEach(media.addOption)
             // Never resume through VLC's ":start-time" option: on HTTP sources it positions the
             // input by demuxing linearly from the head of the file to the target instead of using
             // the container's seek index, which downloads gigabytes before the first frame. A
             // deferred `player.time` seek issued once playback opens takes the indexed path — the
             // same one interactive scrubbing uses.
             pendingResumeSeekSeconds = request.resumeTime > 0 ? request.resumeTime : nil
-            #if os(tvOS)
-                let player =
-                    request.dolbyVisionProfile == 5
-                    ? VLCMediaPlayer(options: ["--vout=gles2", "--gl-dovi-profile5"])
-                    : VLCMediaPlayer()
-            #else
-                let player = VLCMediaPlayer()
-            #endif
-            #if DEBUG
-                // Narrate libvlc internals to the console while a device is attached:
-                // the mkv demuxer logs whether cues loaded and which seek path ran,
-                // and the vout/decoder log why frames stop rendering. Debug builds
-                // only — the logger costs real overhead on every message.
-                let consoleLogger = VLCConsoleLogger()
-                consoleLogger.level = .debug
-                player.libraryInstance.loggers = [consoleLogger]
-            #endif
+            let playerOptions = VLCCompatibilityPlaybackOptions.playerOptions(
+                dolbyVisionProfile: request.dolbyVisionProfile,
+                platform: playbackPlatform
+            )
+            let player =
+                playerOptions.isEmpty
+                ? VLCMediaPlayer()
+                : VLCMediaPlayer(options: playerOptions)
             player.drawable = drawable
             player.delegate = self
             player.media = media
@@ -302,6 +272,24 @@
             else { return }
             guard player.audioTracks.indices.contains(position) else { return }
             player.selectTrack(at: position, type: .audio)
+        }
+
+        private var playbackPlatform: VLCCompatibilityPlaybackPlatform {
+            #if os(iOS)
+                .iOS
+            #elseif os(tvOS)
+                .tvOS
+            #else
+                .macOS
+            #endif
+        }
+
+        private var hardwareDecoderAvailable: Bool {
+            #if targetEnvironment(simulator)
+                false
+            #else
+                true
+            #endif
         }
 
         private func tearDownPlayer() {

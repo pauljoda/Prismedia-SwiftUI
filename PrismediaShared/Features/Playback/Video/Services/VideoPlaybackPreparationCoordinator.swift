@@ -47,9 +47,6 @@ final class VideoPlaybackPreparationCoordinator {
     }
 
     func start(_ request: VideoPlaybackPreparationRequest) {
-        #if DEBUG
-            NSLog("VFS3 start requested phase=\(phase) coord=\(ObjectIdentifier(self))")
-        #endif
         guard phase != .loading, phase != .ready else { return }
         let generation = beginLoading()
         preparationTask = Task { [weak self] in
@@ -77,9 +74,6 @@ final class VideoPlaybackPreparationCoordinator {
         guard phase != .ready || controller !== active.controller else { return }
         guard phase != .loading else { return }
 
-        #if DEBUG
-            NSLog("VFS3 restoreActivePlayback beginLoading coord=\(ObjectIdentifier(self))")
-        #endif
         let generation = beginLoading()
         preparationTask = Task { [weak self] in
             guard let self else { return }
@@ -115,9 +109,6 @@ final class VideoPlaybackPreparationCoordinator {
     }
 
     func reset() {
-        #if DEBUG
-            NSLog("VFS3 reset gen=\(preparationGeneration + 1) coord=\(ObjectIdentifier(self))")
-        #endif
         preparationGeneration += 1
         preparationTask?.cancel()
         preparationTask = nil
@@ -146,9 +137,6 @@ final class VideoPlaybackPreparationCoordinator {
         generation: Int
     ) async {
         do {
-            #if DEBUG
-                NSLog("VFS3 prepare begin gen=\(generation)")
-            #endif
             let resolved = try await VideoEntityPlaybackStartup.resolve(
                 detail: request.detail,
                 sourceThumbnail: request.ownerLink.sourceThumbnail,
@@ -161,17 +149,11 @@ final class VideoPlaybackPreparationCoordinator {
                 ownerLink: request.ownerLink
             )
             requestedResumeSeconds = resumeAt
-            #if DEBUG
-                NSLog("VFS3 resolved id=\(resolved.id)")
-            #endif
             let controller = await prepareController(
                 resolved: resolved,
                 resumeAt: resumeAt,
                 request: request
             )
-            #if DEBUG
-                NSLog("VFS3 controller prepared error=\(controller.errorMessage ?? "nil")")
-            #endif
             try Task.checkCancellation()
             if let message = controller.errorMessage {
                 throw PreparationError.failed(message)
@@ -187,7 +169,6 @@ final class VideoPlaybackPreparationCoordinator {
             phase = .idle
         } catch {
             guard generation == preparationGeneration else { return }
-            NSLog("VFS3 prepare failure: \(error.localizedDescription)")
             phase = .failure(error.localizedDescription)
         }
     }
@@ -222,9 +203,7 @@ final class VideoPlaybackPreparationCoordinator {
         generation: Int
     ) async {
         do {
-            NSLog("VFS3 settle waiting readiness")
             try await readinessWaiter(controller)
-            NSLog("VFS3 settle readiness done")
             try Task.checkCancellation()
             guard generation == preparationGeneration else { return }
             if let message = controller.errorMessage {
@@ -236,7 +215,6 @@ final class VideoPlaybackPreparationCoordinator {
             videoDetail = detail
             self.controller = controller
             phase = .ready
-            NSLog("VFS3 phase ready")
             if playRequested { beginRequestedPlayback(with: controller) }
         } catch is CancellationError {
             guard generation == preparationGeneration else { return }

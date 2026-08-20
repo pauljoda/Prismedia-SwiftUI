@@ -10,9 +10,11 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
     let httpHeaders: [String: String]
 
     var httpBearerToken: String? {
-        guard let authorization = httpHeaders.first(where: {
-            $0.key.caseInsensitiveCompare("Authorization") == .orderedSame
-        })?.value else { return nil }
+        guard
+            let authorization = httpHeaders.first(where: {
+                $0.key.caseInsensitiveCompare("Authorization") == .orderedSame
+            })?.value
+        else { return nil }
 
         let fields = authorization.split(
             maxSplits: 1,
@@ -44,5 +46,17 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
             networkCachingSeconds
         )
         self.httpHeaders = httpHeaders
+    }
+
+    func replacingResumeTime(_ resumeTime: Double) -> Self {
+        Self(
+            url: url,
+            resumeTime: resumeTime,
+            playbackRate: playbackRate,
+            audioStreams: audioStreams,
+            dolbyVisionProfile: dolbyVisionProfile,
+            networkCachingSeconds: networkCachingSeconds,
+            httpHeaders: httpHeaders
+        )
     }
 }

@@ -105,6 +105,68 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
         )
     }
 
+    func testProfile5UsesPatchedDecoderAndRendererOnMobileApplePlatforms() {
+        for platform in [
+            VLCCompatibilityPlaybackPlatform.iOS,
+            VLCCompatibilityPlaybackPlatform.tvOS,
+        ] {
+            let mediaOptions = VLCCompatibilityPlaybackOptions.mediaOptions(
+                dolbyVisionProfile: 5,
+                platform: platform,
+                hardwareDecoderAvailable: true
+            )
+            let playerOptions = VLCCompatibilityPlaybackOptions.playerOptions(
+                dolbyVisionProfile: 5,
+                platform: platform
+            )
+
+            XCTAssertEqual(
+                mediaOptions,
+                [
+                    VLCCompatibilityPlaybackOptions.videoToolboxCodec,
+                    VLCCompatibilityPlaybackOptions.hardwareDecoderOnly,
+                    VLCCompatibilityPlaybackOptions.profile5Metadata,
+                    VLCCompatibilityPlaybackOptions.profile5FullRangeSurface,
+                ]
+            )
+            XCTAssertEqual(
+                playerOptions,
+                [
+                    VLCCompatibilityPlaybackOptions.glesVideoOutput,
+                    VLCCompatibilityPlaybackOptions.profile5Reshape,
+                ]
+            )
+        }
+    }
+
+    func testProfile5OptionsRemainScopedToProfileFive() {
+        XCTAssertEqual(
+            VLCCompatibilityPlaybackOptions.mediaOptions(
+                dolbyVisionProfile: 8,
+                platform: .iOS,
+                hardwareDecoderAvailable: true
+            ),
+            [
+                VLCCompatibilityPlaybackOptions.videoToolboxCodec,
+                VLCCompatibilityPlaybackOptions.hardwareDecoderOnly,
+                VLCCompatibilityPlaybackOptions.avcodecVideoToolbox,
+            ]
+        )
+        XCTAssertTrue(
+            VLCCompatibilityPlaybackOptions.playerOptions(
+                dolbyVisionProfile: 8,
+                platform: .iOS
+            ).isEmpty
+        )
+        XCTAssertTrue(
+            VLCCompatibilityPlaybackOptions.mediaOptions(
+                dolbyVisionProfile: 5,
+                platform: .iOS,
+                hardwareDecoderAvailable: false
+            ).isEmpty
+        )
+    }
+
     func testPreferencesPersistVLCNetworkCachingSeconds() {
         let suiteName = "VideoPlaybackEnginePreferenceTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

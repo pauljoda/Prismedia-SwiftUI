@@ -211,7 +211,15 @@ public final class VideoPlaybackController {
     ) {
         let target = max(0, min(seconds, duration > 0 ? duration : seconds))
         if renderer == .compatibility {
-            compatibilityPlaybackCommands?.seek(target)
+            if let compatibilityPlaybackCommands {
+                compatibilityPlaybackCommands.seek(target)
+            } else if let compatibilityPlaybackRequest {
+                // The compatibility surface is created only after the user chooses
+                // Resume or Start Over. Preserve that choice in the request that
+                // the surface will install instead of dropping a pre-attach seek.
+                self.compatibilityPlaybackRequest =
+                    compatibilityPlaybackRequest.replacingResumeTime(target)
+            }
             playbackReporter.didSeek(positionSeconds: target)
             currentTime = target
             completion(true)
@@ -1019,7 +1027,9 @@ public final class VideoPlaybackController {
         }
         playbackFailureDetails += details
         #if DEBUG
-            details.forEach { print("Video playback recovery: \($0)") }
+            for detail in details {
+                print("Video playback recovery: \(detail)")
+            }
         #endif
     }
 

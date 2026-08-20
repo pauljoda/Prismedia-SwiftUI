@@ -72,9 +72,6 @@ final class VideoPlaybackSession {
         }
 
         loadTask?.cancel()
-        #if DEBUG
-            NSLog("VFS3 session activate fresh (cancelled prior load=\(loadTask != nil))")
-        #endif
         if let activeController { systemPlayback.deactivate(activeController) }
         activeController?.stopPictureInPicture()
         activeController?.stop()
@@ -191,9 +188,6 @@ final class VideoPlaybackSession {
     var isFullscreenPresented = false
 
     func ownerDidDisappear(_ ownerLink: EntityLink) {
-        #if DEBUG
-            NSLog("VFS3 session ownerDidDisappear matches=\(ownerLink == activeOwnerLink)")
-        #endif
         guard ownerLink == activeOwnerLink else { return }
         ownerIsVisible = false
         inlinePlaybackWillNavigate()
@@ -220,9 +214,6 @@ final class VideoPlaybackSession {
     }
 
     func reset() {
-        #if DEBUG
-            NSLog("VFS3 session reset (loadTask=\(loadTask != nil))")
-        #endif
         loadTask?.cancel()
         restoreTask?.cancel()
         restoreTask = nil

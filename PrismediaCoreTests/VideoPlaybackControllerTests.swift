@@ -198,6 +198,23 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertTrue(stopped)
     }
 
+    func testCompatibilitySeekBeforeSurfaceAttachmentUpdatesPendingRequest() async {
+        let videoID = UUID(uuidString: "67676767-6767-6767-6767-676767676767")!
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: CompatibilityVideoPlaybackService(videoID: videoID),
+            audioSession: FailingVideoAudioSession()
+        )
+
+        await controller.load(resumeAt: 420)
+        XCTAssertEqual(controller.compatibilityPlaybackRequest?.resumeTime, 420)
+
+        controller.seek(to: 0)
+
+        XCTAssertEqual(controller.currentTime, 0)
+        XCTAssertEqual(controller.compatibilityPlaybackRequest?.resumeTime, 0)
+    }
+
     func testCompatibilityPlaybackReportsItsFinalResumePosition() async {
         let videoID = UUID(uuidString: "77777777-7777-7777-7777-777777777777")!
         let service = CompatibilityVideoPlaybackService(videoID: videoID)
