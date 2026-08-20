@@ -53,9 +53,23 @@ enable callback, and an OpenGL filter replacement could initialize the wrong
 framebuffer relationship. Both fixes preserve VLC's existing behavior while
 removing the assertion and duplicated or inverted renderer output.
 
+Apple TV exposes this renderer as GLES 2.0 with GLSL 100. A separate libplacebo
+patch selects a vector type that GLSL 100 accepts for Dolby Vision reshaping,
+instead of emitting a boolean-vector `mix` overload that the platform compiler
+rejects. The bootstrap script requires the compiled marker for this path in
+both tvOS slices.
+
 The result is still direct play: the server sends the original media bytes and
 does not perform a video transcode. The Apple TV performs HEVC decoding and RPU
 reshaping locally.
+
+### Authenticated adaptive HLS
+
+VLC's standard HTTP access applies `http-token`, but its adaptive HLS access
+creates separate HTTP sources for child playlists and segments. The tvOS patch
+forwards the inherited bearer token to those child requests. Prismedia supplies
+the option only when a playback plan contains an `Authorization: Bearer` header,
+so public and non-bearer playback behavior is unchanged.
 
 ### Deployment targets
 
@@ -126,11 +140,12 @@ The script performs the following steps:
 1. Clone VLCKit 3.7.3 for iOS/macOS, or VLCKit 4.0.0-a23 and the pinned VLC 4
    commit for tvOS.
 2. Apply `TVVLCKit-EnableTrueHD.patch` to the 3.7.3 wrapper, or VLCKit 4's
-   pinned VLC compatibility series followed by
-   `VLCKit4-tvOS-DolbyVisionProfile5.patch` to the pinned VLC 4 source.
+   pinned VLC compatibility series followed by the Profile 5, GLSL 100, and
+   adaptive HTTP bearer patches to the pinned VLC 4 source.
 3. Run the matching upstream build for the requested platform.
-4. Verify MLP/TrueHD, the deployment-safe pipe fallback, and the two Profile 5
-   options in the tvOS binary.
+4. Verify MLP/TrueHD, the deployment-safe pipe fallback, the Profile 5 options,
+   the GLSL 100 reshape marker, and adaptive bearer forwarding in both tvOS
+   slices.
 5. Install the accepted XCFramework under `Carthage/Build`.
 6. Remove the temporary source checkout.
 

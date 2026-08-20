@@ -101,21 +101,7 @@
                 // only — the logger costs real overhead on every message.
                 let consoleLogger = VLCConsoleLogger()
                 consoleLogger.level = .debug
-                var loggers: [any VLCLogging] = [consoleLogger]
-                if let documentsURL = FileManager.default.urls(
-                    for: .documentDirectory,
-                    in: .userDomainMask
-                ).first {
-                    let logURL = documentsURL.appendingPathComponent("vlc-playback-debug.log")
-                    FileManager.default.createFile(atPath: logURL.path, contents: nil)
-                    if let fileHandle = try? FileHandle(forWritingTo: logURL) {
-                        try? fileHandle.truncate(atOffset: 0)
-                        let fileLogger = VLCFileLogger(fileHandle: fileHandle)
-                        fileLogger.level = .debug
-                        loggers.append(fileLogger)
-                    }
-                }
-                player.libraryInstance.loggers = loggers
+                player.libraryInstance.loggers = [consoleLogger]
             #endif
             player.drawable = drawable
             player.delegate = self

@@ -38,7 +38,11 @@ source revision. The downstream changes are intentionally auditable:
   declare even though the symbol is unavailable on older supported tvOS
   releases;
 - preserve and apply Dolby Vision Profile 5 RPU metadata while retaining
-  VideoToolbox hardware decoding on Apple TV.
+  VideoToolbox hardware decoding on Apple TV;
+- emit a GLSL 100-compatible Dolby Vision reshape selector for Apple TV's GLES
+  renderer; and
+- forward authenticated HLS bearer credentials from a master playlist to its
+  child playlists and segments.
 
 The patch also gives the frameworks explicit minimums of iOS/tvOS 15 and macOS
 12. It does not otherwise change VLCKit's public API.
