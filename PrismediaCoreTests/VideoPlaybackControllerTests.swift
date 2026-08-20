@@ -199,6 +199,36 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertTrue(stopped)
     }
 
+    func testCompatibilityPlaybackPreparesDisplayCriteria() async {
+        let videoID = UUID(uuidString: "67676767-6767-6767-6767-676767676768")!
+        let metadata = VideoPlaybackDisplayMetadata(
+            dynamicRange: .dolbyVision,
+            frameRate: 23.976,
+            width: 3_840,
+            height: 2_160,
+            dolbyVisionProfile: 5
+        )
+        let service = CompatibilityVideoPlaybackService(
+            videoID: videoID,
+            displayMetadata: metadata
+        )
+        var preparedMetadata: VideoPlaybackDisplayMetadata?
+        let controller = VideoPlaybackController(
+            videoID: videoID,
+            service: service,
+            audioSession: FailingVideoAudioSession(),
+            displayCriteria: VideoDisplayCriteriaIntegration(
+                prepare: { preparedMetadata = $0 },
+                reset: {}
+            )
+        )
+
+        await controller.load()
+
+        XCTAssertEqual(controller.renderer, .compatibility)
+        XCTAssertEqual(preparedMetadata, metadata)
+    }
+
     func testCompatibilitySeekBeforeSurfaceAttachmentUpdatesPendingRequest() async {
         let videoID = UUID(uuidString: "67676767-6767-6767-6767-676767676767")!
         let controller = VideoPlaybackController(
@@ -326,10 +356,15 @@ private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing, VideoPl
     }
 
     private let videoID: UUID
+    private let displayMetadata: VideoPlaybackDisplayMetadata?
     private(set) var reports: [RecordedReport] = []
 
-    init(videoID: UUID) {
+    init(
+        videoID: UUID,
+        displayMetadata: VideoPlaybackDisplayMetadata? = nil
+    ) {
         self.videoID = videoID
+        self.displayMetadata = displayMetadata
     }
 
     func negotiateVideoPlayback(videoID: UUID, forceTranscode: Bool) async throws -> VideoPlaybackPlan {
@@ -341,6 +376,7 @@ private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing, VideoPl
             durationSeconds: 120,
             sourceContainer: "mkv",
             httpHeaders: ["authorization": "bearer compatibility-token"],
+            displayMetadata: displayMetadata,
             renderer: .compatibility
         )
     }

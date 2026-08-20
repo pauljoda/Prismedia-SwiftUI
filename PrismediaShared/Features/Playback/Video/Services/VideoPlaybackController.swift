@@ -582,11 +582,7 @@ public final class VideoPlaybackController {
         player.pause()
         player.replaceCurrentItem(with: nil)
         renderer = plan.renderer
-        if renderer == .native {
-            await displayCriteria.prepare(plan.displayMetadata)
-        } else {
-            displayCriteria.reset()
-        }
+        await displayCriteria.prepare(plan.displayMetadata)
         guard !Task.isCancelled else { return }
         playbackReporter.install(plan: plan, positionSeconds: resumeAt)
         audioSelectionGroup = nil
