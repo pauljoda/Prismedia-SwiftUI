@@ -30,16 +30,6 @@
         }
       }
     },
-    "%@ / %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ / %2$@"
-          }
-        }
-      }
-    },
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -73,10 +63,7 @@
         }
       }
     },
-    "%@ times" : {
-
-    },
-    "%@ total activity" : {
+    "%@ spent with this book" : {
 
     },
     "%@ will not be downloaded now or offered by future searches. You can allow it again from Blocklist settings." : {
@@ -141,9 +128,6 @@
           }
         }
       }
-    },
-    "%@×" : {
-
     },
     "%lld" : {
 
@@ -225,16 +209,6 @@
     "%lld more files selected" : {
 
     },
-    "%lld of %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld of %2$lld"
-          }
-        }
-      }
-    },
     "%lld of %lld files processed" : {
       "localizations" : {
         "en" : {
@@ -255,22 +229,22 @@
         }
       }
     },
-    "%lld opened · %lld completed · %@ active" : {
+    "%lld opened · %lld completed · %@ spent" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$lld opened · %2$lld completed · %3$@ active"
+            "value" : "%1$lld opened · %2$lld completed · %3$@ spent"
           }
         }
       }
     },
-    "%lld opened · %lld completed · %lld skips · %@ active" : {
+    "%lld opened · %lld completed · %lld skips · %@ spent" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$lld opened · %2$lld completed · %3$lld skips · %4$@ active"
+            "value" : "%1$lld opened · %2$lld completed · %3$lld skips · %4$@ spent"
           }
         }
       }
@@ -345,9 +319,6 @@
     "−%@" : {
 
     },
-    "1 release is blocked for this item." : {
-
-    },
     "2×" : {
 
     },
@@ -373,9 +344,6 @@
 
     },
     "Acquisition" : {
-
-    },
-    "Acquisition Action Failed" : {
 
     },
     "Acquisition Actions" : {
@@ -519,9 +487,6 @@
     "App Settings" : {
 
     },
-    "Applied to browse, search, and collection grids." : {
-
-    },
     "Apply" : {
 
     },
@@ -558,9 +523,6 @@
     "Audio" : {
 
     },
-    "Audio Tracks" : {
-
-    },
     "Audiobook Now Playing" : {
 
     },
@@ -585,9 +547,6 @@
     "Available" : {
 
     },
-    "Available sources and search fields update for the selected media type." : {
-
-    },
     "Available Update" : {
 
     },
@@ -601,9 +560,6 @@
 
     },
     "Back to previous proposal" : {
-
-    },
-    "Back to Search" : {
 
     },
     "Back up database now" : {
@@ -672,9 +628,6 @@
     "Browse Server Folders" : {
 
     },
-    "Buffering" : {
-
-    },
     "Building the canonical proposal…" : {
 
     },
@@ -682,9 +635,6 @@
 
     },
     "Cancel" : {
-
-    },
-    "Cancel Acquisition" : {
 
     },
     "Candidates" : {
@@ -724,9 +674,6 @@
     "Check Again" : {
 
     },
-    "Check for New Content Now" : {
-
-    },
     "Check your connection and try again." : {
 
     },
@@ -758,9 +705,6 @@
 
     },
     "Choose Chapter" : {
-
-    },
-    "Choose how artwork and metadata are presented throughout your libraries." : {
 
     },
     "Choose local content to use for this item. Prismedia will validate it, upload it securely, then continue through the normal import lifecycle." : {
@@ -835,9 +779,6 @@
     "Close Identify" : {
 
     },
-    "Close Now Playing" : {
-
-    },
     "Close reader" : {
 
     },
@@ -872,9 +813,6 @@
 
     },
     "Consumption Rhythm" : {
-
-    },
-    "Consumption Stats" : {
 
     },
     "Content" : {
@@ -1015,12 +953,6 @@
     "Daily Activity" : {
 
     },
-    "Dark" : {
-
-    },
-    "Dashboard" : {
-
-    },
     "Database Backups" : {
 
     },
@@ -1031,12 +963,6 @@
 
     },
     "Date filters use the date an item was added to the Prismedia library." : {
-
-    },
-    "Decrease" : {
-
-    },
-    "Default" : {
 
     },
     "Delay: %lld day%@" : {
@@ -1113,9 +1039,6 @@
 
     },
     "Disabled" : {
-
-    },
-    "Discover" : {
 
     },
     "Dismiss" : {
@@ -1265,9 +1188,6 @@
     "Failed items remain selected. Review the details and retry the action." : {
 
     },
-    "Fast Forward" : {
-
-    },
     "Favorite" : {
 
     },
@@ -1389,12 +1309,6 @@
     "Hero artwork for %@" : {
 
     },
-    "Hide Now Playing Inspector" : {
-
-    },
-    "Hide Password" : {
-
-    },
     "Hide Player" : {
 
     },
@@ -1420,6 +1334,9 @@
 
     },
     "Identifying children" : {
+
+    },
+    "Identifying children and relationships… Request unlocks when finished." : {
 
     },
     "Identifying related metadata" : {
@@ -1474,9 +1391,6 @@
 
     },
     "Includes every entity kind and clears rating and date filters" : {
-
-    },
-    "Increase" : {
 
     },
     "Install" : {
@@ -1548,12 +1462,6 @@
     "Library Access" : {
 
     },
-    "Library controls" : {
-
-    },
-    "Library Controls" : {
-
-    },
     "Library Root" : {
 
     },
@@ -1563,13 +1471,7 @@
     "Linked Library Entities" : {
 
     },
-    "Listening" : {
-
-    },
     "Live transfer data may be out of date. Prismedia is still retrying." : {
-
-    },
-    "Load More" : {
 
     },
     "Loading %@…" : {
@@ -1596,9 +1498,6 @@
     "Loading collections…" : {
 
     },
-    "Loading Collections…" : {
-
-    },
     "Loading consumption history…" : {
 
     },
@@ -1615,9 +1514,6 @@
 
     },
     "Loading diagnostics…" : {
-
-    },
-    "Loading episodes…" : {
 
     },
     "Loading favorites…" : {
@@ -1656,9 +1552,6 @@
     "Loading more…" : {
 
     },
-    "Loading playback options" : {
-
-    },
     "Loading plugin catalog…" : {
 
     },
@@ -1689,9 +1582,6 @@
     "Loading roots…" : {
 
     },
-    "Loading server settings…" : {
-
-    },
     "Loading settings…" : {
 
     },
@@ -1701,16 +1591,10 @@
     "Loading transcript…" : {
 
     },
-    "Loading TV home…" : {
-
-    },
     "Loading users…" : {
 
     },
     "Loading watched libraries…" : {
-
-    },
-    "Loads %@" : {
 
     },
     "Location" : {
@@ -1737,22 +1621,10 @@
     "Mark Incomplete" : {
 
     },
-    "Mark Listened" : {
-
-    },
     "Mark NSFW" : {
 
     },
-    "Mark Read" : {
-
-    },
     "Mark SFW" : {
-
-    },
-    "Mark Unlistened" : {
-
-    },
-    "Mark Unread" : {
 
     },
     "Match" : {
@@ -1848,16 +1720,10 @@
     "Movies, music, books, and more" : {
 
     },
-    "Movies, series, and the collections you love—ready for the biggest screen in the house." : {
-
-    },
     "Moving…" : {
 
     },
     "Mute" : {
-
-    },
-    "Muted" : {
 
     },
     "Name" : {
@@ -1917,9 +1783,6 @@
     "Next Image" : {
 
     },
-    "Next month" : {
-
-    },
     "Next page" : {
 
     },
@@ -1965,16 +1828,10 @@
     "No Collections" : {
 
     },
-    "No Collections Available" : {
-
-    },
     "No enabled library supports %@. Add one in Settings first." : {
 
     },
     "No enabled provider supports %@." : {
-
-    },
-    "No Episodes" : {
 
     },
     "No Favorites Yet" : {
@@ -2053,9 +1910,6 @@
 
     },
     "No Search Providers" : {
-
-    },
-    "No Subtitles Available" : {
 
     },
     "No Table of Contents" : {
@@ -2321,12 +2175,6 @@
     "Playback Speed" : {
 
     },
-    "Playback timeline" : {
-
-    },
-    "Playback waveform" : {
-
-    },
     "Playing" : {
 
     },
@@ -2336,9 +2184,6 @@
     "Plugin Action Failed" : {
 
     },
-    "Plugin Source" : {
-
-    },
     "Plugins" : {
 
     },
@@ -2346,9 +2191,6 @@
 
     },
     "Prepares the video and begins playback" : {
-
-    },
-    "PREPARING" : {
 
     },
     "Preparing download…" : {
@@ -2361,9 +2203,6 @@
 
     },
     "Preparing metadata" : {
-
-    },
-    "Preparing playback options…" : {
 
     },
     "Preparing search…" : {
@@ -2393,9 +2232,6 @@
     "Previous Image" : {
 
     },
-    "Previous month" : {
-
-    },
     "Previous page" : {
 
     },
@@ -2403,9 +2239,6 @@
 
     },
     "Previous Result" : {
-
-    },
-    "Previous Track" : {
 
     },
     "Prismedia" : {
@@ -2538,16 +2371,10 @@
     "Recent Events" : {
 
     },
-    "Recently Added" : {
-
-    },
     "Recently Completed" : {
 
     },
     "Recursive Size" : {
-
-    },
-    "Redo" : {
 
     },
     "References" : {
@@ -2661,9 +2488,6 @@
     "Rename" : {
 
     },
-    "Request" : {
-
-    },
     "Request Details" : {
 
     },
@@ -2674,9 +2498,6 @@
 
     },
     "Rescan" : {
-
-    },
-    "Rescanning" : {
 
     },
     "Reset" : {
@@ -2733,9 +2554,6 @@
     "Retry Cleanup" : {
 
     },
-    "Retry Import" : {
-
-    },
     "Return from Toggle bookmark" : {
 
     },
@@ -2779,9 +2597,6 @@
 
     },
     "Revoke this session?" : {
-
-    },
-    "Rewind" : {
 
     },
     "Rewind gestures" : {
@@ -2856,22 +2671,10 @@
     "Scroll" : {
 
     },
-    "Scrub Back" : {
-
-    },
-    "Scrub Forward" : {
-
-    },
     "Search" : {
 
     },
     "Search %@" : {
-
-    },
-    "Search %lld Missing" : {
-
-    },
-    "Search Again" : {
 
     },
     "Search book" : {
@@ -2884,9 +2687,6 @@
 
     },
     "Search for a Match" : {
-
-    },
-    "Search for Missing Content" : {
 
     },
     "Search In" : {
@@ -3012,16 +2812,10 @@
     "Selects this artwork" : {
 
     },
-    "Sepia" : {
-
-    },
     "Server" : {
 
     },
     "Server path" : {
-
-    },
-    "Server settings are unavailable" : {
 
     },
     "Server URL" : {
@@ -3070,28 +2864,16 @@
     "Show Now Playing for %@" : {
 
     },
-    "Show Now Playing Inspector" : {
-
-    },
     "Show NSFW Content" : {
 
     },
     "Show Only Relevant" : {
 
     },
-    "Show Password" : {
-
-    },
     "Show Queue" : {
 
     },
-    "Show Text" : {
-
-    },
     "Show Text Below Thumbnails" : {
-
-    },
-    "Show wanted entities" : {
 
     },
     "Showing the latest %lld acquisition events." : {
@@ -3118,25 +2900,16 @@
     "Shows the full description" : {
 
     },
-    "Shows the full episode description" : {
-
-    },
     "Shows the full Now Playing view" : {
 
     },
     "Shows the playing queue" : {
 
     },
-    "Shuffle" : {
-
-    },
     "Sign Out" : {
 
     },
     "Sign out this device?" : {
-
-    },
-    "Sign Out?" : {
 
     },
     "Signed-in Devices" : {
@@ -3212,9 +2985,6 @@
 
     },
     "Stop %@" : {
-
-    },
-    "Stop monitoring this item?" : {
 
     },
     "Stopping and cleaning up files…" : {
@@ -3316,9 +3086,6 @@
     "This device" : {
 
     },
-    "This only changes what is shown for the active account on this Apple TV." : {
-
-    },
     "This PDF does not include an outline." : {
 
     },
@@ -3349,6 +3116,9 @@
     "To Identify" : {
 
     },
+    "Today" : {
+
+    },
     "Toggle animation" : {
 
     },
@@ -3374,9 +3144,6 @@
 
     },
     "Try another provider or refine the search fields." : {
-
-    },
-    "Try Loading Collections Again" : {
 
     },
     "Turning on monitoring…" : {
@@ -3409,9 +3176,6 @@
     "Unable to Load %@" : {
 
     },
-    "Unable to Load Acquisition" : {
-
-    },
     "Unable to Load Calendar" : {
 
     },
@@ -3425,9 +3189,6 @@
 
     },
     "Unavailable until this item is matched to a supported provider." : {
-
-    },
-    "Undo" : {
 
     },
     "Unknown status" : {
@@ -3476,12 +3237,6 @@
 
     },
     "Updates the available search providers and fields" : {
-
-    },
-    "Updates the selected episode" : {
-
-    },
-    "Updating acquisition" : {
 
     },
     "Updating identify queue…" : {
@@ -3557,9 +3312,6 @@
     "v%@ available" : {
 
     },
-    "Value" : {
-
-    },
     "Values · Priority Order" : {
 
     },
@@ -3590,12 +3342,6 @@
     "Visibility" : {
 
     },
-    "VLC" : {
-
-    },
-    "Volume" : {
-
-    },
     "Watched" : {
 
     },
@@ -3609,9 +3355,6 @@
 
     },
     "Weight" : {
-
-    },
-    "What would you like to add?" : {
 
     },
     "Word Spacing" : {
@@ -3629,16 +3372,16 @@
     "Worker ID" : {
 
     },
+    "Yesterday" : {
+
+    },
     "You" : {
 
     },
-    "You’ll return to the Prismedia sign-in screen on this Apple TV." : {
+    "Your Activity" : {
 
     },
     "Your Library Is Ready" : {
-
-    },
-    "Your library,\nmade cinematic." : {
 
     },
     "Your progress" : {

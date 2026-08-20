@@ -20,6 +20,7 @@
         private var audioSelectionState = VideoCompatibilityAudioSelectionState()
         private var stopWasRequested = false
         private var profile5BufferingIsActive = false
+        private var pendingResumeSeekSeconds: Double?
 
         init(controller: VideoPlaybackController) {
             self.controller = controller
@@ -73,9 +74,12 @@
                     media.addOption(":avcodec-hw=videotoolbox")
                 #endif
             #endif
-            if request.resumeTime > 0 {
-                media.addOption(":start-time=\(request.resumeTime)")
-            }
+            // Never resume through VLC's ":start-time" option: on HTTP sources it positions the
+            // input by demuxing linearly from the head of the file to the target instead of using
+            // the container's seek index, which downloads gigabytes before the first frame. A
+            // deferred `player.time` seek issued once playback opens takes the indexed path — the
+            // same one interactive scrubbing uses.
+            pendingResumeSeekSeconds = request.resumeTime > 0 ? request.resumeTime : nil
             #if os(tvOS) && canImport(VLCKit)
                 let player =
                     request.dolbyVisionProfile == 5
@@ -145,6 +149,7 @@
                 case .playing:
                     player.rate = request?.playbackRate ?? 1
                     applyInitialAudioSelection(to: player)
+                    applyPendingResumeSeekIfNeeded(on: player)
                     controller?.videoSurfaceReadinessChanged(true)
                     if openingState.shouldPauseAfterOpening() {
                         player.pause()
@@ -210,6 +215,7 @@
                 case .playing:
                     player.rate = request?.playbackRate ?? 1
                     applyInitialAudioSelection(to: player)
+                    applyPendingResumeSeekIfNeeded(on: player)
                     controller?.videoSurfaceReadinessChanged(true)
                     if openingState.shouldPauseAfterOpening() {
                         player.pause()
@@ -283,6 +289,12 @@
 
         private func publishState(isPlaying: Bool, isWaiting: Bool) {
             guard let player = mediaPlayer else { return }
+            // Delegate ordering is not guaranteed: a time or buffering callback can observe a
+            // playing engine before the state callback runs. Applying the deferred resume here
+            // keeps any first playing publication at the resume target instead of zero.
+            if player.isPlaying {
+                applyPendingResumeSeekIfNeeded(on: player)
+            }
             let candidate = VideoCompatibilityPlaybackState(
                 currentTime: Double(player.time.intValue) / 1_000,
                 duration: Double(player.media?.length.intValue ?? 0) / 1_000,
@@ -306,6 +318,17 @@
         private func applyInitialAudioSelection(to player: VLCMediaPlayer) {
             guard let streamIndex = audioSelectionState.takeInitialStreamIndex() else { return }
             selectAudioStream(streamIndex, on: player)
+        }
+
+        /// Applies the deferred resume position exactly once, the first time the player reaches
+        /// its playing state. The seek-protection filter keeps published state (and therefore
+        /// session reports) at the resume target while VLC completes the jump, so a transient
+        /// zero position never reaches the UI or the server.
+        private func applyPendingResumeSeekIfNeeded(on player: VLCMediaPlayer) {
+            guard let target = pendingResumeSeekSeconds else { return }
+            pendingResumeSeekSeconds = nil
+            stateFilter.beginSeek(to: target, at: ProcessInfo.processInfo.systemUptime)
+            player.time = VLCTime(int: Int32(target * 1_000))
         }
 
         private func disableNativeSubtitleRendering(on player: VLCMediaPlayer) {
@@ -343,6 +366,7 @@
             audioSelectionState = VideoCompatibilityAudioSelectionState()
             stopWasRequested = false
             profile5BufferingIsActive = false
+            pendingResumeSeekSeconds = nil
         }
     }
 #endif
