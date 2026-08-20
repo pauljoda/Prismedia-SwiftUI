@@ -66,6 +66,9 @@
     "%@ spent with this book" : {
 
     },
+    "%@ times" : {
+
+    },
     "%@ will not be downloaded now or offered by future searches. You can allow it again from Blocklist settings." : {
 
     },
@@ -129,6 +132,9 @@
         }
       }
     },
+    "%@×" : {
+
+    },
     "%lld" : {
 
     },
@@ -169,6 +175,9 @@
       }
     },
     "%lld events" : {
+
+    },
+    "%lld explicit mappings" : {
 
     },
     "%lld failed job%@ not included in recent runs." : {
@@ -523,6 +532,12 @@
     "Audio" : {
 
     },
+    "Audiobook alignment" : {
+
+    },
+    "Audiobook file chapter overrides" : {
+
+    },
     "Audiobook Now Playing" : {
 
     },
@@ -539,6 +554,9 @@
 
     },
     "Automatic retention" : {
+
+    },
+    "Automatic title matching" : {
 
     },
     "Availability" : {
@@ -628,6 +646,9 @@
     "Browse Server Folders" : {
 
     },
+    "Buffering" : {
+
+    },
     "Building the canonical proposal…" : {
 
     },
@@ -664,6 +685,12 @@
           }
         }
       }
+    },
+    "Chapter mapping error: %@" : {
+
+    },
+    "Chapter mapping saved" : {
+
     },
     "Chapters" : {
 
@@ -717,6 +744,9 @@
 
     },
     "Choose when automatic searching begins for each acquisition profile." : {
+
+    },
+    "Choose where the first audiobook file begins, then Prismedia fills the remaining files in order. You can override any file below before saving." : {
 
     },
     "Classification" : {
@@ -965,6 +995,15 @@
     "Date filters use the date an item was added to the Prismedia library." : {
 
     },
+    "Decrease" : {
+
+    },
+    "Decrease Network Cache" : {
+
+    },
+    "Default" : {
+
+    },
     "Delay: %lld day%@" : {
       "localizations" : {
         "en" : {
@@ -1179,6 +1218,9 @@
     "Expanded" : {
 
     },
+    "Explicit mapping" : {
+
+    },
     "Export Summary" : {
 
     },
@@ -1186,6 +1228,9 @@
 
     },
     "Failed items remain selected. Review the details and retry the action." : {
+
+    },
+    "Fast Forward" : {
 
     },
     "Favorite" : {
@@ -1258,6 +1303,9 @@
     "Finished" : {
 
     },
+    "First audiobook file" : {
+
+    },
     "First Page Is Cover" : {
 
     },
@@ -1307,6 +1355,9 @@
 
     },
     "Hero artwork for %@" : {
+
+    },
+    "Hide Password" : {
 
     },
     "Hide Player" : {
@@ -1393,6 +1444,12 @@
     "Includes every entity kind and clears rating and date filters" : {
 
     },
+    "Increase" : {
+
+    },
+    "Increase Network Cache" : {
+
+    },
     "Install" : {
 
     },
@@ -1462,6 +1519,12 @@
     "Library Access" : {
 
     },
+    "Library controls" : {
+
+    },
+    "Library Controls" : {
+
+    },
     "Library Root" : {
 
     },
@@ -1498,6 +1561,9 @@
     "Loading collections…" : {
 
     },
+    "Loading Collections…" : {
+
+    },
     "Loading consumption history…" : {
 
     },
@@ -1514,6 +1580,9 @@
 
     },
     "Loading diagnostics…" : {
+
+    },
+    "Loading episodes…" : {
 
     },
     "Loading favorites…" : {
@@ -1552,6 +1621,9 @@
     "Loading more…" : {
 
     },
+    "Loading playback options" : {
+
+    },
     "Loading plugin catalog…" : {
 
     },
@@ -1582,6 +1654,9 @@
     "Loading roots…" : {
 
     },
+    "Loading server settings…" : {
+
+    },
     "Loading settings…" : {
 
     },
@@ -1591,10 +1666,16 @@
     "Loading transcript…" : {
 
     },
+    "Loading TV home…" : {
+
+    },
     "Loading users…" : {
 
     },
     "Loading watched libraries…" : {
+
+    },
+    "Loads %@" : {
 
     },
     "Location" : {
@@ -1610,6 +1691,15 @@
 
     },
     "Manual acquisition error. %@" : {
+
+    },
+    "Map files to readable chapters" : {
+
+    },
+    "mapped" : {
+
+    },
+    "Mappings are up to date" : {
 
     },
     "Margins" : {
@@ -1720,6 +1810,9 @@
     "Movies, music, books, and more" : {
 
     },
+    "Movies, series, and the collections you love—ready for the biggest screen in the house." : {
+
+    },
     "Moving…" : {
 
     },
@@ -1742,6 +1835,9 @@
 
     },
     "Needs Attention · %lld" : {
+
+    },
+    "Network cache applies only to VLC compatibility playback. Changes take effect the next time a video opens." : {
 
     },
     "Never scanned" : {
@@ -1828,10 +1924,16 @@
     "No Collections" : {
 
     },
+    "No Collections Available" : {
+
+    },
     "No enabled library supports %@. Add one in Settings first." : {
 
     },
     "No enabled provider supports %@." : {
+
+    },
+    "No Episodes" : {
 
     },
     "No Favorites Yet" : {
@@ -1910,6 +2012,9 @@
 
     },
     "No Search Providers" : {
+
+    },
+    "No Subtitles Available" : {
 
     },
     "No Table of Contents" : {
@@ -2175,6 +2280,9 @@
     "Playback Speed" : {
 
     },
+    "Playback timeline" : {
+
+    },
     "Playing" : {
 
     },
@@ -2203,6 +2311,9 @@
 
     },
     "Preparing metadata" : {
+
+    },
+    "Preparing playback options…" : {
 
     },
     "Preparing search…" : {
@@ -2324,6 +2435,9 @@
 
     },
     "Read & Listen" : {
+
+    },
+    "Readable chapter for %@" : {
 
     },
     "Reader settings" : {
@@ -2599,6 +2713,9 @@
     "Revoke this session?" : {
 
     },
+    "Rewind" : {
+
+    },
     "Rewind gestures" : {
 
     },
@@ -2743,6 +2860,9 @@
     "Searching…" : {
 
     },
+    "seconds" : {
+
+    },
     "Seeders —" : {
 
     },
@@ -2818,6 +2938,9 @@
     "Server path" : {
 
     },
+    "Server settings are unavailable" : {
+
+    },
     "Server URL" : {
 
     },
@@ -2870,10 +2993,16 @@
     "Show Only Relevant" : {
 
     },
+    "Show Password" : {
+
+    },
     "Show Queue" : {
 
     },
     "Show Text Below Thumbnails" : {
+
+    },
+    "Show wanted entities" : {
 
     },
     "Showing the latest %lld acquisition events." : {
@@ -2900,6 +3029,9 @@
     "Shows the full description" : {
 
     },
+    "Shows the full episode description" : {
+
+    },
     "Shows the full Now Playing view" : {
 
     },
@@ -2910,6 +3042,9 @@
 
     },
     "Sign out this device?" : {
+
+    },
+    "Sign Out?" : {
 
     },
     "Signed-in Devices" : {
@@ -2967,6 +3102,9 @@
 
     },
     "Starting playback…" : {
+
+    },
+    "Starts at readable chapter" : {
 
     },
     "Starts playback" : {
@@ -3086,6 +3224,9 @@
     "This device" : {
 
     },
+    "This only changes what is shown for the active account on this Apple TV." : {
+
+    },
     "This PDF does not include an outline." : {
 
     },
@@ -3144,6 +3285,9 @@
 
     },
     "Try another provider or refine the search fields." : {
+
+    },
+    "Try Loading Collections Again" : {
 
     },
     "Turning on monitoring…" : {
@@ -3212,6 +3356,9 @@
     "Unread" : {
 
     },
+    "Unsaved mapping changes" : {
+
+    },
     "Unwatched" : {
 
     },
@@ -3237,6 +3384,9 @@
 
     },
     "Updates the available search providers and fields" : {
+
+    },
+    "Updates the selected episode" : {
 
     },
     "Updating identify queue…" : {
@@ -3342,6 +3492,9 @@
     "Visibility" : {
 
     },
+    "VLC Network Cache" : {
+
+    },
     "Watched" : {
 
     },
@@ -3378,10 +3531,16 @@
     "You" : {
 
     },
+    "You’ll return to the Prismedia sign-in screen on this Apple TV." : {
+
+    },
     "Your Activity" : {
 
     },
     "Your Library Is Ready" : {
+
+    },
+    "Your library,\nmade cinematic." : {
 
     },
     "Your progress" : {

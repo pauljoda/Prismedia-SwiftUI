@@ -78,9 +78,31 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
         XCTAssertEqual(preferences.engine, VideoPlaybackEngine.defaultChoice)
     }
 
-    func testVLCNetworkCachingDefaultsToThreeSecondsAndConvertsToMilliseconds() {
-        XCTAssertEqual(VLCNetworkCachingSettings.defaultSeconds, 3)
+    func testVLCNetworkCachingDefaultsToValidatedTwentySecondsAndConvertsToMilliseconds() {
+        // 20 seconds is the value the compatibility engine was validated with; a
+        // smaller default regressed Dolby Vision Profile 5 into a permanent
+        // loading overlay while playback ran underneath.
+        XCTAssertEqual(VLCNetworkCachingSettings.defaultSeconds, 20)
         XCTAssertEqual(VLCNetworkCachingSettings.milliseconds(for: 3), 3_000)
+    }
+
+    func testDolbyVisionProfile5FloorsNetworkCachingAtTwentySeconds() {
+        XCTAssertEqual(
+            VLCNetworkCachingSettings.milliseconds(for: 3, dolbyVisionProfile: 5),
+            20_000
+        )
+        XCTAssertEqual(
+            VLCNetworkCachingSettings.milliseconds(for: 45, dolbyVisionProfile: 5),
+            45_000
+        )
+        XCTAssertEqual(
+            VLCNetworkCachingSettings.milliseconds(for: 3, dolbyVisionProfile: 8),
+            3_000
+        )
+        XCTAssertEqual(
+            VLCNetworkCachingSettings.milliseconds(for: 3, dolbyVisionProfile: nil),
+            3_000
+        )
     }
 
     func testPreferencesPersistVLCNetworkCachingSeconds() {
@@ -94,7 +116,7 @@ final class VideoPlaybackEnginePreferenceTests: XCTestCase {
             vlcNetworkCachingStore: cachingStore
         )
 
-        XCTAssertEqual(preferences.vlcNetworkCachingSeconds, 3)
+        XCTAssertEqual(preferences.vlcNetworkCachingSeconds, VLCNetworkCachingSettings.defaultSeconds)
 
         preferences.vlcNetworkCachingSeconds = 7
 

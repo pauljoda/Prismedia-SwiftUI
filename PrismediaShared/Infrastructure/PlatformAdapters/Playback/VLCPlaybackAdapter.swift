@@ -46,7 +46,7 @@
             #endif
             media.addOption(":no-spu")
             media.addOption(
-                ":network-caching=\(VLCNetworkCachingSettings.milliseconds(for: request.networkCachingSeconds))"
+                ":network-caching=\(VLCNetworkCachingSettings.milliseconds(for: request.networkCachingSeconds, dolbyVisionProfile: request.dolbyVisionProfile))"
             )
             #if !targetEnvironment(simulator)
                 // Prefer VLC's native Apple decoder. Simulators need VLC's
