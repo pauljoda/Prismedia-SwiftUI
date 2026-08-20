@@ -38,9 +38,9 @@ revision and patch set. The downstream changes are intentionally auditable:
   declare even though the symbol is unavailable on older supported tvOS
   releases;
 - preserve and apply Dolby Vision Profile 5 RPU metadata while retaining
-  VideoToolbox hardware decoding on Apple TV;
-- emit a GLSL 100-compatible Dolby Vision reshape selector for Apple TV's GLES
-  renderer; and
+  VideoToolbox hardware decoding on iOS, macOS, and tvOS;
+- support the GLSL 100 reshape path used by iOS/tvOS GLES and the GLSL 120
+  rectangle-texture path used by macOS CGL; and
 - forward authenticated HLS bearer credentials from a master playlist to its
   child playlists and segments.
 
