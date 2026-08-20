@@ -1,0 +1,5 @@
+// VLCKit 4's helper passes an iOS deployment setting for every platform.
+// This external configuration supplies Prismedia's explicit framework floors.
+IPHONEOS_DEPLOYMENT_TARGET = 15.0
+TVOS_DEPLOYMENT_TARGET = 15.0
+MACOSX_DEPLOYMENT_TARGET = 12.0

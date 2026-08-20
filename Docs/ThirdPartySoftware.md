@@ -2,13 +2,13 @@
 
 ## VLCKit
 
-The iOS and macOS compatibility players link source builds of MobileVLCKit and
-VLCKit 3.7.3 from VideoLAN. The tvOS player links VLCKit 4.0.0-a23 with an exact
-pinned VLC 4 source revision. Prismedia's bootstrap applies the published
-patches under `Scripts/Patches` to retain FFmpeg's MLP/TrueHD decoder and, on
-tvOS, preserve and reshape Dolby Vision Profile 5 RPU metadata. This lets the
-compatibility player decode supported original tracks locally while keeping
-the source video on the direct-play path.
+The iOS, macOS, and tvOS compatibility players all link VLCKit 4.0.0-a23 from
+VideoLAN with one exact pinned VLC 4 source revision and downstream patch set.
+Prismedia's bootstrap applies the published patches under `Scripts/Patches` to
+retain FFmpeg's MLP/TrueHD decoder, preserve and reshape Dolby Vision Profile 5
+RPU metadata, and forward authenticated adaptive-stream requests. This lets the
+compatibility player decode supported original tracks locally while keeping the
+source video on the direct-play path.
 
 VLCKit is
 licensed under the GNU Lesser General Public License, version 2.1 or later.

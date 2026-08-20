@@ -6,7 +6,7 @@ on:
       release_tag:
         description: Immutable release tag for the custom VLCKit build
         required: true
-        default: vlckit-4.0.0-a23-prismedia.1
+        default: vlckit-4.0.0-a23-prismedia.2
 
 permissions:
   contents: write
@@ -42,10 +42,10 @@ jobs:
       matrix:
         include:
           - platform: ios
-            framework: MobileVLCKit
-            binary: ios-arm64/MobileVLCKit.framework/MobileVLCKit
+            framework: VLCKitiOS
+            binary: ios-arm64/VLCKit.framework/VLCKit
           - platform: macos
-            framework: VLCKit
+            framework: VLCKitMac
             binary: macos-arm64_x86_64/VLCKit.framework/Versions/A/VLCKit
           - platform: tvos
             framework: VLCKitTV

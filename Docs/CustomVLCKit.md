@@ -1,11 +1,11 @@
 # Custom VLCKit builds
 
 Prismedia maintains narrow downstream builds of
-[VideoLAN VLCKit](https://code.videolan.org/videolan/VLCKit). iOS and macOS use
-VLCKit 3.7.3. tvOS uses VLCKit 4.0.0-a23 with VLC pinned to commit
-`2cd8705589d3b125f236d1af695c3961fdcf6ca4`. The source patches, reproducible
-build script, release workflow, and binary verification live in this
-repository.
+[VideoLAN VLCKit](https://code.videolan.org/videolan/VLCKit). Every Apple
+platform uses VLCKit 4.0.0-a23 with VLC pinned to commit
+`2cd8705589d3b125f236d1af695c3961fdcf6ca4` and the same downstream patch set.
+The source patches, reproducible build script, release workflow, and binary
+verification live in this repository.
 
 The goal is not to fork VLCKit as a product. It is to make the compatibility
 changes below transparent and reproducible while Prismedia needs them.
@@ -14,13 +14,9 @@ changes below transparent and reproducible while Prismedia needs them.
 
 ### TrueHD and MLP decoding
 
-VLCKit's `0003-Enable-System-DL.patch` disables FFmpeg's MLP demuxer, parser,
-and decoder. MLP is also the codec family used by Dolby TrueHD, so those flags
-prevent compatible TrueHD tracks from being decoded.
-
-Prismedia's patch removes only those three disable flags. The bootstrap script
-then inspects the produced binaries and requires both `_ff_mlp_decoder` and
-`_ff_truehd_decoder` before accepting a build.
+The pinned VLCKit 4 build retains FFmpeg's MLP and TrueHD decoders. The shared
+binary contract checks their compiled codec descriptions on every platform
+before accepting a source build or downloaded release.
 
 ### Deployment-safe `pipe()` fallback
 
@@ -91,8 +87,8 @@ A complete release produced by the current workflow contains:
 
 | Asset | Architectures and environments |
 | --- | --- |
-| `MobileVLCKit.xcframework.zip` | iOS arm64 device; arm64/x86_64 Simulator |
-| `VLCKit.xcframework.zip` | macOS arm64/x86_64 |
+| `VLCKitiOS.xcframework.zip` | iOS arm64 device; arm64/x86_64 Simulator |
+| `VLCKitMac.xcframework.zip` | macOS arm64/x86_64 |
 | `VLCKitTV.xcframework.zip` | tvOS arm64 device; arm64/x86_64 Simulator |
 
 Each archive has a neighboring `.sha256` file. GitHub also records the archive
@@ -102,8 +98,8 @@ its hashes; the repository does not silently retarget an existing release.
 Download and verify an artifact before unpacking it:
 
 ```sh
-VLCKIT_RELEASE=vlckit-3.7.3-prismedia.2
-VLCKIT_ASSET=MobileVLCKit.xcframework.zip
+VLCKIT_RELEASE=vlckit-4.0.0-a23-prismedia.2
+VLCKIT_ASSET=VLCKitiOS.xcframework.zip
 VLCKIT_BASE=https://github.com/pauljoda/Prismedia-SwiftUI/releases/download/$VLCKIT_RELEASE
 
 curl --fail --location --remote-name "$VLCKIT_BASE/$VLCKIT_ASSET"
@@ -113,8 +109,7 @@ ditto -x -k "$VLCKIT_ASSET" .
 ```
 
 Use the immutable tag you intend to consume rather than a moving `latest` URL
-in automation. Prismedia pins the three archive hashes directly in
-`ci_scripts/ci_post_clone.sh`.
+in automation.
 
 ## Reproduce from source
 
@@ -137,15 +132,14 @@ PRISMEDIA_VLCKIT_PLATFORM=tvos Scripts/bootstrap-vlckit.sh
 
 The script performs the following steps:
 
-1. Clone VLCKit 3.7.3 for iOS/macOS, or VLCKit 4.0.0-a23 and the pinned VLC 4
-   commit for tvOS.
-2. Apply `TVVLCKit-EnableTrueHD.patch` to the 3.7.3 wrapper, or VLCKit 4's
-   pinned VLC compatibility series followed by the Profile 5, GLSL 100, and
-   adaptive HTTP bearer patches to the pinned VLC 4 source.
+1. Clone VLCKit 4.0.0-a23 and the pinned VLC 4 commit.
+2. Apply VLCKit 4's pinned VLC compatibility series followed by Prismedia's
+   Profile 5, GLSL 100, and adaptive HTTP bearer patches once for every Apple
+   platform build.
 3. Run the matching upstream build for the requested platform.
 4. Verify MLP/TrueHD, the deployment-safe pipe fallback, the Profile 5 options,
-   the GLSL 100 reshape marker, and adaptive bearer forwarding in both tvOS
-   slices.
+   the GLSL 100 reshape marker, and adaptive bearer forwarding in every binary
+   slice.
 5. Install the accepted XCFramework under `Carthage/Build`.
 6. Remove the temporary source checkout.
 

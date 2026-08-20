@@ -433,7 +433,7 @@ index 1a90d13b..8a0f50d6 100644
 
 +    if (var_InheritBool(filter, "gl-dovi-profile5")) {
 +        msg_Dbg(filter, "glsl100-dovi-reshape");
-+        /* tvOS exposes the active Metal-backed EAGL context as GLES 2.0. Its
++        /* The tvOS renderer exposes the active Metal-backed EAGL context as GLES 2.0. Its
 +         * GLSL 100 implementation cannot represent libplacebo's default
 +         * 1024-entry tone-mapping LUT, which makes pl_render_image() reject
 +         * every reshaped frame. Profile 5 already carries scene-specific RPU
