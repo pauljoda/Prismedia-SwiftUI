@@ -58,6 +58,20 @@ import SwiftUI
                 }
             )
             .accessibilityIdentifier("tv.shell")
+            #if DEBUG
+                .task {
+                    guard CommandLine.arguments.contains("-prismedia-ui-testing"),
+                        let bootstrapRouter = PrismediaUITestBootstrap.router()
+                    else { return }
+
+                    try? await Task.sleep(for: .seconds(2))
+                    let destinationID = bootstrapRouter.navigation.destinationID
+                    router.setPath(
+                        bootstrapRouter.path(for: destinationID),
+                        for: destinationID
+                    )
+                }
+            #endif
         }
 
         @ViewBuilder

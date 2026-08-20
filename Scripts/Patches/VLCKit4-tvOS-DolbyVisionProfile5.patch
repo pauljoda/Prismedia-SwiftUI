@@ -427,11 +427,12 @@ index 1a90d13b..8a0f50d6 100644
          .debug = true,
      };
      sys->pl_opengl = pl_opengl_create(sys->pl_log, &opengl_params);
-@@ -341,6 +369,26 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
+@@ -341,6 +369,27 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
 
      sys->render_params = pl_render_default_params;
 
 +    if (var_InheritBool(filter, "gl-dovi-profile5")) {
++        msg_Dbg(filter, "glsl100-dovi-reshape");
 +        /* tvOS exposes the active Metal-backed EAGL context as GLES 2.0. Its
 +         * GLSL 100 implementation cannot represent libplacebo's default
 +         * 1024-entry tone-mapping LUT, which makes pl_render_image() reject

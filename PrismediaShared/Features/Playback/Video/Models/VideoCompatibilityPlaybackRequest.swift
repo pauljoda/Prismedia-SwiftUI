@@ -7,6 +7,24 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
     let audioStreams: [VideoPlaybackStreamChoice]
     let dolbyVisionProfile: Int?
     let networkCachingSeconds: Int
+    let httpHeaders: [String: String]
+
+    var httpBearerToken: String? {
+        guard let authorization = httpHeaders.first(where: {
+            $0.key.caseInsensitiveCompare("Authorization") == .orderedSame
+        })?.value else { return nil }
+
+        let fields = authorization.split(
+            maxSplits: 1,
+            omittingEmptySubsequences: true,
+            whereSeparator: \.isWhitespace
+        )
+        guard fields.count == 2,
+            fields[0].caseInsensitiveCompare("Bearer") == .orderedSame,
+            !fields[1].isEmpty
+        else { return nil }
+        return String(fields[1])
+    }
 
     init(
         url: URL,
@@ -14,7 +32,8 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
         playbackRate: Float,
         audioStreams: [VideoPlaybackStreamChoice],
         dolbyVisionProfile: Int?,
-        networkCachingSeconds: Int = VLCNetworkCachingSettings.defaultSeconds
+        networkCachingSeconds: Int = VLCNetworkCachingSettings.defaultSeconds,
+        httpHeaders: [String: String] = [:]
     ) {
         self.url = url
         self.resumeTime = resumeTime
@@ -24,5 +43,6 @@ struct VideoCompatibilityPlaybackRequest: Equatable, Sendable {
         self.networkCachingSeconds = VLCNetworkCachingSettings.normalizedSeconds(
             networkCachingSeconds
         )
+        self.httpHeaders = httpHeaders
     }
 }

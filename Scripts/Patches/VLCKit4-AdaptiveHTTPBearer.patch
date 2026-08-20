@@ -1,0 +1,40 @@
+diff --git a/modules/demux/adaptive/http/HTTPConnection.cpp b/modules/demux/adaptive/http/HTTPConnection.cpp
+index 44e4ce2391..063415cfdb 100644
+--- a/modules/demux/adaptive/http/HTTPConnection.cpp
++++ b/modules/demux/adaptive/http/HTTPConnection.cpp
+@@ -74,7 +74,14 @@ class adaptive::http::LibVLCHTTPSource : public adaptive::BlockStreamInterface
+             http_mgr = vlc_http_mgr_create(p_object, jar);
+             http_res = nullptr;
+             totalRead = 0;
++            char *psz_token = var_InheritString(p_object_, "http-token");
++            if(psz_token)
++            {
++                bearerToken = std::string(psz_token);
++                std::free(psz_token);
++                msg_Dbg(p_object, "adaptive HTTP bearer forwarding enabled");
++            }
+         }
+         virtual ~LibVLCHTTPSource()
+         {
+             if(http_mgr)
+@@ -119,6 +126,12 @@ class adaptive::http::LibVLCHTTPSource : public adaptive::BlockStreamInterface
+         {
+             vlc_http_msg_add_header(req, "Accept-Encoding", "deflate, gzip");
+             vlc_http_msg_add_header(req, "Cache-Control", "no-cache");
++            if(bearerToken.has_value() &&
++               vlc_http_msg_add_header(req, "Authorization", "Bearer %s",
++                                       bearerToken->c_str()))
++            {
++                return -1;
++            }
+             if(range.isValid())
+             {
+                 if(range.getEndByte() > 0)
+@@ -163,6 +176,7 @@ class adaptive::http::LibVLCHTTPSource : public adaptive::BlockStreamInterface
+         BytesRange range;
+         struct vlc_http_resource *http_res;
+         std::optional<std::string> username;
++        std::optional<std::string> bearerToken;
+         std::optional<std::string> password;
+         ConnectionParams lastparams;
+ 

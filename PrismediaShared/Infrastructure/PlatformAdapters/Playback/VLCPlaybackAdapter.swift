@@ -48,6 +48,12 @@
             media.addOption(
                 ":network-caching=\(VLCNetworkCachingSettings.milliseconds(for: request.networkCachingSeconds, dolbyVisionProfile: request.dolbyVisionProfile))"
             )
+            // VLC's standard HTTP access forwards http-token, but its adaptive
+            // HLS access needs our VLCKit patch to apply it to child playlists
+            // and segments. Only authenticated playback plans add this option.
+            if let httpBearerToken = request.httpBearerToken {
+                media.addOption(":http-token=\(httpBearerToken)")
+            }
             #if !targetEnvironment(simulator)
                 // Prefer VLC's native Apple decoder. Simulators need VLC's
                 // software fallback because they have no device decoder.
@@ -95,7 +101,21 @@
                 // only — the logger costs real overhead on every message.
                 let consoleLogger = VLCConsoleLogger()
                 consoleLogger.level = .debug
-                player.libraryInstance.loggers = [consoleLogger]
+                var loggers: [any VLCLogging] = [consoleLogger]
+                if let documentsURL = FileManager.default.urls(
+                    for: .documentDirectory,
+                    in: .userDomainMask
+                ).first {
+                    let logURL = documentsURL.appendingPathComponent("vlc-playback-debug.log")
+                    FileManager.default.createFile(atPath: logURL.path, contents: nil)
+                    if let fileHandle = try? FileHandle(forWritingTo: logURL) {
+                        try? fileHandle.truncate(atOffset: 0)
+                        let fileLogger = VLCFileLogger(fileHandle: fileHandle)
+                        fileLogger.level = .debug
+                        loggers.append(fileLogger)
+                    }
+                }
+                player.libraryInstance.loggers = loggers
             #endif
             player.drawable = drawable
             player.delegate = self

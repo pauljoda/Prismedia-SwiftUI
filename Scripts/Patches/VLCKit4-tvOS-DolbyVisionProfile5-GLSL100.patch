@@ -1,0 +1,48 @@
+diff --git a/contrib/src/libplacebo/0001-shaders-use-compatible-dovi-reshape-selector.patch b/contrib/src/libplacebo/0001-shaders-use-compatible-dovi-reshape-selector.patch
+new file mode 100644
+--- /dev/null
++++ b/contrib/src/libplacebo/0001-shaders-use-compatible-dovi-reshape-selector.patch
+@@ -0,0 +1,23 @@
++diff --git a/src/shaders/colorspace.c b/src/shaders/colorspace.c
++--- a/src/shaders/colorspace.c
+++++ b/src/shaders/colorspace.c
++@@ -222,7 +222,8 @@ void pl_shader_dovi_reshape(pl_shader sh, const struct pl_dovi_metadata *data)
++             });
++ 
++             // Efficiently branch into the correct set of coefficients
++-            GLSL("#define test(i) bvec4(s >= %s[i])                 \n"
+++            const char *selector = sh_bvec(sh, 4);
+++            GLSL("#define test(i) %s(s >= %s[i])                    \n"
++                  "#define coef(i) %s[i]                             \n"
++                  "coeffs = mix(mix(mix(coef(0), coef(1), test(0)),  \n"
++                  "                 mix(coef(2), coef(3), test(2)),  \n"
++@@ -236,6 +237,6 @@ void pl_shader_dovi_reshape(pl_shader sh, const struct pl_dovi_metadata *data)
++                  "#undef test                                       \n"
++                  "#undef coef                                       \n",
++-                 pivots, coeffs);
+++                 selector, pivots, coeffs);
++ 
++         } else {
++ 
++-- 
++2.51.0
+diff --git a/contrib/src/libplacebo/rules.mak b/contrib/src/libplacebo/rules.mak
+--- a/contrib/src/libplacebo/rules.mak
++++ b/contrib/src/libplacebo/rules.mak
+@@ -42,6 +42,7 @@ libplacebo: $(PLACEBO_ARCHIVE) .sum-libplacebo
+ 	$(APPLY) $(SRC)/libplacebo/0001-meson-allow-overriding-python3-path.patch
+ 	$(APPLY) $(SRC)/libplacebo/0001-meson-allow-forcing-the-path-to-look-for-libraries.patch
+ 	$(APPLY) $(SRC)/libplacebo/0001-vulkan-utils_gen-fix-for-python-3.14.patch
++	$(APPLY) $(SRC)/libplacebo/0001-shaders-use-compatible-dovi-reshape-selector.patch
+ 	$(MOVE)
+ 
+ .libplacebo: libplacebo crossfile.meson .python-venv
+diff --git a/extras/tools/packages.mak b/extras/tools/packages.mak
+--- a/extras/tools/packages.mak
++++ b/extras/tools/packages.mak
+@@ -1,4 +1,4 @@
+-GNU=https://ftpmirror.gnu.org/gnu
++GNU=https://ftp.gnu.org/gnu
+ APACHE=https://downloads.apache.org/
+ SF=https://downloads.sourceforge.net/project
+ VIDEOLAN=https://downloads.videolan.org/pub/contrib

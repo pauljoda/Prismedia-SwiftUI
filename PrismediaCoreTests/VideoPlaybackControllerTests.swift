@@ -184,6 +184,10 @@ final class VideoPlaybackControllerTests: XCTestCase {
         XCTAssertNil(controller.player.currentItem)
         XCTAssertEqual(controller.compatibilityPlaybackRequest?.resumeTime, 42)
         XCTAssertEqual(controller.compatibilityPlaybackRequest?.networkCachingSeconds, 7)
+        XCTAssertEqual(
+            controller.compatibilityPlaybackRequest?.httpBearerToken,
+            "compatibility-token"
+        )
 
         controller.play()
         controller.seek(to: 73)
@@ -284,6 +288,7 @@ private actor CompatibilityVideoPlaybackService: VideoPlaybackServicing, VideoPl
             delivery: .direct,
             sessionID: "compatibility-session",
             durationSeconds: 120,
+            httpHeaders: ["authorization": "bearer compatibility-token"],
             renderer: .compatibility
         )
     }

@@ -10,6 +10,8 @@ repository_dir=$(dirname -- "$script_dir")
 destination_dir="$repository_dir/Carthage/Build"
 lossless_patch="$script_dir/Patches/TVVLCKit-EnableTrueHD.patch"
 profile5_patch="$script_dir/Patches/VLCKit4-tvOS-DolbyVisionProfile5.patch"
+profile5_glsl100_patch="$script_dir/Patches/VLCKit4-tvOS-DolbyVisionProfile5-GLSL100.patch"
+adaptive_http_bearer_patch="$script_dir/Patches/VLCKit4-AdaptiveHTTPBearer.patch"
 tvos_xcconfig="$script_dir/VLCKit4-tvOS.xcconfig"
 requested_platform="${PRISMEDIA_VLCKIT_PLATFORM:-all}"
 
@@ -35,6 +37,8 @@ tv_framework_is_compatible() {
     [ -f "$binary" ] \
         && strings "$binary" | grep -q -- 'videotoolbox-dovi-profile5' \
         && strings "$binary" | grep -q -- 'gl-dovi-profile5' \
+        && strings "$binary" | grep -q -- 'glsl100-dovi-reshape' \
+        && strings "$binary" | grep -q -- 'adaptive HTTP bearer forwarding enabled' \
         && ! strings "$binary" | grep -q -- '--disable-decoder=mlp' \
         && strings "$binary" | grep -q -- 'MLP (Meridian Lossless Packing)' \
         && strings "$binary" | grep -q -- 'TrueHD' \
@@ -153,6 +157,8 @@ if [ "$tv_ready" = false ]; then
     git -C "$temporary_dir/VLC4" am \
         "$temporary_dir/VLCKit4"/libvlc/patches/*.patch
     git -C "$temporary_dir/VLC4" apply "$profile5_patch"
+    git -C "$temporary_dir/VLC4" apply "$profile5_glsl100_patch"
+    git -C "$temporary_dir/VLC4" apply "$adaptive_http_bearer_patch"
     # The -e option builds an external VLC checkout but the wrapper Xcode
     # project still resolves headers and static libraries through libvlc/vlc.
     # Link the pinned checkout at that expected path for archive packaging.

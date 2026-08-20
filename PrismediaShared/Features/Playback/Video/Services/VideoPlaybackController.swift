@@ -613,7 +613,8 @@ public final class VideoPlaybackController {
                 playbackRate: playbackRate,
                 audioStreams: plan.audioStreams,
                 dolbyVisionProfile: plan.displayMetadata?.dolbyVisionProfile,
-                networkCachingSeconds: vlcNetworkCachingSeconds
+                networkCachingSeconds: vlcNetworkCachingSeconds,
+                httpHeaders: plan.httpHeaders
             )
             pendingInitialResumeSeconds = nil
             isReadyToPlay = true
