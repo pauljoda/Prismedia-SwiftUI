@@ -51,7 +51,7 @@ extension EntityDetailView {
             #if os(tvOS)
                 return false
             #else
-                return readingService.isAvailable && currentBookUsesNativeReader
+                return readingService.isAvailable && currentEntityUsesNativeReader
             #endif
         }
         guard !state.isMutating, service.canMutate else { return false }

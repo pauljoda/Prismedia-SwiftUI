@@ -1,17 +1,9 @@
 import Foundation
 
 extension EntityDetailView {
-    var currentBookUsesNativeReader: Bool {
+    var currentEntityUsesNativeReader: Bool {
         guard case .content(let detail) = state.phase else { return false }
-        return switch BookReaderFormatPolicy.route(
-            for: detail.kind,
-            format: detail.bookFormat
-        ) {
-        case .comic, .pdf, .epub:
-            true
-        case .unavailable, .unsupported:
-            false
-        }
+        return EntityReadingPolicy.supportsReading(detail)
     }
 
     func openReader(command: BookReaderCommand) {
@@ -19,7 +11,8 @@ extension EntityDetailView {
             dependencies.readerService != nil
         else { return }
         #if os(iOS) || os(macOS)
-            let unifiedTarget = command == .resume
+            let unifiedTarget =
+                command == .resume
                 ? unifiedBookReadingTarget(for: detail)
                 : nil
         #else
@@ -50,8 +43,7 @@ extension EntityDetailView {
 
     func loadReadingState(for detail: EntityDetail) async {
         guard readingService.isAvailable,
-            [.book, .bookVolume, .bookChapter].contains(detail.kind),
-            detail.bookFormat != .audio
+            EntityReadingPolicy.supportsReading(detail)
         else {
             readingState.reset()
             return
@@ -65,8 +57,7 @@ extension EntityDetailView {
     func reloadReadingState() async {
         guard case .content(let detail) = state.phase,
             readingService.isAvailable,
-            [.book, .bookVolume, .bookChapter].contains(detail.kind),
-            detail.bookFormat != .audio
+            EntityReadingPolicy.supportsReading(detail)
         else {
             readingState.reset()
             return

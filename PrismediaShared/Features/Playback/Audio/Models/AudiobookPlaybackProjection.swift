@@ -4,15 +4,27 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
     public let bookID: UUID
     public let title: String
     public let tracks: [MusicTrack]
+    public let preservesQueueOrder: Bool
+    public let supportsPlaybackRate: Bool
 
-    public init(bookID: UUID, title: String, tracks: [MusicTrack]) {
+    public init(
+        bookID: UUID,
+        title: String,
+        tracks: [MusicTrack],
+        preservesQueueOrder: Bool = true,
+        supportsPlaybackRate: Bool = true
+    ) {
         self.bookID = bookID
         self.title = title
         self.tracks = tracks.filter(\.isPlayable)
+        self.preservesQueueOrder = preservesQueueOrder
+        self.supportsPlaybackRate = supportsPlaybackRate
     }
 
     public init?(detail: EntityDetail) {
-        guard detail.kind == .book else { return nil }
+        guard detail.kind == .book,
+            let playback = detail.capability(EntityPlayableAudioCapability.self)
+        else { return nil }
 
         let author = detail.relationships
             .first { $0.kind == .bookAuthor || $0.kind == .person }?
@@ -37,6 +49,8 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
 
         bookID = detail.id
         title = detail.title
+        preservesQueueOrder = playback.preservesQueueOrder
+        supportsPlaybackRate = playback.supportsPlaybackRate
         tracks = audioParts.map {
             MusicTrack(
                 thumbnail: $0,

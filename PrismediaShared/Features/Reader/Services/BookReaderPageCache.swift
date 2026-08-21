@@ -43,9 +43,20 @@ final class BookReaderPageCache {
     }
 
     func data(for id: UUID) async throws -> Data {
+        try await data(
+            for: BookReaderPage(
+                id: id,
+                title: "Page",
+                source: .entity(id),
+                isDoublePage: false
+            ))
+    }
+
+    func data(for page: BookReaderPage) async throws -> Data {
+        let id = page.id
         if let value = values[id], images[id] != nil { return value }
 
-        let request = task(for: id)
+        let request = task(for: page)
         do {
             let decoded = try await request.task.value
             if let cachedValue = values[id], images[id] != nil { return cachedValue }
@@ -80,15 +91,16 @@ final class BookReaderPageCache {
     }
 
     private func task(
-        for id: UUID
+        for page: BookReaderPage
     ) -> (token: UUID, task: Task<(data: Data, image: PlatformReaderImage), Error>) {
+        let id = page.id
         if let request = tasks[id] { return request }
         let token = UUID()
         let service = service
         let decoder = decoder
         let maximumPixelSize = maximumPixelSize
         let task = Task {
-            let data = try await service.loadPageData(id: id)
+            let data = try await service.loadPageData(page: page)
             try Task.checkCancellation()
             let image = await Task.detached(priority: .userInitiated) {
                 decoder(data, maximumPixelSize)

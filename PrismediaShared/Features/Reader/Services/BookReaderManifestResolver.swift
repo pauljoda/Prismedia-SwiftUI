@@ -8,6 +8,10 @@ public struct BookReaderManifestResolver: Sendable {
     }
 
     public func resolve(selected: EntityDetail, command: BookReaderCommand) async throws -> BookReaderManifest {
+        if selected.capability(EntityPageSequenceCapability.self) != nil {
+            return try await entityPageManifest(selected: selected, command: command)
+        }
+
         let book = try await owningBook(for: selected)
         guard book.bookFormat == .imageArchive else {
             throw BookReaderManifestError.unsupportedEntity(book.kind)
@@ -26,6 +30,102 @@ public struct BookReaderManifestResolver: Sendable {
         }
         guard let selectedChapter else { throw BookReaderManifestError.noReadablePages }
         return try await chapterManifest(book: book, chapter: selectedChapter, command: command)
+    }
+
+    private func entityPageManifest(
+        selected: EntityDetail,
+        command: BookReaderCommand
+    ) async throws -> BookReaderManifest {
+        guard let reader = loader as? any EntityPageReaderServicing,
+            let pageCapability = selected.capability(EntityPageSequenceCapability.self)
+        else {
+            throw BookReaderManifestError.noReadablePages
+        }
+
+        let source = try await reader.loadEntityReaderManifest(id: selected.id)
+        guard source.entityID == selected.id, !source.pages.isEmpty else {
+            throw BookReaderManifestError.noReadablePages
+        }
+        let pages = source.pages
+            .sorted { $0.ordinal < $1.ordinal }
+            .map { BookReaderPage(entityID: selected.id, page: $0) }
+        let progress = bookProgress(in: selected)
+        let canResume =
+            command == .resume
+            && progress?.completedAt == nil
+            && progress?.currentEntityID == selected.id
+        let initialIndex = canResume ? max(0, progress?.index ?? 0) : 0
+        let next = try? await followingOrderedItem(after: selected)
+        return BookReaderManifest(
+            bookID: selected.id,
+            title: selected.title,
+            chapters: [
+                BookReaderChapter(
+                    detail: selected,
+                    readerPages: pages,
+                    sequenceIndex: selected.sortOrder ?? 0
+                )
+            ],
+            nextChapter: next,
+            progress: progress,
+            initialIndex: clamp(initialIndex, count: pages.count),
+            readerMode: comicMode(progress?.mode ?? pageCapability.defaultMode),
+            readingDirection: source.direction,
+            coverOrdinal: source.coverOrdinal,
+            completesAtManifestEnd: true
+        )
+    }
+
+    private func followingOrderedItem(after selected: EntityDetail) async throws -> BookChapterSummary? {
+        guard let sequence = selected.capability(EntityOrderedSequenceCapability.self),
+            sequence.role == .item
+        else { return nil }
+
+        let allowedContainers = Set(sequence.containerKinds)
+        var root = selected
+        var parentID = selected.parentEntityID
+        while let id = parentID {
+            let parent = try await loader.loadEntity(id: id)
+            guard allowedContainers.contains(parent.kind) else { break }
+            root = parent
+            parentID = parent.parentEntityID
+        }
+
+        let items: [EntityThumbnail]
+        if selected.parentEntityID == root.id {
+            items = orderedChildren(in: root, kind: sequence.itemKind)
+        } else {
+            var containerThumbnails: [EntityThumbnail] = []
+            for containerKind in sequence.containerKinds where containerKind != root.kind {
+                containerThumbnails += orderedChildren(in: root, kind: containerKind)
+            }
+            containerThumbnails.sort(by: Self.sequenceOrder)
+            var nestedItems: [EntityThumbnail] = []
+            for container in try await loadDetails(containerThumbnails) {
+                nestedItems += orderedChildren(in: container, kind: sequence.itemKind)
+            }
+            items = nestedItems
+        }
+        guard let currentIndex = items.firstIndex(where: { $0.id == selected.id }),
+            items.indices.contains(currentIndex + 1)
+        else { return nil }
+        let nextIndex = currentIndex + 1
+        let next = items[nextIndex]
+        return BookChapterSummary(
+            id: next.id,
+            title: next.title,
+            sortOrder: nextIndex,
+            pageCount: 0
+        )
+    }
+
+    private static func sequenceOrder(_ left: EntityThumbnail, _ right: EntityThumbnail) -> Bool {
+        let leftOrder = left.sortOrder ?? Int.max
+        let rightOrder = right.sortOrder ?? Int.max
+        if leftOrder != rightOrder { return leftOrder < rightOrder }
+        let title = left.title.localizedStandardCompare(right.title)
+        if title != .orderedSame { return title == .orderedAscending }
+        return left.id.uuidString < right.id.uuidString
     }
 
     private func owningBook(for selected: EntityDetail) async throws -> EntityDetail {

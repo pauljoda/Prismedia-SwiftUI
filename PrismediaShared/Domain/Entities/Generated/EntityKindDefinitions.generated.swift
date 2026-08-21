@@ -11,6 +11,9 @@ public extension EntityKind {
     static let bookVolume = Self(rawValue: "book-volume")
     static let bookChapter = Self(rawValue: "book-chapter")
     static let bookPage = Self(rawValue: "book-page")
+    static let comicInstallment = Self(rawValue: "comic-installment")
+    static let comicSeries = Self(rawValue: "comic-series")
+    static let comicVolume = Self(rawValue: "comic-volume")
     static let collection = Self(rawValue: "collection")
     static let gallery = Self(rawValue: "gallery")
     static let image = Self(rawValue: "image")
@@ -81,6 +84,7 @@ let generatedAutoIdentifySelectorCodes: [String] = [
     "image",
     "audio",
     "book",
+    "comic",
 ]
 
 let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
@@ -146,7 +150,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             requiredAncestorKind: nil,
             isTopLevel: true
         ),
-        search: EntityKindSearch(order: 10, expandsRelationshipResults: false),
+        search: EntityKindSearch(order: 11, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "audio",
@@ -197,7 +201,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             requiredAncestorKind: nil,
             isTopLevel: true
         ),
-        search: EntityKindSearch(order: 11, expandsRelationshipResults: false),
+        search: EntityKindSearch(order: 12, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: true,
         autoIdentifySelector: "audio",
@@ -394,6 +398,143 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
+    .comicInstallment: EntityKindDefinition(
+        kind: .comicInstallment,
+        displayName: "Comic Installment",
+        groupLabel: "Installments",
+        category: "Media",
+        storageShape: "Archive",
+        presentation: EntityKindPresentation(
+            icon: .chapter,
+            referenceIcon: .book,
+            thumbnailWidth: 2,
+            thumbnailHeight: 3,
+            primaryAccent: .cyan,
+            secondaryAccent: .blue,
+            primaryAccentIndex: 4,
+            secondaryAccentIndex: 5,
+            artworkFit: .cover,
+            artworkSurface: .plain
+        ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .comicSeries,
+            destinationID: "comics",
+            browsePath: "/comics",
+            detailPathTemplate: "/comics/{parentId}/installments/{id}",
+            requiredAncestorKind: .comicSeries,
+            isTopLevel: false
+        ),
+        search: nil,
+        supportsFileDeletion: true,
+        supportsRequests: true,
+        autoIdentifySelector: "comic",
+        identifyPluginFallbackKind: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "reading"),
+        acquisitionProfile: nil,
+        enumeratesIdentifyChildren: false
+    ),
+    .comicSeries: EntityKindDefinition(
+        kind: .comicSeries,
+        displayName: "Comic Series",
+        groupLabel: "Comics",
+        category: "Media",
+        storageShape: "Folder",
+        presentation: EntityKindPresentation(
+            icon: .series,
+            referenceIcon: .book,
+            thumbnailWidth: 2,
+            thumbnailHeight: 3,
+            primaryAccent: .cyan,
+            secondaryAccent: .blue,
+            primaryAccentIndex: 4,
+            secondaryAccentIndex: 5,
+            artworkFit: .cover,
+            artworkSurface: .plain
+        ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .comicSeries,
+            destinationID: "comics",
+            browsePath: "/comics",
+            detailPathTemplate: "/comics/{id}",
+            requiredAncestorKind: nil,
+            isTopLevel: true
+        ),
+        search: EntityKindSearch(order: 8, expandsRelationshipResults: false),
+        supportsFileDeletion: true,
+        supportsRequests: true,
+        autoIdentifySelector: "comic",
+        identifyPluginFallbackKind: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "reading"),
+        acquisitionProfile: EntityAcquisitionProfileDefinition(
+            label: "Comics (serialized)",
+            displayOrder: 4,
+            libraryRootMediaCapability: "scanBooks",
+            supportedReleaseDateTypes: [.publication, .digitalRelease, .physicalRelease, .release],
+            defaultNamingTemplate: "{Series}/{VolumeFolder}/{Title}.{ext}",
+            namingHint: "{Series} {VolumeFolder} {Title} {Year} {ext} — series/optional volume/archive layout",
+            namingFamily: "book"
+        ),
+        enumeratesIdentifyChildren: true
+    ),
+    .comicVolume: EntityKindDefinition(
+        kind: .comicVolume,
+        displayName: "Comic Volume",
+        groupLabel: "Volumes",
+        category: "Media",
+        storageShape: "None",
+        presentation: EntityKindPresentation(
+            icon: .volume,
+            referenceIcon: .book,
+            thumbnailWidth: 2,
+            thumbnailHeight: 3,
+            primaryAccent: .cyan,
+            secondaryAccent: .blue,
+            primaryAccentIndex: 4,
+            secondaryAccentIndex: 5,
+            artworkFit: .cover,
+            artworkSurface: .plain
+        ),
+        navigation: EntityKindNavigation(
+            canonicalBrowseKind: .comicSeries,
+            destinationID: "comics",
+            browsePath: "/comics",
+            detailPathTemplate: "/comics/{parentId}/volumes/{id}",
+            requiredAncestorKind: .comicSeries,
+            isTopLevel: false
+        ),
+        search: nil,
+        supportsFileDeletion: true,
+        supportsRequests: true,
+        autoIdentifySelector: nil,
+        identifyPluginFallbackKind: nil,
+        containableKinds: nil,
+        supportsManualManagement: false,
+        manualAcquisition: EntityManualAcquisitionPolicy(
+            supportsUpload: false,
+            supportsReplacement: false
+        ),
+        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
+        supportsAtomicMediaUpgrade: false,
+        engagementMode: EntityEngagementMode(rawValue: "reading"),
+        acquisitionProfile: nil,
+        enumeratesIdentifyChildren: true
+    ),
     .collection: EntityKindDefinition(
         kind: .collection,
         displayName: "Collection",
@@ -420,12 +561,12 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             requiredAncestorKind: nil,
             isTopLevel: true
         ),
-        search: EntityKindSearch(order: 9, expandsRelationshipResults: false),
+        search: EntityKindSearch(order: 10, expandsRelationshipResults: false),
         supportsFileDeletion: false,
         supportsRequests: false,
         autoIdentifySelector: nil,
         identifyPluginFallbackKind: nil,
-        containableKinds: [.video, .videoEpisode, .movie, .videoSeries, .gallery, .image, .book, .musicArtist, .audioLibrary, .audioTrack],
+        containableKinds: [.video, .videoEpisode, .movie, .videoSeries, .gallery, .image, .book, .comicSeries, .comicInstallment, .musicArtist, .audioLibrary, .audioTrack],
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
             supportsUpload: false,
@@ -506,7 +647,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
             requiredAncestorKind: nil,
             isTopLevel: true
         ),
-        search: EntityKindSearch(order: 8, expandsRelationshipResults: false),
+        search: EntityKindSearch(order: 9, expandsRelationshipResults: false),
         supportsFileDeletion: true,
         supportsRequests: false,
         autoIdentifySelector: "image",

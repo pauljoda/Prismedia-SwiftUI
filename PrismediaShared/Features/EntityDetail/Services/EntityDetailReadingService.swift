@@ -15,7 +15,7 @@ struct EntityDetailReadingService {
     }
 
     func load(detail: EntityDetail) async -> EntityDetailReadingLoadOutcome {
-        guard supportsReading(detail), let reader else { return .unavailable }
+        guard EntityReadingPolicy.supportsReading(detail), let reader else { return .unavailable }
 
         return await resolve(detail: detail, reader: reader)
     }
@@ -39,10 +39,10 @@ struct EntityDetailReadingService {
         detail: EntityDetail,
         readerMode: ReaderMode
     ) async -> EntityDetailReadingMutationOutcome {
-        guard supportsReading(detail), let reader else { return .unavailable }
+        guard EntityReadingPolicy.supportsReading(detail), let reader else { return .unavailable }
 
         do {
-            if isSingleFile(detail) {
+            if EntityReadingPolicy.isSingleFileDocument(detail) {
                 let refreshedDetail = try await reader.loadEntity(id: detail.id)
                 guard let progress = progress(in: refreshedDetail), progress.total > 0 else {
                     return .failure("Reading progress is unavailable.")
@@ -132,7 +132,7 @@ struct EntityDetailReadingService {
     ) async -> EntityDetailReadingMutationOutcome {
         do {
             let refreshedDetail = try await reader.loadEntity(id: detailID)
-            if isSingleFile(refreshedDetail) {
+            if EntityReadingPolicy.isSingleFileDocument(refreshedDetail) {
                 guard !Task.isCancelled else { return .cancelled }
                 return .singleFile(refreshedDetail)
             }
@@ -154,10 +154,10 @@ struct EntityDetailReadingService {
         detail: EntityDetail,
         reader: any BookReaderServicing
     ) async -> EntityDetailReadingLoadOutcome {
-        guard supportsReading(detail) else { return .unavailable }
+        guard EntityReadingPolicy.supportsReading(detail) else { return .unavailable }
 
         do {
-            if isSingleFile(detail) {
+            if EntityReadingPolicy.isSingleFileDocument(detail) {
                 guard !Task.isCancelled else { return .cancelled }
                 return .singleFile(detail)
             }
@@ -172,27 +172,6 @@ struct EntityDetailReadingService {
         } catch {
             guard !Task.isCancelled else { return .cancelled }
             return .failure(error.localizedDescription)
-        }
-    }
-
-    private func supportsReading(_ detail: EntityDetail) -> Bool {
-        guard [.book, .bookVolume, .bookChapter].contains(detail.kind) else { return false }
-        guard detail.kind == .book else { return true }
-        switch BookReaderFormatPolicy.route(for: detail.bookFormat) {
-        case .comic, .pdf, .epub:
-            return true
-        case .unavailable, .unsupported:
-            return false
-        }
-    }
-
-    private func isSingleFile(_ detail: EntityDetail) -> Bool {
-        guard detail.kind == .book else { return false }
-        switch BookReaderFormatPolicy.route(for: detail.bookFormat) {
-        case .pdf, .epub:
-            return true
-        case .unavailable, .comic, .unsupported:
-            return false
         }
     }
 

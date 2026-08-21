@@ -104,6 +104,9 @@ final class AppShellNavigationTests: XCTestCase {
             .bookAuthor: "authors",
             .bookChapter: "books",
             .bookPage: "books",
+            .comicSeries: "comics",
+            .comicVolume: "comics",
+            .comicInstallment: "comics",
             .collection: "collections",
             .person: "people",
             .studio: "studios",
@@ -134,6 +137,16 @@ final class AppShellNavigationTests: XCTestCase {
                 XCTAssertTrue(entityList.query.sortDescending)
             }
         }
+    }
+
+    func testComicsDestinationUsesTheSerializedSeriesKind() throws {
+        let destination = try XCTUnwrap(ModeCatalog.books.destination(id: "comics"))
+        guard case .entityList(let entityList) = destination.content else {
+            return XCTFail("Comics must use the shared Entity list destination.")
+        }
+
+        XCTAssertEqual(entityList.query.kind, .comicSeries)
+        XCTAssertNil(entityList.query.bookType)
     }
 
     func testRootEntityLibrariesDefaultToNewestAdded() {
@@ -356,7 +369,8 @@ final class AppShellNavigationTests: XCTestCase {
         for definition in definitions {
             let navigation = try XCTUnwrap(definition.navigation)
             let template = try XCTUnwrap(navigation.detailPathTemplate)
-            let path = template
+            let path =
+                template
                 .replacingOccurrences(of: "{parentId}", with: parentID.uuidString)
                 .replacingOccurrences(of: "{id}", with: entityID.uuidString)
             let link = try XCTUnwrap(

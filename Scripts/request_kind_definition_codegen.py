@@ -30,7 +30,14 @@ def review_mode(code: str) -> str:
 def render_manifest(manifest: dict) -> str:
     kinds = manifest["requestKinds"]
     entity_members = {entry["code"]: member(entry["code"]) for entry in manifest["enums"]["EntityKind"]}
-    cases = "\n".join(f"    case {entry['kind']}" for entry in kinds)
+    cases = "\n".join(
+        f"    case {member(entry['kind'])}"
+        + (f" = {literal(entry['kind'])}" if member(entry["kind"]) != entry["kind"] else "")
+        for entry in kinds
+    )
+
+    def request_member(entry: dict) -> str:
+        return member(entry["kind"])
 
     def property(name: str, body: list[str], type_name: str) -> str:
         return "\n".join([
@@ -52,31 +59,31 @@ def render_manifest(manifest: dict) -> str:
         "",
         "    public var id: String { rawValue }",
         "",
-        property("label", [f"        case .{x['kind']}: {literal(x['label'])}" for x in kinds], "String"),
+        property("label", [f"        case .{request_member(x)}: {literal(x['label'])}" for x in kinds], "String"),
         "",
-        property("pluralLabel", [f"        case .{x['kind']}: {literal(x['plural'])}" for x in kinds], "String"),
+        property("pluralLabel", [f"        case .{request_member(x)}: {literal(x['plural'])}" for x in kinds], "String"),
         "",
-        property("childNoun", [f"        case .{x['kind']}: return {literal(x['childNoun'])}" for x in kinds], "String?"),
+        property("childNoun", [f"        case .{request_member(x)}: return {literal(x['childNoun'])}" for x in kinds], "String?"),
         "",
-        property("entityKind", [f"        case .{x['kind']}: return .{entity_members[x['entityKind']]}" for x in kinds], "EntityKind"),
+        property("entityKind", [f"        case .{request_member(x)}: return .{entity_members[x['entityKind']]}" for x in kinds], "EntityKind"),
         "",
-        property("pluginEntityKind", [f"        case .{x['kind']}: {literal(x['pluginEntityKind'])}" for x in kinds], "String"),
+        property("pluginEntityKind", [f"        case .{request_member(x)}: {literal(x['pluginEntityKind'])}" for x in kinds], "String"),
         "",
-        property("acquisitionKind", [f"        case .{x['kind']}: return .{entity_members[x['acquisitionKind']]}" for x in kinds], "EntityKind"),
+        property("acquisitionKind", [f"        case .{request_member(x)}: return .{entity_members[x['acquisitionKind']]}" for x in kinds], "EntityKind"),
         "",
-        property("profileKind", [f"        case .{x['kind']}: return .{entity_members[x['profileKind']]}" for x in kinds], "EntityKind"),
+        property("profileKind", [f"        case .{request_member(x)}: return .{entity_members[x['profileKind']]}" for x in kinds], "EntityKind"),
         "",
-        property("reviewSelection", [f"        case .{x['kind']}: return {review_mode(x['reviewSelection'])}" for x in kinds], "RequestReviewSelectionMode"),
+        property("reviewSelection", [f"        case .{request_member(x)}: return {review_mode(x['reviewSelection'])}" for x in kinds], "RequestReviewSelectionMode"),
         "",
-        property("isCommittable", [f"        case .{x['kind']}: return {str(x['committable']).lower()}" for x in kinds], "Bool"),
+        property("isCommittable", [f"        case .{request_member(x)}: return {str(x['committable']).lower()}" for x in kinds], "Bool"),
         "",
-        property("isDiscoverable", [f"        case .{x['kind']}: return {str(x['discoverable']).lower()}" for x in kinds], "Bool"),
+        property("isDiscoverable", [f"        case .{request_member(x)}: return {str(x['discoverable']).lower()}" for x in kinds], "Bool"),
         "",
         "    public static var discoverable: [Self] { allCases.filter(\\.isDiscoverable) }",
         "",
         "    public func supports(root: AdministrativeLibraryRoot) -> Bool {",
         "        switch self {",
-        *[f"        case .{x['kind']}: return root.{x['rootFlag']}" for x in kinds],
+        *[f"        case .{request_member(x)}: return root.{x['rootFlag']}" for x in kinds],
         "        }",
         "    }",
         "}",

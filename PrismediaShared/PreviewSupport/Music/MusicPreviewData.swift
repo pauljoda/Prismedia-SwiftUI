@@ -57,7 +57,9 @@
                     context: MusicPlaybackContext(
                         playbackOwnerEntityID: UUID(uuidString: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
                         playbackOwnerTitle: "The Glass Archive",
-                        playbackOwnerEntityKind: .book
+                        playbackOwnerEntityKind: .book,
+                        preservesQueueOrder: true,
+                        supportsPlaybackRate: true
                     )
                 )
             }

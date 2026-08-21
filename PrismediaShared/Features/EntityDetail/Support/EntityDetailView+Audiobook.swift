@@ -42,12 +42,13 @@ extension EntityDetailView {
                     trackOffsetSeconds: musicPlayer.elapsedTime
                 )
             } else {
-                currentResume = unifiedAudiobookResume(for: detail).map {
-                    projection.absoluteTime(
-                        trackID: $0.trackID,
-                        trackOffsetSeconds: $0.trackOffsetSeconds
-                    )
-                } ?? 0
+                currentResume =
+                    unifiedAudiobookResume(for: detail).map {
+                        projection.absoluteTime(
+                            trackID: $0.trackID,
+                            trackOffsetSeconds: $0.trackOffsetSeconds
+                        )
+                    } ?? 0
             }
             return AudiobookPlaybackPresentation(
                 totalDuration: projection.totalDuration,
@@ -113,7 +114,9 @@ extension EntityDetailView {
                     playbackOwnerEntityID: projection.bookID,
                     playbackOwnerTitle: projection.title,
                     playbackOwnerEntityKind: .book,
-                    bookProgressMappings: currentDetail.map { bookProgressMappings(for: $0) }
+                    bookProgressMappings: currentDetail.map { bookProgressMappings(for: $0) },
+                    preservesQueueOrder: projection.preservesQueueOrder,
+                    supportsPlaybackRate: projection.supportsPlaybackRate
                 ),
                 startSeconds: startSeconds
             )

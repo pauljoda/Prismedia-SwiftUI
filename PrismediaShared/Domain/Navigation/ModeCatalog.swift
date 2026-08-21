@@ -75,7 +75,7 @@ public enum ModeCatalog {
                 "comics",
                 "Comics",
                 "book.pages",
-                query: EntityListQuery(kind: .book, bookType: "comic,manga")
+                kind: .comicSeries
             ),
             entityDestination(
                 "ebooks",

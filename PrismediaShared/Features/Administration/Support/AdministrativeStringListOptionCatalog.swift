@@ -46,7 +46,7 @@ enum AdministrativeStringListOptionCatalog {
         return generatedAutoIdentifySelectorCodes.filter(selectors.contains).map { selector in
             AdministrativeSettingOption(
                 value: selector,
-                label: AutoIdentifySelectorKind(rawValue: selector)?.displayLabel ?? selector,
+                label: AutoIdentifySelectorKind(rawValue: selector).displayLabel,
                 description: nil
             )
         }

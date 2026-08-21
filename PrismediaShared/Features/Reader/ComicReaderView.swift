@@ -251,6 +251,12 @@
             screenState = .content(manifest)
             currentIndex = manifest.initialIndex
             readerMode = preservingMode ?? manifest.readerMode
+            pageOptions.firstPageIsCover = manifest.coverOrdinal == 0
+            pageOptions.singlePageIndexes = Set(
+                manifest.pages.enumerated().compactMap { index, page in
+                    page.isDoublePage || index == manifest.coverOrdinal ? index : nil
+                }
+            )
             revealChrome()
         }
 
@@ -327,16 +333,20 @@
 
         private func handleTap(x: CGFloat, width: CGFloat) {
             switch ComicReaderNavigation.tapZone(x: x, width: width) {
-            case .previous: goPrevious()
+            case .previous:
+                manifest?.readingDirection == .rightToLeft ? goNext() : goPrevious()
             case .controls: contentTapped()
-            case .next: goNext()
+            case .next:
+                manifest?.readingDirection == .rightToLeft ? goPrevious() : goNext()
             }
         }
 
         private func handleGesture(_ gesture: ComicReaderGesture) {
             switch gesture {
-            case .previous: goPrevious()
-            case .next: goNext()
+            case .previous:
+                manifest?.readingDirection == .rightToLeft ? goNext() : goPrevious()
+            case .next:
+                manifest?.readingDirection == .rightToLeft ? goPrevious() : goNext()
             case .dismiss: close()
             case .none: break
             }

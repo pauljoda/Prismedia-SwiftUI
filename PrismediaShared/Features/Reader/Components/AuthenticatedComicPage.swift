@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AuthenticatedComicPage: View {
-    let page: EntityThumbnail
+    let page: BookReaderPage
     let cache: BookReaderPageCache
     var fit = true
 
@@ -25,7 +25,7 @@ struct AuthenticatedComicPage: View {
         .accessibilityLabel(page.title)
         .task(id: page.id) {
             do {
-                _ = try await cache.data(for: page.id)
+                _ = try await cache.data(for: page)
             } catch {
                 failed = true
             }
@@ -39,7 +39,7 @@ struct AuthenticatedComicPage: View {
 #if DEBUG
     #Preview("Authenticated Comic Page") {
         AuthenticatedComicPage(
-            page: ComicReaderPreviewData.pageThumbnail,
+            page: ComicReaderPreviewData.page,
             cache: ComicReaderPreviewData.pageCache
         )
         .frame(width: 320, height: 480)

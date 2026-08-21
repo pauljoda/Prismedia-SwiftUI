@@ -38,7 +38,7 @@ public struct MusicQueue: Equatable, Sendable {
         }
         var seen = Set<Int>()
         var restoredOrder: [Int]
-        if restoration.context?.isAudiobook == true {
+        if restoration.context?.preservesQueueOrder == true {
             restoredOrder = Array(restoredTracks.indices)
         } else {
             restoredOrder = restoration.orderedTrackIDs.compactMap { id in
@@ -57,7 +57,7 @@ public struct MusicQueue: Equatable, Sendable {
         order = restoredOrder
         position = restoredPosition
         repeatMode = restoration.repeatMode
-        isShuffled = restoration.context?.isAudiobook == true ? false : restoration.isShuffled
+        isShuffled = restoration.context?.preservesQueueOrder == true ? false : restoration.isShuffled
         history = Array((restoration.history ?? []).filter { $0.track.isPlayable }.suffix(Self.historyLimit))
         nextHistorySequence = (history.map(\.sequence).max() ?? 0) + (history.isEmpty ? 0 : 1)
     }

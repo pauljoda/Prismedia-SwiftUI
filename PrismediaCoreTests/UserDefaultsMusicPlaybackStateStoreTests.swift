@@ -47,6 +47,20 @@ final class UserDefaultsMusicPlaybackStateStoreTests: XCTestCase {
         XCTAssertTrue(track.isPlayable)
     }
 
+    func testLegacyPlaybackContextDefaultsCapabilityPoliciesToDisabled() throws {
+        let ownerID = UUID()
+        let data = Data(
+            #"{"playbackOwnerEntityID":"\#(ownerID)","playbackOwnerTitle":"Legacy Book","playbackOwnerEntityKind":"book"}"#
+                .utf8
+        )
+
+        let context = try JSONDecoder().decode(MusicPlaybackContext.self, from: data)
+
+        XCTAssertEqual(context.playbackOwnerEntityID, ownerID)
+        XCTAssertFalse(context.preservesQueueOrder)
+        XCTAssertFalse(context.supportsPlaybackRate)
+    }
+
     func testClearingQueueRestorationKeepsGlobalPlaybackPreferences() {
         let suiteName = "UserDefaultsMusicPlaybackStateStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

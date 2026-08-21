@@ -94,6 +94,23 @@ public enum PrismediaContractCodes {
         public static let `reacquire` = "reacquire"
     }
 
+    public enum AudioPlaybackDiagnosticEvent {
+        public static let `playing` = "playing"
+        public static let `pause` = "pause"
+        public static let `waiting` = "waiting"
+        public static let `stalled` = "stalled"
+        public static let `error` = "error"
+    }
+
+    public enum AudioPlaybackPauseSource {
+        public static let `userControl` = "user-control"
+        public static let `mediaSession` = "media-session"
+        public static let `tabDisplaced` = "tab-displaced"
+        public static let `dismiss` = "dismiss"
+        public static let `trackChange` = "track-change"
+        public static let `browser` = "browser"
+    }
+
     public enum AudioQuality {
         public static let `unknown` = "unknown"
         public static let `lossy` = "lossy"
@@ -108,6 +125,7 @@ public enum PrismediaContractCodes {
         public static let `image` = "image"
         public static let `audio` = "audio"
         public static let `book` = "book"
+        public static let `comic` = "comic"
     }
 
     public enum BlocklistReason {
@@ -116,6 +134,12 @@ public enum PrismediaContractCodes {
         public static let `noImportableFiles` = "no-importable-files"
         public static let `manual` = "manual"
         public static let `wrongContent` = "wrong-content"
+        public static let `notAnUpgrade` = "not-an-upgrade"
+    }
+
+    public enum BookChapterMappingOrigin {
+        public static let `manual` = "manual"
+        public static let `auto` = "auto"
     }
 
     public enum BookFormat {
@@ -220,6 +244,13 @@ public enum PrismediaContractCodes {
         public static let `isNotNull` = "is_not_null"
         public static let `isTrue` = "is_true"
         public static let `isFalse` = "is_false"
+    }
+
+    public enum ComicInstallmentKind {
+        public static let `chapter` = "chapter"
+        public static let `issue` = "issue"
+        public static let `special` = "special"
+        public static let `oneShot` = "one-shot"
     }
 
     public enum ConsumptionActivityKind {
@@ -347,6 +378,9 @@ public enum PrismediaContractCodes {
         public static let `bookVolume` = "book-volume"
         public static let `bookChapter` = "book-chapter"
         public static let `bookPage` = "book-page"
+        public static let `comicInstallment` = "comic-installment"
+        public static let `comicSeries` = "comic-series"
+        public static let `comicVolume` = "comic-volume"
         public static let `collection` = "collection"
         public static let `gallery` = "gallery"
         public static let `image` = "image"
@@ -403,6 +437,11 @@ public enum PrismediaContractCodes {
         public static let `audio` = "audio"
     }
 
+    public enum EntitySequenceRole {
+        public static let `container` = "container"
+        public static let `item` = "item"
+    }
+
     public enum EntitySortDirection {
         public static let `ascending` = "asc"
         public static let `descending` = "desc"
@@ -410,6 +449,7 @@ public enum PrismediaContractCodes {
 
     public enum EntitySourceCode {
         public static let `folder` = "folder"
+        public static let `generatedFromFolder` = "generated-from-folder"
     }
 
     public enum EntityStorageShape {
@@ -557,6 +597,7 @@ public enum PrismediaContractCodes {
         public static let `scanLibrary` = "scan-library"
         public static let `scanGallery` = "scan-gallery"
         public static let `scanBook` = "scan-book"
+        public static let `scanComic` = "scan-comic"
         public static let `scanAudio` = "scan-audio"
         public static let `reconcileEntity` = "reconcile-entity"
         public static let `probeVideo` = "probe-video"
@@ -570,6 +611,7 @@ public enum PrismediaContractCodes {
         public static let `gridThumbnailSweep` = "grid-thumbnail-sweep"
         public static let `generateBookPageThumbnail` = "generate-book-page-thumbnail"
         public static let `generateBookCoverThumbnail` = "generate-book-cover-thumbnail"
+        public static let `mapBookChapters` = "map-book-chapters"
         public static let `generateAudioWaveform` = "generate-audio-waveform"
         public static let `extractSubtitles` = "extract-subtitles"
         public static let `acquireSubtitles` = "acquire-subtitles"
@@ -676,6 +718,21 @@ public enum PrismediaContractCodes {
         public static let `failed` = "failed"
     }
 
+    public enum PageReadingDirection {
+        public static let `leftToRight` = "left-to-right"
+        public static let `rightToLeft` = "right-to-left"
+        public static let `topToBottom` = "top-to-bottom"
+    }
+
+    public enum PageType {
+        public static let `story` = "story"
+        public static let `frontCover` = "front-cover"
+        public static let `backCover` = "back-cover"
+        public static let `advertisement` = "advertisement"
+        public static let `letters` = "letters"
+        public static let `other` = "other"
+    }
+
     public enum PlaybackMode {
         public static let `direct` = "direct"
         public static let `hls` = "hls"
@@ -741,6 +798,7 @@ public enum PrismediaContractCodes {
         public static let `titleMismatch` = "title-mismatch"
         public static let `wrongYear` = "wrong-year"
         public static let `wrongVolume` = "wrong-volume"
+        public static let `wrongInstallment` = "wrong-installment"
     }
 
     public enum RequestCommitOutcome {
@@ -757,6 +815,9 @@ public enum PrismediaContractCodes {
         public static let `series` = "series"
         public static let `season` = "season"
         public static let `episode` = "episode"
+        public static let `comicSeries` = "comic-series"
+        public static let `comicVolume` = "comic-volume"
+        public static let `comicInstallment` = "comic-installment"
         public static let `artist` = "artist"
         public static let `album` = "album"
         public static let `track` = "track"
@@ -835,6 +896,7 @@ public enum PrismediaContractCodes {
         public static let `bookMetadata` = "book-metadata"
         public static let `classification` = "classification"
         public static let `collectionConfiguration` = "collection-configuration"
+        public static let `comicInstallmentMetadata` = "comic-installment-metadata"
         public static let `consumption` = "consumption"
         public static let `coverSelection` = "cover-selection"
         public static let `credits` = "credits"
@@ -850,7 +912,10 @@ public enum PrismediaContractCodes {
         public static let `lifetime` = "lifetime"
         public static let `links` = "links"
         public static let `markers` = "markers"
+        public static let `orderedSequence` = "ordered-sequence"
+        public static let `pageSequence` = "page-sequence"
         public static let `personProfile` = "person-profile"
+        public static let `playableAudio` = "playable-audio"
         public static let `playableVideo` = "playable-video"
         public static let `position` = "position"
         public static let `progress` = "progress"
@@ -897,6 +962,8 @@ public enum PrismediaContractCodes {
         public static let `entityNotCreatable` = "entity_not_creatable"
         public static let `entityNotDeletable` = "entity_not_deletable"
         public static let `entityNotFound` = "entity_not_found"
+        public static let `entityReaderManifestNotFound` = "entity_reader_manifest_not_found"
+        public static let `entityReaderPageNotFound` = "entity_reader_page_not_found"
         public static let `externalIdentityAmbiguous` = "external_identity_ambiguous"
         public static let `fileConflict` = "file_conflict"
         public static let `identifyApplyProgressNotFound` = "identify_apply_progress_not_found"
@@ -907,6 +974,7 @@ public enum PrismediaContractCodes {
         public static let `identifyTargetNotEligible` = "identify_target_not_eligible"
         public static let `indexerInvalid` = "indexer_invalid"
         public static let `indexerUnreachable` = "indexer_unreachable"
+        public static let `invalidBookChapterMapping` = "invalid_book_chapter_mapping"
         public static let `invalidCollection` = "invalid_collection"
         public static let `invalidCollectionItems` = "invalid_collection_items"
         public static let `invalidCollectionRules` = "invalid_collection_rules"
@@ -988,6 +1056,7 @@ public enum PrismediaContractCodes {
         public static let `playbackShowCastControls` = "playback.showCastControls"
         public static let `pluginsAutoUpdateEnabled` = "plugins.autoUpdateEnabled"
         public static let `scanAutoScanEnabled` = "scan.autoScanEnabled"
+        public static let `scanIntegrityIntervalHours` = "scan.integrityIntervalHours"
         public static let `scanIntervalMinutes` = "scan.intervalMinutes"
         public static let `subtitlesAutoDownloadEnabled` = "subtitles.autoDownloadEnabled"
         public static let `subtitlesAutoDownloadLanguages` = "subtitles.autoDownloadLanguages"
@@ -1044,6 +1113,15 @@ public extension AcquisitionStatus {
     static let `manualImportRequired` = Self(rawValue: PrismediaContractCodes.AcquisitionStatus.`manualImportRequired`)
 }
 
+public extension AutoIdentifySelectorKind {
+    static let `video` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`video`)
+    static let `gallery` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`gallery`)
+    static let `image` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`image`)
+    static let `audio` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`audio`)
+    static let `book` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`book`)
+    static let `comic` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`comic`)
+}
+
 public extension BookFormat {
     static let `imageArchive` = Self(rawValue: PrismediaContractCodes.BookFormat.`imageArchive`)
     static let `epub` = Self(rawValue: PrismediaContractCodes.BookFormat.`epub`)
@@ -1056,12 +1134,20 @@ public extension RequestActivityBookRendition {
     static let `audiobook` = Self(rawValue: PrismediaContractCodes.BookRendition.`audiobook`)
 }
 
+public extension ComicInstallmentKind {
+    static let `chapter` = Self(rawValue: PrismediaContractCodes.ComicInstallmentKind.`chapter`)
+    static let `issue` = Self(rawValue: PrismediaContractCodes.ComicInstallmentKind.`issue`)
+    static let `special` = Self(rawValue: PrismediaContractCodes.ComicInstallmentKind.`special`)
+    static let `oneShot` = Self(rawValue: PrismediaContractCodes.ComicInstallmentKind.`oneShot`)
+}
+
 public extension RequestActivityBlocklistReason {
     static let `failed` = Self(rawValue: PrismediaContractCodes.BlocklistReason.`failed`)
     static let `stalled` = Self(rawValue: PrismediaContractCodes.BlocklistReason.`stalled`)
     static let `noImportableFiles` = Self(rawValue: PrismediaContractCodes.BlocklistReason.`noImportableFiles`)
     static let `manual` = Self(rawValue: PrismediaContractCodes.BlocklistReason.`manual`)
     static let `wrongContent` = Self(rawValue: PrismediaContractCodes.BlocklistReason.`wrongContent`)
+    static let `notAnUpgrade` = Self(rawValue: PrismediaContractCodes.BlocklistReason.`notAnUpgrade`)
 }
 
 public extension ConsumptionActivityKind {
@@ -1088,12 +1174,32 @@ public extension EntityEngagementMode {
     static let `reading` = Self(rawValue: PrismediaContractCodes.EntityEngagementMode.`reading`)
 }
 
+public extension EntitySequenceRole {
+    static let `container` = Self(rawValue: PrismediaContractCodes.EntitySequenceRole.`container`)
+    static let `item` = Self(rawValue: PrismediaContractCodes.EntitySequenceRole.`item`)
+}
+
 public extension EntityMonitorStatus {
     static let `active` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`active`)
     static let `paused` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`paused`)
     static let `deletingFiles` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`deletingFiles`)
     static let `stopping` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`stopping`)
     static let `fulfilled` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`fulfilled`)
+}
+
+public extension PageReadingDirection {
+    static let `leftToRight` = Self(rawValue: PrismediaContractCodes.PageReadingDirection.`leftToRight`)
+    static let `rightToLeft` = Self(rawValue: PrismediaContractCodes.PageReadingDirection.`rightToLeft`)
+    static let `topToBottom` = Self(rawValue: PrismediaContractCodes.PageReadingDirection.`topToBottom`)
+}
+
+public extension PageType {
+    static let `story` = Self(rawValue: PrismediaContractCodes.PageType.`story`)
+    static let `frontCover` = Self(rawValue: PrismediaContractCodes.PageType.`frontCover`)
+    static let `backCover` = Self(rawValue: PrismediaContractCodes.PageType.`backCover`)
+    static let `advertisement` = Self(rawValue: PrismediaContractCodes.PageType.`advertisement`)
+    static let `letters` = Self(rawValue: PrismediaContractCodes.PageType.`letters`)
+    static let `other` = Self(rawValue: PrismediaContractCodes.PageType.`other`)
 }
 
 public extension ProgressUnit {
@@ -1130,6 +1236,7 @@ public extension RequestActivityReleaseRejection {
     static let `titleMismatch` = Self(rawValue: PrismediaContractCodes.ReleaseRejectionReason.`titleMismatch`)
     static let `wrongYear` = Self(rawValue: PrismediaContractCodes.ReleaseRejectionReason.`wrongYear`)
     static let `wrongVolume` = Self(rawValue: PrismediaContractCodes.ReleaseRejectionReason.`wrongVolume`)
+    static let `wrongInstallment` = Self(rawValue: PrismediaContractCodes.ReleaseRejectionReason.`wrongInstallment`)
 }
 
 public extension RequestActivityHistoryEvent {
@@ -1151,6 +1258,7 @@ public extension EntityCapabilityKind {
     static let `bookMetadata` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`bookMetadata`)
     static let `classification` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`classification`)
     static let `collectionConfiguration` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`collectionConfiguration`)
+    static let `comicInstallmentMetadata` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`comicInstallmentMetadata`)
     static let `consumption` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`consumption`)
     static let `coverSelection` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`coverSelection`)
     static let `credits` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`credits`)
@@ -1166,7 +1274,10 @@ public extension EntityCapabilityKind {
     static let `lifetime` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`lifetime`)
     static let `links` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`links`)
     static let `markers` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`markers`)
+    static let `orderedSequence` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`orderedSequence`)
+    static let `pageSequence` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`pageSequence`)
     static let `personProfile` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`personProfile`)
+    static let `playableAudio` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`playableAudio`)
     static let `playableVideo` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`playableVideo`)
     static let `position` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`position`)
     static let `progress` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`progress`)

@@ -1,19 +1,19 @@
 import Foundation
 
-enum AutoIdentifySelectorKind: String, CaseIterable, Sendable {
-    case video = "video"
-    case gallery = "gallery"
-    case image = "image"
-    case audio = "audio"
-    case book = "book"
+public struct AutoIdentifySelectorKind: RawRepresentable, Hashable, Sendable {
+    public let rawValue: String
+
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
 
     var displayLabel: String {
-        switch self {
-        case .video: "Videos"
-        case .gallery: "Galleries"
-        case .image: "Images"
-        case .audio: "Audio"
-        case .book: "Books"
-        }
+        if self == .video { return "Videos" }
+        if self == .gallery { return "Galleries" }
+        if self == .image { return "Images" }
+        if self == .audio { return "Audio" }
+        if self == .book { return "Books" }
+        if self == .comic { return "Comics" }
+        return rawValue
     }
 }

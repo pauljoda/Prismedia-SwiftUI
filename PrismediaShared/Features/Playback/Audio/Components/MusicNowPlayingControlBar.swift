@@ -61,7 +61,7 @@
                     .frame(maxWidth: .infinity)
             }
             .buttonBorderShape(.capsule)
-            .disabled(controller.context?.isAudiobook == true)
+            .disabled(controller.context?.preservesQueueOrder == true)
             .accessibilityLabel(shuffleLabel)
             .accessibilityValue(controller.queue.isShuffled ? "On" : "Off")
             .accessibilityIdentifier("music.shuffle")
@@ -97,8 +97,8 @@
         }
 
         private var shuffleLabel: String {
-            if controller.context?.isAudiobook == true {
-                return "Shuffle unavailable. Audiobook parts play in order"
+            if controller.context?.preservesQueueOrder == true {
+                return "Shuffle unavailable. This queue plays in source order"
             }
             return controller.queue.isShuffled ? "Turn Shuffle Off" : "Turn Shuffle On"
         }

@@ -120,6 +120,8 @@ struct EntityDetailReadingState: Hashable, Sendable {
         switch entityKind {
         case .bookVolume: suffix = " Volume"
         case .bookChapter: suffix = " Chapter"
+        case .comicVolume: suffix = " Volume"
+        case .comicInstallment: suffix = " Installment"
         default: suffix = ""
         }
 

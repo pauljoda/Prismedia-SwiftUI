@@ -20,7 +20,9 @@ final class AudiobookPlayerControllerTests: XCTestCase {
             playbackOwnerEntityID: bookID,
             playbackOwnerTitle: "The Long Voyage",
             playbackOwnerEntityKind: .book,
-            bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks)
+            bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks),
+            preservesQueueOrder: true,
+            supportsPlaybackRate: true
         )
 
         controller.play(
@@ -69,7 +71,9 @@ final class AudiobookPlayerControllerTests: XCTestCase {
                 playbackOwnerEntityID: bookID,
                 playbackOwnerTitle: "The Long Voyage",
                 playbackOwnerEntityKind: .book,
-                bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks)
+                bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks),
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
         controller.updatePlaybackProgress(
@@ -98,7 +102,9 @@ final class AudiobookPlayerControllerTests: XCTestCase {
         let context = MusicPlaybackContext(
             playbackOwnerEntityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
             playbackOwnerTitle: "The Long Voyage",
-            playbackOwnerEntityKind: .book
+            playbackOwnerEntityKind: .book,
+            preservesQueueOrder: true,
+            supportsPlaybackRate: true
         )
         let restoration = MusicPlaybackRestoration(
             tracks: tracks,

@@ -42,18 +42,21 @@ struct ComicPagedReader: View {
     }
 
     private var spread: some View {
-        let indexes = ComicReaderNavigation.spread(
+        let logicalIndexes = ComicReaderNavigation.spread(
             index: currentIndex,
             total: manifest.pages.count,
             options: options
         )
+        let indexes = manifest.readingDirection == .rightToLeft
+            ? Array(logicalIndexes.reversed())
+            : logicalIndexes
 
         return HStack(spacing: PrismediaSpacing.small) {
             ForEach(indexes, id: \.self) { index in
                 AuthenticatedComicPage(page: manifest.pages[index], cache: pageCache)
             }
         }
-        .padding(.horizontal, indexes.count > 1 ? 12 : 0)
+        .padding(.horizontal, logicalIndexes.count > 1 ? 12 : 0)
         .task(
             id: ComicReaderPreloadKey(
                 chapterIDs: manifest.chapters.map(\.id),

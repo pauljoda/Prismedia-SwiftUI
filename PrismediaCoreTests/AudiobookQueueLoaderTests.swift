@@ -76,7 +76,14 @@ final class AudiobookQueueLoaderTests: XCTestCase {
             parentEntityID: nil,
             sortOrder: nil,
             hasSourceMedia: true,
-            capabilities: [],
+            capabilities: [
+                .playableAudio(
+                    EntityPlayableAudioCapability(
+                        itemKind: .audioTrack,
+                        preservesQueueOrder: true,
+                        supportsPlaybackRate: true
+                    ))
+            ],
             childrenByKind: [
                 EntityGroup(kind: .audioTrack, label: "Audio Tracks", entities: parts, code: nil)
             ],
@@ -95,7 +102,8 @@ final class AudiobookQueueLoaderTests: XCTestCase {
             kind: .audioTrack,
             title: title,
             sortOrder: sortOrder,
-            meta: duration.map { [EntityThumbnailMeta(icon: "duration", label: $0)] } ?? []
+            meta: duration.map { [EntityThumbnailMeta(icon: "duration", label: $0)] } ?? [],
+            hasSourceMedia: true
         )
     }
 

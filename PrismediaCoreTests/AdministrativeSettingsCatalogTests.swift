@@ -75,8 +75,8 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
 
         let options = AdministrativeStringListOptionCatalog.options(for: setting, plugins: [])
 
-        XCTAssertEqual(options.map(\.value), ["video", "gallery", "image", "audio", "book"])
-        XCTAssertEqual(options.map(\.label), ["Videos", "Galleries", "Images", "Audio", "Books"])
+        XCTAssertEqual(options.map(\.value), ["video", "gallery", "image", "audio", "book", "comic"])
+        XCTAssertEqual(options.map(\.label), ["Videos", "Galleries", "Images", "Audio", "Books", "Comics"])
     }
 
     func testAutoIdentifyProviderOptionsIncludeOnlyInstalledEnabledPlugins() throws {

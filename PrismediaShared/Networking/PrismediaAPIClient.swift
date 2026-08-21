@@ -203,7 +203,7 @@ public struct PrismediaAPIClient: Sendable {
         for startIndex in stride(from: 0, to: uniqueIDs.count, by: 500) {
             try Task.checkCancellation()
             let endIndex = min(startIndex + 500, uniqueIDs.count)
-            let batch = Array(uniqueIDs[startIndex ..< endIndex])
+            let batch = Array(uniqueIDs[startIndex..<endIndex])
             let batchStates = try await send(
                 [EntityMonitorState].self,
                 path: "/api/monitors/states",
@@ -351,7 +351,7 @@ public struct PrismediaAPIClient: Sendable {
                 path: "/api/entities/children",
                 method: "POST",
                 queryItems: [nsfwVisibilityQueryItem],
-                body: EntityChildrenBatchRequest(parentIds: Array(uniqueIDs[start ..< end]))
+                body: EntityChildrenBatchRequest(parentIds: Array(uniqueIDs[start..<end]))
             )
             groups += response.groups
         }
@@ -376,11 +376,12 @@ public struct PrismediaAPIClient: Sendable {
         let thumbnails = try await fetchEntityThumbnails(ids: response.items.map(\.id))
         let thumbnailsByID = Dictionary(uniqueKeysWithValues: thumbnails.map { ($0.id, $0) })
         return response.items.map { option in
-            thumbnailsByID[option.id] ?? EntityThumbnail(
-                id: option.id,
-                kind: .collection,
-                title: option.title
-            )
+            thumbnailsByID[option.id]
+                ?? EntityThumbnail(
+                    id: option.id,
+                    kind: .collection,
+                    title: option.title
+                )
         }
     }
 
@@ -653,6 +654,21 @@ public struct PrismediaAPIClient: Sendable {
 
     public func entitySourceData(id: UUID) async throws -> Data {
         try await mediaData(for: "/api/entities/\(id.uuidString.lowercased())/files/source")
+    }
+
+    /// Loads an Entity's generic ordered-page reader manifest.
+    public func entityReaderManifest(id: UUID) async throws -> EntityReaderManifest {
+        try await send(
+            EntityReaderManifest.self,
+            path: "/api/entities/\(id.uuidString.lowercased())/reader-manifest"
+        )
+    }
+
+    /// Loads one authenticated ordinal from an Entity's generic reader manifest.
+    public func entityReaderPageData(id: UUID, ordinal: Int) async throws -> Data {
+        try await mediaData(
+            for: "/api/entities/\(id.uuidString.lowercased())/reader-pages/\(ordinal)"
+        )
     }
 
     // MARK: - URLs

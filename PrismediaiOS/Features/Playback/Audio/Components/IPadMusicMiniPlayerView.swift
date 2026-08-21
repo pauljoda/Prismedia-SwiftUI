@@ -79,7 +79,7 @@
             return VStack(spacing: 0) {
                 Slider(
                     value: $scrubPosition,
-                    in: 0 ... duration,
+                    in: 0...duration,
                     onEditingChanged: scrubDidChange
                 )
                 .controlSize(.mini)
@@ -188,7 +188,7 @@
                 controller.queue.isShuffled ? "Turn Shuffle Off" : "Turn Shuffle On",
                 systemImage: "shuffle",
                 isActive: controller.queue.isShuffled,
-                isDisabled: controller.context?.isAudiobook == true,
+                isDisabled: controller.context?.preservesQueueOrder == true,
                 identifier: "music.mini-player.shuffle"
             ) {
                 withoutMusicControlAnimation {

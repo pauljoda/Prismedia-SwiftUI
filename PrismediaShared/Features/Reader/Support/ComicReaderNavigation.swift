@@ -13,16 +13,19 @@ public enum ComicReaderNavigation {
         guard total > 0 else { return [] }
         let current = clamp(index, total: total)
         guard options.pageMode == .double else { return [current] }
-        if options.firstPageIsCover, current == 0 { return [0] }
-
-        let spreadStart: Int
-        if options.firstPageIsCover {
-            spreadStart = current.isMultiple(of: 2) ? current - 1 : current
-        } else {
-            spreadStart = current.isMultiple(of: 2) ? current : current - 1
+        var cursor = 0
+        while cursor < total {
+            let next = cursor + 1
+            let standsAlone =
+                (options.firstPageIsCover && cursor == 0)
+                || options.singlePageIndexes.contains(cursor)
+                || next >= total
+                || options.singlePageIndexes.contains(next)
+            let spread = standsAlone ? [cursor] : [cursor, next]
+            if spread.contains(current) { return spread }
+            cursor += spread.count
         }
-        let start = clamp(spreadStart, total: total)
-        return start + 1 < total ? [start, start + 1] : [start]
+        return [current]
     }
 
     public static func nextIndex(from index: Int, total: Int, options: ComicReaderOptions) -> Int {

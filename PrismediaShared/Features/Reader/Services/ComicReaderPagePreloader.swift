@@ -27,8 +27,8 @@ struct ComicReaderPagePreloader {
             let batchEnd = min(indexes.count, batchStart + maximumConcurrentLoads)
             await withTaskGroup(of: Void.self) { group in
                 for index in indexes[batchStart..<batchEnd] {
-                    let pageID = manifest.pages[index].id
-                    group.addTask { _ = try? await cache.data(for: pageID) }
+                    let page = manifest.pages[index]
+                    group.addTask { _ = try? await cache.data(for: page) }
                 }
             }
         }

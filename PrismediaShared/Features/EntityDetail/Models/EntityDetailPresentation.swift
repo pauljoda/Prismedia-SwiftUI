@@ -153,8 +153,9 @@ struct EntityDetailPresentation {
     }
 
     private func thumbnailMediaBadges(excluding existingLabels: Set<String>) -> [VideoPlaybackBadge] {
-        guard let thumbnail = mediaThumbnail
-            ?? detail.childrenByKind
+        guard
+            let thumbnail = mediaThumbnail
+                ?? detail.childrenByKind
                 .first(where: { $0.kind == .video })?
                 .entities
                 .sorted(by: Self.sourceOrder)
@@ -221,7 +222,9 @@ struct EntityDetailPresentation {
     var systemImage: String {
         switch detail.kind {
         case .audio, .audioLibrary, .audioTrack, .musicArtist: return "music.note"
-        case .book, .bookVolume, .bookChapter, .bookPage, .bookAuthor: return "book.closed"
+        case .book, .bookVolume, .bookChapter, .bookPage, .bookAuthor,
+            .comicSeries, .comicVolume, .comicInstallment:
+            return "book.closed"
         case .person: return "person.crop.rectangle"
         case .studio: return "building.2"
         case .tag: return "tag"
@@ -353,7 +356,8 @@ struct EntityDetailPresentation {
                     items.append(
                         .init(
                             label: "Sample Rate",
-                            value: "\((Double(sampleRate) / 1_000).formatted(.number.precision(.fractionLength(0...1)))) kHz",
+                            value:
+                                "\((Double(sampleRate) / 1_000).formatted(.number.precision(.fractionLength(0...1)))) kHz",
                             systemImage: "waveform"
                         )
                     )
@@ -482,6 +486,11 @@ struct EntityDetailPresentation {
             )
         }
         let hasProgress = detail.capability(EntityProgressCapability.self)?.currentEntityID != nil
+        if detail.capability(EntityPageSequenceCapability.self) != nil {
+            return action(
+                hasProgress ? .resume : .read, hasProgress ? "Resume" : "Read",
+                hasProgress ? "book.pages" : "book.fill", primary: true)
+        }
         switch detail.kind {
         case .book:
             switch BookReaderFormatPolicy.route(for: detail.bookFormat) {

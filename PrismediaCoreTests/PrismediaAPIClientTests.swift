@@ -463,6 +463,53 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token")
     }
 
+    func testEntityReaderUsesGenericManifestAndOrdinalPageEndpoints() async throws {
+        let entityID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        let bytes = Data([0x89, 0x50, 0x4e, 0x47])
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                """
+                {
+                  "entityId": "\(entityID)",
+                  "direction": "right-to-left",
+                  "defaultMode": "paged",
+                  "coverOrdinal": 0,
+                  "pages": [{
+                    "ordinal": 0,
+                    "mimeType": "image/png",
+                    "width": 1200,
+                    "height": 1800,
+                    "pageType": "front-cover",
+                    "isDoublePage": false,
+                    "checksum": "abc123"
+                  }]
+                }
+                """),
+            .data(bytes),
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let manifest = try await client.entityReaderManifest(id: entityID)
+        let page = try await client.entityReaderPageData(id: entityID, ordinal: 0)
+
+        XCTAssertEqual(manifest.entityID, entityID)
+        XCTAssertEqual(manifest.direction, .rightToLeft)
+        XCTAssertEqual(manifest.pages.first?.pageType, .frontCover)
+        XCTAssertEqual(page, bytes)
+        XCTAssertEqual(
+            loader.requests.map(\.url?.path),
+            [
+                "/api/entities/\(entityID.uuidString.lowercased())/reader-manifest",
+                "/api/entities/\(entityID.uuidString.lowercased())/reader-pages/0",
+            ]
+        )
+        XCTAssertTrue(
+            loader.requests.allSatisfy {
+                $0.value(forHTTPHeaderField: "Authorization") == "Bearer token"
+            }
+        )
+    }
+
     func testFetchEntityThumbnailsBatchesParentArtistResolution() async throws {
         let artistID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         let loader = MockHTTPDataLoader(responses: [
@@ -1057,7 +1104,7 @@ final class PrismediaAPIClientTests: XCTestCase {
                     }
                   }
                 }
-                """)
+                """),
         ])
         let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
 

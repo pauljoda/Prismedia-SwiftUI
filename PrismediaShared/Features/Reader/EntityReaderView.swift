@@ -49,35 +49,39 @@ public struct EntityReaderView: View {
             #if os(tvOS)
                 UnsupportedBookReaderView(message: "Books can be read in Prismedia on iPhone, iPad, or Mac.")
             #else
-                switch BookReaderFormatPolicy.route(
-                    for: selected.kind,
-                    format: selected.bookFormat
-                ) {
-                case .unavailable:
-                    UnsupportedBookReaderView(message: "This book does not expose a readable source format.")
-                case .comic:
+                if selected.capability(EntityPageSequenceCapability.self) != nil {
                     ComicReaderView(selected: selected, command: command, service: service)
-                case .pdf:
-                    PDFReaderView(book: selected, command: command, service: service)
-                case .epub:
-                    EPUBReaderView(
-                        book: selected,
-                        command: command,
-                        service: service,
-                        bookmarkStore: bookmarkStore,
-                        locatorStore: locatorStore,
-                        initialLocation: initialEPUBLocation,
-                        initialProgression: initialEPUBProgression,
-                        initialUpdatedAt: initialEPUBUpdatedAt,
-                        progressRanges: epubProgressRanges,
-                        companionPlayer: companionPlayer,
-                        findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
-                        onReady: onEPUBReady
-                    )
-                case .unsupported(let format):
-                    UnsupportedBookReaderView(
-                        message: "The native reader does not support the \(format.rawValue) book format."
-                    )
+                } else {
+                    switch BookReaderFormatPolicy.route(
+                        for: selected.kind,
+                        format: selected.bookFormat
+                    ) {
+                    case .unavailable:
+                        UnsupportedBookReaderView(message: "This book does not expose a readable source format.")
+                    case .comic:
+                        ComicReaderView(selected: selected, command: command, service: service)
+                    case .pdf:
+                        PDFReaderView(book: selected, command: command, service: service)
+                    case .epub:
+                        EPUBReaderView(
+                            book: selected,
+                            command: command,
+                            service: service,
+                            bookmarkStore: bookmarkStore,
+                            locatorStore: locatorStore,
+                            initialLocation: initialEPUBLocation,
+                            initialProgression: initialEPUBProgression,
+                            initialUpdatedAt: initialEPUBUpdatedAt,
+                            progressRanges: epubProgressRanges,
+                            companionPlayer: companionPlayer,
+                            findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
+                            onReady: onEPUBReady
+                        )
+                    case .unsupported(let format):
+                        UnsupportedBookReaderView(
+                            message: "The native reader does not support the \(format.rawValue) book format."
+                        )
+                    }
                 }
             #endif
         }

@@ -19,6 +19,7 @@ import SwiftUI
             parentEntityID: chapterID,
             sortOrder: 0
         )
+        static let page = BookReaderPage(thumbnail: pageThumbnail)
         static let book = EntityDetail(
             id: bookID,
             kind: .book,

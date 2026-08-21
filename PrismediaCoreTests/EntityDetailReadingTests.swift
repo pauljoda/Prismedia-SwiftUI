@@ -189,6 +189,90 @@ final class EntityDetailReadingTests: XCTestCase {
         XCTAssertEqual(request.location, location)
     }
 
+    func testPageSequenceCapabilityLoadsAComicInstallmentWithoutBookKindChecks() async throws {
+        let installment = try JSONDecoder().decode(
+            EntityDetail.self,
+            from: Data(
+                """
+                {
+                  "id": "\(bookID)",
+                  "kind": "comic-installment",
+                  "title": "Chapter 12",
+                  "hasSourceMedia": true,
+                  "capabilities": [
+                    {
+                      "kind": "page-sequence",
+                      "pageCount": 2,
+                      "direction": "right-to-left",
+                      "defaultMode": "paged",
+                      "coverOrdinal": 0
+                    },
+                    {
+                      "kind": "progress",
+                      "currentEntityId": "\(bookID)",
+                      "unit": "page",
+                      "index": 1,
+                      "total": 2,
+                      "mode": "paged"
+                    }
+                  ],
+                  "childrenByKind": [],
+                  "relationships": []
+                }
+                """.utf8
+            )
+        )
+        let manifest = try JSONDecoder().decode(
+            EntityReaderManifest.self,
+            from: Data(
+                """
+                {
+                  "entityId": "\(bookID)",
+                  "direction": "right-to-left",
+                  "defaultMode": "paged",
+                  "coverOrdinal": 0,
+                  "pages": [
+                    {
+                      "ordinal": 0,
+                      "mimeType": "image/jpeg",
+                      "width": 1200,
+                      "height": 1800,
+                      "pageType": "front-cover",
+                      "isDoublePage": false
+                    },
+                    {
+                      "ordinal": 1,
+                      "mimeType": "image/jpeg",
+                      "width": 2400,
+                      "height": 1800,
+                      "pageType": "story",
+                      "isDoublePage": true
+                    }
+                  ]
+                }
+                """.utf8
+            )
+        )
+        let service = EntityDetailReadingService(
+            reader: ReadingServiceStub(
+                details: [bookID: installment],
+                manifests: [bookID: manifest]
+            )
+        )
+
+        let outcome = await service.load(detail: installment)
+
+        guard case .content(let resolved) = outcome else {
+            return XCTFail("Expected the page capability to select the generic reader.")
+        }
+        XCTAssertEqual(resolved.bookID, bookID)
+        XCTAssertEqual(resolved.initialIndex, 1)
+        XCTAssertEqual(resolved.readingDirection, .rightToLeft)
+        XCTAssertEqual(resolved.pages.count, 2)
+        XCTAssertTrue(resolved.pages[1].isDoublePage)
+        XCTAssertTrue(resolved.completesAtManifestEnd)
+    }
+
     private func makeManifest(
         bookID: UUID,
         title: String,
@@ -245,7 +329,8 @@ final class EntityDetailReadingTests: XCTestCase {
             parentEntityID: nil,
             sortOrder: nil,
             hasSourceMedia: true,
-            capabilities: [.bookMetadata(.init(bookType: "book", format: format))] + (progress.map { [.progress($0)] } ?? []),
+            capabilities: [.bookMetadata(.init(bookType: "book", format: format))]
+                + (progress.map { [.progress($0)] } ?? []),
             childrenByKind: [],
             relationships: []
         )
@@ -302,10 +387,15 @@ private actor ReadingServiceStub: BookReaderServicing {
     }
 
     let details: [UUID: EntityDetail]
+    let manifests: [UUID: EntityReaderManifest]
     private(set) var progressUpdates: [ProgressUpdate] = []
 
-    init(details: [UUID: EntityDetail]) {
+    init(
+        details: [UUID: EntityDetail],
+        manifests: [UUID: EntityReaderManifest] = [:]
+    ) {
         self.details = details
+        self.manifests = manifests
     }
 
     func loadEntity(id: UUID) async throws -> EntityDetail {
@@ -315,6 +405,11 @@ private actor ReadingServiceStub: BookReaderServicing {
 
     func loadPageData(id: UUID) async throws -> Data {
         return Data()
+    }
+
+    func loadEntityReaderManifest(id: UUID) async throws -> EntityReaderManifest {
+        guard let manifest = manifests[id] else { throw ReadingTestError.missingEntity }
+        return manifest
     }
 
     func updateReadingProgress(id: UUID, request: EntityProgressUpdateRequest) async throws {

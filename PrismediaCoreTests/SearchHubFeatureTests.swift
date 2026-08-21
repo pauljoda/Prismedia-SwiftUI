@@ -292,12 +292,14 @@ final class SearchHubFeatureTests: XCTestCase {
         }
         XCTAssertEqual(
             Set(previewQueries.compactMap { $0["kind"] }), Set(SearchHubCatalog.previewKinds.map(\.rawValue)))
-        XCTAssertTrue(previewQueries.allSatisfy {
-            $0["sort"] == PrismediaContractCodes.EntityListSort.dateAdded
-        })
-        XCTAssertTrue(previewQueries.allSatisfy {
-            $0["sortDirection"] == PrismediaContractCodes.EntitySortDirection.descending
-        })
+        XCTAssertTrue(
+            previewQueries.allSatisfy {
+                $0["sort"] == PrismediaContractCodes.EntityListSort.dateAdded
+            })
+        XCTAssertTrue(
+            previewQueries.allSatisfy {
+                $0["sortDirection"] == PrismediaContractCodes.EntitySortDirection.descending
+            })
         XCTAssertTrue(previewQueries.allSatisfy { $0["limit"] == "2" })
         XCTAssertTrue(previewQueries.allSatisfy { $0["hideNsfw"] == "true" })
 
@@ -338,14 +340,14 @@ final class SearchHubFeatureTests: XCTestCase {
             SearchHubKindCatalog.kinds,
             [
                 .movie, .videoSeries, .video, .person, .studio, .tag,
-                .gallery, .book, .image, .collection, .audioLibrary, .audioTrack,
+                .gallery, .book, .comicSeries, .image, .collection, .audioLibrary, .audioTrack,
             ]
         )
         XCTAssertEqual(
             SearchHubKindCatalog.kinds.map(SearchHubKindCatalog.label(for:)),
             [
                 "Movies", "Series", "Videos", "People", "Studios", "Tags",
-                "Galleries", "Books", "Images", "Collections", "Audio Libraries", "Audio Tracks",
+                "Galleries", "Books", "Comics", "Images", "Collections", "Audio Libraries", "Audio Tracks",
             ]
         )
     }

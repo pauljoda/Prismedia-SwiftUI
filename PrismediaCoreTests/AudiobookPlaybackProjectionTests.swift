@@ -12,6 +12,8 @@ final class AudiobookPlaybackProjectionTests: XCTestCase {
         let projection = try XCTUnwrap(AudiobookPlaybackProjection(detail: makeBook(parts: parts)))
 
         XCTAssertEqual(projection.tracks.map(\.title), ["Part One", "Part Two"])
+        XCTAssertTrue(projection.preservesQueueOrder)
+        XCTAssertTrue(projection.supportsPlaybackRate)
         XCTAssertEqual(projection.totalDuration, 300)
         XCTAssertEqual(
             projection.resumePoint(at: 145),
@@ -85,7 +87,14 @@ final class AudiobookPlaybackProjectionTests: XCTestCase {
             parentEntityID: nil,
             sortOrder: nil,
             hasSourceMedia: true,
-            capabilities: [],
+            capabilities: [
+                .playableAudio(
+                    EntityPlayableAudioCapability(
+                        itemKind: .audioTrack,
+                        preservesQueueOrder: true,
+                        supportsPlaybackRate: true
+                    ))
+            ],
             childrenByKind: [
                 EntityGroup(kind: .audioTrack, label: "Audio Tracks", entities: parts, code: nil)
             ],

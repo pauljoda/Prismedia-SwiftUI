@@ -9,6 +9,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
     case bookMetadata(EntityBookMetadataCapability)
     case classification(EntityClassificationCapability)
     case collectionConfiguration(EntityCollectionConfigurationCapability)
+    case comicInstallmentMetadata(EntityComicInstallmentMetadataCapability)
     case consumption(EntityConsumptionCapability)
     case coverSelection(EntityCoverSelectionCapability)
     case credits(EntityCreditsCapability)
@@ -24,7 +25,10 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
     case lifetime(EntityLifetimeCapability)
     case links(EntityLinksCapability)
     case markers(EntityItemsCapability<EntityMarker>)
+    case orderedSequence(EntityOrderedSequenceCapability)
+    case pageSequence(EntityPageSequenceCapability)
     case personProfile(EntityPersonProfileCapability)
+    case playableAudio(EntityPlayableAudioCapability)
     case playableVideo(EntityPlayableVideoCapability)
     case position(EntityItemsCapability<EntityPosition>)
     case progress(EntityProgressCapability)
@@ -49,6 +53,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .bookMetadata: self = .bookMetadata(try EntityBookMetadataCapability(from: decoder))
         case .classification: self = .classification(try EntityClassificationCapability(from: decoder))
         case .collectionConfiguration: self = .collectionConfiguration(try EntityCollectionConfigurationCapability(from: decoder))
+        case .comicInstallmentMetadata: self = .comicInstallmentMetadata(try EntityComicInstallmentMetadataCapability(from: decoder))
         case .consumption: self = .consumption(try EntityConsumptionCapability(from: decoder))
         case .coverSelection: self = .coverSelection(try EntityCoverSelectionCapability(from: decoder))
         case .credits: self = .credits(try EntityCreditsCapability(from: decoder))
@@ -64,7 +69,10 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .lifetime: self = .lifetime(try EntityLifetimeCapability(from: decoder))
         case .links: self = .links(try EntityLinksCapability(from: decoder))
         case .markers: self = .markers(try EntityItemsCapability<EntityMarker>(from: decoder))
+        case .orderedSequence: self = .orderedSequence(try EntityOrderedSequenceCapability(from: decoder))
+        case .pageSequence: self = .pageSequence(try EntityPageSequenceCapability(from: decoder))
         case .personProfile: self = .personProfile(try EntityPersonProfileCapability(from: decoder))
+        case .playableAudio: self = .playableAudio(try EntityPlayableAudioCapability(from: decoder))
         case .playableVideo: self = .playableVideo(try EntityPlayableVideoCapability(from: decoder))
         case .position: self = .position(try EntityItemsCapability<EntityPosition>(from: decoder))
         case .progress: self = .progress(try EntityProgressCapability(from: decoder))
@@ -86,6 +94,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .bookMetadata: .bookMetadata
         case .classification: .classification
         case .collectionConfiguration: .collectionConfiguration
+        case .comicInstallmentMetadata: .comicInstallmentMetadata
         case .consumption: .consumption
         case .coverSelection: .coverSelection
         case .credits: .credits
@@ -101,7 +110,10 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .lifetime: .lifetime
         case .links: .links
         case .markers: .markers
+        case .orderedSequence: .orderedSequence
+        case .pageSequence: .pageSequence
         case .personProfile: .personProfile
+        case .playableAudio: .playableAudio
         case .playableVideo: .playableVideo
         case .position: .position
         case .progress: .progress
@@ -123,6 +135,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .bookMetadata(let value): value
         case .classification(let value): value
         case .collectionConfiguration(let value): value
+        case .comicInstallmentMetadata(let value): value
         case .consumption(let value): value
         case .coverSelection(let value): value
         case .credits(let value): value
@@ -138,7 +151,10 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .lifetime(let value): value
         case .links(let value): value
         case .markers(let value): value
+        case .orderedSequence(let value): value
+        case .pageSequence(let value): value
         case .personProfile(let value): value
+        case .playableAudio(let value): value
         case .playableVideo(let value): value
         case .position(let value): value
         case .progress(let value): value

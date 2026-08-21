@@ -292,6 +292,84 @@ final class BookReaderManifestResolverTests: XCTestCase {
         XCTAssertEqual(manifest.nextChapter?.title, "Chapter 2")
     }
 
+    func testGenericPageSequenceContinuesAcrossOrderedContainersWithoutMixingDirectItems() async throws {
+        let seriesID = UUID(uuidString: "81000000-0000-0000-0000-000000000000")!
+        let firstVolumeID = UUID(uuidString: "82000000-0000-0000-0000-000000000000")!
+        let secondVolumeID = UUID(uuidString: "83000000-0000-0000-0000-000000000000")!
+        let directID = UUID(uuidString: "84000000-0000-0000-0000-000000000000")!
+        let firstID = UUID(uuidString: "85000000-0000-0000-0000-000000000000")!
+        let selectedID = UUID(uuidString: "86000000-0000-0000-0000-000000000000")!
+        let nextID = UUID(uuidString: "87000000-0000-0000-0000-000000000000")!
+        let series = detail(
+            id: seriesID,
+            kind: .comicSeries,
+            title: "Series",
+            children: [
+                group(
+                    .comicInstallment,
+                    [thumbnail(directID, .comicInstallment, "Direct", order: 0, parent: seriesID)]
+                ),
+                group(
+                    .comicVolume,
+                    [
+                        thumbnail(secondVolumeID, .comicVolume, "Volume 2", order: 2, parent: seriesID),
+                        thumbnail(firstVolumeID, .comicVolume, "Volume 1", order: 1, parent: seriesID),
+                    ]
+                ),
+            ]
+        )
+        let firstVolume = detail(
+            id: firstVolumeID,
+            kind: .comicVolume,
+            title: "Volume 1",
+            parent: seriesID,
+            children: [
+                group(
+                    .comicInstallment,
+                    [
+                        thumbnail(firstID, .comicInstallment, "Chapter 1", order: 0, parent: firstVolumeID),
+                        thumbnail(selectedID, .comicInstallment, "Chapter 2", order: 1, parent: firstVolumeID),
+                    ]
+                )
+            ]
+        )
+        let secondVolume = detail(
+            id: secondVolumeID,
+            kind: .comicVolume,
+            title: "Volume 2",
+            parent: seriesID,
+            children: [
+                group(
+                    .comicInstallment,
+                    [thumbnail(nextID, .comicInstallment, "Chapter 3", order: 0, parent: secondVolumeID)]
+                )
+            ]
+        )
+        let selected = try pageSequenceDetail(
+            id: selectedID,
+            parentID: firstVolumeID,
+            sortOrder: 1
+        )
+        let pageManifest = try readerManifest(entityID: selectedID)
+        let loader = ManifestEntityLoader(
+            values: [
+                seriesID: series,
+                firstVolumeID: firstVolume,
+                secondVolumeID: secondVolume,
+                selectedID: selected,
+            ],
+            manifests: [selectedID: pageManifest]
+        )
+
+        let manifest = try await BookReaderManifestResolver(loader: loader).resolve(
+            selected: selected,
+            command: .read
+        )
+
+        XCTAssertEqual(manifest.nextChapter?.id, nextID)
+        XCTAssertNotEqual(manifest.nextChapter?.id, directID)
+    }
+
     private func detail(
         id: UUID,
         kind: EntityKind,
@@ -307,7 +385,8 @@ final class BookReaderManifestResolverTests: XCTestCase {
             parentEntityID: parent,
             sortOrder: nil,
             hasSourceMedia: false,
-            capabilities: (kind == .book ? [.bookMetadata(.init(bookType: "book", format: .imageArchive))] : []) + (progress.map { [.progress($0)] } ?? []),
+            capabilities: (kind == .book ? [.bookMetadata(.init(bookType: "book", format: .imageArchive))] : [])
+                + (progress.map { [.progress($0)] } ?? []),
             childrenByKind: children,
             relationships: []
         )
@@ -321,14 +400,85 @@ final class BookReaderManifestResolverTests: XCTestCase {
     {
         EntityThumbnail(id: id, kind: kind, title: title, parentEntityID: parent, sortOrder: order)
     }
+
+    private func pageSequenceDetail(
+        id: UUID,
+        parentID: UUID,
+        sortOrder: Int
+    ) throws -> EntityDetail {
+        try JSONDecoder().decode(
+            EntityDetail.self,
+            from: Data(
+                """
+                {
+                  "id": "\(id)",
+                  "kind": "comic-installment",
+                  "title": "Chapter 2",
+                  "parentEntityId": "\(parentID)",
+                  "sortOrder": \(sortOrder),
+                  "hasSourceMedia": true,
+                  "capabilities": [
+                    {
+                      "kind": "page-sequence",
+                      "pageCount": 1,
+                      "direction": "right-to-left",
+                      "defaultMode": "paged",
+                      "coverOrdinal": 0
+                    },
+                    {
+                      "kind": "ordered-sequence",
+                      "role": "item",
+                      "itemKind": "comic-installment",
+                      "containerKinds": ["comic-series", "comic-volume"]
+                    }
+                  ],
+                  "childrenByKind": [],
+                  "relationships": []
+                }
+                """.utf8
+            )
+        )
+    }
+
+    private func readerManifest(entityID: UUID) throws -> EntityReaderManifest {
+        try JSONDecoder().decode(
+            EntityReaderManifest.self,
+            from: Data(
+                """
+                {
+                  "entityId": "\(entityID)",
+                  "direction": "right-to-left",
+                  "defaultMode": "paged",
+                  "coverOrdinal": 0,
+                  "pages": [{
+                    "ordinal": 0,
+                    "mimeType": "image/jpeg",
+                    "pageType": "front-cover",
+                    "isDoublePage": false
+                  }]
+                }
+                """.utf8
+            )
+        )
+    }
 }
 
-private struct ManifestEntityLoader: EntityDetailLoading {
+private struct ManifestEntityLoader: EntityPageReaderServicing {
     let values: [UUID: EntityDetail]
+    var manifests: [UUID: EntityReaderManifest] = [:]
 
     func loadEntity(id: UUID) async throws -> EntityDetail {
         guard let value = values[id] else { throw ManifestLoaderError.missing(id) }
         return value
+    }
+
+    func loadEntityReaderManifest(id: UUID) async throws -> EntityReaderManifest {
+        guard let manifest = manifests[id] else { throw ManifestLoaderError.missing(id) }
+        return manifest
+    }
+
+    func loadEntityReaderPageData(id: UUID, ordinal: Int) async throws -> Data {
+        Data()
     }
 }
 

@@ -77,7 +77,7 @@
         @ViewBuilder
         private var auxiliaryControl: some View {
             Group {
-                if controller.context?.isAudiobook == true {
+                if controller.context?.supportsPlaybackRate == true {
                     MusicPlaybackRateControl(controller: controller)
                 } else {
                     volumeControl

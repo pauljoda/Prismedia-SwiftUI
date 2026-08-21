@@ -11,7 +11,7 @@
                     controller.queue.isShuffled ? "Turn Shuffle Off" : "Turn Shuffle On",
                     systemImage: "shuffle",
                     isActive: controller.queue.isShuffled,
-                    isDisabled: controller.context?.isAudiobook == true
+                    isDisabled: controller.context?.preservesQueueOrder == true
                 ) {
                     withoutMusicControlAnimation {
                         controller.setShuffleEnabled(!controller.queue.isShuffled)

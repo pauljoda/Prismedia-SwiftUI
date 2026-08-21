@@ -100,7 +100,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.queue.tracks, replacementTracks + [lateTrack])
     }
 
-    func testPlaybackRateAppliesImmediatelyAndSurvivesTrackChanges() {
+    func testCapabilityPoliciesApplyWithoutBookOwnerKind() {
         let tracks = [makeTrack(idSuffix: 1), makeTrack(idSuffix: 2)]
         let engine = AudioPlaybackEngineSpy()
         let controller = MusicPlayerController(
@@ -112,13 +112,17 @@ final class MusicPlayerControllerTests: XCTestCase {
             tracks: tracks,
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
-                playbackOwnerTitle: "Book",
-                playbackOwnerEntityKind: .book
+                playbackOwnerTitle: "Spoken Collection",
+                playbackOwnerEntityKind: .audioLibrary,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
+        controller.setShuffleEnabled(true)
         controller.setPlaybackRate(1.5)
         controller.skipToNext()
 
+        XCTAssertFalse(controller.queue.isShuffled)
         XCTAssertEqual(controller.playbackRate, 1.5)
         XCTAssertEqual(engine.playbackRates, [1, 1.5, 1.5])
     }
@@ -135,7 +139,9 @@ final class MusicPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
                 playbackOwnerTitle: "Book",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
 
@@ -160,7 +166,9 @@ final class MusicPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
                 playbackOwnerTitle: "First Book",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
         controller.setPlaybackRate(1.75)
@@ -170,7 +178,9 @@ final class MusicPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
                 playbackOwnerTitle: "Second Book",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
 
@@ -191,7 +201,9 @@ final class MusicPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
                 playbackOwnerTitle: "Book",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
         controller.setPlaybackRate(1.75)
@@ -290,7 +302,9 @@ final class MusicPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
                 playbackOwnerTitle: "Book",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
         controller.skipToUpcomingTrack(id: tracks[2].id)
@@ -418,7 +432,9 @@ final class MusicPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
                 playbackOwnerTitle: "Private Audiobook",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
 
@@ -880,7 +896,9 @@ final class MusicPlayerControllerTests: XCTestCase {
             context: MusicPlaybackContext(
                 playbackOwnerEntityID: UUID(),
                 playbackOwnerTitle: "Book",
-                playbackOwnerEntityKind: .book
+                playbackOwnerEntityKind: .book,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
             )
         )
         XCTAssertFalse(controller.queue.isShuffled)
@@ -925,7 +943,9 @@ final class MusicPlayerControllerTests: XCTestCase {
                     mode: .paged,
                     readerLocation: "Text/chapter-1.xhtml"
                 )
-            ]
+            ],
+            preservesQueueOrder: true,
+            supportsPlaybackRate: true
         )
     }
 }
@@ -999,12 +1019,13 @@ private final class MusicPlaybackServiceStub: MusicPlaybackServicing {
     private(set) var skippedTrackIDs: [UUID] = []
     private(set) var skippedPositions: [Double?] = []
     private(set) var skippedDurations: [Double?] = []
-    private(set) var consumptionUpdates: [(
-        id: UUID,
-        positionSeconds: Double?,
-        activitySeconds: Double?,
-        completed: Bool?
-    )] = []
+    private(set) var consumptionUpdates:
+        [(
+            id: UUID,
+            positionSeconds: Double?,
+            activitySeconds: Double?,
+            completed: Bool?
+        )] = []
     private(set) var entityProgressUpdates: [(id: UUID, request: EntityProgressUpdateRequest)] = []
 
     init(missingStreamIDs: Set<UUID> = []) {

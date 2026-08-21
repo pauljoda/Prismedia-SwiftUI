@@ -46,7 +46,7 @@ public struct BookReaderUseCase: Sendable {
         let pageIndex = min(index, max(0, manifest.pages.count - 1))
         guard let position = manifest.position(at: pageIndex) else { return nil }
 
-        let reachedBookEnd = index >= manifest.pages.count - 1 && manifest.nextChapter == nil
+        let reachedBookEnd = index >= manifest.pages.count - 1 && manifest.completesAtManifestEnd
         let completed =
             explicitCompletion
             ?? (allowAutomaticCompletion && reachedBookEnd ? true : nil)
