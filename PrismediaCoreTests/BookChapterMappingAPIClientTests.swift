@@ -6,7 +6,13 @@ final class BookChapterMappingAPIClientTests: XCTestCase {
     func testLoadsAndReplacesBookChapterMappingsUsingTheSharedContract() async throws {
         let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let trackID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        let response = #"{"mappings":[{"readableChapterKey":"Text/prologue.xhtml","audioTrackId":"\#(trackID)"}]}"#
+        let autoTrackID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let response = #"""
+            {"mappings":[
+                {"readableChapterKey":"Text/prologue.xhtml","audioTrackId":"\#(trackID)","origin":"manual"},
+                {"readableChapterKey":"Text/chapter-01.xhtml","audioTrackId":"\#(autoTrackID)","origin":"auto"}
+            ]}
+            """#
         let loader = MockHTTPDataLoader(responses: [
             .json(response),
             .json(response),
@@ -20,10 +26,11 @@ final class BookChapterMappingAPIClientTests: XCTestCase {
         let loaded = try await client.loadBookChapterMappings(bookID: bookID)
         let saved = try await client.replaceBookChapterMappings(
             bookID: bookID,
-            mappings: loaded
+            mappings: loaded.filter { !$0.isAutomatic }
         )
 
         XCTAssertEqual(loaded.first?.readableChapterKey, "Text/prologue.xhtml")
+        XCTAssertEqual(loaded.map(\.isAutomatic), [false, true])
         XCTAssertEqual(saved.first?.audioTrackID, trackID)
         XCTAssertEqual(
             loader.requests.map { $0.url?.path },
@@ -41,6 +48,8 @@ final class BookChapterMappingAPIClientTests: XCTestCase {
         let body = try XCTUnwrap(loader.requests.last?.httpBody)
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
         let mappings = try XCTUnwrap(json["mappings"] as? [[String: Any]])
+        // Only the manual layer may be saved; echoing automatic rows would promote them.
+        XCTAssertEqual(mappings.count, 1)
         XCTAssertEqual(mappings.first?["readableChapterKey"] as? String, "Text/prologue.xhtml")
         XCTAssertEqual(mappings.first?["audioTrackId"] as? String, trackID.uuidString)
         XCTAssertNil(mappings.first?["audioTrackID"])

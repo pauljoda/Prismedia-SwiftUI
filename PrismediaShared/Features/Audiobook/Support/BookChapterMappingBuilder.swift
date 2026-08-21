@@ -1,5 +1,8 @@
 import Foundation
 
+/// Composes the reading/listening chapter rows from the server-persisted chapter map. The map
+/// already merges the user's explicit picks with the scan-computed automatic title matches, so
+/// this builder only applies it — no title matching runs on the client anymore.
 struct BookChapterMappingBuilder: Sendable {
     func build(
         readableChapters: [ReadableBookChapter],
@@ -20,19 +23,6 @@ struct BookChapterMappingBuilder: Sendable {
                 !consumedTrackIndexes.contains(index)
             else { continue }
             matches[mapping.readableChapterKey] = index
-            consumedTrackIndexes.insert(index)
-        }
-
-        for chapter in readable where matches[chapter.id] == nil {
-            let key = matchKey(chapter.title)
-            guard !key.isEmpty,
-                let index = firstAvailableTrackIndex(
-                    in: tracks,
-                    consumed: consumedTrackIndexes,
-                    matching: { matchKey($0.title) == key }
-                )
-            else { continue }
-            matches[chapter.id] = index
             consumedTrackIndexes.insert(index)
         }
 
@@ -93,28 +83,6 @@ struct BookChapterMappingBuilder: Sendable {
         }
     }
 
-    func matchKey(_ value: String) -> String {
-        value
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .replacingOccurrences(
-                of: #"^\s*(?:chapter|ch\.?|track|part)\s*[ivxlcdm]+\s*(?:[.\-–—:_]|\s)+"#,
-                with: "",
-                options: [.regularExpression, .caseInsensitive]
-            )
-            .replacingOccurrences(
-                of: #"^\s*(?:chapter|ch\.?|track|part)\s*0*\d+\s*(?:[.\-–—:_]|\s)*"#,
-                with: "",
-                options: [.regularExpression, .caseInsensitive]
-            )
-            .replacingOccurrences(
-                of: #"^\s*0*\d+\s*(?:[.\-–—:_]|\s)+"#,
-                with: "",
-                options: .regularExpression
-            )
-            .replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     private func readableChapterSort(_ lhs: ReadableBookChapter, _ rhs: ReadableBookChapter) -> Bool {
         (lhs.order, lhs.title, lhs.id) < (rhs.order, rhs.title, rhs.id)
     }
@@ -123,13 +91,4 @@ struct BookChapterMappingBuilder: Sendable {
         (lhs.sortOrder, lhs.title, lhs.id.uuidString)
             < (rhs.sortOrder, rhs.title, rhs.id.uuidString)
     }
-
-    private func firstAvailableTrackIndex(
-        in tracks: [MusicTrack],
-        consumed: Set<Int>,
-        matching predicate: (MusicTrack) -> Bool
-    ) -> Int? {
-        tracks.indices.first { !consumed.contains($0) && predicate(tracks[$0]) }
-    }
-
 }

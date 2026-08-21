@@ -18,11 +18,14 @@ struct BookChapterMappingEditor: View {
     ) {
         self.presentation = presentation
         self.onSave = onSave
+        // Drafts hold only the user's manual rows: echoing the server-derived automatic layer
+        // back through a save would promote it to manual and freeze it against future rescans.
+        let manual = presentation.manualMappings
         let draft = Dictionary(
-            uniqueKeysWithValues: presentation.mappings.map { ($0.audioTrackID, $0.readableChapterKey) }
+            uniqueKeysWithValues: manual.map { ($0.audioTrackID, $0.readableChapterKey) }
         )
         _draftByTrackID = State(initialValue: draft)
-        _sourceSignature = State(initialValue: Self.signature(presentation.mappings))
+        _sourceSignature = State(initialValue: Self.signature(manual))
         _firstChapterKey = State(initialValue: Self.initialFirstChapterKey(presentation: presentation))
     }
 
@@ -242,11 +245,13 @@ struct BookChapterMappingEditor: View {
         Task { @MainActor in
             defer { isSaving = false }
             do {
-                let persisted = try await onSave(explicitMappings)
+                // The response is the merged map (manual plus refreshed automatic rows); only
+                // the manual subset belongs back in the draft.
+                let persistedManual = try await onSave(explicitMappings).filter { !$0.isAutomatic }
                 draftByTrackID = Dictionary(
-                    uniqueKeysWithValues: persisted.map { ($0.audioTrackID, $0.readableChapterKey) }
+                    uniqueKeysWithValues: persistedManual.map { ($0.audioTrackID, $0.readableChapterKey) }
                 )
-                sourceSignature = Self.signature(persisted)
+                sourceSignature = Self.signature(persistedManual)
                 didSave = true
             } catch is CancellationError {
                 return
@@ -260,7 +265,8 @@ struct BookChapterMappingEditor: View {
         presentation: BookChapterMappingEditorPresentation
     ) -> String? {
         let firstTrackID = presentation.orderedAudioTracks.first?.id
-        if let mappedKey = presentation.mappings.first(where: { $0.audioTrackID == firstTrackID })?.readableChapterKey,
+        if let mappedKey = presentation.manualMappings
+            .first(where: { $0.audioTrackID == firstTrackID })?.readableChapterKey,
             presentation.readableChapters.contains(where: { $0.id == mappedKey })
         {
             return mappedKey
