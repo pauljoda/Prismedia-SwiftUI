@@ -84,8 +84,8 @@ final class PrismediaAPIClientTests: XCTestCase {
             ratingMax: 4,
             unrated: false,
             status: "in-progress",
-            bookType: "comic,manga",
-            bookFormat: "image-archive",
+            bookType: "book,novel",
+            bookFormat: "pdf",
             nsfw: true,
             hasFile: false,
             engaged: true,
@@ -116,8 +116,8 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(items["ratingMax"], "4")
         XCTAssertEqual(items["unrated"], "false")
         XCTAssertEqual(items["status"], "in-progress")
-        XCTAssertEqual(items["bookType"], "comic,manga")
-        XCTAssertEqual(items["bookFormat"], "image-archive")
+        XCTAssertEqual(items["bookType"], "book,novel")
+        XCTAssertEqual(items["bookFormat"], "pdf")
         XCTAssertEqual(items["hasFile"], "false")
         XCTAssertEqual(items["engaged"], "true")
         XCTAssertEqual(items["orphaned"], "false")

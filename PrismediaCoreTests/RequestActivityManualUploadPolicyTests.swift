@@ -5,12 +5,14 @@ import XCTest
 final class RequestActivityManualUploadPolicyTests: XCTestCase {
     func testContentUploadAvailabilityMatchesCanonicalActiveAndReplacementGates() {
         XCTAssertTrue(available(kind: .book, owned: false, status: "awaiting-selection"))
+        XCTAssertTrue(available(kind: .comicInstallment, owned: false, status: "awaiting-selection"))
         XCTAssertTrue(available(kind: .movie, owned: false, status: "failed"))
         XCTAssertTrue(available(kind: .videoSeason, owned: false, status: "cancelled"))
         XCTAssertFalse(available(kind: .book, owned: true, status: "downloading"))
         XCTAssertFalse(available(kind: .book, owned: false, status: "imported"))
         XCTAssertTrue(available(kind: .book, owned: true, status: "imported"))
         XCTAssertTrue(available(kind: .audioLibrary, owned: true, status: nil))
+        XCTAssertTrue(available(kind: .comicInstallment, owned: true, status: nil))
         XCTAssertFalse(available(kind: .videoSeason, owned: true, status: nil))
         XCTAssertFalse(available(kind: .gallery, owned: true, status: nil))
     }
@@ -31,6 +33,20 @@ final class RequestActivityManualUploadPolicyTests: XCTestCase {
             try RequestActivityManualUploadPolicy.validateContent(
                 [file("notes.txt", size: 2_000)],
                 kind: .book,
+                bookRendition: nil
+            )
+        )
+        XCTAssertThrowsError(
+            try RequestActivityManualUploadPolicy.validateContent(
+                [file("chapter.cbz", size: 4_200_000)],
+                kind: .book,
+                bookRendition: nil
+            )
+        )
+        XCTAssertNoThrow(
+            try RequestActivityManualUploadPolicy.validateContent(
+                [file("chapter.cbz", size: 4_200_000)],
+                kind: .comicInstallment,
                 bookRendition: nil
             )
         )

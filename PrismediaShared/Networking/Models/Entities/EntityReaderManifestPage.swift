@@ -10,6 +10,24 @@ public struct EntityReaderManifestPage: Decodable, Hashable, Sendable {
     public let isDoublePage: Bool
     public let checksum: String?
 
+    public init(
+        ordinal: Int,
+        mimeType: String,
+        width: Int? = nil,
+        height: Int? = nil,
+        pageType: PageType = .story,
+        isDoublePage: Bool = false,
+        checksum: String? = nil
+    ) {
+        self.ordinal = ordinal
+        self.mimeType = mimeType
+        self.width = width
+        self.height = height
+        self.pageType = pageType
+        self.isDoublePage = isDoublePage
+        self.checksum = checksum
+    }
+
     private enum CodingKeys: String, CodingKey {
         case ordinal
         case mimeType

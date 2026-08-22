@@ -35,7 +35,7 @@ final class EntityGridControlsTests: XCTestCase {
         let baseline = EntityListQuery(
             kind: .book,
             sort: PrismediaContractCodes.EntityListSort.dateAdded,
-            bookType: "comic,manga"
+            bookType: "book,novel"
         )
         var controls = EntityGridControls(baselineQuery: baseline)
         controls.sort = .rating
@@ -45,7 +45,7 @@ final class EntityGridControlsTests: XCTestCase {
         controls.filters.acquisitionStatus = AcquisitionStatus(rawValue: "searching")
         controls.filters.rating = .atLeast(3)
         controls.filters.maximumRating = 5
-        controls.filters.bookFormats = ["cbz", "pdf"]
+        controls.filters.bookFormats = ["epub", "pdf"]
 
         let preferences = try JSONDecoder().decode(
             EntityGridPreferences.self,
@@ -69,14 +69,14 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(restored.filters.acquisitionStatus?.rawValue, "searching")
         XCTAssertEqual(restored.filters.rating, .atLeast(3))
         XCTAssertEqual(restored.filters.maximumRating, 5)
-        XCTAssertEqual(restored.filters.bookFormats, ["cbz", "pdf"])
+        XCTAssertEqual(restored.filters.bookFormats, ["epub", "pdf"])
         XCTAssertEqual(preferences.displayMode, .list)
         XCTAssertEqual(preferences.density, .large)
         XCTAssertEqual(preferences.pageSize, 96)
         XCTAssertFalse(preferences.showsThumbnailText)
         XCTAssertEqual(preferences.showsThumbnailTextOverride, false)
         XCTAssertEqual(query.kind, .book)
-        XCTAssertEqual(query.bookType, "comic,manga")
+        XCTAssertEqual(query.bookType, "book,novel")
     }
 
     func testLegacyArtworkFadePreferenceMigratesToVisibleThumbnailText() throws {
@@ -245,8 +245,8 @@ final class EntityGridControlsTests: XCTestCase {
         let baseline = EntityListQuery(
             kind: .book,
             sort: PrismediaContractCodes.EntityListSort.dateAdded,
-            bookType: "comic,manga",
-            bookFormat: "image-archive"
+            bookType: "book,novel",
+            bookFormat: "pdf"
         )
         var controls = EntityGridControls(baselineQuery: baseline)
         controls.sort = .rating
@@ -263,8 +263,8 @@ final class EntityGridControlsTests: XCTestCase {
         XCTAssertEqual(query.kind, .book)
         XCTAssertEqual(query.sort, "rating")
         XCTAssertFalse(query.sortDescending)
-        XCTAssertEqual(query.bookType, "comic,manga")
-        XCTAssertEqual(query.bookFormat, "image-archive")
+        XCTAssertEqual(query.bookType, "book,novel")
+        XCTAssertEqual(query.bookFormat, "pdf")
         XCTAssertEqual(query.favorite, true)
         XCTAssertEqual(query.organized, false)
         XCTAssertEqual(query.wanted, true)

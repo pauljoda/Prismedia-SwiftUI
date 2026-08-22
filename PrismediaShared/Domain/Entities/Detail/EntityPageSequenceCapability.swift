@@ -7,6 +7,18 @@ public struct EntityPageSequenceCapability: Decodable, Hashable, Sendable {
     public let defaultMode: ReaderMode
     public let coverOrdinal: Int?
 
+    public init(
+        pageCount: Int,
+        direction: PageReadingDirection,
+        defaultMode: ReaderMode,
+        coverOrdinal: Int?
+    ) {
+        self.pageCount = pageCount
+        self.direction = direction
+        self.defaultMode = defaultMode
+        self.coverOrdinal = coverOrdinal
+    }
+
     private enum CodingKeys: String, CodingKey {
         case pageCount
         case direction

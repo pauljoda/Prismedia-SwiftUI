@@ -61,6 +61,39 @@ final class UserDefaultsMusicPlaybackStateStoreTests: XCTestCase {
         XCTAssertFalse(context.supportsPlaybackRate)
     }
 
+    func testLegacyBookProgressContextDecodesIntoGenericMappedProgress() throws {
+        let ownerID = UUID()
+        let trackID = UUID()
+        let data = Data(
+            #"{"playbackOwnerEntityID":"\#(ownerID)","bookProgressMappings":[{"trackId":"\#(trackID)","currentEntityId":"\#(ownerID)","unit":"cfi","startIndex":20,"endIndex":40,"total":100,"mode":"paged","readerLocation":"Text/chapter.xhtml"}]}"#
+                .utf8
+        )
+
+        let context = try JSONDecoder().decode(MusicPlaybackContext.self, from: data)
+
+        XCTAssertTrue(context.usesMappedProgress)
+        let mapping = try XCTUnwrap(context.progressMappings?.first)
+        XCTAssertEqual(mapping.itemID, trackID)
+        XCTAssertEqual(mapping.resourceLocation, "Text/chapter.xhtml")
+        let encoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(context)) as? [String: Any]
+        )
+        XCTAssertNotNil(encoded["progressMappings"])
+        XCTAssertNil(encoded["bookProgressMappings"])
+    }
+
+    func testLegacyAudiobookCompletionCheckpointDecodesIntoMappedProgressState() throws {
+        let trackID = UUID()
+        let data = Data(
+            #"{"currentTrackID":"\#(trackID)","elapsedTime":42,"audiobookCompleted":true}"#.utf8
+        )
+
+        let checkpoint = try JSONDecoder().decode(MusicPlaybackProgressCheckpoint.self, from: data)
+
+        XCTAssertEqual(checkpoint.currentTrackID, trackID)
+        XCTAssertTrue(checkpoint.mappedProgressCompleted == true)
+    }
+
     func testClearingQueueRestorationKeepsGlobalPlaybackPreferences() {
         let suiteName = "UserDefaultsMusicPlaybackStateStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -103,7 +136,7 @@ final class UserDefaultsMusicPlaybackStateStoreTests: XCTestCase {
             MusicPlaybackProgressCheckpoint(
                 currentTrackID: tracks[0].id,
                 elapsedTime: 42,
-                audiobookCompleted: false
+                mappedProgressCompleted: false
             )
         )
 

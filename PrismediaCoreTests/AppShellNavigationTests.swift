@@ -103,7 +103,6 @@ final class AppShellNavigationTests: XCTestCase {
             .book: "books",
             .bookAuthor: "authors",
             .bookChapter: "books",
-            .bookPage: "books",
             .comicSeries: "comics",
             .comicVolume: "comics",
             .comicInstallment: "comics",
@@ -402,8 +401,8 @@ final class AppShellNavigationTests: XCTestCase {
                 .map(\.kind)
         )
 
-        XCTAssertEqual(uploadableKinds, [.audioLibrary, .book, .movie, .video, .videoSeason])
-        XCTAssertEqual(replaceableKinds, [.audioLibrary, .book, .movie, .video])
+        XCTAssertEqual(uploadableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video, .videoSeason])
+        XCTAssertEqual(replaceableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video])
         XCTAssertTrue(replaceableKinds.isSubset(of: uploadableKinds))
     }
 

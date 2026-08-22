@@ -20,7 +20,7 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(mappings.map(\.total), [10_000, 10_000])
         XCTAssertTrue(mappings.allSatisfy { $0.unit == .cfi && $0.currentEntityID == bookID })
 
-        let request = BookProgressMappingResolver().progressRequest(
+        let request = AudioProgressMappingResolver().progressRequest(
             mapping: try XCTUnwrap(mappings.last),
             offsetSeconds: 50,
             durationSeconds: 200,
@@ -64,7 +64,7 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(mapping.endIndex, 19)
         XCTAssertEqual(mapping.total, 20)
 
-        let request = BookProgressMappingResolver().progressRequest(
+        let request = AudioProgressMappingResolver().progressRequest(
             mapping: mapping,
             offsetSeconds: 50,
             durationSeconds: 100,
@@ -114,8 +114,8 @@ final class BookProgressMappingTests: XCTestCase {
 
     func testCanonicalCursorMapsBackToAudioWithFiveSecondRunway() throws {
         let track = musicTrack(number: 1, duration: 200)
-        let mapping = BookProgressTrackMapping(
-            trackID: track.id,
+        let mapping = PlaybackProgressMapping(
+            itemID: track.id,
             currentEntityID: bookID,
             unit: .cfi,
             startIndex: 2_000,
@@ -150,15 +150,15 @@ final class BookProgressMappingTests: XCTestCase {
 
     func testExactEPUBLocationMapsBackToAudioWithinTheChapter() throws {
         let track = musicTrack(number: 1, duration: 600)
-        let mapping = BookProgressTrackMapping(
-            trackID: track.id,
+        let mapping = PlaybackProgressMapping(
+            itemID: track.id,
             currentEntityID: bookID,
             unit: .cfi,
             startIndex: 4_000,
             endIndex: 6_000,
             total: 10_000,
             mode: .paged,
-            readerLocation: "Text/chapter-1.xhtml"
+            resourceLocation: "Text/chapter-1.xhtml"
         )
         let progress = canonicalProgress(
             index: 4_000,
@@ -194,7 +194,7 @@ final class BookProgressMappingTests: XCTestCase {
             BookProgressMappingResolver().mapping(for: progress, in: mappings)
         )
 
-        XCTAssertEqual(mapping.trackID, chapters[1].audioTrack?.id)
+        XCTAssertEqual(mapping.itemID, chapters[1].audioTrack?.id)
     }
 
     func testOpaqueCFICanonicalCursorSelectsOneUnifiedChapter() {
@@ -259,8 +259,8 @@ final class BookProgressMappingTests: XCTestCase {
             readEndFraction: 0.4,
             audioTrack: track
         )
-        let mapping = BookProgressTrackMapping(
-            trackID: track.id,
+        let mapping = PlaybackProgressMapping(
+            itemID: track.id,
             currentEntityID: bookID,
             unit: .cfi,
             startIndex: 2_000,
@@ -377,27 +377,27 @@ final class BookProgressMappingTests: XCTestCase {
     }
 
     func testTrackMappingsRoundTripWithStableContractKeys() throws {
-        let mapping = BookProgressTrackMapping(
-            trackID: musicTrack(number: 1, duration: 100).id,
+        let mapping = PlaybackProgressMapping(
+            itemID: musicTrack(number: 1, duration: 100).id,
             currentEntityID: bookID,
             unit: .second,
             startIndex: 10,
             endIndex: 110,
             total: 300,
             mode: nil,
-            readerLocation: "Text/chapter-1.xhtml"
+            resourceLocation: "Text/chapter-1.xhtml"
         )
 
         let data = try JSONEncoder().encode(mapping)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["trackId"] as? String, mapping.trackID.uuidString)
+        XCTAssertEqual(object["itemId"] as? String, mapping.itemID.uuidString)
         XCTAssertEqual(object["currentEntityId"] as? String, bookID.uuidString)
         XCTAssertEqual(object["unit"] as? String, "second")
         XCTAssertEqual(object["startIndex"] as? Int, 10)
         XCTAssertEqual(object["endIndex"] as? Int, 110)
         XCTAssertEqual(object["total"] as? Int, 300)
-        XCTAssertEqual(object["readerLocation"] as? String, "Text/chapter-1.xhtml")
-        XCTAssertEqual(try JSONDecoder().decode(BookProgressTrackMapping.self, from: data), mapping)
+        XCTAssertEqual(object["resourceLocation"] as? String, "Text/chapter-1.xhtml")
+        XCTAssertEqual(try JSONDecoder().decode(PlaybackProgressMapping.self, from: data), mapping)
     }
 
     private let bookID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!

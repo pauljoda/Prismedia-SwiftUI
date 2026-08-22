@@ -2,72 +2,53 @@ import SwiftUI
 
 #if DEBUG
     enum ComicReaderPreviewData {
-        static let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-        static let chapterID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-        static let pageID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-        static let chapterThumbnail = EntityThumbnail(
-            id: chapterID,
-            kind: .bookChapter,
-            title: "Chapter One",
-            parentEntityID: bookID,
-            sortOrder: 0
+        static let installmentID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        static let sourcePage = EntityReaderManifestPage(
+            ordinal: 0,
+            mimeType: "image/png",
+            width: 1_200,
+            height: 1_800,
+            pageType: .frontCover
         )
-        static let pageThumbnail = EntityThumbnail(
-            id: pageID,
-            kind: .bookPage,
-            title: "Page One",
-            parentEntityID: chapterID,
-            sortOrder: 0
-        )
-        static let page = BookReaderPage(thumbnail: pageThumbnail)
-        static let book = EntityDetail(
-            id: bookID,
-            kind: .book,
-            title: "Signal in the Static",
+        static let page = BookReaderPage(entityID: installmentID, page: sourcePage)
+        static let installment = EntityDetail(
+            id: installmentID,
+            kind: .comicInstallment,
+            title: "Signal in the Static · Chapter One",
             parentEntityID: nil,
-            sortOrder: nil,
-            hasSourceMedia: true,
-            capabilities: [.bookMetadata(.init(bookType: "comic", format: .imageArchive))],
-            childrenByKind: [.init(kind: .bookChapter, label: "Chapters", entities: [chapterThumbnail], code: nil)],
-            relationships: []
-        )
-        static let chapter = EntityDetail(
-            id: chapterID,
-            kind: .bookChapter,
-            title: "Chapter One",
-            parentEntityID: bookID,
             sortOrder: 0,
-            hasSourceMedia: false,
-            capabilities: [],
-            childrenByKind: [.init(kind: .bookPage, label: "Pages", entities: [pageThumbnail], code: nil)],
+            hasSourceMedia: true,
+            capabilities: [
+                .pageSequence(.init(
+                    pageCount: 1,
+                    direction: .leftToRight,
+                    defaultMode: .paged,
+                    coverOrdinal: 0
+                ))
+            ],
+            childrenByKind: [],
             relationships: []
         )
         static let manifest = BookReaderManifest(
-            bookID: bookID,
-            title: book.title,
+            bookID: installmentID,
+            title: installment.title,
             chapters: [
                 BookReaderChapter(
-                    detail: chapter,
-                    pages: [pageThumbnail],
+                    detail: installment,
+                    readerPages: [page],
                     sequenceIndex: 0
                 )
             ],
-            nextChapter: BookChapterSummary(
-                id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
-                title: "Chapter Two",
-                sortOrder: 1,
-                pageCount: 18
-            ),
+            nextChapter: nil,
             progress: nil,
             initialIndex: 0,
             readerMode: .paged
         )
-        static let service = ComicReaderPreviewService(values: [bookID: book, chapterID: chapter])
+        static let service = ComicReaderPreviewService(values: [installmentID: installment])
 
         @MainActor
         static var pageCache: BookReaderPageCache {
             BookReaderPageCache(service: service)
         }
     }
-
 #endif

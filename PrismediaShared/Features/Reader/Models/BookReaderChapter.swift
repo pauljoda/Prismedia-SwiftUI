@@ -13,16 +13,6 @@ public struct BookReaderChapter: Identifiable, Hashable, Sendable {
 
     public init(
         detail: EntityDetail,
-        pages: [EntityThumbnail],
-        sequenceIndex: Int
-    ) {
-        self.detail = detail
-        self.pages = pages.map(BookReaderPage.init(thumbnail:))
-        self.sequenceIndex = sequenceIndex
-    }
-
-    public init(
-        detail: EntityDetail,
         readerPages: [BookReaderPage],
         sequenceIndex: Int
     ) {

@@ -673,7 +673,7 @@ final class MusicPlayerControllerTests: XCTestCase {
         )
 
         clock.advance(by: 5)
-        await controller.flushAudiobookProgress()
+        await controller.flushMappedProgress()
         controller.updatePlaybackProgress(
             elapsedTime: 1,
             duration: 3_600,
@@ -932,16 +932,16 @@ final class MusicPlayerControllerTests: XCTestCase {
             playbackOwnerEntityID: bookID,
             playbackOwnerTitle: "Book",
             playbackOwnerEntityKind: .book,
-            bookProgressMappings: [
-                BookProgressTrackMapping(
-                    trackID: track.id,
+            progressMappings: [
+                PlaybackProgressMapping(
+                    itemID: track.id,
                     currentEntityID: bookID,
                     unit: .cfi,
                     startIndex: 0,
                     endIndex: 10_000,
                     total: 10_000,
                     mode: .paged,
-                    readerLocation: "Text/chapter-1.xhtml"
+                    resourceLocation: "Text/chapter-1.xhtml"
                 )
             ],
             preservesQueueOrder: true,

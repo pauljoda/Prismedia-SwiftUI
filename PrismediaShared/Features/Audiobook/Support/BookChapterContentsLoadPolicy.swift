@@ -9,8 +9,6 @@ struct BookChapterContentsLoadPolicy: Sendable {
         switch detail.bookFormat {
         case .epub:
             return detail.hasSourceMedia
-        case .imageArchive:
-            return true
         default:
             return false
         }

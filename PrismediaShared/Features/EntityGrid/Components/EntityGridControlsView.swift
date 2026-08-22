@@ -227,13 +227,10 @@ struct EntityGridControlsView: View {
 
     private static let bookTypes = [
         Option(id: "book", label: "Book"),
-        Option(id: "comic", label: "Comic"),
-        Option(id: "manga", label: "Manga"),
         Option(id: "novel", label: "Novel"),
     ]
 
     private static let bookFormats = [
-        Option(id: "image-archive", label: "Comic Archive"),
         Option(id: "epub", label: "EPUB"),
         Option(id: "pdf", label: "PDF"),
     ]

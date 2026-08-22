@@ -19,51 +19,32 @@ final class BookReaderUseCaseTests: XCTestCase {
     }
 
     func testRapidPageTurnsCoalesceToTheLatestCompletedPosition() async throws {
-        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
-        let chapterID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!
-        let pages = (0..<3).map { index in
-            EntityThumbnail(
-                id: UUID(uuidString: "30000000-0000-0000-0000-00000000000\(index + 1)")!,
-                kind: .bookPage,
-                title: "Page \(index + 1)",
-                parentEntityID: chapterID,
-                sortOrder: index
-            )
-        }
-        let book = EntityDetail(
-            id: bookID,
-            kind: .book,
-            title: "Book",
-            parentEntityID: nil,
-            sortOrder: nil,
-            hasSourceMedia: true,
-            capabilities: [.bookMetadata(.init(bookType: "book", format: .imageArchive))],
-            childrenByKind: [
-                EntityGroup(
-                    kind: .bookChapter,
-                    label: "Chapters",
-                    entities: [
-                        EntityThumbnail(
-                            id: chapterID, kind: .bookChapter, title: "Chapter", parentEntityID: bookID, sortOrder: 0)
-                    ],
-                    code: nil
-                )
-            ],
-            relationships: []
-        )
-        let chapter = EntityDetail(
-            id: chapterID,
-            kind: .bookChapter,
+        let installmentID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let installment = EntityDetail(
+            id: installmentID,
+            kind: .comicInstallment,
             title: "Chapter",
-            parentEntityID: bookID,
+            parentEntityID: nil,
             sortOrder: 0,
-            hasSourceMedia: false,
-            capabilities: [],
-            childrenByKind: [EntityGroup(kind: .bookPage, label: "Pages", entities: pages, code: nil)],
+            hasSourceMedia: true,
+            capabilities: [.pageSequence(.init(
+                pageCount: 3,
+                direction: .leftToRight,
+                defaultMode: .paged,
+                coverOrdinal: 0
+            ))],
+            childrenByKind: [],
             relationships: []
         )
-        let service = OrderedProgressService(values: [bookID: book, chapterID: chapter])
-        let useCase = BookReaderUseCase(selected: book, command: .read, service: service)
+        let source = EntityReaderManifest(
+            entityID: installmentID,
+            direction: .leftToRight,
+            defaultMode: .paged,
+            coverOrdinal: 0,
+            pages: (0..<3).map { EntityReaderManifestPage(ordinal: $0, mimeType: "image/jpeg") }
+        )
+        let service = OrderedProgressService(values: [installmentID: installment], manifests: [installmentID: source])
+        let useCase = BookReaderUseCase(selected: installment, command: .read, service: service)
         let manifest = try await useCase.loadManifest()
         let writer = BookReaderProgressWriter(service: service)
 
@@ -83,41 +64,43 @@ final class BookReaderUseCaseTests: XCTestCase {
     }
 
     func testPageStoreRetainsOnlyTheCurrentWarmWindow() async throws {
-        let ids = (0..<4).map { _ in UUID() }
+        let pages = (0..<4).map { ordinal in
+            readerPage(entityID: UUID(), ordinal: ordinal)
+        }
         let service = PageDataService(data: Self.validPNG)
         let store = BookReaderPageCache(service: service)
 
-        store.retainOnly(Set(ids.prefix(3)))
-        for id in ids.prefix(3) { _ = try await store.data(for: id) }
-        XCTAssertEqual(Set(store.images.keys), Set(ids.prefix(3)))
+        store.retainOnly(Set(pages.prefix(3).map(\.id)))
+        for page in pages.prefix(3) { _ = try await store.data(for: page) }
+        XCTAssertEqual(Set(store.images.keys), Set(pages.prefix(3).map(\.id)))
 
-        store.retainOnly([ids[2], ids[3]])
-        _ = try await store.data(for: ids[3])
-        XCTAssertEqual(Set(store.images.keys), [ids[2], ids[3]])
+        store.retainOnly([pages[2].id, pages[3].id])
+        _ = try await store.data(for: pages[3])
+        XCTAssertEqual(Set(store.images.keys), [pages[2].id, pages[3].id])
     }
 
     func testPageStoreSurfacesDecodeFailureAndAllowsRetry() async {
-        let id = UUID()
+        let page = readerPage(entityID: UUID())
         let service = PageDataService(data: Data("not an image".utf8))
         let store = BookReaderPageCache(service: service)
-        store.retainOnly([id])
+        store.retainOnly([page.id])
 
-        await xctAssertThrowsErrorAsync { _ = try await store.data(for: id) }
-        await xctAssertThrowsErrorAsync { _ = try await store.data(for: id) }
-        XCTAssertNil(store.images[id])
+        await xctAssertThrowsErrorAsync { _ = try await store.data(for: page) }
+        await xctAssertThrowsErrorAsync { _ = try await store.data(for: page) }
+        XCTAssertNil(store.images[page.id])
         let loadCount = await service.loadCount()
         XCTAssertEqual(loadCount, 2)
     }
 
     func testConcurrentPageRequestsShareTransportAndDecodeAtTheBoundedSize() async throws {
-        let id = UUID()
+        let page = readerPage(entityID: UUID())
         let service = PageDataService(data: Self.validPNG)
         let decoder = PageImageDecoderSpy()
         let store = BookReaderPageCache(service: service, decoder: decoder.decode)
-        store.retainOnly([id])
+        store.retainOnly([page.id])
 
-        async let first = store.data(for: id)
-        async let second = store.data(for: id)
+        async let first = store.data(for: page)
+        async let second = store.data(for: page)
         _ = try await (first, second)
 
         let loadCount = await service.loadCount()
@@ -144,37 +127,34 @@ final class BookReaderUseCaseTests: XCTestCase {
     }
 
     private func makeManifest(pageCount: Int) -> BookReaderManifest {
-        let bookID = UUID()
-        let chapterID = UUID()
-        let chapter = EntityDetail(
-            id: chapterID,
-            kind: .bookChapter,
+        let installmentID = UUID()
+        let installment = EntityDetail(
+            id: installmentID,
+            kind: .comicInstallment,
             title: "Chapter",
-            parentEntityID: bookID,
+            parentEntityID: nil,
             sortOrder: 0,
-            hasSourceMedia: false,
+            hasSourceMedia: true,
             capabilities: [],
             childrenByKind: [],
             relationships: []
         )
-        let pages = (0..<pageCount).map { index in
-            EntityThumbnail(
-                id: UUID(),
-                kind: .bookPage,
-                title: "Page \(index + 1)",
-                parentEntityID: chapterID,
-                sortOrder: index
-            )
+        let pages = (0..<pageCount).map {
+            BookReaderPage(entityID: installmentID, page: .init(ordinal: $0, mimeType: "image/jpeg"))
         }
         return BookReaderManifest(
-            bookID: bookID,
-            title: "Book",
-            chapters: [BookReaderChapter(detail: chapter, pages: pages, sequenceIndex: 0)],
+            bookID: installmentID,
+            title: "Comic",
+            chapters: [BookReaderChapter(detail: installment, readerPages: pages, sequenceIndex: 0)],
             nextChapter: nil,
             progress: nil,
             initialIndex: 0,
             readerMode: .paged
         )
+    }
+
+    private func readerPage(entityID: UUID, ordinal: Int = 0) -> BookReaderPage {
+        BookReaderPage(entityID: entityID, page: .init(ordinal: ordinal, mimeType: "image/png"))
     }
 
     private static let validPNG = Data(
@@ -185,11 +165,13 @@ final class BookReaderUseCaseTests: XCTestCase {
 
 private actor OrderedProgressService: BookReaderServicing {
     let values: [UUID: EntityDetail]
+    let manifests: [UUID: EntityReaderManifest]
     private var completed: [EntityProgressUpdateRequest] = []
     private var accesses: [(id: UUID, sessionID: String)] = []
 
-    init(values: [UUID: EntityDetail]) {
+    init(values: [UUID: EntityDetail], manifests: [UUID: EntityReaderManifest] = [:]) {
         self.values = values
+        self.manifests = manifests
     }
 
     func loadEntity(id: UUID) async throws -> EntityDetail {
@@ -197,7 +179,12 @@ private actor OrderedProgressService: BookReaderServicing {
         return value
     }
 
-    func loadPageData(id: UUID) async throws -> Data { Data() }
+    func loadEntityReaderManifest(id: UUID) async throws -> EntityReaderManifest {
+        guard let manifest = manifests[id] else { throw OrderedProgressError.missing }
+        return manifest
+    }
+
+    func loadEntityReaderPageData(id: UUID, ordinal: Int) async throws -> Data { Data() }
 
     func recordReadingAccess(id: UUID, sessionID: String) async throws {
         accesses.append((id, sessionID))
@@ -224,7 +211,7 @@ private actor PageDataService: BookReaderServicing {
 
     func loadEntity(id: UUID) async throws -> EntityDetail { throw OrderedProgressError.missing }
 
-    func loadPageData(id: UUID) async throws -> Data {
+    func loadEntityReaderPageData(id: UUID, ordinal: Int) async throws -> Data {
         count += 1
         return data
     }
@@ -248,7 +235,7 @@ private actor ConcurrentPageDataService: BookReaderServicing {
         throw OrderedProgressError.missing
     }
 
-    func loadPageData(id: UUID) async throws -> Data {
+    func loadEntityReaderPageData(id: UUID, ordinal: Int) async throws -> Data {
         requestCount += 1
         activeRequests += 1
         maximumConcurrentRequests = max(maximumConcurrentRequests, activeRequests)

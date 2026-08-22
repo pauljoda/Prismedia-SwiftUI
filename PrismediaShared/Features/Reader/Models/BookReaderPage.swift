@@ -1,40 +1,36 @@
 import Foundation
 
-/// One reader page whose bytes may come from a legacy page Entity or an ordinal manifest resource.
+/// One ordinal page resource in an Entity reader manifest. A page is never an Entity.
 public struct BookReaderPage: Identifiable, Hashable, Sendable {
-    public enum Source: Hashable, Sendable {
-        case entity(UUID)
-        case manifest(entityID: UUID, ordinal: Int)
-    }
-
     public let id: UUID
     public let title: String
-    public let source: Source
+    public let entityID: UUID
+    public let ordinal: Int
+    public let pageType: PageType
     public let isDoublePage: Bool
 
     public init(
         id: UUID,
         title: String,
-        source: Source,
+        entityID: UUID,
+        ordinal: Int,
+        pageType: PageType = .story,
         isDoublePage: Bool
     ) {
         self.id = id
         self.title = title
-        self.source = source
+        self.entityID = entityID
+        self.ordinal = ordinal
+        self.pageType = pageType
         self.isDoublePage = isDoublePage
-    }
-
-    public init(thumbnail: EntityThumbnail) {
-        id = thumbnail.id
-        title = thumbnail.title
-        source = .entity(thumbnail.id)
-        isDoublePage = false
     }
 
     public init(entityID: UUID, page: EntityReaderManifestPage) {
         id = Self.manifestPageID(entityID: entityID, ordinal: page.ordinal)
         title = "Page \(page.ordinal + 1)"
-        source = .manifest(entityID: entityID, ordinal: page.ordinal)
+        self.entityID = entityID
+        ordinal = page.ordinal
+        pageType = page.pageType
         isDoublePage = page.isDoublePage
     }
 

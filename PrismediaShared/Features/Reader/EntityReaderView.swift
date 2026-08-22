@@ -58,8 +58,6 @@ public struct EntityReaderView: View {
                     ) {
                     case .unavailable:
                         UnsupportedBookReaderView(message: "This book does not expose a readable source format.")
-                    case .comic:
-                        ComicReaderView(selected: selected, command: command, service: service)
                     case .pdf:
                         PDFReaderView(book: selected, command: command, service: service)
                     case .epub:
@@ -92,7 +90,7 @@ public struct EntityReaderView: View {
 #if DEBUG
     #Preview("Entity Reader · Comic") {
         EntityReaderView(
-            selected: ComicReaderPreviewData.book,
+            selected: ComicReaderPreviewData.installment,
             command: .read,
             service: ComicReaderPreviewData.service
         )

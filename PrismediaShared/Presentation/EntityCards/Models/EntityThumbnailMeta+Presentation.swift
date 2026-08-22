@@ -73,7 +73,6 @@ extension EntityThumbnailMeta {
         case "book-author": "author"
         case "book-volume": "volume"
         case "book-chapter": "chapter"
-        case "book-page": "page"
         default: icon.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
     }

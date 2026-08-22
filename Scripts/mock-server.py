@@ -736,21 +736,17 @@ AUDIOBOOK_PROGRESS = {
     "location": None,
 }
 CHAPTER_ID = "81818181-8181-8181-8181-818181818181"
-PAGE_IDS = [
-    "82828282-8282-8282-8282-828282828281",
-    "82828282-8282-8282-8282-828282828282",
-    "82828282-8282-8282-8282-828282828283",
-]
+BOOK_PAGE_COUNT = 3
 BOOK_PROGRESS = {
     "currentEntityId": CHAPTER_ID,
     "unit": "page",
     "index": 0,
-    "total": len(PAGE_IDS),
+    "total": BOOK_PAGE_COUNT,
     "mode": "paged",
     "completedAt": None,
     "updatedAt": "2026-07-11T00:00:00Z",
     "workIndex": 0,
-    "workTotal": len(PAGE_IDS),
+    "workTotal": BOOK_PAGE_COUNT,
     "location": None,
 }
 EPUB_BOOK_PROGRESS = {
@@ -1215,7 +1211,7 @@ def build_entity_detail_response(entity_id):
     ]
     if entity["kind"] == "book":
         if entity["id"] == BOOK_ID:
-            book_type, book_format = "comic", "image-archive"
+            book_type, book_format = "novel", "pdf"
         elif entity["id"] == EPUB_BOOK_ID:
             book_type, book_format = "novel", "epub"
         elif entity["id"] == AUDIOBOOK_ID:
@@ -1227,7 +1223,6 @@ def build_entity_detail_response(entity_id):
                 "kind": "book-metadata",
                 "bookType": book_type,
                 "format": book_format,
-                "coverPageId": PAGE_IDS[0] if entity["id"] == BOOK_ID else None,
             }
         )
     if entity["kind"] in ("video", "movie", "video-episode"):
@@ -1327,7 +1322,7 @@ def build_book_detail_response(entity_id):
     if response is None or response["kind"] != "book":
         return None
     if entity_id == BOOK_ID:
-        response.update({"bookType": "comic", "format": "image-archive", "coverPageId": PAGE_IDS[0]})
+        response.update({"bookType": "novel", "format": "pdf"})
     elif entity_id == EPUB_BOOK_ID:
         response.update({"bookType": "novel", "format": "epub", "coverPageId": None})
     elif entity_id == AUDIOBOOK_ID:
@@ -1420,17 +1415,10 @@ def build_chapter_detail_response():
         "parentEntityId": BOOK_ID,
         "sortOrder": 0,
         "hasSourceMedia": False,
-        "capabilities": [],
-        "childrenByKind": [
-            {
-                "kind": "book-page",
-                "label": "Pages",
-                "entities": [
-                    book_child(page_id, "book-page", f"Page {index + 1}", CHAPTER_ID, index)
-                    for index, page_id in enumerate(PAGE_IDS)
-                ],
-            }
+        "capabilities": [
+            {"kind": "stats", "items": [{"code": "pages", "value": BOOK_PAGE_COUNT}]}
         ],
+        "childrenByKind": [],
         "relationships": [],
     }
 
@@ -1737,8 +1725,6 @@ class Handler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/entities/") and path.endswith("/files/source"):
             entity_id = path.split("/")[3]
-            if entity_id in PAGE_IDS:
-                return self._send_page()
             if entity_id == EPUB_BOOK_ID:
                 return self._send_binary(MOCK_EPUB, "application/epub+zip")
             if entity_id == PDF_BOOK_ID:

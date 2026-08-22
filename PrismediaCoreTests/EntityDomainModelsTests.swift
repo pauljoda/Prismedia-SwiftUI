@@ -84,7 +84,7 @@ final class EntityDomainModelsTests: XCTestCase {
               "kind": "book",
               "title": "Native Book",
               "capabilities": [
-                { "kind": "book-metadata", "bookType": "comic", "format": "image-archive" },
+                { "kind": "book-metadata", "bookType": "novel", "format": "epub" },
                 { "kind": "cover-selection", "entityId": "22222222-2222-2222-2222-222222222222" }
               ],
               "childrenByKind": [],
@@ -94,8 +94,8 @@ final class EntityDomainModelsTests: XCTestCase {
 
         let detail = try PrismediaJSON.decoder().decode(EntityDetail.self, from: Data(json.utf8))
 
-        XCTAssertEqual(detail.bookType, "comic")
-        XCTAssertEqual(detail.bookFormat, .imageArchive)
+        XCTAssertEqual(detail.bookType, "novel")
+        XCTAssertEqual(detail.bookFormat, .epub)
         XCTAssertEqual(detail.selectedCoverEntityID, UUID(uuidString: "22222222-2222-2222-2222-222222222222"))
     }
 

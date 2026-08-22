@@ -8,7 +8,7 @@ struct BookProgressMappingBuilder: Sendable {
         chapters: [BookChapterMapping],
         readerMode: ReaderMode?,
         hasReadableRendition: Bool
-    ) -> [BookProgressTrackMapping] {
+    ) -> [PlaybackProgressMapping] {
         guard hasReadableRendition else {
             return audioOnlyMappings(bookID: bookID, chapters: chapters)
         }
@@ -26,21 +26,21 @@ struct BookProgressMappingBuilder: Sendable {
                     end.isFinite,
                     end > start
                 else { return nil }
-                return BookProgressTrackMapping(
-                    trackID: track.id,
+                return PlaybackProgressMapping(
+                    itemID: track.id,
                     currentEntityID: bookID,
                     unit: .cfi,
                     startIndex: Int((bounded(start) * Double(epubProgressTotal)).rounded()),
                     endIndex: Int((bounded(end) * Double(epubProgressTotal)).rounded()),
                     total: epubProgressTotal,
                     mode: readerMode,
-                    readerLocation: location
+                    resourceLocation: location
                 )
             case .entityChapter(let chapterID):
                 let pageCount = max(0, chapter.readPageCount ?? 0)
                 guard pageCount > 0 else { return nil }
-                return BookProgressTrackMapping(
-                    trackID: track.id,
+                return PlaybackProgressMapping(
+                    itemID: track.id,
                     currentEntityID: chapterID,
                     unit: .page,
                     startIndex: 0,
@@ -55,7 +55,7 @@ struct BookProgressMappingBuilder: Sendable {
     private func audioOnlyMappings(
         bookID: UUID,
         chapters: [BookChapterMapping]
-    ) -> [BookProgressTrackMapping] {
+    ) -> [PlaybackProgressMapping] {
         let durations = chapters.map { chapter in
             guard let duration = chapter.audioTrack?.duration, duration.isFinite else { return 0 }
             return max(0, Int(duration.rounded(.up)))
@@ -68,8 +68,8 @@ struct BookProgressMappingBuilder: Sendable {
             let duration = durations[index]
             guard let track = chapter.audioTrack, duration > 0 else { return nil }
             defer { startIndex += duration }
-            return BookProgressTrackMapping(
-                trackID: track.id,
+            return PlaybackProgressMapping(
+                itemID: track.id,
                 currentEntityID: bookID,
                 unit: .second,
                 startIndex: startIndex,

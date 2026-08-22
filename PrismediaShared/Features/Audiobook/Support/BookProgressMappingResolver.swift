@@ -3,58 +3,10 @@ import Foundation
 struct BookProgressMappingResolver: Sendable {
     private let audioRunwaySeconds = 5.0
 
-    func progressRequest(
-        mapping: BookProgressTrackMapping,
-        offsetSeconds: Double,
-        durationSeconds: Double,
-        activitySeconds: Double?,
-        completed: Bool
-    ) -> EntityProgressUpdateRequest {
-        let duration = durationSeconds.isFinite ? max(0, durationSeconds) : 0
-        let offset = offsetSeconds.isFinite ? max(0, offsetSeconds) : 0
-        let fraction = duration > 0 ? bounded(offset / duration) : 0
-        let index: Int
-        if mapping.unit == .page {
-            index = max(
-                mapping.startIndex,
-                min(mapping.endIndex, Int(ceil(fraction * Double(mapping.total))) - 1)
-            )
-        } else {
-            index = max(
-                mapping.startIndex,
-                min(
-                    mapping.endIndex,
-                    Int(
-                        (Double(mapping.startIndex)
-                            + fraction * Double(mapping.endIndex - mapping.startIndex))
-                            .rounded()
-                    )
-                )
-            )
-        }
-
-        return EntityProgressUpdateRequest(
-            currentEntityID: mapping.currentEntityID,
-            unit: mapping.unit,
-            index: index,
-            total: mapping.total,
-            mode: mapping.mode,
-            completed: completed ? true : nil,
-            location: mapping.readerLocation.map {
-                DocumentReaderProgressMapper.epubLocation(
-                    chapterLocation: $0,
-                    progress: fraction
-                )
-            },
-            activitySeconds: activitySeconds,
-            activityKind: .listening
-        )
-    }
-
     func mapping(
         for progress: EntityProgressCapability,
-        in mappings: [BookProgressTrackMapping]
-    ) -> BookProgressTrackMapping? {
+        in mappings: [PlaybackProgressMapping]
+    ) -> PlaybackProgressMapping? {
         let candidates = mappings.filter {
             $0.currentEntityID == progress.currentEntityID && $0.unit == progress.unit
         }
@@ -66,7 +18,7 @@ struct BookProgressMappingResolver: Sendable {
     func currentChapterID(
         bookID: UUID,
         chapters: [BookChapterMapping],
-        mappings: [BookProgressTrackMapping],
+        mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> String? {
         guard let progress, progress.completedAt == nil else { return nil }
@@ -80,7 +32,7 @@ struct BookProgressMappingResolver: Sendable {
         }
 
         if let mapping = mapping(for: progress, in: mappings),
-            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.trackID })
+            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.itemID })
         {
             return chapter.id
         }
@@ -111,7 +63,7 @@ struct BookProgressMappingResolver: Sendable {
 
     func legacyProgressPromotionRequest(
         tracks: [MusicTrack],
-        mappings: [BookProgressTrackMapping],
+        mappings: [PlaybackProgressMapping],
         legacyResumeSeconds: Double,
         progress: EntityProgressCapability?
     ) -> EntityProgressUpdateRequest? {
@@ -124,14 +76,14 @@ struct BookProgressMappingResolver: Sendable {
                 title: "",
                 tracks: tracks
             ).resumePoint(at: legacyResumeSeconds),
-            let candidateOrder = mappings.firstIndex(where: { $0.trackID == resume.trackID }),
+            let candidateOrder = mappings.firstIndex(where: { $0.itemID == resume.trackID }),
             let duration = tracks.first(where: { $0.id == resume.trackID })?.duration,
             duration.isFinite,
             duration > 0
         else { return nil }
 
         let candidateMapping = mappings[candidateOrder]
-        let candidate = progressRequest(
+        let candidate = AudioProgressMappingResolver().progressRequest(
             mapping: candidateMapping,
             offsetSeconds: resume.trackOffsetSeconds,
             durationSeconds: duration,
@@ -155,13 +107,13 @@ struct BookProgressMappingResolver: Sendable {
 
     func audioResume(
         tracks: [MusicTrack],
-        mappings: [BookProgressTrackMapping],
+        mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> AudiobookResumePoint? {
         guard let progress,
             progress.completedAt == nil,
             let mapping = mapping(for: progress, in: mappings),
-            let track = tracks.first(where: { $0.id == mapping.trackID })
+            let track = tracks.first(where: { $0.id == mapping.itemID })
         else { return nil }
 
         let fraction = fraction(for: progress, mapping: mapping)
@@ -174,10 +126,10 @@ struct BookProgressMappingResolver: Sendable {
 
     func fraction(
         for progress: EntityProgressCapability,
-        mapping: BookProgressTrackMapping
+        mapping: PlaybackProgressMapping
     ) -> Double {
         if mapping.unit == .cfi,
-            let readerLocation = mapping.readerLocation,
+            let readerLocation = mapping.resourceLocation,
             let savedLocation = progress.location.flatMap(EPUBProgressLocation.init(serialized:)),
             EPUBResourceLocationMatcher().bestMatch(
                 for: savedLocation.href,

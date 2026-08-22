@@ -289,17 +289,17 @@ final class EntityDetailReadingTests: XCTestCase {
             childrenByKind: [],
             relationships: []
         )
-        let page = EntityThumbnail(
+        let page = BookReaderPage(
             id: pageID,
-            kind: .bookPage,
             title: "Page One",
-            parentEntityID: chapterID,
-            sortOrder: 0
+            entityID: chapterID,
+            ordinal: 0,
+            isDoublePage: false
         )
         return BookReaderManifest(
             bookID: bookID,
             title: title,
-            chapters: [BookReaderChapter(detail: chapterDetail, pages: [page], sequenceIndex: 0)],
+            chapters: [BookReaderChapter(detail: chapterDetail, readerPages: [page], sequenceIndex: 0)],
             nextChapter: nil,
             progress: EntityProgressCapability(
                 currentEntityID: chapterID,

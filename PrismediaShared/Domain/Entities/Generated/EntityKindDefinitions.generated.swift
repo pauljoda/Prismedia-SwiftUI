@@ -10,7 +10,6 @@ public extension EntityKind {
     static let book = Self(rawValue: "book")
     static let bookVolume = Self(rawValue: "book-volume")
     static let bookChapter = Self(rawValue: "book-chapter")
-    static let bookPage = Self(rawValue: "book-page")
     static let comicInstallment = Self(rawValue: "comic-installment")
     static let comicSeries = Self(rawValue: "comic-series")
     static let comicVolume = Self(rawValue: "comic-volume")
@@ -308,7 +307,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,
-        engagementMode: EntityEngagementMode(rawValue: "reading"),
+        engagementMode: EntityEngagementMode(rawValue: "none"),
         acquisitionProfile: nil,
         enumeratesIdentifyChildren: true
     ),
@@ -355,49 +354,6 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         acquisitionProfile: nil,
         enumeratesIdentifyChildren: false
     ),
-    .bookPage: EntityKindDefinition(
-        kind: .bookPage,
-        displayName: "Book Page",
-        groupLabel: "Pages",
-        category: "Media",
-        storageShape: "ArchiveEntry",
-        presentation: EntityKindPresentation(
-            icon: .page,
-            referenceIcon: .book,
-            thumbnailWidth: 2,
-            thumbnailHeight: 3,
-            primaryAccent: .cyan,
-            secondaryAccent: .blue,
-            primaryAccentIndex: 4,
-            secondaryAccentIndex: 5,
-            artworkFit: .cover,
-            artworkSurface: .plain
-        ),
-        navigation: EntityKindNavigation(
-            canonicalBrowseKind: .book,
-            destinationID: "books",
-            browsePath: "/books",
-            detailPathTemplate: nil,
-            requiredAncestorKind: nil,
-            isTopLevel: false
-        ),
-        search: nil,
-        supportsFileDeletion: false,
-        supportsRequests: false,
-        autoIdentifySelector: nil,
-        identifyPluginFallbackKind: nil,
-        containableKinds: nil,
-        supportsManualManagement: false,
-        manualAcquisition: EntityManualAcquisitionPolicy(
-            supportsUpload: false,
-            supportsReplacement: false
-        ),
-        mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
-        supportsAtomicMediaUpgrade: false,
-        engagementMode: EntityEngagementMode(rawValue: "none"),
-        acquisitionProfile: nil,
-        enumeratesIdentifyChildren: false
-    ),
     .comicInstallment: EntityKindDefinition(
         kind: .comicInstallment,
         displayName: "Comic Installment",
@@ -432,8 +388,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
-            supportsUpload: false,
-            supportsReplacement: false
+            supportsUpload: true,
+            supportsReplacement: true
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "none"),
         supportsAtomicMediaUpgrade: false,

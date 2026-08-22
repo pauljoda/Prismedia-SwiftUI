@@ -9,8 +9,22 @@ import SwiftUI
             return value
         }
 
-        func loadPageData(id: UUID) async throws -> Data {
-            Data(
+        func loadEntityReaderManifest(id: UUID) async throws -> EntityReaderManifest {
+            guard values[id] != nil else { throw BookReaderManifestError.noReadablePages }
+            return EntityReaderManifest(
+                entityID: id,
+                direction: .leftToRight,
+                defaultMode: .paged,
+                coverOrdinal: 0,
+                pages: [ComicReaderPreviewData.sourcePage]
+            )
+        }
+
+        func loadEntityReaderPageData(id: UUID, ordinal: Int) async throws -> Data {
+            guard values[id] != nil, ordinal == 0 else {
+                throw BookReaderManifestError.noReadablePages
+            }
+            return Data(
                 base64Encoded:
                     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL+WQAAAABJRU5ErkJggg==")
                 ?? Data()

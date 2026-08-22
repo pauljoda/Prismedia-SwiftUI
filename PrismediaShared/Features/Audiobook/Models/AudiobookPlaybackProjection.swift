@@ -108,7 +108,9 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
         let elapsedBefore = tracks.prefix(index).reduce(0) { $0 + duration(of: $1) }
         let trackDuration = duration(of: tracks[index])
         let localOffset = min(
-            max(0, trackOffsetSeconds), trackDuration > 0 ? trackDuration : max(0, trackOffsetSeconds))
+            max(0, trackOffsetSeconds),
+            trackDuration > 0 ? trackDuration : max(0, trackOffsetSeconds)
+        )
         return elapsedBefore + localOffset
     }
 

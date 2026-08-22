@@ -20,7 +20,7 @@ final class AudiobookPlayerControllerTests: XCTestCase {
             playbackOwnerEntityID: bookID,
             playbackOwnerTitle: "The Long Voyage",
             playbackOwnerEntityKind: .book,
-            bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks),
+            progressMappings: epubMappings(bookID: bookID, tracks: tracks),
             preservesQueueOrder: true,
             supportsPlaybackRate: true
         )
@@ -71,7 +71,7 @@ final class AudiobookPlayerControllerTests: XCTestCase {
                 playbackOwnerEntityID: bookID,
                 playbackOwnerTitle: "The Long Voyage",
                 playbackOwnerEntityKind: .book,
-                bookProgressMappings: epubMappings(bookID: bookID, tracks: tracks),
+                progressMappings: epubMappings(bookID: bookID, tracks: tracks),
                 preservesQueueOrder: true,
                 supportsPlaybackRate: true
             )
@@ -85,7 +85,7 @@ final class AudiobookPlayerControllerTests: XCTestCase {
         clock.advance(by: 12)
         await controller.handlePlaybackEnded()
         await controller.flushPendingPlaybackReports()
-        await controller.flushAudiobookProgress()
+        await controller.flushMappedProgress()
 
         XCTAssertEqual(service.progressUpdates.count, 1)
         XCTAssertEqual(service.progressUpdates[0].entityID, bookID)
@@ -95,6 +95,46 @@ final class AudiobookPlayerControllerTests: XCTestCase {
         XCTAssertEqual(service.progressUpdates[0].request.activityKind, .listening)
         XCTAssertTrue(service.recordedTrackIDs.isEmpty)
         XCTAssertFalse(controller.isPlaying)
+    }
+
+    func testGlobalPlaybackHeartbeatReportsMappedBookProgressWithoutAnotherTimeCallback() async {
+        let bookID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
+        let track = makeTrack(idSuffix: 1, duration: 100)
+        let service = AudiobookPlaybackServiceSpy()
+        let clock = AudiobookTestClock()
+        let controller = MusicPlayerController(
+            engine: AudiobookAudioEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: bookID,
+                playbackOwnerTitle: "The Long Voyage",
+                playbackOwnerEntityKind: .book,
+                progressMappings: epubMappings(bookID: bookID, tracks: [track]),
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
+            ),
+            startSeconds: 40
+        )
+        controller.updatePlaybackProgress(
+            elapsedTime: 40,
+            duration: track.duration,
+            isAdvancing: true
+        )
+
+        clock.advance(by: 10)
+        controller.persistProgressHeartbeat()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(service.progressUpdates.count, 1)
+        XCTAssertEqual(service.progressUpdates[0].entityID, bookID)
+        XCTAssertEqual(service.progressUpdates[0].request.index, 2_000)
+        XCTAssertEqual(service.progressUpdates[0].request.activitySeconds, 10)
+        XCTAssertEqual(service.progressUpdates[0].request.activityKind, .listening)
     }
 
     func testAudiobookRestorationKeepsOwnerAndSourceOrderWithoutShuffle() {
@@ -142,10 +182,10 @@ final class AudiobookPlayerControllerTests: XCTestCase {
     private func epubMappings(
         bookID: UUID,
         tracks: [MusicTrack]
-    ) -> [BookProgressTrackMapping] {
+    ) -> [PlaybackProgressMapping] {
         tracks.enumerated().map { index, track in
-            BookProgressTrackMapping(
-                trackID: track.id,
+            PlaybackProgressMapping(
+                itemID: track.id,
                 currentEntityID: bookID,
                 unit: .cfi,
                 startIndex: index * 5_000,

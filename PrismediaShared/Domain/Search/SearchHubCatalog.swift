@@ -21,7 +21,7 @@ public enum SearchHubCatalog {
     ]
 
     private static let leafKindPriority: [EntityKind] = [
-        .video, .audioTrack, .image, .bookChapter, .bookPage,
+        .video, .audioTrack, .image, .bookChapter, .comicInstallment,
     ]
 
     public static func cards(for modes: [AppMode]) -> [SearchHubModeCard] {
@@ -99,7 +99,7 @@ public enum SearchHubCatalog {
         switch kind {
         case .videoSeason: return "Seasons"
         case .bookChapter: return "Chapters"
-        case .bookPage: return "Pages"
+        case .comicInstallment: return "Comic Installments"
         default:
             return ModeCatalog.canonicalDestination(for: kind)?.destination.title ?? kind.displayLabel
         }

@@ -42,16 +42,6 @@ final class BookReaderPageCache {
         self.decoder = decoder
     }
 
-    func data(for id: UUID) async throws -> Data {
-        try await data(
-            for: BookReaderPage(
-                id: id,
-                title: "Page",
-                source: .entity(id),
-                isDoublePage: false
-            ))
-    }
-
     func data(for page: BookReaderPage) async throws -> Data {
         let id = page.id
         if let value = values[id], images[id] != nil { return value }

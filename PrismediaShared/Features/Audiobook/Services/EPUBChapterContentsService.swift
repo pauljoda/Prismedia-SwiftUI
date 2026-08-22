@@ -12,10 +12,6 @@ struct EPUBChapterContentsService: Sendable {
             return EPUBChapterContents(chapters: [], currentChapterID: nil)
         }
 
-        if book.bookFormat == .imageArchive {
-            return try await loadImageChapters(book: book)
-        }
-
         let data = try await reader.loadSourceData(id: book.id)
         let title = book.title
         let destination = cacheDirectory(bookID: book.id)
@@ -107,49 +103,6 @@ struct EPUBChapterContentsService: Sendable {
                 startFraction: ranges[index].start,
                 endFraction: ranges[index].end
             )
-        }
-    }
-
-    private func loadImageChapters(book: EntityDetail) async throws -> EPUBChapterContents {
-        var chapterThumbnails = orderedChildren(in: book, kind: .bookChapter)
-        if chapterThumbnails.isEmpty {
-            for volume in orderedChildren(in: book, kind: .bookVolume) {
-                let detail = try await reader.loadEntity(id: volume.id)
-                chapterThumbnails += orderedChildren(in: detail, kind: .bookChapter)
-            }
-        }
-
-        var chapters: [ReadableBookChapter] = []
-        for (index, chapter) in chapterThumbnails.enumerated() {
-            let detail = try await reader.loadEntity(id: chapter.id)
-            let pageCount = orderedChildren(in: detail, kind: .bookPage).count
-            guard pageCount > 0 else { continue }
-            chapters.append(
-                ReadableBookChapter(
-                    id: chapter.id.uuidString.lowercased(),
-                    title: chapter.title,
-                    order: index,
-                    depth: 0,
-                    target: .entityChapter(id: chapter.id),
-                    pageCount: pageCount
-                )
-            )
-        }
-
-        let progress: EntityProgressCapability? = book.capability()
-        return EPUBChapterContents(
-            chapters: chapters,
-            currentChapterID: progress?.completedAt == nil
-                ? progress?.currentEntityID?.uuidString.lowercased()
-                : nil
-        )
-    }
-
-    private func orderedChildren(in detail: EntityDetail, kind: EntityKind) -> [EntityThumbnail] {
-        let children = detail.childrenByKind.first { $0.kind == kind }?.entities ?? []
-        return children.sorted {
-            ($0.sortOrder ?? Int.max, $0.title, $0.id.uuidString)
-                < ($1.sortOrder ?? Int.max, $1.title, $1.id.uuidString)
         }
     }
 

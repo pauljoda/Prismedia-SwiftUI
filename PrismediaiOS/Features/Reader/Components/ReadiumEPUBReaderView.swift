@@ -412,8 +412,19 @@
 
     #if DEBUG
         #Preview("Readium EPUB Reader") {
+            let book = EntityDetail(
+                id: ComicReaderPreviewData.installmentID,
+                kind: .book,
+                title: "Signal in the Static",
+                parentEntityID: nil,
+                sortOrder: nil,
+                hasSourceMedia: true,
+                capabilities: [.bookMetadata(.init(bookType: "book", format: .epub))],
+                childrenByKind: [],
+                relationships: []
+            )
             ReadiumEPUBReaderView(
-                book: ComicReaderPreviewData.book,
+                book: book,
                 command: .read,
                 service: ComicReaderPreviewData.service,
                 preferencesStore: .disabled,

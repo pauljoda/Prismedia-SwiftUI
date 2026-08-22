@@ -515,7 +515,7 @@
 
         #Preview("Comic Reader · Paged") {
             ComicReaderView(
-                selected: ComicReaderPreviewData.book,
+                selected: ComicReaderPreviewData.installment,
                 command: .read,
                 service: ComicReaderPreviewData.service
             )

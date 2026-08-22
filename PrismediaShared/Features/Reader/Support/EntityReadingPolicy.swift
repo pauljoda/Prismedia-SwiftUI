@@ -1,7 +1,6 @@
 import Foundation
 
-/// Resolves reader behavior from Entity capabilities, with legacy prose-book
-/// formats retained only for contracts that predate generic page manifests.
+/// Resolves reader behavior from generic page-sequence capability or supported prose formats.
 enum EntityReadingPolicy {
     static func supportsReading(_ detail: EntityDetail) -> Bool {
         if detail.capability(EntityPageSequenceCapability.self) != nil {
@@ -9,11 +8,9 @@ enum EntityReadingPolicy {
         }
 
         switch detail.kind {
-        case .bookVolume, .bookChapter:
-            return true
         case .book:
             switch BookReaderFormatPolicy.route(for: detail.bookFormat) {
-            case .comic, .pdf, .epub:
+            case .pdf, .epub:
                 return true
             case .unavailable, .unsupported:
                 return false
@@ -28,7 +25,7 @@ enum EntityReadingPolicy {
         switch BookReaderFormatPolicy.route(for: detail.bookFormat) {
         case .pdf, .epub:
             return true
-        case .unavailable, .comic, .unsupported:
+        case .unavailable, .unsupported:
             return false
         }
     }

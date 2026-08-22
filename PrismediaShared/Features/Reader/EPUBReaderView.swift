@@ -498,7 +498,7 @@
     #if DEBUG
         #Preview("EPUB Reader · Invalid Fixture") {
             let book = EntityDetail(
-                id: ComicReaderPreviewData.bookID,
+                id: ComicReaderPreviewData.installmentID,
                 kind: .book,
                 title: "Signal in the Static",
                 parentEntityID: nil,

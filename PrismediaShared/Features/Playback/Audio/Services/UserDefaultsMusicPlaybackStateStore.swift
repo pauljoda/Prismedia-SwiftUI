@@ -35,7 +35,7 @@ public final class UserDefaultsMusicPlaybackStateStore: MusicPlaybackStatePersis
             MusicPlaybackProgressCheckpoint(
                 currentTrackID: restoration.currentTrackID,
                 elapsedTime: restoration.elapsedTime,
-                audiobookCompleted: restoration.audiobookCompleted
+                mappedProgressCompleted: restoration.mappedProgressCompleted
             )
         )
     }

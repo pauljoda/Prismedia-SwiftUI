@@ -114,7 +114,7 @@ extension EntityDetailView {
                     playbackOwnerEntityID: projection.bookID,
                     playbackOwnerTitle: projection.title,
                     playbackOwnerEntityKind: .book,
-                    bookProgressMappings: currentDetail.map { bookProgressMappings(for: $0) },
+                    progressMappings: currentDetail.map { bookProgressMappings(for: $0) },
                     preservesQueueOrder: projection.preservesQueueOrder,
                     supportsPlaybackRate: projection.supportsPlaybackRate
                 ),
@@ -133,7 +133,7 @@ extension EntityDetailView {
             audiobookErrorMessage = nil
             do {
                 await musicPlayer.flushPendingPlaybackReports()
-                musicPlayer.setAudiobookCompletionState(false)
+                musicPlayer.setMappedProgressCompletionState(false)
                 try await playbackService.reportEntityProgress(
                     id: detail.id,
                     request: EntityProgressUpdateRequest(
@@ -147,7 +147,7 @@ extension EntityDetailView {
                         location: nil
                     )
                 )
-                play(projection, startingAt: mapping.trackID, startSeconds: 0)
+                play(projection, startingAt: mapping.itemID, startSeconds: 0)
                 await refreshAudiobookDetail()
             } catch {
                 audiobookErrorMessage = error.localizedDescription
@@ -168,7 +168,7 @@ extension EntityDetailView {
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
             do {
                 await musicPlayer.flushPendingPlaybackReports()
-                if isCurrent { musicPlayer.setAudiobookCompletionState(marksCompleted) }
+                if isCurrent { musicPlayer.setMappedProgressCompletionState(marksCompleted) }
                 try await playbackService.reportEntityProgress(
                     id: detail.id,
                     request: EntityProgressUpdateRequest(
@@ -183,7 +183,7 @@ extension EntityDetailView {
                 )
                 await refreshAudiobookDetail()
             } catch {
-                if isCurrent { musicPlayer.setAudiobookCompletionState(!marksCompleted) }
+                if isCurrent { musicPlayer.setMappedProgressCompletionState(!marksCompleted) }
                 audiobookErrorMessage = error.localizedDescription
             }
             isListeningMutating = false

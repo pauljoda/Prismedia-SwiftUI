@@ -130,6 +130,19 @@ extension EntityDetailView {
                                                 onRetryChapters: { Task { await loadBookChapters(for: detail) } }
                                             )
                                             .equatable()
+
+                                            if detail.kind == .comicInstallment,
+                                                let pages = readingState.manifest?.pages,
+                                                !pages.isEmpty,
+                                                let readerService = dependencies.readerService
+                                            {
+                                                ComicPageThumbnailGrid(
+                                                    pages: pages,
+                                                    service: readerService,
+                                                    horizontalPadding: detailHorizontalPadding,
+                                                    onSelect: { openReader(command: .page($0)) }
+                                                )
+                                            }
                                         #endif
 
                                         #if os(tvOS)

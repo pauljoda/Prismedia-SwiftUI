@@ -22,12 +22,12 @@ struct BookCombinedResumeResolver: Sendable {
 
     func resolveContinuation(
         chapters: [BookChapterMapping],
-        mappings: [BookProgressTrackMapping],
+        mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
         if let progress, progress.completedAt == nil {
             guard let mapping = BookProgressMappingResolver().mapping(for: progress, in: mappings),
-                let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.trackID })
+                let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.itemID })
             else {
                 // The readable cursor is authoritative when no audio part maps to it.
                 return nil
@@ -36,18 +36,18 @@ struct BookCombinedResumeResolver: Sendable {
         }
 
         guard let mapping = mappings.first,
-            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.trackID })
+            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.itemID })
         else { return nil }
         return target(chapter: chapter, mapping: mapping, progress: nil)
     }
 
     func resolveChapter(
         _ chapter: BookChapterMapping,
-        mappings: [BookProgressTrackMapping],
+        mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
         guard let trackID = chapter.audioTrack?.id,
-            let mapping = mappings.first(where: { $0.trackID == trackID })
+            let mapping = mappings.first(where: { $0.itemID == trackID })
         else { return nil }
         let matchingProgress = progress.flatMap {
             BookProgressMappingResolver().mapping(for: $0, in: [mapping]) == nil ? nil : $0
@@ -57,7 +57,7 @@ struct BookCombinedResumeResolver: Sendable {
 
     func resolveAudioResume(
         chapters: [BookChapterMapping],
-        mappings: [BookProgressTrackMapping],
+        mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> AudiobookResumePoint? {
         BookProgressMappingResolver().audioResume(
@@ -69,7 +69,7 @@ struct BookCombinedResumeResolver: Sendable {
 
     private func target(
         chapter: BookChapterMapping,
-        mapping: BookProgressTrackMapping,
+        mapping: PlaybackProgressMapping,
         progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
         guard let track = chapter.audioTrack,

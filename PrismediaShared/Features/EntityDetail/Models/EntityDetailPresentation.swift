@@ -222,7 +222,7 @@ struct EntityDetailPresentation {
     var systemImage: String {
         switch detail.kind {
         case .audio, .audioLibrary, .audioTrack, .musicArtist: return "music.note"
-        case .book, .bookVolume, .bookChapter, .bookPage, .bookAuthor,
+        case .book, .bookVolume, .bookChapter, .bookAuthor,
             .comicSeries, .comicVolume, .comicInstallment:
             return "book.closed"
         case .person: return "person.crop.rectangle"
@@ -494,15 +494,11 @@ struct EntityDetailPresentation {
         switch detail.kind {
         case .book:
             switch BookReaderFormatPolicy.route(for: detail.bookFormat) {
-            case .comic, .pdf, .epub:
+            case .pdf, .epub:
                 break
             case .unavailable, .unsupported:
                 return nil
             }
-            return action(
-                hasProgress ? .resume : .read, hasProgress ? "Resume" : "Read",
-                hasProgress ? "book.pages" : "book.fill", primary: true)
-        case .bookVolume, .bookChapter:
             return action(
                 hasProgress ? .resume : .read, hasProgress ? "Resume" : "Read",
                 hasProgress ? "book.pages" : "book.fill", primary: true)

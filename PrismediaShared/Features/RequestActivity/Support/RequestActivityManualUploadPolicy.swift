@@ -4,7 +4,7 @@ enum RequestActivityManualUploadPolicy {
     static let contentUploadLimitBytes: Int64 = 250 * 1_024 * 1_024 * 1_024
 
     static func supportsContentUpload(for kind: EntityKind) -> Bool {
-        [.book, .movie, .video, .audioLibrary, .videoSeason].contains(kind)
+        kind.definition?.manualAcquisition.supportsUpload == true
     }
 
     static func canUploadContent(
@@ -21,7 +21,7 @@ enum RequestActivityManualUploadPolicy {
                 return false
             }
         }
-        return hasOwnedContent && replaceableKinds.contains(kind)
+        return hasOwnedContent && kind.definition?.manualAcquisition.supportsReplacement == true
     }
 
     static func validateContent(
@@ -82,7 +82,9 @@ enum RequestActivityManualUploadPolicy {
         switch kind {
         case .book:
             if bookRendition?.rawValue == "audiobook" { return audiobookExtensions }
-            return bookExtensions.union(audiobookExtensions)
+            return ebookExtensions.union(audiobookExtensions)
+        case .comicInstallment:
+            return comicArchiveExtensions
         case .movie, .video, .videoSeason:
             return videoExtensions
         case .audioLibrary:
@@ -96,8 +98,8 @@ enum RequestActivityManualUploadPolicy {
         "pending", "searching", "awaiting-selection", "failed",
         "manual-import-required", "cancelled",
     ]
-    private static let replaceableKinds: Set<EntityKind> = [.book, .movie, .video, .audioLibrary]
-    private static let bookExtensions: Set<String> = ["epub", "pdf", "cbz", "zip"]
+    private static let ebookExtensions: Set<String> = ["epub", "pdf"]
+    private static let comicArchiveExtensions: Set<String> = ["cbz", "zip"]
     private static let audiobookExtensions: Set<String> = ["m4b", "m4a", "mp3"]
     private static let videoExtensions: Set<String> = [
         "mp4", "m4v", "mkv", "mov", "webm", "avi", "wmv", "flv", "ts", "m2ts", "mpg", "mpeg",

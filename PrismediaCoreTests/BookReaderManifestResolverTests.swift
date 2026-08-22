@@ -3,30 +3,12 @@ import XCTest
 @testable import PrismediaCore
 
 final class BookReaderManifestResolverTests: XCTestCase {
-    func testRootBookResumeReloadsFreshProgressBeforeSelectingPage() async throws {
-        let bookID = UUID(uuidString: "01000000-0000-0000-0000-000000000000")!
-        let chapterID = UUID(uuidString: "02000000-0000-0000-0000-000000000000")!
-        let firstPageID = UUID(uuidString: "03000000-0000-0000-0000-000000000000")!
-        let secondPageID = UUID(uuidString: "04000000-0000-0000-0000-000000000000")!
-        let chapterThumbnail = thumbnail(
-            chapterID,
-            .bookChapter,
-            "Chapter",
-            order: 0,
-            parent: bookID
-        )
-        let staleBook = detail(
-            id: bookID,
-            kind: .book,
-            title: "Book",
-            children: [group(.bookChapter, [chapterThumbnail])]
-        )
-        let freshBook = detail(
-            id: bookID,
-            kind: .book,
-            title: "Book",
+    func testManifestResourcesResumeWithoutPageEntities() async throws {
+        let installmentID = UUID(uuidString: "01000000-0000-0000-0000-000000000000")!
+        let detail = installment(
+            id: installmentID,
             progress: .init(
-                currentEntityID: chapterID,
+                currentEntityID: installmentID,
                 unit: .page,
                 index: 1,
                 total: 2,
@@ -36,321 +18,70 @@ final class BookReaderManifestResolverTests: XCTestCase {
                 workIndex: 1,
                 workTotal: 2,
                 location: nil
-            ),
-            children: [group(.bookChapter, [chapterThumbnail])]
+            )
         )
-        let chapter = detail(
-            id: chapterID,
-            kind: .bookChapter,
-            title: "Chapter",
-            parent: bookID,
-            children: [
-                group(
-                    .bookPage,
-                    [
-                        thumbnail(firstPageID, .bookPage, "Page 1", order: 0, parent: chapterID),
-                        thumbnail(secondPageID, .bookPage, "Page 2", order: 1, parent: chapterID),
-                    ]
-                )
-            ]
-        )
-        let loader = ManifestEntityLoader(values: [bookID: freshBook, chapterID: chapter])
+        let source = readerManifest(entityID: installmentID, pageCount: 2)
+        let loader = ManifestEntityLoader(values: [installmentID: detail], manifests: [installmentID: source])
 
         let manifest = try await BookReaderManifestResolver(loader: loader).resolve(
-            selected: staleBook,
+            selected: detail,
             command: .resume
         )
 
+        XCTAssertEqual(manifest.bookID, installmentID)
         XCTAssertEqual(manifest.initialIndex, 1)
-        XCTAssertEqual(manifest.readerMode, .webtoon)
-        XCTAssertEqual(manifest.pages.map(\.id), [firstPageID, secondPageID])
+        XCTAssertEqual(manifest.readerMode, .paged)
+        XCTAssertEqual(manifest.readingDirection, .rightToLeft)
+        XCTAssertEqual(manifest.pages.map(\.entityID), [installmentID, installmentID])
+        XCTAssertEqual(manifest.pages.map(\.ordinal), [0, 1])
+        XCTAssertTrue(manifest.pages[1].isDoublePage)
     }
 
-    func testBookResumeLoadsSavedChapterInsideVolumeAndFindsNextVolumeChapter() async throws {
-        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000000")!
-        let volumeOneID = UUID(uuidString: "20000000-0000-0000-0000-000000000000")!
-        let volumeTwoID = UUID(uuidString: "30000000-0000-0000-0000-000000000000")!
-        let chapterOneID = UUID(uuidString: "40000000-0000-0000-0000-000000000000")!
-        let chapterTwoID = UUID(uuidString: "50000000-0000-0000-0000-000000000000")!
-        let pageOneID = UUID(uuidString: "60000000-0000-0000-0000-000000000000")!
-        let pageTwoID = UUID(uuidString: "70000000-0000-0000-0000-000000000000")!
-
-        let book = detail(
-            id: bookID,
-            kind: .book,
-            title: "Saga",
-            progress: .init(
-                currentEntityID: chapterOneID,
-                unit: .page,
-                index: 0,
-                total: 1,
-                mode: .webtoon,
-                completedAt: nil,
-                updatedAt: nil,
-                workIndex: 0,
-                workTotal: 2,
-                location: nil
-            ),
-            children: [
-                group(
-                    .bookVolume,
-                    [
-                        thumbnail(volumeTwoID, .bookVolume, "Volume 2", order: 2, parent: bookID),
-                        thumbnail(volumeOneID, .bookVolume, "Volume 1", order: 1, parent: bookID),
-                    ])
-            ]
-        )
-        let volumeOne = detail(
-            id: volumeOneID,
-            kind: .bookVolume,
-            title: "Volume 1",
-            parent: bookID,
-            children: [
-                group(.bookChapter, [thumbnail(chapterOneID, .bookChapter, "Chapter 1", order: 0, parent: volumeOneID)])
-            ]
-        )
-        let volumeTwo = detail(
-            id: volumeTwoID,
-            kind: .bookVolume,
-            title: "Volume 2",
-            parent: bookID,
-            children: [
-                group(.bookChapter, [thumbnail(chapterTwoID, .bookChapter, "Chapter 2", order: 0, parent: volumeTwoID)])
-            ]
-        )
-        let chapterOne = detail(
-            id: chapterOneID,
-            kind: .bookChapter,
-            title: "Chapter 1",
-            parent: volumeOneID,
-            children: [group(.bookPage, [thumbnail(pageOneID, .bookPage, "Page 1", order: 0, parent: chapterOneID)])]
-        )
-        let chapterTwo = detail(
-            id: chapterTwoID,
-            kind: .bookChapter,
-            title: "Chapter 2",
-            parent: volumeTwoID,
-            children: [group(.bookPage, [thumbnail(pageTwoID, .bookPage, "Page 2", order: 0, parent: chapterTwoID)])]
-        )
-        let loader = ManifestEntityLoader(values: [
-            bookID: book,
-            volumeOneID: volumeOne,
-            volumeTwoID: volumeTwo,
-            chapterOneID: chapterOne,
-            chapterTwoID: chapterTwo,
-        ])
+    func testExplicitThumbnailSelectionOpensTheRequestedOrdinal() async throws {
+        let installmentID = UUID()
+        let detail = installment(id: installmentID)
+        let source = readerManifest(entityID: installmentID, pageCount: 4)
+        let loader = ManifestEntityLoader(values: [installmentID: detail], manifests: [installmentID: source])
 
         let manifest = try await BookReaderManifestResolver(loader: loader).resolve(
-            selected: book,
-            command: .resume
+            selected: detail,
+            command: .page(3)
         )
 
-        XCTAssertEqual(manifest.bookID, bookID)
-        XCTAssertEqual(manifest.chapters.map(\.id), [chapterOneID])
-        XCTAssertEqual(manifest.pages.map(\.id), [pageOneID])
-        XCTAssertEqual(manifest.initialIndex, 0)
-        XCTAssertEqual(manifest.readerMode, .webtoon)
-        XCTAssertEqual(manifest.tableOfContents.map(\.id), [chapterOneID, chapterTwoID])
-        XCTAssertEqual(manifest.nextChapter?.id, chapterTwoID)
+        XCTAssertEqual(manifest.initialIndex, 3)
     }
 
-    func testVolumeReaderFlattensOrderedChapterPagesAndMapsProgressToLocalPosition() async throws {
-        let bookID = UUID(uuidString: "11000000-0000-0000-0000-000000000000")!
-        let volumeID = UUID(uuidString: "22000000-0000-0000-0000-000000000000")!
-        let firstChapterID = UUID(uuidString: "33000000-0000-0000-0000-000000000000")!
-        let secondChapterID = UUID(uuidString: "44000000-0000-0000-0000-000000000000")!
-        let firstPageID = UUID(uuidString: "55000000-0000-0000-0000-000000000000")!
-        let secondPageID = UUID(uuidString: "66000000-0000-0000-0000-000000000000")!
-        let book = detail(
-            id: bookID,
-            kind: .book,
-            title: "Book",
-            progress: .init(
-                currentEntityID: secondChapterID, unit: .page, index: 0, total: 1, mode: .paged, completedAt: nil,
-                updatedAt: nil, workIndex: 1, workTotal: 2, location: nil),
-            children: [group(.bookVolume, [thumbnail(volumeID, .bookVolume, "Volume", order: 0, parent: bookID)])]
-        )
-        let volume = detail(
-            id: volumeID,
-            kind: .bookVolume,
-            title: "Volume",
-            parent: bookID,
-            children: [
-                group(
-                    .bookChapter,
-                    [
-                        thumbnail(secondChapterID, .bookChapter, "Second", order: 2, parent: volumeID),
-                        thumbnail(firstChapterID, .bookChapter, "First", order: 1, parent: volumeID),
-                    ])
-            ]
-        )
-        let first = detail(
-            id: firstChapterID, kind: .bookChapter, title: "First", parent: volumeID,
-            children: [
-                group(.bookPage, [thumbnail(firstPageID, .bookPage, "First page", order: 0, parent: firstChapterID)])
-            ])
-        let second = detail(
-            id: secondChapterID, kind: .bookChapter, title: "Second", parent: volumeID,
-            children: [
-                group(.bookPage, [thumbnail(secondPageID, .bookPage, "Second page", order: 0, parent: secondChapterID)])
-            ])
-        let loader = ManifestEntityLoader(values: [
-            bookID: book, volumeID: volume, firstChapterID: first, secondChapterID: second,
-        ])
-
-        let manifest = try await BookReaderManifestResolver(loader: loader).resolve(selected: volume, command: .resume)
-
-        XCTAssertEqual(manifest.chapters.map(\.id), [firstChapterID, secondChapterID])
-        XCTAssertEqual(manifest.pages.map(\.id), [firstPageID, secondPageID])
-        XCTAssertEqual(manifest.initialIndex, 1)
-        XCTAssertNil(manifest.nextChapter)
-        XCTAssertEqual(manifest.tableOfContents.map(\.id), [firstChapterID, secondChapterID])
-        XCTAssertEqual(manifest.tableOfContents.map(\.pageCount), [1, 1])
-        XCTAssertEqual(manifest.position(at: 1)?.chapterID, secondChapterID)
-        XCTAssertEqual(manifest.position(at: 1)?.pageIndex, 0)
-    }
-
-    func testNonFinalVolumeContinuesIntoTheNextVolumesFirstChapter() async throws {
-        let bookID = UUID(uuidString: "12000000-0000-0000-0000-000000000000")!
-        let firstVolumeID = UUID(uuidString: "23000000-0000-0000-0000-000000000000")!
-        let secondVolumeID = UUID(uuidString: "34000000-0000-0000-0000-000000000000")!
-        let firstChapterID = UUID(uuidString: "45000000-0000-0000-0000-000000000000")!
-        let secondChapterID = UUID(uuidString: "56000000-0000-0000-0000-000000000000")!
-        let firstPageID = UUID(uuidString: "67000000-0000-0000-0000-000000000000")!
-        let secondPageID = UUID(uuidString: "78000000-0000-0000-0000-000000000000")!
-        let book = detail(
-            id: bookID,
-            kind: .book,
-            title: "Book",
-            children: [
-                group(
-                    .bookVolume,
-                    [
-                        thumbnail(firstVolumeID, .bookVolume, "Volume 1", order: 0, parent: bookID),
-                        thumbnail(secondVolumeID, .bookVolume, "Volume 2", order: 1, parent: bookID),
-                    ]
-                )
-            ]
-        )
-        let firstVolume = detail(
-            id: firstVolumeID,
-            kind: .bookVolume,
-            title: "Volume 1",
-            parent: bookID,
-            children: [
-                group(
-                    .bookChapter,
-                    [thumbnail(firstChapterID, .bookChapter, "Chapter 1", order: 0, parent: firstVolumeID)]
-                )
-            ]
-        )
-        let secondVolume = detail(
-            id: secondVolumeID,
-            kind: .bookVolume,
-            title: "Volume 2",
-            parent: bookID,
-            children: [
-                group(
-                    .bookChapter,
-                    [thumbnail(secondChapterID, .bookChapter, "Chapter 2", order: 0, parent: secondVolumeID)]
-                )
-            ]
-        )
-        let firstChapter = detail(
-            id: firstChapterID,
-            kind: .bookChapter,
-            title: "Chapter 1",
-            parent: firstVolumeID,
-            children: [
-                group(.bookPage, [thumbnail(firstPageID, .bookPage, "Page 1", order: 0, parent: firstChapterID)])
-            ]
-        )
-        let secondChapter = detail(
-            id: secondChapterID,
-            kind: .bookChapter,
-            title: "Chapter 2",
-            parent: secondVolumeID,
-            children: [
-                group(.bookPage, [thumbnail(secondPageID, .bookPage, "Page 2", order: 0, parent: secondChapterID)])
-            ]
-        )
-        let loader = ManifestEntityLoader(values: [
-            bookID: book,
-            firstVolumeID: firstVolume,
-            secondVolumeID: secondVolume,
-            firstChapterID: firstChapter,
-            secondChapterID: secondChapter,
-        ])
-
-        let manifest = try await BookReaderManifestResolver(loader: loader).resolve(
-            selected: firstVolume,
-            command: .read
-        )
-
-        XCTAssertEqual(manifest.pages.map(\.id), [firstPageID])
-        XCTAssertEqual(manifest.nextChapter?.id, secondChapterID)
-        XCTAssertEqual(manifest.nextChapter?.title, "Chapter 2")
-    }
-
-    func testGenericPageSequenceContinuesAcrossOrderedContainersWithoutMixingDirectItems() async throws {
-        let seriesID = UUID(uuidString: "81000000-0000-0000-0000-000000000000")!
-        let firstVolumeID = UUID(uuidString: "82000000-0000-0000-0000-000000000000")!
-        let secondVolumeID = UUID(uuidString: "83000000-0000-0000-0000-000000000000")!
-        let directID = UUID(uuidString: "84000000-0000-0000-0000-000000000000")!
-        let firstID = UUID(uuidString: "85000000-0000-0000-0000-000000000000")!
-        let selectedID = UUID(uuidString: "86000000-0000-0000-0000-000000000000")!
-        let nextID = UUID(uuidString: "87000000-0000-0000-0000-000000000000")!
-        let series = detail(
+    func testPageSequenceContinuesAcrossOrderedComicVolumes() async throws {
+        let seriesID = UUID()
+        let firstVolumeID = UUID()
+        let secondVolumeID = UUID()
+        let selectedID = UUID()
+        let nextID = UUID()
+        let series = entity(
             id: seriesID,
             kind: .comicSeries,
-            title: "Series",
-            children: [
-                group(
-                    .comicInstallment,
-                    [thumbnail(directID, .comicInstallment, "Direct", order: 0, parent: seriesID)]
-                ),
-                group(
-                    .comicVolume,
-                    [
-                        thumbnail(secondVolumeID, .comicVolume, "Volume 2", order: 2, parent: seriesID),
-                        thumbnail(firstVolumeID, .comicVolume, "Volume 1", order: 1, parent: seriesID),
-                    ]
-                ),
-            ]
+            children: [group(.comicVolume, [
+                thumbnail(firstVolumeID, .comicVolume, "Volume 1", order: 0, parent: seriesID),
+                thumbnail(secondVolumeID, .comicVolume, "Volume 2", order: 1, parent: seriesID),
+            ])]
         )
-        let firstVolume = detail(
+        let firstVolume = entity(
             id: firstVolumeID,
             kind: .comicVolume,
-            title: "Volume 1",
             parent: seriesID,
-            children: [
-                group(
-                    .comicInstallment,
-                    [
-                        thumbnail(firstID, .comicInstallment, "Chapter 1", order: 0, parent: firstVolumeID),
-                        thumbnail(selectedID, .comicInstallment, "Chapter 2", order: 1, parent: firstVolumeID),
-                    ]
-                )
-            ]
+            children: [group(.comicInstallment, [
+                thumbnail(selectedID, .comicInstallment, "Chapter 1", order: 0, parent: firstVolumeID)
+            ])]
         )
-        let secondVolume = detail(
+        let secondVolume = entity(
             id: secondVolumeID,
             kind: .comicVolume,
-            title: "Volume 2",
             parent: seriesID,
-            children: [
-                group(
-                    .comicInstallment,
-                    [thumbnail(nextID, .comicInstallment, "Chapter 3", order: 0, parent: secondVolumeID)]
-                )
-            ]
+            children: [group(.comicInstallment, [
+                thumbnail(nextID, .comicInstallment, "Chapter 2", order: 0, parent: secondVolumeID)
+            ])]
         )
-        let selected = try pageSequenceDetail(
-            id: selectedID,
-            parentID: firstVolumeID,
-            sortOrder: 1
-        )
-        let pageManifest = try readerManifest(entityID: selectedID)
+        let selected = installment(id: selectedID, parent: firstVolumeID, ordered: true)
         let loader = ManifestEntityLoader(
             values: [
                 seriesID: series,
@@ -358,7 +89,7 @@ final class BookReaderManifestResolverTests: XCTestCase {
                 secondVolumeID: secondVolume,
                 selectedID: selected,
             ],
-            manifests: [selectedID: pageManifest]
+            manifests: [selectedID: readerManifest(entityID: selectedID, pageCount: 1)]
         )
 
         let manifest = try await BookReaderManifestResolver(loader: loader).resolve(
@@ -367,28 +98,90 @@ final class BookReaderManifestResolverTests: XCTestCase {
         )
 
         XCTAssertEqual(manifest.nextChapter?.id, nextID)
-        XCTAssertNotEqual(manifest.nextChapter?.id, directID)
     }
 
-    private func detail(
+    func testBookChapterWithoutPageSequenceIsNotReadable() async {
+        let chapter = entity(id: UUID(), kind: .bookChapter)
+        let loader = ManifestEntityLoader(values: [chapter.id: chapter])
+
+        do {
+            _ = try await BookReaderManifestResolver(loader: loader).resolve(
+                selected: chapter,
+                command: .read
+            )
+            XCTFail("Expected prose chapter metadata to stay out of the page reader.")
+        } catch let error as BookReaderManifestError {
+            guard case .unsupportedEntity(.bookChapter) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    private func installment(
         id: UUID,
-        kind: EntityKind,
-        title: String,
         parent: UUID? = nil,
         progress: EntityProgressCapability? = nil,
+        ordered: Bool = false
+    ) -> EntityDetail {
+        var capabilities: [EntityCapability] = [
+            .pageSequence(.init(
+                pageCount: 4,
+                direction: .rightToLeft,
+                defaultMode: .paged,
+                coverOrdinal: 0
+            ))
+        ]
+        if ordered {
+            capabilities.append(.orderedSequence(.init(
+                role: .item,
+                itemKind: .comicInstallment,
+                containerKinds: [.comicSeries, .comicVolume]
+            )))
+        }
+        if let progress { capabilities.append(.progress(progress)) }
+        return entity(
+            id: id,
+            kind: .comicInstallment,
+            parent: parent,
+            capabilities: capabilities
+        )
+    }
+
+    private func entity(
+        id: UUID,
+        kind: EntityKind,
+        parent: UUID? = nil,
+        capabilities: [EntityCapability] = [],
         children: [EntityGroup] = []
     ) -> EntityDetail {
         EntityDetail(
             id: id,
             kind: kind,
-            title: title,
+            title: kind.displayLabel,
             parentEntityID: parent,
             sortOrder: nil,
-            hasSourceMedia: false,
-            capabilities: (kind == .book ? [.bookMetadata(.init(bookType: "book", format: .imageArchive))] : [])
-                + (progress.map { [.progress($0)] } ?? []),
+            hasSourceMedia: kind == .comicInstallment,
+            capabilities: capabilities,
             childrenByKind: children,
             relationships: []
+        )
+    }
+
+    private func readerManifest(entityID: UUID, pageCount: Int) -> EntityReaderManifest {
+        EntityReaderManifest(
+            entityID: entityID,
+            direction: .rightToLeft,
+            defaultMode: .webtoon,
+            coverOrdinal: 0,
+            pages: (0..<pageCount).map {
+                EntityReaderManifestPage(
+                    ordinal: $0,
+                    mimeType: "image/jpeg",
+                    isDoublePage: $0 == 1
+                )
+            }
         )
     }
 
@@ -396,92 +189,37 @@ final class BookReaderManifestResolverTests: XCTestCase {
         EntityGroup(kind: kind, label: kind.displayLabel, entities: entities, code: nil)
     }
 
-    private func thumbnail(_ id: UUID, _ kind: EntityKind, _ title: String, order: Int, parent: UUID) -> EntityThumbnail
-    {
+    private func thumbnail(
+        _ id: UUID,
+        _ kind: EntityKind,
+        _ title: String,
+        order: Int,
+        parent: UUID
+    ) -> EntityThumbnail {
         EntityThumbnail(id: id, kind: kind, title: title, parentEntityID: parent, sortOrder: order)
-    }
-
-    private func pageSequenceDetail(
-        id: UUID,
-        parentID: UUID,
-        sortOrder: Int
-    ) throws -> EntityDetail {
-        try JSONDecoder().decode(
-            EntityDetail.self,
-            from: Data(
-                """
-                {
-                  "id": "\(id)",
-                  "kind": "comic-installment",
-                  "title": "Chapter 2",
-                  "parentEntityId": "\(parentID)",
-                  "sortOrder": \(sortOrder),
-                  "hasSourceMedia": true,
-                  "capabilities": [
-                    {
-                      "kind": "page-sequence",
-                      "pageCount": 1,
-                      "direction": "right-to-left",
-                      "defaultMode": "paged",
-                      "coverOrdinal": 0
-                    },
-                    {
-                      "kind": "ordered-sequence",
-                      "role": "item",
-                      "itemKind": "comic-installment",
-                      "containerKinds": ["comic-series", "comic-volume"]
-                    }
-                  ],
-                  "childrenByKind": [],
-                  "relationships": []
-                }
-                """.utf8
-            )
-        )
-    }
-
-    private func readerManifest(entityID: UUID) throws -> EntityReaderManifest {
-        try JSONDecoder().decode(
-            EntityReaderManifest.self,
-            from: Data(
-                """
-                {
-                  "entityId": "\(entityID)",
-                  "direction": "right-to-left",
-                  "defaultMode": "paged",
-                  "coverOrdinal": 0,
-                  "pages": [{
-                    "ordinal": 0,
-                    "mimeType": "image/jpeg",
-                    "pageType": "front-cover",
-                    "isDoublePage": false
-                  }]
-                }
-                """.utf8
-            )
-        )
     }
 }
 
 private struct ManifestEntityLoader: EntityPageReaderServicing {
     let values: [UUID: EntityDetail]
-    var manifests: [UUID: EntityReaderManifest] = [:]
+    let manifests: [UUID: EntityReaderManifest]
+
+    init(values: [UUID: EntityDetail], manifests: [UUID: EntityReaderManifest] = [:]) {
+        self.values = values
+        self.manifests = manifests
+    }
 
     func loadEntity(id: UUID) async throws -> EntityDetail {
-        guard let value = values[id] else { throw ManifestLoaderError.missing(id) }
-        return value
+        guard let detail = values[id] else { throw BookReaderManifestError.noReadablePages }
+        return detail
     }
 
     func loadEntityReaderManifest(id: UUID) async throws -> EntityReaderManifest {
-        guard let manifest = manifests[id] else { throw ManifestLoaderError.missing(id) }
+        guard let manifest = manifests[id] else { throw BookReaderManifestError.noReadablePages }
         return manifest
     }
 
     func loadEntityReaderPageData(id: UUID, ordinal: Int) async throws -> Data {
-        Data()
+        throw BookReaderManifestError.noReadablePages
     }
-}
-
-private enum ManifestLoaderError: Error {
-    case missing(UUID)
 }

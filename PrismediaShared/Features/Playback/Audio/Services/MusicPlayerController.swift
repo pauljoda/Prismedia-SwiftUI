@@ -25,7 +25,7 @@ public final class MusicPlayerController {
     private var preferences: MusicPlaybackPreferences
     private var lastPersistedElapsedTime = 0.0
     private var didAttemptRestoration = false
-    private var audiobookCompleted = false
+    private var mappedProgressCompleted = false
     private var pendingPlaybackReport: Task<Void, Never>?
     private var loadedTrackID: MusicTrack.ID?
     private var resumesWhenPlaybackBecomesAvailable = false
@@ -135,7 +135,7 @@ public final class MusicPlayerController {
         }
         self.context = context
         accessedConsumptionEntityID = nil
-        audiobookCompleted = false
+        mappedProgressCompleted = false
         if preferences.repeatMode == .one {
             preferences.repeatMode = .all
             persistPreferences()
@@ -181,7 +181,7 @@ public final class MusicPlayerController {
 
     public func resume() {
         guard currentTrack != nil else { return }
-        if context?.usesBookProgress == true { audiobookCompleted = false }
+        if context?.usesMappedProgress == true { mappedProgressCompleted = false }
         guard prepareCurrentTrack() else {
             resumesWhenPlaybackBecomesAvailable = !service.isPlaybackAvailable
             return
@@ -227,7 +227,7 @@ public final class MusicPlayerController {
         resolvedTrackDuration = 0
         isPlaybackAdvancing = false
         lastPersistedElapsedTime = 0
-        audiobookCompleted = false
+        mappedProgressCompleted = false
         playbackRate = 1
         loadedTrackID = nil
         currentTrackRequestedAt = nil
@@ -250,7 +250,7 @@ public final class MusicPlayerController {
     }
 
     public func seek(to seconds: Double) {
-        if context?.usesBookProgress == true { audiobookCompleted = false }
+        if context?.usesMappedProgress == true { mappedProgressCompleted = false }
         elapsedTime = max(0, seconds)
         engine.seek(to: elapsedTime)
         reportCurrentConsumption()
@@ -338,17 +338,17 @@ public final class MusicPlayerController {
 
     public func handlePlaybackEnded() async {
         guard let completedTrack = currentTrack else { return }
-        let usesBookProgress = context?.usesBookProgress == true
-        let completedAudiobook = usesBookProgress && queue.orderedTracks.last?.id == completedTrack.id
+        let usesMappedProgress = context?.usesMappedProgress == true
+        let completedMappedProgress = usesMappedProgress && queue.orderedTracks.last?.id == completedTrack.id
         let completedDuration = reportingTrackDuration
         let completedPosition = completedDuration ?? elapsedTime
 
-        if usesBookProgress {
-            audiobookCompleted = completedAudiobook
-            reportAudiobookProgress(
-                completed: completedAudiobook,
+        if usesMappedProgress {
+            mappedProgressCompleted = completedMappedProgress
+            reportMappedProgress(
+                completed: completedMappedProgress,
                 trackOffsetSeconds: completedPosition,
-                stopsActivity: completedAudiobook
+                stopsActivity: completedMappedProgress
             )
         } else {
             reportMusicProgress(track: completedTrack, stopsActivity: true)
@@ -373,7 +373,7 @@ public final class MusicPlayerController {
         }
 
         persistState()
-        if !usesBookProgress { await flushPendingPlaybackReports() }
+        if !usesMappedProgress { await flushPendingPlaybackReports() }
     }
 
     public func restoreIfNeeded() {
@@ -386,7 +386,7 @@ public final class MusicPlayerController {
             return
         }
         context = restoration.context
-        audiobookCompleted = restoration.audiobookCompleted ?? false
+        mappedProgressCompleted = restoration.mappedProgressCompleted ?? false
         queue = restoredQueue
         activeQueueID = UUID()
         let restoredElapsedTime = restoredTrack.id == restoration.currentTrackID ? restoration.elapsedTime : 0
@@ -457,23 +457,42 @@ public final class MusicPlayerController {
         await pendingPlaybackReport?.value
     }
 
-    public func flushAudiobookProgress() async {
-        reportAudiobookProgress(completed: false, stopsActivity: true)
+    public func flushMappedProgress() async {
+        reportMappedProgress(completed: false, stopsActivity: true)
         persistProgress()
         await flushPendingPlaybackReports()
     }
 
-    public func resumeAudiobookActivity() {
-        guard isPlaybackAdvancing, context?.usesBookProgress == true else { return }
+    /// Persists the current generic audio progress even when the presentation surface is idle.
+    public func persistProgressHeartbeat() {
+        guard isPlaying, currentTrack != nil else { return }
+        reportCurrentConsumption()
+        persistProgress()
+    }
+
+    /// Runs the host-owned progress heartbeat for the lifetime of the playback composition.
+    public func runProgressHeartbeat() async {
+        while !Task.isCancelled {
+            do {
+                try await Task.sleep(for: .seconds(10))
+            } catch {
+                return
+            }
+            persistProgressHeartbeat()
+        }
+    }
+
+    public func resumeMappedProgressActivity() {
+        guard isPlaybackAdvancing, context?.usesMappedProgress == true else { return }
         consumptionActivityClock.start(at: playbackClock.now)
     }
 
-    public func setAudiobookCompletionState(_ completed: Bool) {
-        guard context?.usesBookProgress == true else { return }
+    public func setMappedProgressCompletionState(_ completed: Bool) {
+        guard context?.usesMappedProgress == true else { return }
         if completed {
             reportCurrentConsumption(stopsActivity: true)
         }
-        audiobookCompleted = completed
+        mappedProgressCompleted = completed
         if completed {
             engine.pause()
             isPlaying = false
@@ -565,7 +584,7 @@ public final class MusicPlayerController {
                 queue: queue,
                 elapsedTime: elapsedTime,
                 context: context,
-                audiobookCompleted: audiobookCompleted
+                mappedProgressCompleted: mappedProgressCompleted
             )
         )
     }
@@ -577,26 +596,26 @@ public final class MusicPlayerController {
             MusicPlaybackProgressCheckpoint(
                 currentTrackID: currentTrack?.id,
                 elapsedTime: elapsedTime,
-                audiobookCompleted: audiobookCompleted
+                mappedProgressCompleted: mappedProgressCompleted
             )
         )
     }
 
-    private func reportAudiobookProgress(
+    private func reportMappedProgress(
         completed: Bool,
         trackOffsetSeconds: Double? = nil,
         stopsActivity: Bool = false
     ) {
         guard let context,
-            context.usesBookProgress,
+            context.usesMappedProgress,
             let ownerID = context.playbackOwnerEntityID,
             let currentTrack,
-            completed || !audiobookCompleted
+            completed || !mappedProgressCompleted
         else { return }
 
         guard
-            let mapping = context.bookProgressMappings?.first(where: {
-                $0.trackID == currentTrack.id
+            let mapping = context.progressMappings?.first(where: {
+                $0.itemID == currentTrack.id
             }),
             let duration = reportingTrackDuration
         else {
@@ -609,7 +628,7 @@ public final class MusicPlayerController {
             : isPlaybackAdvancing
                 ? consumptionActivityClock.take(at: playbackClock.now)
                 : nil
-        let request = BookProgressMappingResolver().progressRequest(
+        let request = AudioProgressMappingResolver().progressRequest(
             mapping: mapping,
             offsetSeconds: trackOffsetSeconds ?? elapsedTime,
             durationSeconds: duration,
@@ -625,8 +644,8 @@ public final class MusicPlayerController {
     }
 
     private func reportCurrentConsumption(stopsActivity: Bool = false) {
-        if context?.usesBookProgress == true {
-            reportAudiobookProgress(completed: false, stopsActivity: stopsActivity)
+        if context?.usesMappedProgress == true {
+            reportMappedProgress(completed: false, stopsActivity: stopsActivity)
         } else {
             reportMusicProgress(track: currentTrack, stopsActivity: stopsActivity)
         }
@@ -635,7 +654,7 @@ public final class MusicPlayerController {
     private func beginCurrentConsumption(startActivity: Bool = false) {
         guard let currentTrack else { return }
         let entityID =
-            context?.usesBookProgress == true
+            context?.usesMappedProgress == true
             ? context?.playbackOwnerEntityID
             : currentTrack.id
         guard let entityID else { return }
@@ -643,15 +662,15 @@ public final class MusicPlayerController {
         if accessedConsumptionEntityID != entityID {
             let sessionID = UUID().uuidString.lowercased()
             accessedConsumptionEntityID = entityID
-            let usesBookProgress = context?.usesBookProgress == true
+            let usesMappedProgress = context?.usesMappedProgress == true
             let position = elapsedTime
             let duration = reportingTrackDuration
             enqueuePlaybackReport { service in
                 try? await service.recordEntityConsumptionEvent(
                     id: entityID,
                     kind: .accessed,
-                    positionSeconds: usesBookProgress ? nil : position,
-                    durationSeconds: usesBookProgress ? nil : duration,
+                    positionSeconds: usesMappedProgress ? nil : position,
+                    durationSeconds: usesMappedProgress ? nil : duration,
                     sessionID: sessionID
                 )
             }
@@ -666,7 +685,7 @@ public final class MusicPlayerController {
         track: MusicTrack?,
         stopsActivity: Bool
     ) {
-        guard context?.usesBookProgress != true, let track else {
+        guard context?.usesMappedProgress != true, let track else {
             if stopsActivity { _ = consumptionActivityClock.stop(at: playbackClock.now) }
             return
         }

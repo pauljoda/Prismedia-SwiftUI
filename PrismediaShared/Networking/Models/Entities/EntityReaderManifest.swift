@@ -8,6 +8,20 @@ public struct EntityReaderManifest: Decodable, Hashable, Sendable {
     public let coverOrdinal: Int?
     public let pages: [EntityReaderManifestPage]
 
+    public init(
+        entityID: UUID,
+        direction: PageReadingDirection,
+        defaultMode: ReaderMode,
+        coverOrdinal: Int?,
+        pages: [EntityReaderManifestPage]
+    ) {
+        self.entityID = entityID
+        self.direction = direction
+        self.defaultMode = defaultMode
+        self.coverOrdinal = coverOrdinal
+        self.pages = pages
+    }
+
     private enum CodingKeys: String, CodingKey {
         case entityID = "entityId"
         case direction

@@ -110,6 +110,13 @@ def render_manifest(manifest: dict) -> str:
             ],
         ),
         (
+            "EntityStatCode",
+            [
+                (swift_member(entry["name"]), entry["value"])
+                for entry in manifest.get("entityStatCodes", [])
+            ],
+        ),
+        (
             "ProblemCode",
             [
                 (swift_member(entry["name"]), entry["value"])

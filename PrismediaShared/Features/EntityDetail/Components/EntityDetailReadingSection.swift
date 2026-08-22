@@ -102,56 +102,7 @@ struct EntityDetailReadingSection: View {
     }
 
     #if DEBUG
-        fileprivate static let previewManifest: BookReaderManifest = {
-            let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-            let chapterID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
-            let pageID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-            let chapter = EntityDetail(
-                id: chapterID,
-                kind: .bookChapter,
-                title: "The Quiet Frequency",
-                parentEntityID: bookID,
-                sortOrder: 0,
-                hasSourceMedia: false,
-                capabilities: [],
-                childrenByKind: [],
-                relationships: []
-            )
-            return BookReaderManifest(
-                bookID: bookID,
-                title: "Signal in the Static",
-                chapters: [
-                    BookReaderChapter(
-                        detail: chapter,
-                        pages: [
-                            EntityThumbnail(
-                                id: pageID,
-                                kind: .bookPage,
-                                title: "Page 24",
-                                parentEntityID: chapterID,
-                                sortOrder: 23
-                            )
-                        ],
-                        sequenceIndex: 0
-                    )
-                ],
-                nextChapter: nil,
-                progress: EntityProgressCapability(
-                    currentEntityID: chapterID,
-                    unit: .page,
-                    index: 23,
-                    total: 96,
-                    mode: .paged,
-                    completedAt: nil,
-                    updatedAt: nil,
-                    workIndex: 23,
-                    workTotal: 96,
-                    location: nil
-                ),
-                initialIndex: 23,
-                readerMode: .paged
-            )
-        }()
+        fileprivate static let previewManifest = ComicReaderPreviewData.manifest
 
         fileprivate static let previewEPUB = EntityDetail(
             id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,

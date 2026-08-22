@@ -27,7 +27,7 @@ extension EntityDetailView {
         mappedBookChapters = chapters
     }
 
-    func bookProgressMappings(for detail: EntityDetail) -> [BookProgressTrackMapping] {
+    func bookProgressMappings(for detail: EntityDetail) -> [PlaybackProgressMapping] {
         BookProgressMappingBuilder().build(
             bookID: detail.id,
             chapters: mappedBookChapters,

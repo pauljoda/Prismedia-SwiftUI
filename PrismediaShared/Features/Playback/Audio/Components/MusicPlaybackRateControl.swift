@@ -1,7 +1,7 @@
 #if os(iOS) || os(macOS)
     import SwiftUI
 
-    /// Presents the supported audiobook reading-rate range without owning a second playback value.
+    /// Presents a capability-enabled variable playback rate without owning a second playback value.
     struct MusicPlaybackRateControl: View {
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
@@ -42,7 +42,7 @@
     }
 
     #if DEBUG
-        #Preview("Audiobook Playback Rate") {
+        #Preview("Variable Playback Rate") {
             MusicPlaybackRateControl(controller: MusicPreviewData.audiobookController())
                 .padding()
                 .background(PrismediaBackdrop())

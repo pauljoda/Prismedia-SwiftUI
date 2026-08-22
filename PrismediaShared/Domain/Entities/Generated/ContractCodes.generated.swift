@@ -143,7 +143,6 @@ public enum PrismediaContractCodes {
     }
 
     public enum BookFormat {
-        public static let `imageArchive` = "image-archive"
         public static let `epub` = "epub"
         public static let `pdf` = "pdf"
         public static let `audio` = "audio"
@@ -169,8 +168,6 @@ public enum PrismediaContractCodes {
 
     public enum BookType {
         public static let `book` = "book"
-        public static let `comic` = "comic"
-        public static let `manga` = "manga"
         public static let `novel` = "novel"
     }
 
@@ -377,7 +374,6 @@ public enum PrismediaContractCodes {
         public static let `book` = "book"
         public static let `bookVolume` = "book-volume"
         public static let `bookChapter` = "book-chapter"
-        public static let `bookPage` = "book-page"
         public static let `comicInstallment` = "comic-installment"
         public static let `comicSeries` = "comic-series"
         public static let `comicVolume` = "comic-volume"
@@ -499,7 +495,6 @@ public enum PrismediaContractCodes {
         public static let `none` = "none"
         public static let `video` = "video"
         public static let `image` = "image"
-        public static let `bookPage` = "book-page"
         public static let `audioTrack` = "audio-track"
     }
 
@@ -609,7 +604,6 @@ public enum PrismediaContractCodes {
         public static let `generateImageThumbnail` = "generate-image-thumbnail"
         public static let `generateGridThumbnail` = "generate-grid-thumbnail"
         public static let `gridThumbnailSweep` = "grid-thumbnail-sweep"
-        public static let `generateBookPageThumbnail` = "generate-book-page-thumbnail"
         public static let `generateBookCoverThumbnail` = "generate-book-cover-thumbnail"
         public static let `mapBookChapters` = "map-book-chapters"
         public static let `generateAudioWaveform` = "generate-audio-waveform"
@@ -938,6 +932,10 @@ public enum PrismediaContractCodes {
         public static let `tvdb` = "tvdb"
     }
 
+    public enum EntityStatCode {
+        public static let `pages` = "pages"
+    }
+
     public enum ProblemCode {
         public static let `acquisitionImportBlocked` = "acquisition_import_blocked"
         public static let `acquisitionInvalid` = "acquisition_invalid"
@@ -1123,7 +1121,6 @@ public extension AutoIdentifySelectorKind {
 }
 
 public extension BookFormat {
-    static let `imageArchive` = Self(rawValue: PrismediaContractCodes.BookFormat.`imageArchive`)
     static let `epub` = Self(rawValue: PrismediaContractCodes.BookFormat.`epub`)
     static let `pdf` = Self(rawValue: PrismediaContractCodes.BookFormat.`pdf`)
     static let `audio` = Self(rawValue: PrismediaContractCodes.BookFormat.`audio`)

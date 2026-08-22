@@ -8,7 +8,7 @@ public struct MusicPlaybackRestoration: Codable, Equatable, Sendable {
     public let isShuffled: Bool
     public let elapsedTime: Double
     public let context: MusicPlaybackContext?
-    public let audiobookCompleted: Bool?
+    public let mappedProgressCompleted: Bool?
     public let history: [MusicQueueHistoryEntry]?
 
     public init(
@@ -19,7 +19,7 @@ public struct MusicPlaybackRestoration: Codable, Equatable, Sendable {
         isShuffled: Bool,
         elapsedTime: Double,
         context: MusicPlaybackContext? = nil,
-        audiobookCompleted: Bool? = nil,
+        mappedProgressCompleted: Bool? = nil,
         history: [MusicQueueHistoryEntry]? = nil
     ) {
         self.tracks = tracks
@@ -29,7 +29,7 @@ public struct MusicPlaybackRestoration: Codable, Equatable, Sendable {
         self.isShuffled = isShuffled
         self.elapsedTime = max(0, elapsedTime.isFinite ? elapsedTime : 0)
         self.context = context
-        self.audiobookCompleted = audiobookCompleted
+        self.mappedProgressCompleted = mappedProgressCompleted
         self.history = history
     }
 
@@ -37,7 +37,7 @@ public struct MusicPlaybackRestoration: Codable, Equatable, Sendable {
         queue: MusicQueue,
         elapsedTime: Double,
         context: MusicPlaybackContext? = nil,
-        audiobookCompleted: Bool? = nil
+        mappedProgressCompleted: Bool? = nil
     ) {
         self.init(
             tracks: queue.tracks,
@@ -47,7 +47,7 @@ public struct MusicPlaybackRestoration: Codable, Equatable, Sendable {
             isShuffled: queue.isShuffled,
             elapsedTime: elapsedTime,
             context: context,
-            audiobookCompleted: audiobookCompleted,
+            mappedProgressCompleted: mappedProgressCompleted,
             history: queue.history
         )
     }
@@ -66,8 +66,44 @@ public struct MusicPlaybackRestoration: Codable, Equatable, Sendable {
             isShuffled: isShuffled,
             elapsedTime: checkpoint.elapsedTime,
             context: context,
-            audiobookCompleted: checkpoint.audiobookCompleted,
+            mappedProgressCompleted: checkpoint.mappedProgressCompleted,
             history: history
         )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case tracks, orderedTrackIDs, currentTrackID, repeatMode, isShuffled, elapsedTime
+        case context, mappedProgressCompleted, history
+        case legacyAudiobookCompleted = "audiobookCompleted"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        tracks = try container.decode([MusicTrack].self, forKey: .tracks)
+        orderedTrackIDs = try container.decode([UUID].self, forKey: .orderedTrackIDs)
+        currentTrackID = try container.decodeIfPresent(UUID.self, forKey: .currentTrackID)
+        repeatMode = try container.decode(MusicRepeatMode.self, forKey: .repeatMode)
+        isShuffled = try container.decode(Bool.self, forKey: .isShuffled)
+        let elapsedTime = try container.decode(Double.self, forKey: .elapsedTime)
+        self.elapsedTime = max(0, elapsedTime.isFinite ? elapsedTime : 0)
+        context = try container.decodeIfPresent(MusicPlaybackContext.self, forKey: .context)
+        mappedProgressCompleted = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .mappedProgressCompleted
+        ) ?? container.decodeIfPresent(Bool.self, forKey: .legacyAudiobookCompleted)
+        history = try container.decodeIfPresent([MusicQueueHistoryEntry].self, forKey: .history)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(tracks, forKey: .tracks)
+        try container.encode(orderedTrackIDs, forKey: .orderedTrackIDs)
+        try container.encodeIfPresent(currentTrackID, forKey: .currentTrackID)
+        try container.encode(repeatMode, forKey: .repeatMode)
+        try container.encode(isShuffled, forKey: .isShuffled)
+        try container.encode(elapsedTime, forKey: .elapsedTime)
+        try container.encodeIfPresent(context, forKey: .context)
+        try container.encodeIfPresent(mappedProgressCompleted, forKey: .mappedProgressCompleted)
+        try container.encodeIfPresent(history, forKey: .history)
     }
 }

@@ -41,11 +41,14 @@
                 .task(id: controller.currentTrack?.id) {
                     await loadWaveform()
                 }
+                .task {
+                    await controller.runProgressHeartbeat()
+                }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
-                        controller.resumeAudiobookActivity()
+                        controller.resumeMappedProgressActivity()
                     } else {
-                        Task { await controller.flushAudiobookProgress() }
+                        Task { await controller.flushMappedProgress() }
                     }
                 }
                 .onChange(of: controller.currentQueueID) {
