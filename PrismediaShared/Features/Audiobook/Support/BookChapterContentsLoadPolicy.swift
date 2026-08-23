@@ -5,12 +5,6 @@ struct BookChapterContentsLoadPolicy: Sendable {
         guard detail.kind == .book,
             detail.capability(EntityFlagsCapability.self)?.isWanted != true
         else { return false }
-
-        switch detail.bookFormat {
-        case .epub:
-            return detail.hasSourceMedia
-        default:
-            return false
-        }
+        return true
     }
 }

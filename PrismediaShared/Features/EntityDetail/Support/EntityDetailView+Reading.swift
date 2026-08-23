@@ -223,7 +223,7 @@ extension EntityDetailView {
     func loadBookChapters(for detail: EntityDetail) async {
         #if os(iOS) || os(macOS)
             guard BookChapterContentsLoadPolicy.canLoad(detail),
-                let reader = dependencies.readerService
+                let bookContentsService
             else {
                 readableBookChapters = []
                 epubReadingProgressRanges = []
@@ -238,7 +238,7 @@ extension EntityDetailView {
             defer { areBookChaptersLoading = false }
             do {
                 let storedLocation = dependencies.readerLocatorStore.load(bookID: detail.id)
-                let contents = try await EPUBChapterContentsService(reader: reader).load(book: detail)
+                let contents = try await bookContentsService.load(book: detail)
                 guard case .content(let currentDetail) = state.phase,
                     currentDetail.id == detail.id
                 else { return }

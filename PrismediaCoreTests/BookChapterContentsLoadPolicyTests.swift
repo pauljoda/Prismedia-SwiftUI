@@ -15,13 +15,13 @@ final class BookChapterContentsLoadPolicyTests: XCTestCase {
         XCTAssertFalse(BookChapterContentsLoadPolicy.canLoad(book))
     }
 
-    func testFilelessEPUBCannotLoadChapters() {
+    func testFilelessEPUBCanLoadTheServerProjection() {
         let book = makeBook(hasSourceMedia: false, isWanted: false)
 
-        XCTAssertFalse(BookChapterContentsLoadPolicy.canLoad(book))
+        XCTAssertTrue(BookChapterContentsLoadPolicy.canLoad(book))
     }
 
-    func testPDFDoesNotEnterTheEPUBChapterLoader() {
+    func testPDFCanLoadChapterEntitySummaries() {
         let book = EntityDetail(
             id: UUID(),
             kind: .book,
@@ -34,7 +34,7 @@ final class BookChapterContentsLoadPolicyTests: XCTestCase {
             relationships: []
         )
 
-        XCTAssertFalse(BookChapterContentsLoadPolicy.canLoad(book))
+        XCTAssertTrue(BookChapterContentsLoadPolicy.canLoad(book))
     }
 
     private func makeBook(
@@ -57,7 +57,7 @@ final class BookChapterContentsLoadPolicyTests: XCTestCase {
                         isOrganized: false,
                         isWanted: isWanted
                     )
-                )
+                ),
             ],
             childrenByKind: [],
             relationships: []

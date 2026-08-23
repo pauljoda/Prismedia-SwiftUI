@@ -54,6 +54,7 @@ public struct EntityDetailView: View {
     let imageViewerSession: EntityImageViewerSession?
     let service: EntityDetailService
     let readingService: EntityDetailReadingService
+    let bookContentsService: BookContentsService?
     let collectionMembersService: CollectionMembersService
     let videoProgressService: VideoContainerProgressService
 
@@ -87,6 +88,7 @@ public struct EntityDetailView: View {
             mutator: dependencies.mutator
         )
         readingService = EntityDetailReadingService(reader: dependencies.readerService)
+        bookContentsService = dependencies.bookContentsLoader.map(BookContentsService.init(loader:))
         collectionMembersService = CollectionMembersService(
             loader: dependencies.collectionItemsLoader
         )

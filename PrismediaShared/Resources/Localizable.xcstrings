@@ -2102,6 +2102,9 @@
     "Open Link" : {
 
     },
+    "Open page %lld" : {
+
+    },
     "Opening EPUB…" : {
 
     },
@@ -2203,6 +2206,9 @@
 
     },
     "Paged" : {
+
+    },
+    "Pages" : {
 
     },
     "Paragraph focus keeps the text nearest the center fully visible and progressively fades surrounding passages. The guide settles beneath the center line after scrolling stops." : {

@@ -58,6 +58,7 @@ enum PrismediaEntityDetailComposition {
                 isAdministrator: isAdministrator,
                 onOpenProviders: onOpenIdentifyProviders
             ),
+            bookContentsLoader: client,
             chapterMappingService: client
         )
     }
