@@ -8,15 +8,15 @@ struct BookContentsService: Sendable {
         self.loader = loader
     }
 
-    func load(book: EntityDetail) async throws -> EPUBChapterContents {
+    func load(book: EntityDetail) async throws -> BookChapterContents {
         guard BookChapterContentsLoadPolicy.canLoad(book) else {
-            return EPUBChapterContents(chapters: [], currentChapterID: nil)
+            return BookChapterContents(chapters: [], currentChapterID: nil)
         }
 
         let entries = try await loader.loadBookContents(bookID: book.id)
         let chapters = entries.compactMap { chapter(from: $0, format: book.bookFormat) }
         let progress: EntityProgressCapability? = book.capability()
-        return EPUBChapterContents(
+        return BookChapterContents(
             chapters: chapters,
             currentChapterID: currentChapterID(progress: progress, chapters: chapters),
             progressRanges: chapters.compactMap(progressRange)

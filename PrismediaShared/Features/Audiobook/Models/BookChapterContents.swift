@@ -1,6 +1,6 @@
 import Foundation
 
-struct EPUBChapterContents: Equatable, Sendable {
+struct BookChapterContents: Equatable, Sendable {
     let chapters: [ReadableBookChapter]
     let currentChapterID: String?
     let progressRanges: [EPUBReadingProgressRange]
