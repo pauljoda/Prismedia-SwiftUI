@@ -149,7 +149,9 @@
                 MPMediaItemPropertyTitle: track.title,
                 MPMediaItemPropertyArtist: MusicPresentation.artist(track.artist),
                 MPNowPlayingInfoPropertyElapsedPlaybackTime: engine.elapsedTime,
-                MPNowPlayingInfoPropertyPlaybackRate: controller.isPlaying ? controller.playbackRate : 0,
+                MPNowPlayingInfoPropertyPlaybackRate: controller.isPlaybackAdvancing
+                    ? controller.playbackRate
+                    : 0,
                 MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
             ]
             if let existingArtwork { information[MPMediaItemPropertyArtwork] = existingArtwork }

@@ -2,6 +2,7 @@
     import AVFoundation
     import Foundation
     import Observation
+    import OSLog
 
     @Observable
     @MainActor
@@ -12,6 +13,7 @@
         public private(set) var isPlaybackAdvancing = false
 
         @ObservationIgnored public var onPlaybackEnded: (() -> Void)?
+        @ObservationIgnored public var onPlaybackFailed: (() -> Void)?
         @ObservationIgnored public var onNowPlayingProgressChanged: (() -> Void)?
 
         let player: AVPlayer
@@ -22,10 +24,19 @@
         nonisolated(unsafe) private var timeObserver: Any?
         @ObservationIgnored
         nonisolated(unsafe) private var endObserver: NSObjectProtocol?
+        @ObservationIgnored
+        nonisolated(unsafe) private var failedToEndObserver: NSObjectProtocol?
         @ObservationIgnored private var statusObservation: NSKeyValueObservation?
         @ObservationIgnored private var timeControlStatusObservation: NSKeyValueObservation?
+        @ObservationIgnored private var playbackStartTask: Task<Void, Never>?
         @ObservationIgnored private var wantsToPlay = false
         @ObservationIgnored private var playbackRate: Float = 1
+        @ObservationIgnored private var failedItemIdentifier: ObjectIdentifier?
+
+        private static let logger = Logger(
+            subsystem: Bundle.main.bundleIdentifier ?? "Prismedia",
+            category: "AudioPlayback"
+        )
 
         public override init() {
             player = AVPlayer()
@@ -35,8 +46,12 @@
         }
 
         deinit {
+            playbackStartTask?.cancel()
             if let timeObserver { player.removeTimeObserver(timeObserver) }
             if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+            if let failedToEndObserver {
+                NotificationCenter.default.removeObserver(failedToEndObserver)
+            }
         }
 
         public func load(url: URL) {
@@ -46,6 +61,7 @@
             observe(item)
             elapsedTime = 0
             duration = 0
+            failedItemIdentifier = nil
         }
 
         public func play() {
@@ -57,14 +73,18 @@
                     guard self?.wantsToPlay == true else { return }
                     guard let self else { return }
                     self.player.playImmediately(atRate: self.playbackRate)
+                    self.watchForPlaybackStart(of: self.player.currentItem)
                 }
             #else
                 player.playImmediately(atRate: playbackRate)
+                watchForPlaybackStart(of: player.currentItem)
             #endif
         }
 
         public func pause() {
             wantsToPlay = false
+            playbackStartTask?.cancel()
+            playbackStartTask = nil
             player.pause()
         }
 
@@ -108,6 +128,12 @@
                 Task { @MainActor in
                     self?.isBuffering = item.status == .unknown
                     self?.updateDuration(item.duration)
+                    if item.status == .failed {
+                        self?.reportFailure(
+                            for: item,
+                            error: item.error ?? Self.playbackFailureError()
+                        )
+                    }
                 }
             }
             endObserver = NotificationCenter.default.addObserver(
@@ -117,12 +143,100 @@
             ) { [weak self] _ in
                 Task { @MainActor in self?.onPlaybackEnded?() }
             }
+            failedToEndObserver = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemFailedToPlayToEndTime,
+                object: item,
+                queue: .main
+            ) { [weak self] notification in
+                let error =
+                    notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? any Error
+                    ?? item.error
+                    ?? Self.playbackFailureError()
+                Task { @MainActor in
+                    self?.reportFailure(for: item, error: error)
+                }
+            }
         }
 
         private func removeItemObservers() {
+            playbackStartTask?.cancel()
+            playbackStartTask = nil
             statusObservation = nil
             if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
             endObserver = nil
+            if let failedToEndObserver {
+                NotificationCenter.default.removeObserver(failedToEndObserver)
+            }
+            failedToEndObserver = nil
+            failedItemIdentifier = nil
+        }
+
+        private func watchForPlaybackStart(of item: AVPlayerItem?) {
+            playbackStartTask?.cancel()
+            guard let item else { return }
+            playbackStartTask = Task { @MainActor [weak self, weak item] in
+                guard let self, let item else { return }
+                var previousPosition = self.player.currentTime().seconds
+                for _ in 0..<15 {
+                    do {
+                        try await Task.sleep(for: .seconds(1))
+                    } catch {
+                        return
+                    }
+                    guard self.wantsToPlay,
+                        self.player.currentItem === item
+                    else { return }
+                    let currentPosition = self.player.currentTime().seconds
+                    if self.player.timeControlStatus == .playing,
+                        previousPosition.isFinite,
+                        currentPosition.isFinite,
+                        currentPosition - previousPosition >= 0.1
+                    {
+                        return
+                    }
+                    previousPosition = currentPosition
+                }
+
+                self.reportFailure(for: item, error: Self.playbackStartTimeoutError())
+            }
+        }
+
+        private func reportFailure(for item: AVPlayerItem, error: any Error) {
+            guard wantsToPlay, player.currentItem === item else { return }
+            let itemIdentifier = ObjectIdentifier(item)
+            guard failedItemIdentifier != itemIdentifier else { return }
+            failedItemIdentifier = itemIdentifier
+            wantsToPlay = false
+            playbackStartTask?.cancel()
+            playbackStartTask = nil
+            player.pause()
+            isBuffering = false
+            if isPlaybackAdvancing {
+                isPlaybackAdvancing = false
+                onNowPlayingProgressChanged?()
+            }
+
+            let failure = error as NSError
+            Self.logger.error(
+                "Audio playback failed domain=\(failure.domain, privacy: .public) code=\(failure.code)"
+            )
+            onPlaybackFailed?()
+        }
+
+        nonisolated private static func playbackFailureError() -> NSError {
+            NSError(
+                domain: "Prismedia.AudioPlayback",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "The audio stream could not be played."]
+            )
+        }
+
+        nonisolated private static func playbackStartTimeoutError() -> NSError {
+            NSError(
+                domain: "Prismedia.AudioPlayback",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "The audio stream did not start."]
+            )
         }
 
         private func updateTime(_ time: CMTime) {

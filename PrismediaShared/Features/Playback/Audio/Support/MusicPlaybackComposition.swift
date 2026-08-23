@@ -26,11 +26,15 @@
             #endif
             self.engine = engine
             self.serviceRelay = serviceRelay
-            controller = MusicPlayerController(
+            let controller = MusicPlayerController(
                 engine: engine,
                 service: serviceRelay,
                 stateStore: stateStore
             )
+            self.controller = controller
+            engine.onPlaybackFailed = { [weak controller] in
+                controller?.handlePlaybackFailed()
+            }
             controller.restoreIfNeeded()
         }
 

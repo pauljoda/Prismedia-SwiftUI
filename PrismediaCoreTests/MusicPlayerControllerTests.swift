@@ -358,6 +358,29 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(engine.playCallCount, 0)
     }
 
+    func testPlatformPlaybackFailureStopsFalseProgressAndKeepsTheTrackAvailable() async {
+        let track = makeTrack(idSuffix: 1, duration: 180)
+        let engine = AudioPlaybackEngineSpy()
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(engine: engine, service: service)
+        controller.play(tracks: [track])
+        controller.updatePlaybackProgress(elapsedTime: 0, duration: 180, isAdvancing: true)
+
+        controller.handlePlaybackFailed()
+        await controller.flushPendingPlaybackReports()
+        let reportCount = service.consumptionUpdates.count
+        controller.persistProgressHeartbeat()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(controller.currentTrack, track)
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertFalse(controller.isPlaybackAdvancing)
+        XCTAssertEqual(controller.errorMessage, "This track could not be played.")
+        XCTAssertEqual(engine.pauseCallCount, 1)
+        XCTAssertEqual(service.consumptionUpdates.count, reportCount)
+        XCTAssertEqual(service.consumptionUpdates.last?.positionSeconds, 0)
+    }
+
     func testDirectWantedTrackPlayDoesNotCreateAQueueOrRequestAStream() {
         let wanted = makeTrack(idSuffix: 1, isWanted: true)
         let engine = AudioPlaybackEngineSpy()

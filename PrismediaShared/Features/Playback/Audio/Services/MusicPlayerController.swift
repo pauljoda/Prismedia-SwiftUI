@@ -205,6 +205,18 @@ public final class MusicPlayerController {
         persistProgress()
     }
 
+    /// Stops optimistic playback state when the platform player rejects or cannot start a stream.
+    public func handlePlaybackFailed() {
+        guard currentTrack != nil else { return }
+        engine.pause()
+        reportCurrentConsumption(stopsActivity: true)
+        isPlaying = false
+        isPlaybackAdvancing = false
+        errorMessage = "This track could not be played."
+        publishNowPlayingState()
+        persistProgress()
+    }
+
     public func clearPlayback() {
         reportCurrentConsumption(stopsActivity: true)
         resetPlaybackState()
