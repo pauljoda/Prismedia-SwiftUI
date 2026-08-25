@@ -85,6 +85,34 @@ final class MusicPresentationTests: XCTestCase {
         XCTAssertEqual(projected.first?.duration, 232)
     }
 
+    func testLibraryTrackProjectionPrefersTrackArtistOverAlbumArtist() {
+        let artistID = UUID()
+        let albumID = UUID()
+        let track = EntityThumbnail(
+            id: UUID(),
+            kind: .audioTrack,
+            title: "I Knew It, I Knew You",
+            parentEntityID: albumID,
+            meta: [.init(icon: PrismediaContractCodes.ThumbnailMetaIcon.person, label: "Taylor Swift")]
+        )
+        let album = EntityThumbnail(
+            id: albumID,
+            kind: .audioLibrary,
+            title: "Toy Story 5",
+            parentEntityID: artistID
+        )
+        let albumArtist = EntityThumbnail(id: artistID, kind: .musicArtist, title: "Randy Newman")
+
+        let projected = MusicEntityProjection.libraryTracks(
+            [track],
+            albumsByID: [albumID: album],
+            artistsByID: [artistID: albumArtist]
+        )
+
+        XCTAssertEqual(projected.first?.artist, "Taylor Swift")
+        XCTAssertNil(projected.first?.artistID)
+    }
+
     func testEffectiveRemainingTimeScalesWithPlaybackRate() {
         XCTAssertEqual(
             MusicPresentation.effectiveRemainingTime(

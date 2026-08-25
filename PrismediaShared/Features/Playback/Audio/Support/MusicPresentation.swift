@@ -95,11 +95,23 @@ extension MusicTrack {
         let discTitle = thumbnail.musicMetadataValue(matching: ["disc", "section"])
         let trackNumber = thumbnail.musicMetadataValue(matching: ["track"])
             .flatMap(Self.trailingInteger)
+        let trackArtist = thumbnail.musicMetadataValue(matching: [
+            PrismediaContractCodes.CreditRole.artist,
+            PrismediaContractCodes.ThumbnailMetaIcon.person,
+        ])
+        let resolvedArtistID: UUID?
+        if let trackArtist {
+            resolvedArtistID = artist.map {
+                trackArtist.localizedCaseInsensitiveCompare($0) == .orderedSame
+            } == true ? artistID : nil
+        } else {
+            resolvedArtistID = artistID
+        }
         self.init(
             id: thumbnail.id,
             title: thumbnail.title,
-            artist: artist ?? thumbnail.musicMetadataValue(matching: ["artist", "person"]),
-            artistID: artistID,
+            artist: trackArtist ?? artist,
+            artistID: resolvedArtistID,
             album: album ?? thumbnail.musicMetadataValue(matching: ["album", "library"]),
             albumID: albumID ?? thumbnail.parentEntityID,
             artworkPath: thumbnail.bestCoverPath ?? artworkPath,
