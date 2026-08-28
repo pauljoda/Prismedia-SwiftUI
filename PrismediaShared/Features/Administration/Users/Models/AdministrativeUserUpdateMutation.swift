@@ -6,6 +6,7 @@ public struct AdministrativeUserUpdateMutation: Encodable, Hashable, Sendable {
     public let role: UserRole?
     public let allowNsfw: Bool?
     public let canCreateLibraries: Bool?
+    public let canRequestContent: Bool?
     public let enabled: Bool?
 
     public init(
@@ -14,6 +15,7 @@ public struct AdministrativeUserUpdateMutation: Encodable, Hashable, Sendable {
         role: UserRole? = nil,
         allowNsfw: Bool? = nil,
         canCreateLibraries: Bool? = nil,
+        canRequestContent: Bool? = nil,
         enabled: Bool? = nil
     ) {
         self.username = username
@@ -21,6 +23,7 @@ public struct AdministrativeUserUpdateMutation: Encodable, Hashable, Sendable {
         self.role = role
         self.allowNsfw = allowNsfw
         self.canCreateLibraries = canCreateLibraries
+        self.canRequestContent = canRequestContent
         self.enabled = enabled
     }
 }

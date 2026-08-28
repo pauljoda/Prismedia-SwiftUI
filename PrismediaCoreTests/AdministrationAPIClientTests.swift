@@ -99,11 +99,20 @@ final class AdministrationAPIClientTests: XCTestCase {
 
         _ = try await client.listAdministrativeUsers()
         _ = try await client.createAdministrativeUser(
-            AdministrativeUserCreateMutation(username: "reader", password: "eightchars", displayName: "Reader")
+            AdministrativeUserCreateMutation(
+                username: "reader",
+                password: "eightchars",
+                displayName: "Reader",
+                canRequestContent: true
+            )
         )
         _ = try await client.updateAdministrativeUser(
             id: userID,
-            mutation: AdministrativeUserUpdateMutation(displayName: "Reader Two", allowNsfw: true)
+            mutation: AdministrativeUserUpdateMutation(
+                displayName: "Reader Two",
+                allowNsfw: true,
+                canRequestContent: false
+            )
         )
         try await client.resetAdministrativeUserPassword(id: userID, newPassword: "another-secret")
         try await client.replaceAdministrativeUserLibraryAccess(userID: userID, rootIDs: [rootID])
@@ -112,8 +121,10 @@ final class AdministrationAPIClientTests: XCTestCase {
         XCTAssertEqual(loader.requests.map(\.httpMethod), ["GET", "POST", "PATCH", "POST", "PUT", "DELETE"])
         XCTAssertNil(try jsonBody(loader.requests[1])["allowSfw"])
         XCTAssertEqual(try jsonBody(loader.requests[1])["allowNsfw"] as? Bool, false)
+        XCTAssertEqual(try jsonBody(loader.requests[1])["canRequestContent"] as? Bool, true)
         XCTAssertNil(try jsonBody(loader.requests[2])["allowSfw"])
         XCTAssertEqual(try jsonBody(loader.requests[2])["allowNsfw"] as? Bool, true)
+        XCTAssertEqual(try jsonBody(loader.requests[2])["canRequestContent"] as? Bool, false)
         XCTAssertEqual(loader.requests[3].url?.path, "/api/users/\(userID.uuidString.lowercased())/password")
         XCTAssertEqual(loader.requests[4].url?.path, "/api/users/\(userID.uuidString.lowercased())/library-access")
     }
@@ -147,7 +158,7 @@ final class AdministrationAPIClientTests: XCTestCase {
     }
 
     private var userJSON: String {
-        #"{"id":"\#(userID)","username":"reader","displayName":"Reader","role":"member","allowNsfw":false,"canCreateLibraries":false,"enabled":true,"lastLoginAt":null,"createdAt":"2026-07-01T12:00:00Z","updatedAt":"2026-07-01T12:00:00Z","libraryRootIds":[]}"#
+        #"{"id":"\#(userID)","username":"reader","displayName":"Reader","role":"member","allowNsfw":false,"canCreateLibraries":false,"canRequestContent":true,"enabled":true,"lastLoginAt":null,"createdAt":"2026-07-01T12:00:00Z","updatedAt":"2026-07-01T12:00:00Z","libraryRootIds":[]}"#
     }
 
     private var rootJSON: String {

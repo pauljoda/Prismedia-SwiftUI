@@ -8,6 +8,7 @@ struct AdministrativeUserEditor: View {
     @State private var role: UserRole
     @State private var allowNsfw: Bool
     @State private var canCreateLibraries: Bool
+    @State private var canRequestContent: Bool
     @State private var enabled: Bool
     @State private var rootIDs: Set<UUID>
     @State private var isSaving = false
@@ -36,6 +37,7 @@ struct AdministrativeUserEditor: View {
         _role = State(initialValue: user?.role ?? .member)
         _allowNsfw = State(initialValue: user?.allowNsfw ?? false)
         _canCreateLibraries = State(initialValue: user?.canCreateLibraries ?? false)
+        _canRequestContent = State(initialValue: user?.canRequestContent ?? false)
         _enabled = State(initialValue: user?.enabled ?? true)
         _rootIDs = State(initialValue: Set(user?.libraryRootIDs ?? []))
     }
@@ -65,6 +67,7 @@ struct AdministrativeUserEditor: View {
                         isOn: Binding(get: { allowNsfw }, set: { setAllowNsfw($0) })
                     )
                     Toggle("Can create libraries", isOn: $canCreateLibraries)
+                    Toggle("Can request content", isOn: $canRequestContent)
                     Toggle("Account enabled", isOn: $enabled).disabled(isSelf)
                 }
                 if role == .admin {
@@ -128,6 +131,7 @@ struct AdministrativeUserEditor: View {
                         role: isSelf ? nil : role,
                         allowNsfw: allowNsfw,
                         canCreateLibraries: canCreateLibraries,
+                        canRequestContent: canRequestContent,
                         enabled: isSelf ? nil : enabled
                     )
                 )
@@ -141,6 +145,7 @@ struct AdministrativeUserEditor: View {
                         role: role,
                         allowNsfw: allowNsfw,
                         canCreateLibraries: canCreateLibraries,
+                        canRequestContent: canRequestContent,
                         enabled: enabled
                     )
                 )

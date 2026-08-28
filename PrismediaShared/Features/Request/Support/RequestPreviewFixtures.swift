@@ -12,11 +12,9 @@ import Foundation
         )
 
         static let roots = [
-            AdministrativeLibraryRoot(
+            RequestLibraryRoot(
                 id: rootID,
-                path: "/media/movies",
                 label: "Movies",
-                enabled: true,
                 scanVideos: true
             )
         ]

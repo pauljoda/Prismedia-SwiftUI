@@ -11,14 +11,13 @@ public enum RequestTargetPolicy {
 
     public static func roots(
         for kind: RequestKindDefinition,
-        from roots: [AdministrativeLibraryRoot],
+        from roots: [RequestLibraryRoot],
         hidesNsfw: Bool
-    ) -> [AdministrativeLibraryRoot] {
-        roots.filter { $0.enabled && kind.supports(root: $0) && (!hidesNsfw || !$0.isNsfw) }
+    ) -> [RequestLibraryRoot] {
+        roots.filter { kind.supports(root: $0) && (!hidesNsfw || !$0.isNsfw) }
             .sorted {
                 if $0.isNsfw != $1.isNsfw { return !$0.isNsfw }
-                return ($0.label.isEmpty ? $0.path : $0.label)
-                    .localizedStandardCompare($1.label.isEmpty ? $1.path : $1.label) == .orderedAscending
+                return $0.label.localizedStandardCompare($1.label) == .orderedAscending
             }
     }
 
@@ -32,7 +31,7 @@ public enum RequestTargetPolicy {
 
     public static func defaultRootID(
         for profile: AdministrativeAcquisitionProfile?,
-        compatibleRoots: [AdministrativeLibraryRoot]
+        compatibleRoots: [RequestLibraryRoot]
     ) -> UUID? {
         if let targetID = profile?.targetLibraryRootID,
             compatibleRoots.contains(where: { $0.id == targetID })

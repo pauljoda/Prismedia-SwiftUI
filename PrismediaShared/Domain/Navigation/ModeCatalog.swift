@@ -121,6 +121,15 @@ public enum ModeCatalog {
             ],
             preferredTabDestinationIDs: ["files", "identify", "request", "release-calendar"]
         )
+
+        public static let requestManagement = AppMode(
+            id: "request-management",
+            title: "Request",
+            systemImage: "paperplane",
+            destinations: [
+                manageDestination(.request, "Request", "paperplane")
+            ]
+        )
     #endif
 
     public static let operate = AppMode(
@@ -156,8 +165,13 @@ public enum ModeCatalog {
     public static func modes(for user: UserAccount?) -> [AppMode] {
         var modes = all.filter { !$0.requiresAdmin || user?.isAdmin == true }
         #if os(iOS) || os(macOS)
-            if user?.isAdmin != true, user?.canCreateLibraries == true {
-                modes.append(libraryManagement)
+            if user?.isAdmin != true {
+                if user?.canRequestContent == true {
+                    modes.append(requestManagement)
+                }
+                if user?.canCreateLibraries == true {
+                    modes.append(libraryManagement)
+                }
             }
         #endif
         return modes

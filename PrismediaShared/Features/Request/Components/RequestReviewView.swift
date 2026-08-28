@@ -15,7 +15,7 @@ import SwiftUI
         @State private var isCustomSelection = false
         @State private var reviewSelection = MetadataReviewSelection()
         @State private var proposalPath: [String] = []
-        @State private var roots: [AdministrativeLibraryRoot] = []
+        @State private var roots: [RequestLibraryRoot] = []
         @State private var profiles: [AdministrativeAcquisitionProfile] = []
         @State private var selectedProfileID: UUID?
         @State private var selectedRootID: UUID?
@@ -39,7 +39,7 @@ import SwiftUI
                 } else {
                     ScrollView {
                         errorView
-                        .padding()
+                            .padding()
                     }
                 }
             }
@@ -82,9 +82,10 @@ import SwiftUI
 
         private func reviewContent(_ review: AdministrativeRequestReviewResponse) -> some View {
             let selection = RequestSelectionPolicy.derive(from: review)
-            let activeProposal = proposalPath.last.flatMap {
-                MetadataReviewPolicy.proposal(withID: $0, in: review.proposal)
-            } ?? review.proposal
+            let activeProposal =
+                proposalPath.last.flatMap {
+                    MetadataReviewPolicy.proposal(withID: $0, in: review.proposal)
+                } ?? review.proposal
             let structuralIDs = Set(
                 MetadataReviewPolicy.structuralChildren(of: activeProposal).map(\.proposalID)
             )
@@ -93,7 +94,8 @@ import SwiftUI
             )
             let selectableReviewIDs = structuralIDs.union(relationshipIDs)
             let selectedReviewIDs = selectableReviewIDs.subtracting(reviewSelection.excludedProposalIDs)
-            let activeChildrenTitle = MetadataReviewPolicy.structuralChildren(of: activeProposal)
+            let activeChildrenTitle =
+                MetadataReviewPolicy.structuralChildren(of: activeProposal)
                 .first?.targetKind.groupLabel ?? childrenTitle
             return RequestIdentifyReviewPage(
                 navigationTitle: "Review Request",

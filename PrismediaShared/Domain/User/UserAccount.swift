@@ -7,6 +7,7 @@ public struct UserAccount: Codable, Hashable, Identifiable, Sendable {
     public let role: UserRole
     public let allowNsfw: Bool
     public let canCreateLibraries: Bool
+    public let canRequestContent: Bool
     public let enabled: Bool
     public let lastLoginAt: Date?
     public let createdAt: Date?
@@ -24,6 +25,7 @@ public struct UserAccount: Codable, Hashable, Identifiable, Sendable {
         role: UserRole,
         allowNsfw: Bool = false,
         canCreateLibraries: Bool = false,
+        canRequestContent: Bool = false,
         enabled: Bool = true,
         lastLoginAt: Date? = nil,
         createdAt: Date? = nil,
@@ -36,6 +38,7 @@ public struct UserAccount: Codable, Hashable, Identifiable, Sendable {
         self.role = role
         self.allowNsfw = allowNsfw
         self.canCreateLibraries = canCreateLibraries
+        self.canRequestContent = canRequestContent
         self.enabled = enabled
         self.lastLoginAt = lastLoginAt
         self.createdAt = createdAt

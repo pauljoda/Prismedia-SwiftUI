@@ -202,7 +202,7 @@ public enum RequestKindDefinition: String, CaseIterable, Identifiable, Hashable,
 
     public static var discoverable: [Self] { allCases.filter(\.isDiscoverable) }
 
-    public func supports(root: AdministrativeLibraryRoot) -> Bool {
+    public func supports(root: RequestLibraryRoot) -> Bool {
         switch self {
         case .book: return root.scanBooks
         case .audiobook: return root.scanBooks

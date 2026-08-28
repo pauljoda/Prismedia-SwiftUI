@@ -139,6 +139,9 @@ public struct AdministrationService: AdministrationServicing {
     public func libraryRoots() async throws -> [AdministrativeLibraryRoot] {
         try await client.listAdministrativeLibraryRoots()
     }
+    public func accessibleLibraryRoots() async throws -> [RequestLibraryRoot] {
+        try await client.listRequestLibraryRoots()
+    }
     public func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] {
         try await client.listAdministrativeAcquisitionProfiles()
     }

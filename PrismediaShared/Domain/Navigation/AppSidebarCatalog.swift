@@ -4,8 +4,17 @@ public enum AppSidebarCatalog {
         #if os(iOS) || os(macOS)
             if user?.isAdmin == true {
                 sections.append(operateSection)
-            } else if user?.canCreateLibraries == true {
-                sections.append(libraryManagementSection)
+            } else {
+                var items: [AppSidebarItem] = []
+                if user?.canRequestContent == true {
+                    items.append(item(in: ModeCatalog.requestManagement, destinationID: "request"))
+                }
+                if user?.canCreateLibraries == true {
+                    items.append(item(in: ModeCatalog.libraryManagement, destinationID: "settings"))
+                }
+                if !items.isEmpty {
+                    sections.append(AppSidebarSection(id: "member-management", title: "Manage", items: items))
+                }
             }
         #endif
         return sections
@@ -98,13 +107,6 @@ public enum AppSidebarCatalog {
             ]
         )
 
-        private static let libraryManagementSection = AppSidebarSection(
-            id: "library-management",
-            title: "Manage",
-            items: [
-                item(in: ModeCatalog.libraryManagement, destinationID: "settings")
-            ]
-        )
     #endif
 
     private static func item(

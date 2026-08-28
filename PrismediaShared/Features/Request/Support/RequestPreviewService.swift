@@ -84,13 +84,11 @@ import Foundation
             )
         }
 
-        func libraryRoots() async throws -> [AdministrativeLibraryRoot] {
+        func libraryRoots() async throws -> [RequestLibraryRoot] {
             [
-                AdministrativeLibraryRoot(
+                RequestLibraryRoot(
                     id: rootID,
-                    path: "/media/movies",
                     label: "Movies",
-                    enabled: true,
                     scanVideos: true
                 )
             ]

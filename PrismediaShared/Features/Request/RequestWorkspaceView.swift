@@ -12,6 +12,7 @@ import SwiftUI
         let detailDependencies: EntityDetailDependencies
         let navigationPath: Binding<[EntityLink]>
         let hidesNsfw: Bool
+        let showsAdministrativeTools: Bool
         let resolveAssetURL: (String) -> URL?
 
         var body: some View {
@@ -27,9 +28,10 @@ import SwiftUI
                                 accent: PrismediaColor.materialSpectrumViolet
                             )
 
-                            RequestWorkspaceSectionBar(selection: $section)
-
-                            Divider()
+                            if showsAdministrativeTools {
+                                RequestWorkspaceSectionBar(selection: $section)
+                                Divider()
+                            }
 
                             sectionContent
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -43,24 +45,28 @@ import SwiftUI
                 #if os(iOS)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbarTitleMenu {
-                        sectionPicker
+                        if showsAdministrativeTools {
+                            sectionPicker
+                        }
                     }
                 #endif
                 .prismediaEntityDestinations(dependencies: detailDependencies)
                 .toolbar {
-                    ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
-                    ToolbarItem(placement: trailingToolbarPlacement) {
-                        Button {
-                            showsAcquisitionSettings = true
-                        } label: {
-                            if usesWideWorkspace {
-                                Label("Acquisition Settings", systemImage: "gearshape")
-                                    .foregroundStyle(PrismediaColor.materialSpectrumViolet)
-                            } else {
-                                Image(systemName: "gearshape")
+                    if showsAdministrativeTools {
+                        ToolbarSpacer(.fixed, placement: trailingToolbarPlacement)
+                        ToolbarItem(placement: trailingToolbarPlacement) {
+                            Button {
+                                showsAcquisitionSettings = true
+                            } label: {
+                                if usesWideWorkspace {
+                                    Label("Acquisition Settings", systemImage: "gearshape")
+                                        .foregroundStyle(PrismediaColor.materialSpectrumViolet)
+                                } else {
+                                    Image(systemName: "gearshape")
+                                }
                             }
+                            .accessibilityLabel("Acquisition Settings")
                         }
-                        .accessibilityLabel("Acquisition Settings")
                     }
                 }
             }
@@ -76,8 +82,8 @@ import SwiftUI
 
         @ViewBuilder
         private var sectionContent: some View {
-            switch section {
-            case .discover:
+            switch (showsAdministrativeTools, section) {
+            case (false, _), (true, .discover):
                 RequestFeatureView(
                     service: administrationService,
                     kind: $kind,
@@ -86,7 +92,7 @@ import SwiftUI
                         openEntity(intent.entityID, intent.entityKind)
                     }
                 )
-            case .activity(let activitySection):
+            case (true, .activity(let activitySection)):
                 RequestActivitySurface(
                     section: activitySection,
                     service: activityService,
@@ -165,6 +171,7 @@ import SwiftUI
                 ),
                 navigationPath: .constant([]),
                 hidesNsfw: true,
+                showsAdministrativeTools: true,
                 resolveAssetURL: { URL(string: $0) }
             )
         }

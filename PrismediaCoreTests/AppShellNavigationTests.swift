@@ -74,6 +74,22 @@ final class AppShellNavigationTests: XCTestCase {
         )
     }
 
+    func testRequestPermissionExposesOnlyTheRequestDestinationToMembers() {
+        let user = UserAccount(
+            id: UUID(),
+            username: "requester",
+            displayName: "Requester",
+            role: .member,
+            canRequestContent: true
+        )
+
+        XCTAssertEqual(ModeCatalog.modes(for: user).last?.id, "request-management")
+        XCTAssertEqual(AppSidebarCatalog.sections(for: user).last?.title, "Manage")
+        XCTAssertEqual(AppSidebarCatalog.sections(for: user).last?.items.map(\.title), ["Request"])
+        XCTAssertFalse(ModeCatalog.modes(for: user).contains(where: { $0.id == "manage" }))
+        XCTAssertFalse(ModeCatalog.modes(for: user).contains(where: { $0.id == "operate" }))
+    }
+
     func testLibraryCreatorsReceiveOnlyTheDedicatedManagementEntry() {
         let user = UserAccount(
             id: UUID(),

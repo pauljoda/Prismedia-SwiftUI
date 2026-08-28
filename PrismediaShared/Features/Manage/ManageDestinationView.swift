@@ -8,6 +8,7 @@ import SwiftUI
         let client: PrismediaAPIClient
         let detailDependencies: EntityDetailDependencies
         let navigationPath: Binding<[EntityLink]>
+        let showsAdministrativeTools: Bool
 
         init(
             destination: ManageDestination,
@@ -15,6 +16,7 @@ import SwiftUI
             client: PrismediaAPIClient,
             detailDependencies: EntityDetailDependencies,
             navigationPath: Binding<[EntityLink]>,
+            showsAdministrativeTools: Bool,
             fileService: (any FileAdministrationServicing)? = nil
         ) {
             self.destination = destination
@@ -22,6 +24,7 @@ import SwiftUI
             self.client = client
             self.detailDependencies = detailDependencies
             self.navigationPath = navigationPath
+            self.showsAdministrativeTools = showsAdministrativeTools
             if let fileService {
                 self.fileService = fileService
             } else {
@@ -55,6 +58,7 @@ import SwiftUI
                         detailDependencies: detailDependencies,
                         navigationPath: navigationPath,
                         hidesNsfw: !client.allowsNsfwContent,
+                        showsAdministrativeTools: showsAdministrativeTools,
                         resolveAssetURL: client.assetURL
                     )
                 }
@@ -77,6 +81,7 @@ import SwiftUI
                     onEntityMutated: {}
                 ),
                 navigationPath: .constant([]),
+                showsAdministrativeTools: true,
                 fileService: Step4AdministrationPreviewService()
             )
         }

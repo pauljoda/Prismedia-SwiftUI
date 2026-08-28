@@ -323,7 +323,8 @@ public struct PrismediaShellView: View {
                     navigationPath: pathBinding(
                         for: destination.id,
                         videoPlaybackSession: videoPlaybackSession
-                    )
+                    ),
+                    showsAdministrativeTools: user.isAdmin
                 )
         #endif
         }

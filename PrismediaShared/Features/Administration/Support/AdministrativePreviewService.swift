@@ -182,6 +182,7 @@ import Foundation
             _ request: AdministrativeReviewedRequestCommitRequest
         ) async throws -> AdministrativeRequestCommitResponse { throw CancellationError() }
         func libraryRoots() async throws -> [AdministrativeLibraryRoot] { [] }
+        func accessibleLibraryRoots() async throws -> [RequestLibraryRoot] { [] }
         func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] { [] }
         func acquisitionBlocklist(entityID: UUID?) async throws -> [RequestActivityBlocklistEntry] { [] }
         func clearAcquisitionBlocklist(entityID: UUID?, createdAfter: Date?) async throws -> Int { 0 }

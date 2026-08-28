@@ -15,6 +15,7 @@ final class PrismediaAPIClientTests: XCTestCase {
             "role": "admin",
             "allowNsfw": true,
             "canCreateLibraries": true,
+            "canRequestContent": true,
             "enabled": true,
             "lastLoginAt": "2026-07-07T18:30:00.1234567+00:00",
             "createdAt": "2026-07-06T20:00:00Z",

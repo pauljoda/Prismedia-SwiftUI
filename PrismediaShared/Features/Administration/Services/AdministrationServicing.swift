@@ -51,6 +51,7 @@ public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable
     func commitReviewedRequest(_ request: AdministrativeReviewedRequestCommitRequest) async throws
         -> AdministrativeRequestCommitResponse
     func libraryRoots() async throws -> [AdministrativeLibraryRoot]
+    func accessibleLibraryRoots() async throws -> [RequestLibraryRoot]
     func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile]
     func updateAcquisitionProfileTiming(
         _ profile: AdministrativeAcquisitionProfile,

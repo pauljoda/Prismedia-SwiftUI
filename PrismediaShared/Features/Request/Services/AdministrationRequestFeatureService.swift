@@ -49,8 +49,8 @@ public struct AdministrationRequestFeatureService: RequestFeatureServicing {
         try await administration.commitReviewedRequest(request)
     }
 
-    public func libraryRoots() async throws -> [AdministrativeLibraryRoot] {
-        try await administration.libraryRoots()
+    public func libraryRoots() async throws -> [RequestLibraryRoot] {
+        try await administration.accessibleLibraryRoots()
     }
 
     public func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile] {

@@ -3,7 +3,7 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct RequestTargetOptionsView: View {
         let kind: RequestKindDefinition
-        let roots: [AdministrativeLibraryRoot]
+        let roots: [RequestLibraryRoot]
         let profiles: [AdministrativeAcquisitionProfile]
         let isLoading: Bool
         let errorMessage: String?
@@ -89,7 +89,7 @@ import SwiftUI
                 LabeledContent {
                     Picker("Import Into", selection: rootBinding) {
                         ForEach(compatibleRoots) { root in
-                            Text(root.label.isEmpty ? root.path : root.label).tag(Optional(root.id))
+                            Text(root.label).tag(Optional(root.id))
                         }
                     }
                     .pickerStyle(.menu)
@@ -104,7 +104,7 @@ import SwiftUI
             RequestTargetPolicy.profiles(for: kind, from: profiles)
         }
 
-        private var compatibleRoots: [AdministrativeLibraryRoot] { roots }
+        private var compatibleRoots: [RequestLibraryRoot] { roots }
 
         private var profileBinding: Binding<UUID?> {
             Binding(

@@ -220,12 +220,10 @@ final class RequestFeaturePolicyTests: XCTestCase {
         books: Bool = false,
         videos: Bool = false,
         isNsfw: Bool = false
-    ) -> AdministrativeLibraryRoot {
-        AdministrativeLibraryRoot(
+    ) -> RequestLibraryRoot {
+        RequestLibraryRoot(
             id: UUID(uuidString: id)!,
-            path: "/media/\(label)",
             label: label,
-            enabled: true,
             scanVideos: videos,
             scanBooks: books,
             isNsfw: isNsfw

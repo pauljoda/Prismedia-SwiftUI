@@ -10,6 +10,6 @@ public protocol RequestFeatureServicing: Sendable {
     func review(reviewID: UUID) async throws -> AdministrativeRequestReviewResponse
     func commit(_ request: AdministrativeReviewedRequestCommitRequest) async throws
         -> AdministrativeRequestCommitResponse
-    func libraryRoots() async throws -> [AdministrativeLibraryRoot]
+    func libraryRoots() async throws -> [RequestLibraryRoot]
     func acquisitionProfiles() async throws -> [AdministrativeAcquisitionProfile]
 }
