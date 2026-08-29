@@ -22,7 +22,6 @@ import SwiftUI
         @State private var isLoading = true
         @State private var isLoadingTargets = true
         @State private var isSubmitting = false
-        @State private var requiresReload = false
         @State private var errorMessage: String?
         @State private var enrichmentErrorMessage: String?
         @State private var targetErrorMessage: String?
@@ -111,10 +110,6 @@ import SwiftUI
                 onSetProposalSelected: setProposalSelected,
                 onActivateProposal: openProposal,
                 leadingContent: {
-                    if requiresReload {
-                        conflictBanner
-                    }
-
                     requestPanel(selection)
 
                     if proposalPath.count > 1 {
@@ -151,7 +146,7 @@ import SwiftUI
                     embedsInParentPanel: true
                 )
 
-                if let panelError = errorMessage ?? enrichmentErrorMessage, !requiresReload {
+                if let panelError = errorMessage ?? enrichmentErrorMessage {
                     Label(panelError, systemImage: "exclamationmark.triangle")
                         .font(.callout)
                         .foregroundStyle(PrismediaColor.destructive)
@@ -179,7 +174,6 @@ import SwiftUI
                 )
                 .disabled(
                     isSubmitting
-                        || requiresReload
                         || review?.enrichment?.running == true
                         || !hasRequestIntent(selection)
                 )
@@ -195,29 +189,6 @@ import SwiftUI
                 return "Request This \(route.kind.label)"
             }
             return "Request \(noun.capitalized)s"
-        }
-
-        private var conflictBanner: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Label("Proposal Changed", systemImage: "arrow.triangle.2.circlepath")
-                    .font(.headline)
-                Text(
-                    "The provider changed this proposal after you reviewed it. Reload and confirm the selection again."
-                )
-                .font(.callout)
-                .foregroundStyle(PrismediaColor.textSecondary)
-                PrismediaButton(
-                    "Reload Review",
-                    systemImage: "arrow.clockwise",
-                    variant: .prominent,
-                    primaryTint: primaryAccent
-                ) {
-                    Task { await loadReview() }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
         }
 
         private func presetControls(_ selection: RequestReviewSelection) -> some View {
@@ -272,7 +243,6 @@ import SwiftUI
             errorMessage = nil
             enrichmentErrorMessage = nil
             targetErrorMessage = nil
-            requiresReload = false
             async let loadedReview = service.review(
                 kind: route.kind.rawValue,
                 pluginID: route.pluginID,
@@ -429,13 +399,6 @@ import SwiftUI
                     } else {
                         outcome = result
                     }
-                } catch let PrismediaAPIError.httpStatus(_, problem)
-                    where problem?.code == "request_proposal_changed"
-                {
-                    requiresReload = true
-                    errorMessage = "This proposal changed after you reviewed it."
-                    isSubmitting = false
-                    flowPhase = .commitFailure
                 } catch {
                     errorMessage = error.localizedDescription
                     isSubmitting = false
