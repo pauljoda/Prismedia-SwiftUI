@@ -29,7 +29,7 @@ struct VideoProgressEpisode: Hashable, Sendable {
         self.init(
             id: detail.id,
             title: detail.title,
-            resumeSeconds: playback?.resumeSeconds ?? 0,
+            resumeSeconds: playback?.resumableSeconds ?? 0,
             durationSeconds: AudiobookDurationParser.seconds(from: technical?.duration),
             isCompleted: playback?.completedAt != nil
         )

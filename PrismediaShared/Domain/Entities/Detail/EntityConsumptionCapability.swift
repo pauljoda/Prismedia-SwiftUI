@@ -11,6 +11,13 @@ public struct EntityConsumptionCapability: Decodable, Hashable, Sendable {
     public let lastActiveAt: String?
     public let completedAt: String?
 
+    /// Resume position exposed to playback surfaces. Completed items retain their raw cursor so
+    /// marking them incomplete can restore it, but must not reopen at that terminal position.
+    public var resumableSeconds: Double {
+        guard completedAt == nil, resumeSeconds.isFinite else { return 0 }
+        return max(0, resumeSeconds)
+    }
+
     private enum CodingKeys: String, CodingKey {
         case accessCount
         case completionCount

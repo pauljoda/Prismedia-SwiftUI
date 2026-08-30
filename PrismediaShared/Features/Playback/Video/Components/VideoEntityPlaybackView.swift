@@ -562,10 +562,10 @@ struct VideoEntityPlaybackView: View {
         )
     }
 
-    private func resumeSeconds(in detail: EntityDetail) -> Double? {
-        detail.capabilities.compactMap { capability -> Double? in
+    private func consumption(in detail: EntityDetail) -> EntityConsumptionCapability? {
+        detail.capabilities.compactMap { capability -> EntityConsumptionCapability? in
             guard case .consumption(let playback) = capability else { return nil }
-            return playback.resumeSeconds
+            return playback
         }.first
     }
 
@@ -580,8 +580,10 @@ struct VideoEntityPlaybackView: View {
     }
 
     private func initialResumeSeconds(in detail: EntityDetail) -> Double {
-        VideoInitialResumePosition.resolve(
-            detailResumeSeconds: resumeSeconds(in: detail),
+        let consumption = consumption(in: detail)
+        return VideoInitialResumePosition.resolve(
+            detailResumeSeconds: consumption?.resumeSeconds,
+            detailCompletedAt: consumption?.completedAt,
             thumbnailResumeSeconds: ownerLink.thumbnailPreview?.resumeSeconds
         )
     }

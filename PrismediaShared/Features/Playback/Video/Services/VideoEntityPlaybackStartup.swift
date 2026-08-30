@@ -27,17 +27,19 @@ enum VideoEntityPlaybackStartup {
             sourceThumbnail: ownerLink.sourceThumbnail,
             detailLoader: detailLoader
         )
+        let consumption = consumption(in: resolved)
         activate(
             resolved,
             VideoInitialResumePosition.resolve(
-                detailResumeSeconds: resumeSeconds(in: resolved),
+                detailResumeSeconds: consumption?.resumeSeconds,
+                detailCompletedAt: consumption?.completedAt,
                 thumbnailResumeSeconds: ownerLink.thumbnailPreview?.resumeSeconds))
         return resolved
     }
-    private static func resumeSeconds(in detail: EntityDetail) -> Double? {
-        detail.capabilities.compactMap { capability -> Double? in
+    private static func consumption(in detail: EntityDetail) -> EntityConsumptionCapability? {
+        detail.capabilities.compactMap { capability -> EntityConsumptionCapability? in
             guard case .consumption(let playback) = capability else { return nil }
-            return playback.resumeSeconds
+            return playback
         }.first
     }
 }

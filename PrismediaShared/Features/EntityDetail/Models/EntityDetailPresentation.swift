@@ -302,10 +302,10 @@ struct EntityDetailPresentation {
                         )
                     )
                 }
-                if consumption.resumeSeconds > 0 {
+                if consumption.resumableSeconds > 0 {
                     items.append(
                         .init(
-                            label: "Resume", value: Self.duration(consumption.resumeSeconds),
+                            label: "Resume", value: Self.duration(consumption.resumableSeconds),
                             systemImage: "clock.arrow.circlepath"))
                 }
             case .position(let positions):
@@ -474,7 +474,7 @@ struct EntityDetailPresentation {
         if PlayableVideoResolver.videoID(in: detail) != nil {
             let resumeSeconds = max(
                 0,
-                detail.capability(EntityConsumptionCapability.self)?.resumeSeconds ?? 0
+                detail.capability(EntityConsumptionCapability.self)?.resumableSeconds ?? 0
             )
             return action(
                 resumeSeconds > 0 ? .resume : .play,

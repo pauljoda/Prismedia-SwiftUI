@@ -17,7 +17,7 @@ enum VideoProgressPlaybackRoute {
             coverThumbURL: images?.thumbnailURL,
             coverThumb2xURL: images?.thumbnail2xURL,
             hasSourceMedia: episode.hasSourceMedia,
-            resumeSeconds: playback?.resumeSeconds,
+            resumeSeconds: playback?.resumableSeconds,
             accessCount: playback?.accessCount
         )
 

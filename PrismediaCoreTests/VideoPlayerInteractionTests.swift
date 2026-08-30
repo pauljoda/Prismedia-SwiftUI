@@ -65,6 +65,7 @@ final class VideoPlayerInteractionTests: XCTestCase {
         XCTAssertEqual(
             VideoInitialResumePosition.resolve(
                 detailResumeSeconds: 0,
+                detailCompletedAt: nil,
                 thumbnailResumeSeconds: 120
             ),
             0
@@ -72,9 +73,21 @@ final class VideoPlayerInteractionTests: XCTestCase {
         XCTAssertEqual(
             VideoInitialResumePosition.resolve(
                 detailResumeSeconds: nil,
+                detailCompletedAt: nil,
                 thumbnailResumeSeconds: 120
             ),
             120
+        )
+    }
+
+    func testCompletedDetailDoesNotResumeFromTerminalDetailOrThumbnailProgress() {
+        XCTAssertEqual(
+            VideoInitialResumePosition.resolve(
+                detailResumeSeconds: 1_799,
+                detailCompletedAt: "2026-08-30T12:00:00Z",
+                thumbnailResumeSeconds: 1_799
+            ),
+            0
         )
     }
 

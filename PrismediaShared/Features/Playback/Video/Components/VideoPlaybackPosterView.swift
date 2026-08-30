@@ -138,12 +138,13 @@ import SwiftUI
         }
 
         private var resumeSeconds: Double {
-            let detailResumeSeconds = detail.capabilities.compactMap { capability -> Double? in
+            let consumption = detail.capabilities.compactMap { capability -> EntityConsumptionCapability? in
                 guard case .consumption(let playback) = capability else { return nil }
-                return playback.resumeSeconds
+                return playback
             }.first
             return VideoInitialResumePosition.resolve(
-                detailResumeSeconds: detailResumeSeconds,
+                detailResumeSeconds: consumption?.resumeSeconds,
+                detailCompletedAt: consumption?.completedAt,
                 thumbnailResumeSeconds: ownerLink.thumbnailPreview?.resumeSeconds
             )
         }
