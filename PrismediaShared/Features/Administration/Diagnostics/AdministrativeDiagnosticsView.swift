@@ -1,124 +1,130 @@
 import SwiftUI
 
 struct AdministrativeDiagnosticsView: View {
-    @State private var snapshot: AdministrativeDiagnosticsSnapshot?
-    @State private var isLoading = true
-    @State private var action: String?
-    @State private var confirmation: String?
-    @State private var message: String?
+    @State private var snapshot = AdministrativeCollectionLoadState<AdministrativeDiagnosticsSnapshot>()
+    @State private var action: AdministrativeMaintenanceAction?
+    @State private var confirmation: AdministrativeMaintenanceAction?
+    @State private var completionMessage: String?
+    @State private var actionError: String?
     let isAdministrator: Bool
     let service: any DiagnosticsServicing
 
     var body: some View {
         Form {
-            if let snapshot {
-                Section("Runtime Health") {
-                    LabeledContent("API", value: snapshot.health.status.capitalized)
-                    LabeledContent("Runtime", value: snapshot.health.runtime ?? "Unknown")
-                    LabeledContent("Worker", value: snapshot.worker.status.capitalized)
-                    LabeledContent("Worker ID", value: snapshot.worker.workerID ?? "Not reported")
-                    LabeledContent("Last heartbeat") {
-                        Text(snapshot.worker.lastSeenAt?.formatted(.dateTime) ?? "Never")
-                    }
-                    LabeledContent("Database restore", value: restoreLabel(snapshot.restore))
-                }
-                Section("Storage") {
-                    LabeledContent("Backup directory") {
-                        Text(snapshot.backups.backupDirectory).font(.body.monospaced()).prismediaTextSelection()
-                    }
-                    LabeledContent("Retention", value: "\(snapshot.backups.automaticRetentionDays) days")
-                    LabeledContent("Backup records", value: snapshot.backups.backups.count.formatted())
-                }
-                Section("Diagnostic Summary") {
-                    Text(summary(snapshot)).font(.caption.monospaced()).prismediaTextSelection()
+            if let error = snapshot.errorMessage {
+                PrismediaRetryView(
+                    title: "Couldn't Load Diagnostics", message: error,
+                    retry: { Task { await load() } })
+            }
+            if let action {
+                Section { ProgressView(action.progressTitle) }
+            } else if let completionMessage {
+                Section { Text(completionMessage) }
+            }
+            if let value = snapshot.items.first {
+                AdministrativeDiagnosticsStatusSections(snapshot: value)
+                Section("Support") {
                     #if !os(tvOS)
-                        ShareLink(item: summary(snapshot)) {
+                        ShareLink(item: summary(value)) {
                             Label("Export Summary", systemImage: "square.and.arrow.up")
                         }
+                    #else
+                        Text(summary(value)).font(.caption.monospaced())
                     #endif
-                }
-            }
-            if let message {
-                Section {
-                    Text(message).foregroundStyle(message.hasPrefix("Queued") ? .secondary : PrismediaColor.destructive)
                 }
             }
             if isAdministrator {
                 Section {
-                    Button("Backfill Missing Fingerprints", systemImage: "number") { Task { await backfill() } }
-                        .disabled(action != nil)
-                    Button("Force Rebuild All Previews", systemImage: "photo.badge.arrow.down", role: .destructive) {
-                        confirmation = "previews"
+                    ForEach(AdministrativeMaintenanceAction.allCases, id: \.self) { candidate in
+                        Button(role: candidate == .previews ? .destructive : nil) {
+                            confirmation = candidate
+                        } label: {
+                            FullWidthButtonLabel {
+                                Label(candidate.title, systemImage: candidate.systemImage)
+                            }
+                        }
+                        .disabled(action != nil || !snapshot.isReady)
                     }
-                    .disabled(action != nil)
                 } header: {
                     Text("Maintenance")
                 } footer: {
-                    Text(
-                        "These actions enqueue background work. Preview regeneration is a heavy operation and does not delete source media."
-                    )
+                    Text("These actions queue background work. Review the confirmation before proceeding.")
                 }
             }
         }
         .prismediaSettingsForm()
-        .overlay { if isLoading && snapshot == nil { PrismediaLoadingView("Loading diagnostics…") } }
-        .prismediaScreenBackground()
-        .navigationTitle("Diagnostics")
-        .toolbar { Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }.disabled(isLoading) }
-        .task { await load() }
-        .refreshable {
-            await PrismediaRefreshAction.perform {
-                await load()
+        .overlay {
+            if snapshot.isLoading && snapshot.items.isEmpty {
+                PrismediaLoadingView("Loading diagnostics…")
             }
         }
+        .prismediaScreenBackground()
+        .navigationTitle("Diagnostics")
+        .toolbar {
+            PrismediaToolbarActionButton("Refresh Diagnostics", systemImage: "arrow.clockwise") {
+                Task { await load() }
+            }
+            .disabled(snapshot.isLoading || action != nil)
+        }
+        .task { await load() }
+        .refreshable { await PrismediaRefreshAction.perform { await load() } }
         .confirmationDialog(
-            "Rebuild every generated preview?",
+            confirmation?.confirmationTitle ?? "Queue maintenance?",
             isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }),
             titleVisibility: .visible
         ) {
-            Button("Queue Rebuild", role: .destructive) { Task { await rebuild() } }
+            if let confirmation {
+                Button("Queue Work", role: confirmation == .previews ? .destructive : nil) {
+                    Task { await perform(confirmation) }
+                }
+            }
         } message: {
-            Text("Every video, image, book page, and audio track will be queued for preview regeneration.")
+            Text(confirmation?.explanation ?? "")
+        }
+        .alert(
+            "Couldn't Queue Maintenance",
+            isPresented: Binding(get: { actionError != nil }, set: { if !$0 { actionError = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(actionError ?? "")
         }
         .accessibilityIdentifier("administration.settings.diagnostics")
     }
 
     private func load() async {
-        isLoading = true
-        defer { isLoading = false }
+        guard action == nil else { return }
+        let request = snapshot.begin()
         do {
-            snapshot = try await service.snapshot()
-            message = nil
-        } catch { message = error.localizedDescription }
+            let loaded = try await service.snapshot()
+            snapshot.succeed([loaded], request: request, isCancelled: Task.isCancelled)
+        } catch {
+            snapshot.fail(error, request: request, isCancelled: Task.isCancelled)
+        }
     }
 
-    private func backfill() async {
-        action = "fingerprints"
-        defer { action = nil }
-        do {
-            let result = try await service.backfillFingerprints()
-            message = "Queued \(result.enqueued) entities for fingerprint generation (\(result.skipped) skipped)."
-        } catch { message = error.localizedDescription }
-    }
-
-    private func rebuild() async {
+    private func perform(_ selected: AdministrativeMaintenanceAction) async {
+        guard isAdministrator, action == nil, snapshot.isReady else { return }
         confirmation = nil
-        action = "previews"
+        action = selected
+        completionMessage = nil
+        actionError = nil
         defer { action = nil }
         do {
-            let result = try await service.rebuildPreviews()
-            message = "Queued \(result.enqueued) entities for preview regeneration (\(result.skipped) skipped)."
-        } catch { message = error.localizedDescription }
-    }
-
-    private func restoreLabel(_ status: AdministrativeDatabaseRestoreStatus) -> String {
-        if status.restoreFailed { return "Failed" }
-        if status.restorePending { return "Pending" }
-        return "Ready"
+            let result: AdministrativeBulkJobResponse
+            switch selected {
+            case .fingerprints: result = try await service.backfillFingerprints()
+            case .previews: result = try await service.rebuildPreviews()
+            }
+            completionMessage = "\(selected.title): \(result.enqueued) queued, \(result.skipped) skipped."
+        } catch {
+            actionError = error.localizedDescription
+        }
     }
 
     private func summary(_ value: AdministrativeDiagnosticsSnapshot) -> String {
-        "Prismedia diagnostics\nAPI: \(value.health.status) (\(value.health.runtime ?? "unknown"))\nWorker: \(value.worker.status)\nBackup records: \(value.backups.backups.count)\nRestore: \(restoreLabel(value.restore))"
+        let restore = value.restore.restoreFailed ? "Failed" : (value.restore.restorePending ? "Pending" : "Ready")
+        return "Prismedia diagnostics\nAPI: \(value.health.status) (\(value.health.runtime ?? "unknown"))\nWorker: \(value.worker.status)\nBackup records: \(value.backups.backups.count)\nRestore: \(restore)"
     }
 }
 
@@ -128,5 +134,11 @@ struct AdministrativeDiagnosticsView: View {
             AdministrativeDiagnosticsView(isAdministrator: true, service: Step3AdministrationPreviewService())
         }
         .frame(width: 760, height: 700)
+    }
+    #Preview("Diagnostics · Accessibility") {
+        NavigationStack {
+            AdministrativeDiagnosticsView(isAdministrator: true, service: Step3AdministrationPreviewService())
+        }
+        .environment(\.dynamicTypeSize, .accessibility3)
     }
 #endif

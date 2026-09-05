@@ -158,6 +158,96 @@ final class AdministrationAPIClientTests: XCTestCase {
     }
 
     @MainActor
+    func testRestoreRequiresTypedConfirmationAndRechecksTheExactBackupBeforeSubmitting() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(backupListJSON), .json(backupListJSON),
+            .json(#"{"backupId":"\#(backupID)","requestedAt":"2026-07-16T12:05:00Z","restartScheduled":true}"#),
+        ])
+        let service = DatabaseBackupService(client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader))
+        let session = AdministrativeBackupRestoreSession(backupID: backupID)
+        await session.load(service: service)
+        XCTAssertFalse(session.canRestore)
+        let unconfirmed = await session.restore(service: service)
+        XCTAssertFalse(unconfirmed)
+        XCTAssertEqual(loader.requests.count, 1)
+        session.confirmationText = "DESTROY AND RESTORE"
+        XCTAssertTrue(session.canRestore)
+        let scheduled = await session.restore(service: service)
+        XCTAssertTrue(scheduled)
+        XCTAssertTrue(session.isScheduled)
+        XCTAssertEqual(loader.requests.map(\.httpMethod), ["GET", "GET", "POST"])
+        XCTAssertEqual(try jsonBody(loader.requests[2])["backupId"] as? String, backupID.uuidString)
+        XCTAssertEqual(try jsonBody(loader.requests[2])["confirmationText"] as? String, session.confirmationText)
+        let repeated = await session.restore(service: service)
+        XCTAssertFalse(repeated)
+        XCTAssertEqual(loader.requests.count, 3)
+    }
+
+    @MainActor
+    func testInProcessRestoreAcknowledgementAlsoPreventsDuplicateSubmission() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(backupListJSON), .json(backupListJSON),
+            .json(#"{"backupId":"\#(backupID)","requestedAt":"2026-07-16T12:05:00Z","restartScheduled":false}"#),
+        ])
+        let service = DatabaseBackupService(client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader))
+        let session = AdministrativeBackupRestoreSession(backupID: backupID)
+        await session.load(service: service)
+        session.confirmationText = "DESTROY AND RESTORE"
+        let scheduled = await session.restore(service: service)
+        XCTAssertTrue(scheduled)
+        XCTAssertTrue(session.isScheduled)
+        let repeated = await session.restore(service: service)
+        XCTAssertFalse(repeated)
+        XCTAssertEqual(loader.requests.map(\.httpMethod), ["GET", "GET", "POST"])
+    }
+
+    @MainActor
+    func testRestoreRejectsASelectionThatIsNoLongerCompleted() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(backupListJSON), .json(backupListJSON.replacingOccurrences(of: "completed", with: "failed")),
+        ])
+        let service = DatabaseBackupService(client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader))
+        let session = AdministrativeBackupRestoreSession(backupID: backupID)
+        await session.load(service: service)
+        session.confirmationText = "DESTROY AND RESTORE"
+        let scheduled = await session.restore(service: service)
+        XCTAssertFalse(scheduled)
+        XCTAssertFalse(session.canRestore)
+        XCTAssertEqual(loader.requests.map(\.httpMethod), ["GET", "GET"])
+        XCTAssertNotNil(session.actionError)
+    }
+
+    @MainActor
+    func testRestoreRequiresNewConfirmationWhenTheServerPhraseChanges() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(backupListJSON), .json(backupListJSON.replacingOccurrences(of: "DESTROY AND RESTORE", with: "REPLACE DATABASE")),
+        ])
+        let service = DatabaseBackupService(client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader))
+        let session = AdministrativeBackupRestoreSession(backupID: backupID)
+        await session.load(service: service)
+        session.confirmationText = "DESTROY AND RESTORE"
+        let scheduled = await session.restore(service: service)
+        XCTAssertFalse(scheduled)
+        XCTAssertEqual(session.confirmationText, "")
+        XCTAssertEqual(session.requiredConfirmation, "REPLACE DATABASE")
+        XCTAssertEqual(loader.requests.map(\.httpMethod), ["GET", "GET"])
+    }
+
+    @MainActor
+    func testRestoreDoesNotSubmitWhenTheFreshInventoryCannotBeLoaded() async throws {
+        let loader = MockHTTPDataLoader(responses: [.json(backupListJSON), .json("{}", statusCode: 503)])
+        let service = DatabaseBackupService(client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader))
+        let session = AdministrativeBackupRestoreSession(backupID: backupID)
+        await session.load(service: service)
+        session.confirmationText = "DESTROY AND RESTORE"
+        let scheduled = await session.restore(service: service)
+        XCTAssertFalse(scheduled)
+        XCTAssertFalse(session.canRestore)
+        XCTAssertNotNil(session.loadError)
+        XCTAssertEqual(loader.requests.map(\.httpMethod), ["GET", "GET"])
+    }
+
+    @MainActor
     func testUserSaveRetriesLibraryFailureAgainstTheConfirmedAccount() async throws {
         let loader = MockHTTPDataLoader(responses: [
             .json(userJSON), .json("{}", statusCode: 500),

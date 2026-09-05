@@ -1,118 +1,110 @@
 import SwiftUI
 
 struct AdministrativeDatabaseBackupsView: View {
-    @State private var state: AdministrativeDatabaseBackupList?
-    @State private var isLoading = true
-    @State private var isWorking = false
-    @State private var selectedBackupID: UUID?
-    @State private var confirmationText = ""
-    @State private var confirmsRestore = false
-    @State private var message: String?
+    @State private var catalog = AdministrativeCollectionLoadState<AdministrativeDatabaseBackupList>()
+    @State private var isCreating = false
+    @State private var creationMessage: String?
+    @State private var actionError: String?
     let service: any DatabaseBackupServicing
     let onRestoreScheduled: () async -> Void
 
     var body: some View {
         Form {
-            if let state {
-                Section("Retention") {
+            if let error = catalog.errorMessage {
+                PrismediaRetryView(
+                    title: "Couldn't Load Backups", message: error,
+                    retry: { Task { await load() } })
+            }
+            if isCreating {
+                Section { ProgressView("Creating backup…") }
+            } else if let creationMessage {
+                Section { Text(creationMessage) }
+            }
+            AdministrativeDatabaseBackupSection(
+                isWorking: isCreating || !catalog.isReady, onCreate: create)
+            if let state = catalog.items.first {
+                Section("Backups") {
+                    if state.backups.isEmpty {
+                        ContentUnavailableView(
+                            "No Backups", systemImage: "archivebox",
+                            description: Text("Create a backup or wait for the next scheduled backup."))
+                    }
+                    ForEach(state.backups) { backup in
+                        NavigationLink(value: backup) {
+                            AdministrativeDatabaseBackupRow(backup: backup)
+                        }
+                    }
+                }
+                Section("Schedule and Storage") {
                     LabeledContent("Next automatic backup") {
                         Text(state.nextAutomaticBackupAt?.formatted(.dateTime) ?? "Not scheduled")
                     }
                     LabeledContent("Automatic retention", value: "\(state.automaticRetentionDays) days")
-                    LabeledContent("Backup directory") {
+                    AdministrativeDetailsDisclosure("Backup directory") {
                         Text(state.backupDirectory).font(.body.monospaced()).prismediaTextSelection()
                     }
                 }
-                Section("Backup Files") {
-                    if state.backups.isEmpty { ContentUnavailableView("No Backups", systemImage: "archivebox") }
-                    ForEach(state.backups) { AdministrativeDatabaseBackupRow(backup: $0) }
-                }
-                Section {
-                    Picker("Completed backup", selection: $selectedBackupID) {
-                        Text("Select a backup").tag(Optional<UUID>.none)
-                        ForEach(completedBackups) { Text($0.fileName).tag(Optional($0.id)) }
-                    }
-                    TextField("Type \(state.restoreConfirmationText)", text: $confirmationText)
-                        .prismediaPlainTextInput()
-                        .disabled(selectedBackupID == nil)
-                    Button("Restore and Restart", systemImage: "arrow.counterclockwise", role: .destructive) {
-                        confirmsRestore = true
-                    }
-                    .disabled(!canRestore || isWorking)
-                } header: {
-                    Text("Destructive Restore")
-                } footer: {
-                    Text(
-                        "Restore destroys the current database, applies the selected completed backup, restarts Prismedia, and requires a fresh sign-in. Type the confirmation exactly."
-                    )
-                }
             }
-            if let message { Section { Text(message).foregroundStyle(PrismediaColor.destructive) } }
         }
         .prismediaSettingsForm()
-        .overlay { if isLoading && state == nil { PrismediaLoadingView("Loading database backups…") } }
+        .overlay {
+            if catalog.isLoading && catalog.items.isEmpty {
+                PrismediaLoadingView("Loading backups…")
+            }
+        }
         .prismediaScreenBackground()
         .navigationTitle("Database Backups")
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
-                    .prismediaToolbarActionLabelStyle()
-                    .disabled(isLoading)
-                Button("Backup Now", systemImage: "archivebox.badge.plus") { Task { await create() } }
-                    .prismediaToolbarActionLabelStyle()
-                    .disabled(isWorking)
+            PrismediaToolbarActionButton("Refresh Backups", systemImage: "arrow.clockwise") {
+                Task { await load() }
             }
+            .disabled(catalog.isLoading || isCreating)
+        }
+        .navigationDestination(for: AdministrativeDatabaseBackup.self) { backup in
+            AdministrativeBackupDetailView(
+                backup: backup, service: service, onRestoreScheduled: onRestoreScheduled)
         }
         .task { await load() }
-        .refreshable {
-            await PrismediaRefreshAction.perform {
-                await load()
-            }
-        }
-        .confirmationDialog("Restore this backup?", isPresented: $confirmsRestore, titleVisibility: .visible) {
-            Button("Restore and Restart", role: .destructive) { Task { await restore() } }
+        .refreshable { await PrismediaRefreshAction.perform { await load() } }
+        .alert(
+            "Couldn't Create Backup",
+            isPresented: Binding(get: { actionError != nil }, set: { if !$0 { actionError = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
         } message: {
-            Text(
-                "All current data will be replaced. Prismedia will restart and this app will discard its current session token."
-            )
+            Text(actionError ?? "")
         }
         .accessibilityIdentifier("administration.settings.database-backups")
     }
 
-    private var completedBackups: [AdministrativeDatabaseBackup] {
-        state?.backups.filter { ["complete", "completed"].contains($0.status) } ?? []
-    }
-    private var canRestore: Bool {
-        selectedBackupID != nil && confirmationText == state?.restoreConfirmationText
+    private func load() async {
+        guard !isCreating else { return }
+        await refresh()
     }
 
-    private func load() async {
-        isLoading = true
-        defer { isLoading = false }
+    private func refresh() async {
+        let request = catalog.begin()
         do {
-            state = try await service.backups()
-            selectedBackupID = selectedBackupID ?? completedBackups.first?.id
-            message = nil
-        } catch { message = error.localizedDescription }
+            let loaded = try await service.backups()
+            catalog.succeed([loaded], request: request, isCancelled: Task.isCancelled)
+        } catch {
+            catalog.fail(error, request: request, isCancelled: Task.isCancelled)
+        }
     }
 
     private func create() async {
-        isWorking = true
-        defer { isWorking = false }
+        guard !isCreating, catalog.isReady else { return }
+        isCreating = true
+        creationMessage = nil
+        actionError = nil
+        defer { isCreating = false }
         do {
-            _ = try await service.create()
-            await load()
-        } catch { message = error.localizedDescription }
-    }
-
-    private func restore() async {
-        guard let selectedBackupID, let state else { return }
-        isWorking = true
-        defer { isWorking = false }
-        do {
-            _ = try await service.restore(id: selectedBackupID, confirmationText: state.restoreConfirmationText)
-            await onRestoreScheduled()
-        } catch { message = error.localizedDescription }
+            let backup = try await service.create()
+            creationMessage = backup.isRestorable ? "Backup created." : "Backup requested. Check its status below."
+            await refresh()
+        } catch {
+            actionError = error.localizedDescription
+        }
     }
 }
 

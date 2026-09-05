@@ -12,6 +12,9 @@ public struct AdministrativeDatabaseBackup: Decodable, Identifiable, Hashable, S
     public let expiresAt: Date?
     public let error: String?
 
+    /// Only a completed server backup can be selected for database restoration.
+    public var isRestorable: Bool { status == PrismediaContractCodes.DatabaseBackupStatus.completed }
+
     public init(
         id: UUID,
         fileName: String,

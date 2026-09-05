@@ -80,7 +80,7 @@ import Foundation
             allowNsfw: false,
             libraryRootIDs: [rootID]
         )
-        private static let backup = AdministrativeDatabaseBackup(
+        static let backup = AdministrativeDatabaseBackup(
             id: backupID,
             fileName: "manual-2026-07-16.sqlite",
             backupPath: "/data/backups/manual.sqlite",
