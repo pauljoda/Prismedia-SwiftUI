@@ -9,6 +9,7 @@ struct AdministrativeOrderedStringListEditor: View {
     @State private var newValue = ""
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var isChoosingLanguage = false
 
     let setting: AdministrativeSetting
     let onSave: (AdministrativeJSONValue) async -> Bool
@@ -26,26 +27,49 @@ struct AdministrativeOrderedStringListEditor: View {
         List {
             Section {
                 ForEach(values, id: \.self) { value in
-                    Text(value)
+                    if usesLanguageChoices {
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
+                            Text(AdministrativeLanguageCatalog.option(for: value).label)
+                            Text(value).font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text(value)
+                    }
                 }
                 .onDelete(perform: removeValues)
                 .onMove(perform: moveValues)
             } header: {
-                Text("Values · Priority Order")
+                Text(usesLanguageChoices ? "Languages · Priority Order" : "Values · Priority Order")
             } footer: {
-                Text("Add one value at a time. Drag to change priority; the first value is preferred.")
+                Text(usesLanguageChoices ? "Languages are tried from top to bottom. Use Edit to change their order." : "Add one value at a time. Drag to change priority; the first value is preferred.")
             }
 
-            Section("Add Value") {
-                TextField("New value", text: $newValue)
-                    .onSubmit(addValue)
-                    .disabled(isSaving || hasReachedMaximum)
-                Button("Add", systemImage: "plus", action: addValue)
-                    .disabled(!canAdd)
+            if usesLanguageChoices {
+                Section {
+                    Button("Add Language", systemImage: "plus") { isChoosingLanguage = true }
+                        .disabled(isSaving || hasReachedMaximum)
+                }
+            } else {
+                Section("Add Value") {
+                    TextField("New value", text: $newValue)
+                        .onSubmit(addValue)
+                        .disabled(isSaving || hasReachedMaximum)
+                    Button("Add", systemImage: "plus", action: addValue)
+                        .disabled(!canAdd)
+                }
             }
         }
         .prismediaScreenBackground()
-        .navigationTitle(setting.label)
+        .navigationTitle(navigationTitle)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(usesLanguageChoices ? .inline : .automatic)
+        .sheet(isPresented: $isChoosingLanguage) {
+            AdministrativeLanguagePicker(selectedCodes: values) { code in
+                guard !isSaving, !hasReachedMaximum, !values.contains(code) else { return }
+                values.append(code)
+            }
+        }
+        #endif
         .toolbar {
             #if os(iOS)
                 if values.count > 1 {
@@ -81,6 +105,20 @@ struct AdministrativeOrderedStringListEditor: View {
 
     private var normalizedNewValue: String {
         newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var usesLanguageChoices: Bool {
+        #if os(iOS)
+            AdministrativeLanguageCatalog.supports(key: setting.key)
+        #else
+            false
+        #endif
+    }
+
+    private var navigationTitle: String {
+        guard usesLanguageChoices else { return setting.label }
+        return setting.key == PrismediaContractCodes.SettingKey.playbackAudioPreferredLanguages
+            ? "Audio Languages" : "Download Languages"
     }
 
     private var hasReachedMaximum: Bool {

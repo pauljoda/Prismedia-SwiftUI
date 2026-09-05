@@ -23,7 +23,7 @@ struct AdministrativeStringListControl: View {
             } label: {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
                     Text(setting.label)
-                    Text(setting.applyHint.map { "\(setting.description) \($0)" } ?? setting.description)
+                    Text(setting.applyHint.map { "\(description) \($0)" } ?? description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -36,8 +36,22 @@ struct AdministrativeStringListControl: View {
         AdministrativeStringListOptionCatalog.selectedValues(for: setting, options: options)
     }
 
+    private var description: String {
+        #if os(iOS)
+            if AdministrativeLanguageCatalog.supports(key: setting.key) {
+                return "Choose languages and arrange them in your preferred order."
+            }
+        #endif
+        return setting.description
+    }
+
     private var summary: String {
         guard !values.isEmpty else { return "None" }
+        #if os(iOS)
+            if AdministrativeLanguageCatalog.supports(key: setting.key) {
+                return "\(values.count) language\(values.count == 1 ? "" : "s")"
+            }
+        #endif
         if AdministrativeStringListOptionCatalog.usesFixedOptions(for: setting) {
             return "\(values.count) selected"
         }
