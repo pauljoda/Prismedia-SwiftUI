@@ -58,16 +58,28 @@ import SwiftUI
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.textSecondary)
             } else {
-                LabeledContent {
-                    Picker("Quality Profile", selection: profileBinding) {
-                        ForEach(compatibleProfiles) { profile in
-                            Text(profile.displayName).tag(Optional(profile.id))
+                Group {
+                    #if os(iOS)
+                        PrismediaMenuPicker(
+                            title: "Quality Profile",
+                            systemImage: "slider.horizontal.3",
+                            selectedValue: compatibleProfiles.first { $0.id == profileBinding.wrappedValue }?
+                                .displayName ?? "Choose Profile",
+                            selection: profileBinding
+                        ) {
+                            profileOptions
                         }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                } label: {
-                    Label("Quality Profile", systemImage: "slider.horizontal.3")
+                    #else
+                        LabeledContent {
+                            Picker("Quality Profile", selection: profileBinding) {
+                                profileOptions
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                        } label: {
+                            Label("Quality Profile", systemImage: "slider.horizontal.3")
+                        }
+                    #endif
                 }
                 .onChange(of: selectedProfileID) { _, profileID in
                     let profile = compatibleProfiles.first { $0.id == profileID }
@@ -86,17 +98,39 @@ import SwiftUI
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.destructive)
             } else {
-                LabeledContent {
-                    Picker("Import Into", selection: rootBinding) {
-                        ForEach(compatibleRoots) { root in
-                            Text(root.label).tag(Optional(root.id))
-                        }
+                #if os(iOS)
+                    PrismediaMenuPicker(
+                        title: "Import Into",
+                        systemImage: "folder",
+                        selectedValue: compatibleRoots.first { $0.id == rootBinding.wrappedValue }?.label
+                            ?? "Choose Library",
+                        selection: rootBinding
+                    ) {
+                        rootOptions
                     }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                } label: {
-                    Label("Import Into", systemImage: "folder")
-                }
+                #else
+                    LabeledContent {
+                        Picker("Import Into", selection: rootBinding) {
+                            rootOptions
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                    } label: {
+                        Label("Import Into", systemImage: "folder")
+                    }
+                #endif
+            }
+        }
+
+        private var profileOptions: some View {
+            ForEach(compatibleProfiles) { profile in
+                Text(profile.displayName).tag(Optional(profile.id))
+            }
+        }
+
+        private var rootOptions: some View {
+            ForEach(compatibleRoots) { root in
+                Text(root.label).tag(Optional(root.id))
             }
         }
 

@@ -64,7 +64,7 @@ import SwiftUI
         }
 
         private var loadingView: some View {
-            PrismediaLoadingView("Building the canonical proposal…")
+            PrismediaLoadingView("Loading request details…")
         }
 
         private var errorView: some View {

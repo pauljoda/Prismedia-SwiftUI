@@ -9,6 +9,12 @@ import SwiftUI
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                #if os(iOS)
+                    Text(field.label)
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textPrimary)
+                        .accessibilityHidden(true)
+                #endif
                 input
 
                 if let help = field.help, !help.isEmpty {
