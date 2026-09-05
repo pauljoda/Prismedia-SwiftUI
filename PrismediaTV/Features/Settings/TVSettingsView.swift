@@ -12,7 +12,6 @@ import SwiftUI
         @State private var plugins: [AdministrativePlugin] = []
         @State private var isLoadingServerSettings = false
         @State private var message: String?
-        @State private var isConfirmingSignOut = false
 
         var body: some View {
             TVSettingsDirectoryView(
@@ -46,12 +45,6 @@ import SwiftUI
                     await loadServerSettings()
                 }
             }
-            .alert("Sign Out?", isPresented: $isConfirmingSignOut) {
-                Button("Cancel", role: .cancel) {}
-                Button("Sign Out", role: .destructive, action: onSignOut)
-            } message: {
-                Text("You’ll return to the Prismedia sign-in screen on this Apple TV.")
-            }
             .alert("Settings", isPresented: messageIsPresented) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -73,9 +66,7 @@ import SwiftUI
                     )
                 )
             case .account:
-                TVAccountSettingsView(user: user) {
-                    isConfirmingSignOut = true
-                }
+                TVAccountSettingsView(user: user, onSignOut: onSignOut)
             }
         }
 
