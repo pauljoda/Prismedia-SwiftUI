@@ -3,6 +3,53 @@ import XCTest
 @testable import PrismediaCore
 
 final class AdministrativeSettingsCatalogTests: XCTestCase {
+    @MainActor
+    func testSupportingReadFailuresDoNotDiscardSettingsAndCanRetryIndependently() async {
+        let session = AdministrativeSettingsLoadSession()
+        await session.load(service: AdministrativePreviewService(cacheUnavailable: true, pluginsUnavailable: true))
+        XCTAssertTrue(session.catalog.isReady)
+        XCTAssertFalse(session.catalog.items.isEmpty)
+        XCTAssertNotNil(session.cache.errorMessage)
+        XCTAssertNotNil(session.plugins.errorMessage)
+
+        await session.loadCache(service: AdministrativePreviewService())
+        XCTAssertTrue(session.cache.isReady)
+        XCTAssertNotNil(session.plugins.errorMessage)
+        XCTAssertTrue(session.catalog.isReady)
+        await session.loadPlugins(service: AdministrativePreviewService())
+        XCTAssertTrue(session.plugins.isReady)
+    }
+
+    @MainActor
+    func testCatalogRefreshFailureRetainsCategoriesUntilSuccessfulRetry() async {
+        let session = AdministrativeSettingsLoadSession()
+        await session.load(service: AdministrativePreviewService())
+        let groups = session.catalog.items.first?.groups
+        await session.loadCatalog(service: AdministrativePreviewService(settingsUnavailable: true))
+        XCTAssertEqual(session.catalog.items.first?.groups, groups)
+        XCTAssertFalse(session.catalog.isReady)
+        XCTAssertNotNil(session.catalog.errorMessage)
+        XCTAssertTrue(session.cache.isReady)
+        await session.loadCatalog(service: AdministrativePreviewService())
+        XCTAssertTrue(session.catalog.isReady)
+        XCTAssertNil(session.catalog.errorMessage)
+    }
+
+    @MainActor
+    func testAcknowledgedSettingRemainsVisibleWhenFollowUpRefreshFails() async throws {
+        let session = AdministrativeSettingsLoadSession()
+        await session.load(service: AdministrativePreviewService())
+        let confirmed = try JSONDecoder().decode(
+            AdministrativeSetting.self,
+            from: Data(
+                #"{"key":"scan.intervalMinutes","groupKey":"library","label":"Scan interval","description":"Updated by server","type":"integer","value":90,"defaultValue":60,"isDefault":false,"order":0,"options":[]}"#
+                    .utf8))
+        session.accept(confirmed)
+        await session.loadCatalog(service: AdministrativePreviewService(settingsUnavailable: true))
+        XCTAssertEqual(session.catalog.items.first?.groups.first?.settings.first, confirmed)
+        XCTAssertNotNil(session.catalog.errorMessage)
+    }
+
     func testDecodesStringListsAndSettingConstraints() throws {
         let data = Data(
             #"{"groups":[{"key":"subtitles","label":"Subtitles","description":"Caption defaults","order":1,"settings":[{"key":"subtitles.preferredLanguages","groupKey":"subtitles","label":"Preferred languages","description":"Language priority","type":"stringList","value":["en","eng"],"defaultValue":["en"],"isDefault":false,"order":1,"constraints":{"minItems":1,"maxItems":3},"options":[],"inputKind":null,"applyHint":null}]}]}"#

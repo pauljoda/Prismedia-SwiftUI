@@ -1,10 +1,8 @@
 import SwiftUI
 
 struct AdministrativeSettingsView: View {
-    @State private var catalog = AdministrativeSettingsCatalog(groups: [])
-    @State private var cacheStatus: AdministrativeTranscodeCacheStatus?
-    @State private var plugins: [AdministrativePlugin] = []
-    @State private var isWorking = true
+    @State private var loading = AdministrativeSettingsLoadSession()
+    @State private var isSaving = false
     @State private var message: String?
     private let service: any AdministrationServicing
     private let user: UserAccount
@@ -39,19 +37,17 @@ struct AdministrativeSettingsView: View {
         NavigationStack {
             settingsRootContent
                 .prismediaScreenBackground()
-                .overlay {
-                    if isWorking && sections.isEmpty {
-                        PrismediaLoadingView("Loading settings…")
-                    } else if isWorking {
-                        ProgressView("Loading settings…")
-                    }
-                }
                 .navigationTitle("Settings")
                 .navigationDestination(for: AdministrativeSettingsSection.self) { section in
                     AdministrativeSettingsDetailView(
                         section: currentSection(id: section.id) ?? section,
-                        cacheStatus: cacheStatus,
-                        plugins: plugins,
+                        cacheStatus: loading.cache.items.first,
+                        plugins: loading.plugins.items,
+                        canEditSettings: loading.catalog.isReady && !isSaving,
+                        isRefreshingSettings: loading.catalog.isLoading,
+                        isSavingSetting: isSaving,
+                        arePluginsAvailable: loading.plugins.isReady,
+                        isCacheReady: loading.cache.isReady,
                         hidesNsfw: hidesNsfw,
                         blocklistService: service,
                         profileService: service,
@@ -66,6 +62,14 @@ struct AdministrativeSettingsView: View {
                     }
                 #endif
                 .refreshable { await load() }
+                .toolbar {
+                    if user.isAdmin {
+                        PrismediaToolbarActionButton("Refresh Settings", systemImage: "arrow.clockwise") {
+                            Task { await load() }
+                        }
+                        .disabled(loading.isLoading || isSaving)
+                    }
+                }
                 .alert("Settings", isPresented: messageIsPresented) {
                     Button("OK", role: .cancel) {}
                 } message: {
@@ -80,6 +84,10 @@ struct AdministrativeSettingsView: View {
     private var settingsRootContent: some View {
         #if os(macOS)
             ScrollView {
+                if showsLoadFeedback {
+                    AdministrativeSettingsLoadFeedback(session: loading, service: service)
+                        .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+                }
                 LazyVGrid(
                     columns: [
                         GridItem(
@@ -139,6 +147,11 @@ struct AdministrativeSettingsView: View {
             }
         #else
             List {
+                if showsLoadFeedback {
+                    Section {
+                        AdministrativeSettingsLoadFeedback(session: loading, service: service)
+                    }
+                }
                 #if os(iOS) || os(macOS)
                     Section("App Settings") {
                         directoryLink("Entity Grids", "rectangle.grid.2x2", "app-settings")
@@ -248,7 +261,14 @@ struct AdministrativeSettingsView: View {
     #endif
 
     private var sections: [AdministrativeSettingsSection] {
-        AdministrativeSettingsSectionCatalog.sections(for: catalog)
+        AdministrativeSettingsSectionCatalog.sections(
+            for: loading.catalog.items.first ?? AdministrativeSettingsCatalog(groups: []))
+    }
+
+    private var showsLoadFeedback: Bool {
+        user.isAdmin
+            && (loading.isLoading || loading.catalog.errorMessage != nil
+                || loading.cache.errorMessage != nil || loading.plugins.errorMessage != nil)
     }
 
     private var messageIsPresented: Binding<Bool> {
@@ -264,7 +284,7 @@ struct AdministrativeSettingsView: View {
                     .foregroundStyle(settingsAccent(for: value))
             }
         }
-            .accessibilityIdentifier("administration.settings.section.\(value)")
+        .accessibilityIdentifier("administration.settings.section.\(value)")
     }
 
     private func settingsAccent(for id: String) -> Color {
@@ -304,30 +324,23 @@ struct AdministrativeSettingsView: View {
     private func currentSection(id: String) -> AdministrativeSettingsSection? { sections.first { $0.id == id } }
 
     private func load() async {
-        isWorking = true
-        defer { isWorking = false }
-        guard user.isAdmin else {
-            catalog = AdministrativeSettingsCatalog(groups: [])
-            cacheStatus = nil
-            plugins = []
-            return
-        }
-        do {
-            async let loadedCatalog = service.settings()
-            async let loadedCache = service.transcodeCacheStatus()
-            catalog = try await loadedCatalog
-            cacheStatus = try await loadedCache
-            plugins = (try? await service.plugins()) ?? []
-        } catch { message = error.localizedDescription }
+        guard user.isAdmin, !isSaving else { return }
+        await loading.load(service: service)
     }
 
     private func save(setting: AdministrativeSetting, value: AdministrativeJSONValue) async
         -> AdministrativeSettingsSection?
     {
+        guard user.isAdmin, loading.catalog.isReady, !isSaving else { return nil }
+        isSaving = true
+        defer { isSaving = false }
         do {
-            _ = try await service.updateSetting(key: setting.key, value: value)
-            catalog = try await service.settings()
-            return currentSection(id: sectionID(containing: setting.groupKey))
+            let saved = try await service.updateSetting(key: setting.key, value: value)
+            loading.accept(saved)
+            let updatedSectionID = sectionID(containing: saved.groupKey)
+            let confirmedSection = currentSection(id: updatedSectionID)
+            await loading.loadCatalog(service: service)
+            return currentSection(id: updatedSectionID) ?? confirmedSection
         } catch {
             message = error.localizedDescription
             return nil
@@ -341,7 +354,7 @@ struct AdministrativeSettingsView: View {
     private func clearCache() async -> AdministrativeTranscodeCacheStatus? {
         do {
             let status = try await service.clearTranscodeCache()
-            cacheStatus = status
+            loading.accept(status)
             message = "Transcode cache cleared."
             return status
         } catch {

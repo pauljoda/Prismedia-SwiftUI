@@ -2,9 +2,14 @@ import SwiftUI
 
 struct AdministrativeSettingsDetailView: View {
     @State private var section: AdministrativeSettingsSection
-    @State private var cacheStatus: AdministrativeTranscodeCacheStatus?
+    let cacheStatus: AdministrativeTranscodeCacheStatus?
     @State private var isPerformingAction = false
     let plugins: [AdministrativePlugin]
+    let canEditSettings: Bool
+    let isRefreshingSettings: Bool
+    let isSavingSetting: Bool
+    let arePluginsAvailable: Bool
+    let isCacheReady: Bool
     let hidesNsfw: Bool
     let blocklistService: (any AcquisitionBlocklistServicing)?
     let profileService: (any AdministrationServicing)?
@@ -16,6 +21,11 @@ struct AdministrativeSettingsDetailView: View {
         section: AdministrativeSettingsSection,
         cacheStatus: AdministrativeTranscodeCacheStatus?,
         plugins: [AdministrativePlugin] = [],
+        canEditSettings: Bool = true,
+        isRefreshingSettings: Bool = false,
+        isSavingSetting: Bool = false,
+        arePluginsAvailable: Bool = true,
+        isCacheReady: Bool = true,
         hidesNsfw: Bool = true,
         blocklistService: (any AcquisitionBlocklistServicing)? = nil,
         profileService: (any AdministrationServicing)? = nil,
@@ -24,8 +34,13 @@ struct AdministrativeSettingsDetailView: View {
         onCreateBackup: @escaping () async -> Bool
     ) {
         _section = State(initialValue: section)
-        _cacheStatus = State(initialValue: cacheStatus)
+        self.cacheStatus = cacheStatus
         self.plugins = plugins
+        self.canEditSettings = canEditSettings
+        self.isRefreshingSettings = isRefreshingSettings
+        self.isSavingSetting = isSavingSetting
+        self.arePluginsAvailable = arePluginsAvailable
+        self.isCacheReady = isCacheReady
         self.hidesNsfw = hidesNsfw
         self.blocklistService = blocklistService
         self.profileService = profileService
@@ -36,6 +51,16 @@ struct AdministrativeSettingsDetailView: View {
 
     var body: some View {
         Form {
+            if isSavingSetting {
+                Section { ProgressView("Saving setting…") }
+            } else if isRefreshingSettings {
+                Section { ProgressView("Refreshing settings…") }
+            } else if !canEditSettings {
+                Section {
+                    Text("Reload server settings from Settings before editing.")
+                        .foregroundStyle(.secondary)
+                }
+            }
             if section.id == "subtitles" {
                 AdministrativeSubtitlePreview(settings: settings)
             }
@@ -55,7 +80,18 @@ struct AdministrativeSettingsDetailView: View {
                             section = updated
                             return true
                         }
+                        .disabled(
+                            !canEditSettings
+                                || (!arePluginsAvailable
+                                    && setting.key == PrismediaContractCodes.SettingKey.autoIdentifyProviders)
+                        )
                         .id(setting.value)
+                        if !arePluginsAvailable
+                            && setting.key == PrismediaContractCodes.SettingKey.autoIdentifyProviders
+                        {
+                            Text("Reload provider choices from Settings before changing this selection.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
                     }
                 } header: {
                     Text(group.label)
@@ -65,9 +101,15 @@ struct AdministrativeSettingsDetailView: View {
             }
 
             if section.includesTranscodeCacheActions {
+                if !isCacheReady {
+                    Section {
+                        Text("Reload cache status from Settings before clearing prepared streams.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
                 AdministrativeTranscodeCacheSection(
                     status: cacheStatus,
-                    isWorking: isPerformingAction
+                    isWorking: isPerformingAction || !isCacheReady
                 ) {
                     await performCacheClear()
                 }
@@ -103,7 +145,8 @@ struct AdministrativeSettingsDetailView: View {
     private func performCacheClear() async {
         isPerformingAction = true
         defer { isPerformingAction = false }
-        if let status = await onClearCache() { cacheStatus = status }
+        guard isCacheReady else { return }
+        _ = await onClearCache()
     }
 
     private func performBackup() async {

@@ -2,6 +2,9 @@ import Foundation
 
 #if DEBUG
     struct AdministrativePreviewService: AdministrationServicing {
+        var settingsUnavailable = false
+        var cacheUnavailable = false
+        var pluginsUnavailable = false
         static let setting = AdministrativeSetting(
             key: "scan.intervalMinutes",
             groupKey: "library",
@@ -160,7 +163,10 @@ import Foundation
             selectedImages: [String: String?]?
         ) async throws {}
         func removeIdentifyItem(entityID: UUID) async throws {}
-        func plugins() async throws -> [AdministrativePlugin] { [] }
+        func plugins() async throws -> [AdministrativePlugin] {
+            if pluginsUnavailable { throw URLError(.cannotConnectToHost) }
+            return []
+        }
         func updatePlugin(id: String) async throws -> AdministrativePlugin { throw CancellationError() }
         func searchRequests(kind: String, pluginID: String, fields: [String: String], limit: Int?) async throws
             -> AdministrativeRequestSearchResponse
@@ -197,7 +203,8 @@ import Foundation
             AdministrativeBulkJobResponse(enqueued: 0, skipped: 0)
         }
         func settings() async throws -> AdministrativeSettingsCatalog {
-            AdministrativeSettingsCatalog(groups: [
+            if settingsUnavailable { throw URLError(.cannotConnectToHost) }
+            return AdministrativeSettingsCatalog(groups: [
                 AdministrativeSettingsGroup(
                     key: "library",
                     label: "Library",
@@ -214,7 +221,8 @@ import Foundation
             Self.setting
         }
         func transcodeCacheStatus() async throws -> AdministrativeTranscodeCacheStatus {
-            AdministrativeTranscodeCacheStatus(usedBytes: 512_000_000, maxBytes: 4_000_000_000)
+            if cacheUnavailable { throw URLError(.cannotConnectToHost) }
+            return AdministrativeTranscodeCacheStatus(usedBytes: 512_000_000, maxBytes: 4_000_000_000)
         }
         func clearTranscodeCache() async throws -> AdministrativeTranscodeCacheStatus {
             AdministrativeTranscodeCacheStatus(usedBytes: 0, maxBytes: 4_000_000_000)
