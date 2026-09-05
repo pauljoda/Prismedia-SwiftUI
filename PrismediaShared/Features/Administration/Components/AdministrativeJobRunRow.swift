@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdministrativeJobRunRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let job: AdministrativeJobRun
     let isWorking: Bool
     let onCancel: (AdministrativeJobRun) -> Void
@@ -40,30 +41,35 @@ struct AdministrativeJobRunRow: View {
                     details
                 }
             #else
-            DisclosureGroup(isExpanded: $showsDetails) {
-                details
-            } label: {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Label(job.targetLabel ?? displayName, systemImage: statusImage)
-                            .lineLimit(2)
-                        Spacer(minLength: PrismediaSpacing.medium)
-                        Text(job.status.capitalized)
-                            .font(.caption)
-                            .foregroundStyle(statusColor)
-                    }
+                DisclosureGroup(isExpanded: $showsDetails) {
+                    details
+                } label: {
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                        let layout =
+                            dynamicTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: PrismediaSpacing.small))
+                            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: PrismediaSpacing.medium))
+                        layout {
+                            Label(job.targetLabel ?? displayName, systemImage: statusImage)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(job.status.capitalized)
+                                .font(.caption)
+                                .foregroundStyle(statusColor)
+                                .fixedSize(horizontal: true, vertical: false)
+                        }
 
-                    if showsProgress {
-                        ProgressView(value: Double(job.progress), total: 100)
-                            .accessibilityLabel("Progress")
-                            .accessibilityValue("\(job.progress) percent")
+                        if showsProgress {
+                            ProgressView(value: Double(job.progress), total: 100)
+                                .accessibilityLabel("Progress")
+                                .accessibilityValue("\(job.progress) percent")
+                        }
                     }
                 }
-            }
             #endif
 
             if job.isCancellable {
-                Button("Cancel", systemImage: "stop.fill", role: .destructive) {
+                PrismediaButton("Stop Job", systemImage: "stop.fill", variant: .destructive) {
                     onCancel(job)
                 }
                 .disabled(isWorking)
@@ -106,7 +112,7 @@ struct AdministrativeJobRunRow: View {
     }
 
     private var showsProgress: Bool {
-        ["active", "running"].contains(job.status.lowercased()) || job.progress > 0
+        AdministrativeJobListResponse.activeStatuses.contains(job.status.lowercased())
     }
 
     private var statusImage: String {

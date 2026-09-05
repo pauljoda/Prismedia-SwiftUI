@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdministrativeJobCatalogRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: String
     let description: String
     let systemImage: String
@@ -9,43 +10,52 @@ struct AdministrativeJobCatalogRow: View {
     let failedCount: Int
     let isWorking: Bool
     let accent: Color
+    var actionTitle = "Run"
     let onRun: () -> Void
     let onStop: () -> Void
     let onClearFailures: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: PrismediaSpacing.medium) {
-            Label {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text(title)
-                    Text(statusDescription)
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
+        let layout =
+            dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: PrismediaSpacing.medium))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: PrismediaSpacing.medium))
+        layout {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                Label {
+                    Text(title).font(.headline)
+                } icon: {
+                    Image(systemName: systemImage).foregroundStyle(accent)
                 }
-            } icon: {
-                Image(systemName: systemImage)
-                    .foregroundStyle(accent)
+                Text(statusDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(PrismediaColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: PrismediaSpacing.small)
-
-            if activeCount + queuedCount > 0 {
-                Button("Stop", systemImage: "stop.fill", role: .destructive, action: onStop)
+            HStack(spacing: PrismediaSpacing.small) {
+                if activeCount + queuedCount > 0 {
+                    PrismediaButton("Stop", variant: .destructive, action: onStop)
+                        .accessibilityLabel("Stop \(title)")
+                } else {
+                    PrismediaButton(actionTitle, action: onRun)
+                        .accessibilityLabel("\(actionTitle) \(title)")
+                }
+                if failedCount > 0 {
+                    Menu("More Actions", systemImage: "ellipsis") {
+                        Button(
+                            "Clear Failures", systemImage: "xmark.circle", role: .destructive, action: onClearFailures)
+                    }
                     .labelStyle(.iconOnly)
-                    .accessibilityLabel("Stop \(title)")
-            } else {
-                Button("Run", systemImage: "play.fill", action: onRun)
-                    .labelStyle(.iconOnly)
-                    .accessibilityLabel("Run \(title)")
+                    .buttonStyle(.glass)
+                    .accessibilityLabel("More \(title) actions")
+                }
             }
-
-            if failedCount > 0 {
-                Button("Clear Failures", systemImage: "xmark.circle", action: onClearFailures)
-                    .labelStyle(.iconOnly)
-                    .accessibilityLabel("Clear \(title) failures")
-            }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .disabled(isWorking)
+        .padding(.vertical, PrismediaSpacing.small)
     }
 
     private var statusDescription: String {

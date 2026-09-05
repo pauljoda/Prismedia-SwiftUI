@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdministrativeJobGroupView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: String
     let jobs: [AdministrativeJobRun]
     let statusLabel: String
@@ -54,21 +55,26 @@ struct AdministrativeJobGroupView: View {
                 }
             }
         #else
-        DisclosureGroup(isExpanded: $isExpanded) {
-            ForEach(jobs) { job in
-                AdministrativeJobRunRow(job: job, isWorking: isWorking, onCancel: onCancel)
-                if job.id != jobs.last?.id { Divider() }
+            DisclosureGroup(isExpanded: $isExpanded) {
+                ForEach(jobs) { job in
+                    AdministrativeJobRunRow(job: job, isWorking: isWorking, onCancel: onCancel)
+                }
+            } label: {
+                let layout =
+                    dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: PrismediaSpacing.small))
+                    : AnyLayout(HStackLayout(spacing: PrismediaSpacing.medium))
+                layout {
+                    Text(title)
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(jobs.count) \(statusLabel)")
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
             }
-        } label: {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                Spacer()
-                Text("\(jobs.count) \(statusLabel)")
-                    .font(.caption)
-                    .foregroundStyle(PrismediaColor.textSecondary)
-            }
-        }
         #endif
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable {
+public protocol AdministrationServicing: AcquisitionBlocklistServicing, AdministrativeJobServicing, Sendable {
     func fileRoots() async throws -> [AdministrativeFileRoot]
     func fileChildren(rootID: UUID, path: String) async throws -> AdministrativeFileChildrenResponse
     func rescan(rootID: UUID, path: String?) async throws -> AdministrativeFileOperationResponse
@@ -58,11 +58,6 @@ public protocol AdministrationServicing: AcquisitionBlocklistServicing, Sendable
         searchAfterDateType: EntityDateType?,
         searchDelayDays: Int
     ) async throws -> AdministrativeAcquisitionProfile
-    func jobs() async throws -> AdministrativeJobListResponse
-    func createJob(type: String) async throws -> AdministrativeJobRun
-    func cancelJob(id: UUID) async throws -> Int
-    func cancelJobs(type: String?) async throws -> Int
-    func clearFailures(type: String?) async throws -> Int
     func rebuildPreviews() async throws -> AdministrativeBulkJobResponse
     func settings() async throws -> AdministrativeSettingsCatalog
     func settingValues(keys: [String]) async throws -> AdministrativeSettingsValuesResponse
