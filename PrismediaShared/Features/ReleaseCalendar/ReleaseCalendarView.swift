@@ -49,15 +49,16 @@ import SwiftUI
                         }
                     }
                 } else {
-                    ZStack(alignment: .top) {
-                        monthPage
-                            .id(displayedMonthKey)
-                            .transition(monthTransition)
-                        ReleaseCalendarMonthNavigationControls(
+                    VStack(spacing: 0) {
+                        ReleaseCalendarMonthHeader(
+                            month: displayedMonth,
                             isDisabled: pendingMonth != nil,
                             onPrevious: { moveMonth(-1) },
                             onNext: { moveMonth(1) }
                         )
+                        monthPage
+                            .id(displayedMonthKey)
+                            .transition(monthTransition)
                     }
                 }
             }
@@ -83,13 +84,6 @@ import SwiftUI
         @ViewBuilder
         private var monthPage: some View {
             VStack(spacing: 0) {
-                Text(displayedMonth, format: .dateTime.month(.wide).year())
-                    .font(.title2.bold())
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .padding(PrismediaSpacing.large)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityIdentifier("release-calendar.month")
-
                 if usesMonthGrid {
                     ScrollView {
                         monthGrid
