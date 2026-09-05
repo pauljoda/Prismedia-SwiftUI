@@ -11,6 +11,7 @@ public struct TVHomeShelf: Identifiable, Hashable, Sendable {
     /// Activity is library-wide on the server. Keep the television activity
     /// shelves scoped to video-family entities.
     public func accepts(_ item: EntityThumbnail) -> Bool {
+        guard TVPlaybackCatalogPolicy.accepts(item) else { return false }
         guard id == "in-progress" || id == "recently-watched" else { return true }
         return [.movie, .video, .videoSeries, .videoSeason].contains(item.kind)
     }
@@ -27,7 +28,9 @@ public struct TVHomeShelf: Identifiable, Hashable, Sendable {
         self.id = id
         self.title = title
         self.systemImage = systemImage
-        self.query = query
+        var playbackQuery = query
+        playbackQuery.hasFile = true
+        self.query = playbackQuery
         self.limit = limit
         self.destinationTabID = destinationTabID
     }

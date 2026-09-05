@@ -31,7 +31,7 @@ import SwiftUI
                             endPoint: .bottom
                         )
                         LinearGradient(
-                            colors: [.black.opacity(0.82), .black.opacity(0.12), .clear],
+                            colors: [.black.opacity(0.82), .black.opacity(0.28), .black.opacity(0.72)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )

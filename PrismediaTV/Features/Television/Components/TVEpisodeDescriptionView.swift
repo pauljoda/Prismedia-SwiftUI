@@ -13,9 +13,9 @@ import SwiftUI
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                 Text(text)
-                    .font(.system(size: 24))
+                    .font(PrismediaTypography.caption)
                     .foregroundStyle(PrismediaColor.onMedia.opacity(0.88))
-                    .lineLimit(3)
+                    .lineLimit(5)
                     .fixedSize(horizontal: false, vertical: true)
                     .onGeometryChange(for: CGSize.self) { proxy in
                         proxy.size
@@ -26,7 +26,7 @@ import SwiftUI
 
                 if measuredWidth > 0 {
                     Text(text)
-                        .font(.system(size: 24))
+                        .font(PrismediaTypography.caption)
                         .frame(width: measuredWidth, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                         .hidden()
@@ -41,7 +41,7 @@ import SwiftUI
 
                 if isTruncated {
                     Button("Read more") { showsFullDescription = true }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.borderless)
                         .controlSize(.small)
                         .font(PrismediaTypography.captionEmphasized)
                         .accessibilityHint("Shows the full episode description")
@@ -60,8 +60,7 @@ import SwiftUI
         }
 
         private var isTruncated: Bool {
-            (collapsedHeight > 0 && fullHeight > collapsedHeight + 1)
-                || TVEpisodeDescriptionPresentation.likelyRequiresDisclosure(text)
+            collapsedHeight > 0 && fullHeight > collapsedHeight + PrismediaLayout.hairline
         }
     }
 #endif

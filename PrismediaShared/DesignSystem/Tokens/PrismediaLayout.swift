@@ -43,4 +43,6 @@ public enum PrismediaLayout {
     public static let compactBrandMark: CGFloat = 72
     public static let televisionBrandMark: CGFloat = 148
     public static let televisionContentInset: CGFloat = 72
+    /// Reserves an aligned summary band above a television detail page's browsing rail.
+    public static let televisionDetailSummaryMinimumHeight: CGFloat = 320
 }

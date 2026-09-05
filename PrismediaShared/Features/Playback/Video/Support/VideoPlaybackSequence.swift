@@ -1,7 +1,8 @@
 import Foundation
 
 enum VideoPlaybackSequence {
-    static func nextEpisode(after videoID: UUID, in group: EntityGroup) -> EntityThumbnail? {
+    static func nextEpisode(after videoID: UUID, in group: EntityGroup, playableOnly: Bool = false) -> EntityThumbnail?
+    {
         guard group.kind == .videoEpisode else { return nil }
 
         let orderedEpisodes = group.entities.enumerated().sorted { lhs, rhs in
@@ -12,8 +13,6 @@ enum VideoPlaybackSequence {
         let episodes = EntitySharedSourceEpisodePresentation.coalesced(orderedEpisodes)
 
         guard let currentIndex = episodes.firstIndex(where: { $0.representsEpisode(id: videoID) }) else { return nil }
-        let nextIndex = episodes.index(after: currentIndex)
-        guard episodes.indices.contains(nextIndex) else { return nil }
-        return episodes[nextIndex]
+        return episodes.dropFirst(currentIndex + 1).first { !playableOnly || $0.hasSourceMedia }
     }
 }

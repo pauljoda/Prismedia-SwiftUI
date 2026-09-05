@@ -171,7 +171,7 @@ struct VideoEntityPlaybackView: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, PrismediaLayout.televisionContentInset)
+                    .padding(.horizontal, tvLayout == .compact ? 0 : PrismediaLayout.televisionContentInset)
                     .padding(.vertical, tvLayout == .compact ? PrismediaSpacing.small : PrismediaSpacing.large)
                     .prismediaFocusSection()
                 } else if loadFailed {

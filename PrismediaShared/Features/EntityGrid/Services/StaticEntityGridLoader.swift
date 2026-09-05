@@ -35,6 +35,9 @@ struct StaticEntityGridLoader: EntityGridLoading {
         query: EntityListQuery,
         search: String?
     ) -> [EntityThumbnail] {
+        #if os(tvOS)
+            let candidates = candidates.filter(TVPlaybackCatalogPolicy.accepts)
+        #endif
         let kinds = query.kind.map { [$0] } ?? query.kinds
         let normalizedSearch = EntityGridSnapshot.normalizedSearch(search ?? "")
 

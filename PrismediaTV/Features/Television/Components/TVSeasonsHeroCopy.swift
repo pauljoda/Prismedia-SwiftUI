@@ -2,12 +2,13 @@ import SwiftUI
 
 #if os(tvOS)
 
-    struct TVSeasonsHeroCopy: View {
+    struct TVSeasonsHeroCopy<Playback: View>: View {
         let series: EntityDetail
         let selectedEpisode: EntityThumbnail?
         let selectedEpisodeDetail: EntityDetail?
         let seasons: [EntityThumbnail]
         let selectedSeasonID: UUID?
+        @ViewBuilder let playback: () -> Playback
 
         var body: some View {
             let seriesPresentation = EntityDetailPresentation(detail: series)
@@ -17,40 +18,41 @@ import SwiftUI
                 seriesDescription: seriesPresentation.description
             )
 
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Text(series.title)
-                    .font(.system(size: 42, weight: .bold))
-                    .foregroundStyle(PrismediaColor.onMedia)
-                    .lineLimit(1, reservesSpace: true)
+            HStack(alignment: .top, spacing: PrismediaSpacing.screen) {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                    Text(series.title)
+                        .font(PrismediaTypography.sectionTitle)
+                        .foregroundStyle(PrismediaColor.onMedia)
+                        .lineLimit(1, reservesSpace: true)
 
-                Text(selectedEpisode.map(episodeSubtitle) ?? " ")
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(PrismediaColor.onMedia.opacity(0.92))
-                    .lineLimit(2, reservesSpace: true)
+                    Text(selectedEpisode.map(episodeSubtitle) ?? " ")
+                        .font(PrismediaTypography.body.weight(.semibold))
+                        .foregroundStyle(PrismediaColor.onMedia)
+                        .lineLimit(2)
+
+                    let badges = EntityDetailPresentation(
+                        detail: selectedEpisodeDetail ?? series,
+                        mediaThumbnail: selectedEpisode
+                    ).mediaBadges
+                    if !badges.isEmpty {
+                        EntityDetailMediaChipsView(badges: badges)
+                    }
+
+                    playback()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let description {
                     TVEpisodeDescriptionView(
                         title: selectedEpisode?.displayTitle ?? series.title,
                         text: description
                     )
-                    .containerRelativeFrame(.horizontal) { length, _ in
-                        length / 3
-                    }
-                }
-
-                let badges = EntityDetailPresentation(
-                    detail: selectedEpisodeDetail ?? series,
-                    mediaThumbnail: selectedEpisode
-                ).mediaBadges
-                if !badges.isEmpty {
-                    EntityDetailMediaChipsView(badges: badges)
-                        .containerRelativeFrame(.horizontal) { length, _ in
-                            length / 3
-                        }
+                    .containerRelativeFrame(.horizontal) { length, _ in length / 3 }
+                    .prismediaFocusSection()
                 }
             }
             .padding(.horizontal, PrismediaLayout.televisionContentInset)
-            .frame(minHeight: 250, alignment: .bottomLeading)
+            .frame(minHeight: PrismediaLayout.televisionDetailSummaryMinimumHeight, alignment: .bottomLeading)
             .transaction { $0.disablesAnimations = true }
         }
 
@@ -80,7 +82,9 @@ import SwiftUI
                 selectedEpisodeDetail: TVSeasonsPreviewData.episode,
                 seasons: [TVSeasonsPreviewData.seasonThumbnail],
                 selectedSeasonID: TVSeasonsPreviewData.seasonID
-            )
+            ) {
+                TVPlaybackLaunchButton(title: "Play", systemImage: "play.fill", isPrimary: true) {}
+            }
         }
         .environment(\.dynamicTypeSize, .accessibility3)
     }

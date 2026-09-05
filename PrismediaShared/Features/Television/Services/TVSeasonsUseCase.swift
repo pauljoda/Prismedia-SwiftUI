@@ -48,6 +48,7 @@ struct TVSeasonsUseCase: Sendable {
 
         guard rootDetail.kind == .videoSeries,
             let episode = try await loadEpisode(id: episodeID),
+            episode.hasSourceMedia,
             let seasonID = episode.parentEntityID,
             TVSeasonsPresentation.seasons(in: rootDetail).contains(where: { $0.id == seasonID })
         else { return nil }

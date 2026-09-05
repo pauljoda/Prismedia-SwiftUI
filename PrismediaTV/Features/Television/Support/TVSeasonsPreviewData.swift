@@ -15,11 +15,12 @@ import SwiftUI
                 parentEntityID: seriesID,
                 parentKind: .videoSeries,
                 sortOrder: 1,
-                meta: [EntityThumbnailMeta(icon: "video", label: "10 episodes")]
+                meta: [EntityThumbnailMeta(icon: "video", label: "10 episodes")],
+                hasSourceMedia: true
             )
             static let episodeThumbnail = EntityThumbnail(
                 id: episodeID,
-                kind: .video,
+                kind: .videoEpisode,
                 title: "The Signal",
                 subtitle: "Season 1",
                 parentEntityID: seasonID,
@@ -28,7 +29,8 @@ import SwiftUI
                 meta: [
                     EntityThumbnailMeta(icon: "duration", label: "42 min"),
                     EntityThumbnailMeta(icon: "resolution", label: "4K"),
-                ]
+                ],
+                hasSourceMedia: true
             )
             static let series = EntityDetail(
                 id: seriesID,
@@ -36,7 +38,7 @@ import SwiftUI
                 title: "The Chair Company",
                 parentEntityID: nil,
                 sortOrder: nil,
-                hasSourceMedia: false,
+                hasSourceMedia: true,
                 capabilities: [],
                 childrenByKind: [.init(kind: .videoSeason, label: "Seasons", entities: [seasonThumbnail], code: nil)],
                 relationships: []
@@ -47,19 +49,21 @@ import SwiftUI
                 title: "Season 1",
                 parentEntityID: seriesID,
                 sortOrder: 1,
-                hasSourceMedia: false,
+                hasSourceMedia: true,
                 capabilities: [],
-                childrenByKind: [.init(kind: .video, label: "Episodes", entities: [episodeThumbnail], code: nil)],
+                childrenByKind: [
+                    .init(kind: .videoEpisode, label: "Episodes", entities: [episodeThumbnail], code: nil)
+                ],
                 relationships: []
             )
             static let episode = EntityDetail(
                 id: episodeID,
-                kind: .video,
+                kind: .videoEpisode,
                 title: "The Signal",
                 parentEntityID: seasonID,
                 sortOrder: 1,
                 hasSourceMedia: true,
-                capabilities: [],
+                capabilities: [.playableVideo(.init())],
                 childrenByKind: [],
                 relationships: []
             )

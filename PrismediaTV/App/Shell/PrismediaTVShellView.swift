@@ -101,7 +101,7 @@ import SwiftUI
                         supportsSearch: isSearch,
                         minimumColumnWidth: 270
                     ),
-                    loader: PrismediaEntityGridLoader(client: client),
+                    loader: TVPlaybackCatalogLoader(client: client),
                     feedMediaDependencies: EntityMediaFeedDependencies(
                         detailLoader: dependencies.detailLoader,
                         sourceLoader: dependencies.imageSourceLoader,

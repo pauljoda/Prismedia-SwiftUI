@@ -3,6 +3,36 @@ import XCTest
 @testable import PrismediaCore
 
 final class TVSeasonsPresentationTests: XCTestCase {
+    func testPendingEpisodesCannotBeSelectedEvenByAnOldProgressTarget() {
+        let pending = EntityThumbnail(id: UUID(), kind: .videoEpisode, title: "Pending", sortOrder: 1)
+        let playable = thumbnail(kind: .videoEpisode, title: "Playable", order: 2)
+        let season = detail(
+            kind: .videoSeason,
+            children: [
+                EntityGroup(kind: .videoEpisode, label: "Episodes", entities: [pending, playable], code: nil)
+            ])
+        var snapshot = TVSeasonsSnapshot()
+        snapshot.installSeason(season, preferredEpisodeID: pending.id)
+        XCTAssertEqual(snapshot.episodes.map(\.id), [playable.id])
+        XCTAssertEqual(snapshot.selectedEpisode?.id, playable.id)
+        XCTAssertEqual(season.childrenByKind.first?.entities.count, 2, "The shared document stays unchanged")
+    }
+
+    func testEmptySeasonsAreExcludedFromSelectionAndAdjacentNavigation() {
+        let pending = EntityThumbnail(id: UUID(), kind: .videoSeason, title: "Pending", sortOrder: 1)
+        let playable = thumbnail(kind: .videoSeason, title: "Available", order: 2)
+        let series = detail(
+            kind: .videoSeries,
+            children: [
+                EntityGroup(kind: .videoSeason, label: "Seasons", entities: [pending, playable], code: nil)
+            ])
+        var snapshot = TVSeasonsSnapshot()
+        snapshot.applySeries(series, preferredSeasonID: pending.id)
+        XCTAssertEqual(snapshot.seasons.map(\.id), [playable.id])
+        XCTAssertEqual(snapshot.selectedSeasonID, playable.id)
+        XCTAssertNil(TVSeasonsPresentation.adjacentSeasons(selectedID: playable.id, seasons: snapshot.seasons).previous)
+    }
+
     func testSeriesSeasonsUseStructuralOrderInsteadOfResponseOrder() throws {
         let first = thumbnail(
             id: "11111111-1111-1111-1111-111111111111",
@@ -496,7 +526,8 @@ final class TVSeasonsUseCaseTests: XCTestCase {
             kind: .videoSeason,
             title: "Season 2",
             parentEntityID: seriesID,
-            sortOrder: 2
+            sortOrder: 2,
+            hasSourceMedia: true
         )
         let series = EntityDetail(
             id: seriesID,
@@ -557,14 +588,16 @@ final class TVSeasonsUseCaseTests: XCTestCase {
             title: "Episode 1",
             parentEntityID: seasonID,
             parentKind: .videoSeason,
-            sortOrder: 1
+            sortOrder: 1,
+            hasSourceMedia: true
         )
         let seasonThumbnail = EntityThumbnail(
             id: seasonID,
             kind: .videoSeason,
             title: "Season 1",
             parentEntityID: seriesID,
-            sortOrder: 1
+            sortOrder: 1,
+            hasSourceMedia: true
         )
         let series = EntityDetail(
             id: seriesID,

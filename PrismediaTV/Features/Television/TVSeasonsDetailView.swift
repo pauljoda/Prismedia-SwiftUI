@@ -35,43 +35,47 @@ import SwiftUI
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                Spacer(minLength: 24)
+                Spacer(minLength: PrismediaSpacing.extraExtraLarge)
                 TVSeasonsHeroCopy(
                     series: displayedSeries,
                     selectedEpisode: snapshot.selectedEpisode,
                     selectedEpisodeDetail: snapshot.selectedEpisodeDetail,
                     seasons: snapshot.seasons,
                     selectedSeasonID: snapshot.selectedSeasonID
-                )
-                TVSeasonsPlaybackArea(
-                    episode: snapshot.selectedEpisode,
-                    episodeDetail: snapshot.selectedEpisodeDetail,
-                    loader: loader,
-                    playbackService: playbackService,
-                    trickplayFrameLoader: dependencies.trickplayFrameLoader,
-                    fullscreenRequest: snapshot.fullscreenRequest,
-                    onFullscreenDismiss: handleFullscreenDismiss,
-                    onPlaybackProgressCommitted: { progress in
-                        Task { await refreshPlaybackProgress(for: progress.videoID) }
-                    },
-                    onAdvance: handleAdvancedEpisode
-                )
-                TVSeasonPicker(
-                    seasons: snapshot.seasons,
-                    selectedSeasonID: snapshot.selectedSeasonID,
-                    onSelect: { season in Task { await selectSeason(id: season.id) } }
-                )
-                TVEpisodeRail(
-                    episodes: snapshot.episodes,
-                    initialFocusEpisodeID: initialFocusEpisodeID,
-                    previousSeason: adjacentSeasons.previous,
-                    nextSeason: adjacentSeasons.next,
-                    isLoading: snapshot.isLoadingSeason,
-                    errorMessage: snapshot.seasonErrorMessage,
-                    onFocus: { applyEpisodeSelection($0, intent: .focus) },
-                    onActivate: { applyEpisodeSelection($0, intent: .activate) },
-                    onSelectSeason: { season in Task { await selectSeason(id: season.id) } }
-                )
+                ) {
+                    TVSeasonsPlaybackArea(
+                        episode: snapshot.selectedEpisode,
+                        episodeDetail: snapshot.selectedEpisodeDetail,
+                        loader: loader,
+                        playbackService: playbackService,
+                        trickplayFrameLoader: dependencies.trickplayFrameLoader,
+                        fullscreenRequest: snapshot.fullscreenRequest,
+                        onFullscreenDismiss: handleFullscreenDismiss,
+                        onPlaybackProgressCommitted: { progress in
+                            Task { await refreshPlaybackProgress(for: progress.videoID) }
+                        },
+                        onAdvance: handleAdvancedEpisode
+                    )
+                }
+                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                    TVSeasonPicker(
+                        seasons: snapshot.seasons,
+                        selectedSeasonID: snapshot.selectedSeasonID,
+                        onSelect: { season in Task { await selectSeason(id: season.id) } }
+                    )
+                    TVEpisodeRail(
+                        episodes: snapshot.episodes,
+                        initialFocusEpisodeID: initialFocusEpisodeID,
+                        previousSeason: adjacentSeasons.previous,
+                        nextSeason: adjacentSeasons.next,
+                        isLoading: snapshot.isLoadingSeason,
+                        errorMessage: snapshot.seasonErrorMessage,
+                        onFocus: { applyEpisodeSelection($0, intent: .focus) },
+                        onActivate: { applyEpisodeSelection($0, intent: .activate) },
+                        onSelectSeason: { season in Task { await selectSeason(id: season.id) } }
+                    )
+                }
+                .padding(.top, PrismediaSpacing.large)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.bottom, PrismediaSpacing.section)

@@ -18,10 +18,16 @@ struct VideoPlaybackAdvanceResolver {
         do {
             let parent = try await loader.loadEntity(id: parentID)
             guard !Task.isCancelled, lifecycleIsCurrent() else { return nil }
+            #if os(tvOS)
+                let playableOnly = true
+            #else
+                let playableOnly = false
+            #endif
             guard let episodeGroup = parent.childrenByKind.first(where: { $0.kind == .videoEpisode }),
                 let nextEpisode = VideoPlaybackSequence.nextEpisode(
                     after: completed.id,
-                    in: episodeGroup
+                    in: episodeGroup,
+                    playableOnly: playableOnly
                 )
             else { return nil }
 

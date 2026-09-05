@@ -94,6 +94,7 @@ enum TVSeasonsPresentation {
         let children = detail.childrenByKind
             .filter { $0.kind == kind }
             .flatMap(\.entities)
+            .filter(\.hasSourceMedia)
 
         return children.enumerated().sorted { lhs, rhs in
             let lhsOrder = lhs.element.sortOrder ?? Int.max

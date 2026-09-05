@@ -3,6 +3,16 @@ import XCTest
 @testable import PrismediaCore
 
 final class VideoPlaybackSequenceTests: XCTestCase {
+    func testPlaybackOnlySequenceSkipsPendingEpisodesWithoutChangingOtherClients() {
+        let first = EntityThumbnail(id: UUID(), kind: .videoEpisode, title: "First", sortOrder: 1, hasSourceMedia: true)
+        let pending = EntityThumbnail(id: UUID(), kind: .videoEpisode, title: "Pending", sortOrder: 2)
+        let last = EntityThumbnail(id: UUID(), kind: .videoEpisode, title: "Last", sortOrder: 3, hasSourceMedia: true)
+        let group = EntityGroup(kind: .videoEpisode, label: "Episodes", entities: [first, pending, last], code: nil)
+        XCTAssertEqual(VideoPlaybackSequence.nextEpisode(after: first.id, in: group, playableOnly: true)?.id, last.id)
+        XCTAssertEqual(VideoPlaybackSequence.nextEpisode(after: first.id, in: group)?.id, pending.id)
+        XCTAssertNil(VideoPlaybackSequence.nextEpisode(after: last.id, in: group, playableOnly: true))
+    }
+
     func testNextEpisodeUsesSeasonOrderEvenWhenResponseOrderDiffers() {
         let first = episode(id: "11111111-1111-1111-1111-111111111111", order: 1)
         let second = episode(id: "22222222-2222-2222-2222-222222222222", order: 2)

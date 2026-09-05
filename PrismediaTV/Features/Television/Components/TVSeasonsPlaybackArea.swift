@@ -42,7 +42,6 @@ import SwiftUI
                         .overlay { ProgressView().tint(PrismediaColor.onMedia) }
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, PrismediaLayout.televisionContentInset)
                 .frame(minHeight: 80)
                 .accessibilityLabel("Loading playback options")
             } else {

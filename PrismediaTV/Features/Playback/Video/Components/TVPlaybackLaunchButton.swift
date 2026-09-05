@@ -19,14 +19,14 @@ import SwiftUI
                     button.buttonStyle(.glass)
                 }
             }
-            .controlSize(.regular)
+            .controlSize(.small)
             .buttonBorderShape(.capsule)
         }
 
         private var button: some View {
             Button(action: action) {
                 Label(title, systemImage: systemImage)
-                    .font(PrismediaTypography.sectionTitle)
+                    .font(PrismediaTypography.body.weight(.semibold))
             }
         }
     }
