@@ -132,6 +132,7 @@ struct PrismediaButton: View {
             standardLabel
                 .font(.headline.weight(.bold))
                 .multilineTextAlignment(.center)
+                .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
         case .fillIcon:
@@ -159,7 +160,16 @@ struct PrismediaButton: View {
                         .accessibilityHidden(true)
                 }
             } else if let systemImage {
-                Label(title, systemImage: systemImage)
+                if form == .fill {
+                    HStack(alignment: .firstTextBaseline, spacing: PrismediaSpacing.small) {
+                        Image(systemName: systemImage).accessibilityHidden(true)
+                        Text(title)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Label(title, systemImage: systemImage)
+                }
             } else {
                 Text(title)
             }

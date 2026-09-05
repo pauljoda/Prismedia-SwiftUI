@@ -13,7 +13,7 @@ struct AdministrativeLibraryRootEditor: View {
     @State private var isNsfw: Bool
     @State private var autoIdentify: Bool
     @State private var selectedUserIDs: Set<UUID>
-    @State private var browser: AdministrativeLibraryBrowseResponse?
+    @State private var showsFolderPicker = false
     @State private var isWorking = false
     @State private var error: String?
     let target: AdministrativeLibraryEditorTarget
@@ -55,39 +55,42 @@ struct AdministrativeLibraryRootEditor: View {
         NavigationStack {
             Form {
                 Section("Location") {
-                    TextField("Server path", text: $path)
-                        .prismediaPlainTextInput()
-                    TextField("Label", text: $label)
-                    Button("Browse Server Folders", systemImage: "folder") { Task { await browse(path: path) } }
-                    if let browser {
-                        if let parent = browser.parentPath {
-                            Button("Up to \(parent)", systemImage: "arrow.up") { Task { await browse(path: parent) } }
-                        }
-                        ForEach(browser.directories) { directory in
-                            Button {
-                                path = directory.path
-                                Task { await browse(path: directory.path) }
-                            } label: {
-                                FullWidthButtonLabel { Label(directory.name, systemImage: "folder") }
-                            }
-                        }
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                        Text("Server path").font(.subheadline).foregroundStyle(.secondary)
+                        TextField("Choose or enter a folder", text: $path, axis: .vertical)
+                            .prismediaPlainTextInput()
+                    }
+                    Button("Browse Server Folders", systemImage: "folder") { showsFolderPicker = true }
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                        Text("Name").font(.subheadline).foregroundStyle(.secondary)
+                        TextField("Optional library name", text: $label)
                     }
                 }
                 Section("Scanning") {
-                    Toggle("Enabled", isOn: $enabled)
+                    Toggle("Scan this library", isOn: $enabled)
                     Toggle("Include subfolders", isOn: $recursive)
+                    Toggle("Identify automatically", isOn: $autoIdentify)
+                }
+                Section {
                     Toggle("Videos", isOn: $scanVideos)
                     Toggle("Images", isOn: $scanImages)
                     Toggle("Audio", isOn: $scanAudio)
                     Toggle("Books", isOn: $scanBooks)
-                    Toggle("Auto Identify", isOn: $autoIdentify)
-                    if allowsNsfw { Toggle("NSFW Library", isOn: $isNsfw) }
+                } header: {
+                    Text("Media Types")
+                } footer: {
+                    if ![scanVideos, scanImages, scanAudio, scanBooks].contains(true) {
+                        Text("Choose at least one media type to save the library.")
+                    }
                     if scanBooks && scanImages {
                         Text("ZIP and CBZ files can appear as both books and image galleries.")
                             .font(.footnote).foregroundStyle(PrismediaColor.warning)
                     }
                 }
-                if isAdministrator && !availableUsers.isEmpty {
+                if allowsNsfw {
+                    Section("Content") { Toggle("NSFW Library", isOn: $isNsfw) }
+                }
+                if isAdministrator && availableUsers.contains(where: { !$0.isAdmin }) {
                     Section("Member Access") {
                         ForEach(availableUsers.filter { !$0.isAdmin }) { user in
                             let isSelected = Binding(
@@ -110,11 +113,13 @@ struct AdministrativeLibraryRootEditor: View {
                 }
                 if let error { Section { Text(error).foregroundStyle(PrismediaColor.destructive) } }
             }
+            .disabled(isWorking)
             .prismediaScreenBackground()
             .navigationTitle(target.root == nil ? "Add Library" : "Edit Library")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                        .disabled(isWorking)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
@@ -123,6 +128,10 @@ struct AdministrativeLibraryRootEditor: View {
                     .disabled(!isValid || isWorking)
                 }
             }
+        }
+        .interactiveDismissDisabled(isWorking)
+        .sheet(isPresented: $showsFolderPicker) {
+            AdministrativeLibraryFolderPicker(initialPath: path, service: service) { path = $0 }
         }
     }
 
@@ -133,15 +142,8 @@ struct AdministrativeLibraryRootEditor: View {
 
     private func rootIsNsfwAndUserIsBlocked(_ user: UserAccount) -> Bool { isNsfw && !user.allowNsfw }
 
-    private func browse(path: String?) async {
-        isWorking = true
-        defer { isWorking = false }
-        do { browser = try await service.browse(path: path?.isEmpty == false ? path : nil) } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
     private func save() async {
+        guard !isWorking else { return }
         guard isValid else {
             error = "Choose a path and at least one media type."
             return
