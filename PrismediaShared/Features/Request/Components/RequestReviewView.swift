@@ -173,7 +173,8 @@ import SwiftUI
 
                 PrismediaButton(
                     isSubmitting ? "Requesting…" : requestButtonTitle(selection),
-                    systemImage: "paperplane",
+                    systemImage: selection.mode == .directChildren && selectedIDs.isEmpty
+                        ? "dot.radiowaves.left.and.right" : "paperplane",
                     variant: .prominent,
                     form: .fill,
                     primaryTint: primaryAccent,
@@ -191,20 +192,29 @@ import SwiftUI
 
         private func presetControls(_ selection: RequestReviewSelection) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                LabeledContent {
-                    Picker("Monitor", selection: presetBinding(selection)) {
-                        ForEach(RequestMonitorPreset.allCases.filter { $0 != .custom || isCustomSelection }) { preset in
-                            Text(preset.label).tag(preset)
-                        }
+                PrismediaMenuPicker(
+                    title: "Monitor",
+                    systemImage: "dot.radiowaves.left.and.right",
+                    selectedValue: (isCustomSelection ? RequestMonitorPreset.custom : chosenPreset).label,
+                    selection: presetBinding(selection)
+                ) {
+                    ForEach(RequestMonitorPreset.allCases.filter { $0 != .custom || isCustomSelection }) { preset in
+                        Text(preset.label).tag(preset)
                     }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                } label: {
-                    Label("Monitor", systemImage: "dot.radiowaves.left.and.right")
                 }
-                Text((isCustomSelection ? RequestMonitorPreset.custom : chosenPreset).detail)
+                Text(monitoringDetail)
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.textSecondary)
+            }
+        }
+
+        private var monitoringDetail: String {
+            guard isCustomSelection else { return chosenPreset.detail }
+            switch chosenPreset {
+            case .all, .future:
+                return "Request the selected items now and automatically monitor new ones."
+            case .missing, .manual, .custom:
+                return "Request only the selected items. New items won't be added automatically."
             }
         }
 
@@ -347,7 +357,16 @@ import SwiftUI
 
         private func requestButtonTitle(_ selection: RequestReviewSelection) -> String {
             guard selection.mode == .directChildren else { return "Request \(route.kind.label)" }
-            if selectedIDs.isEmpty { return "Apply \(chosenPreset.label)" }
+            if selectedIDs.isEmpty {
+                if isCustomSelection { return "Select items to request" }
+                switch chosenPreset {
+                case .all: return "Monitor all items"
+                case .missing: return "Request missing items"
+                case .future: return "Monitor future items"
+                case .manual: return "Save manual monitoring"
+                case .custom: return "Select items to request"
+                }
+            }
             return "Request \(selectedIDs.count) \(route.kind.childNoun ?? "item")\(selectedIDs.count == 1 ? "" : "s")"
         }
 
