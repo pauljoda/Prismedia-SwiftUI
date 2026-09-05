@@ -1,6 +1,18 @@
 import Foundation
 
 enum MetadataReviewThumbnailPolicy {
+    /// Artwork choices show the complete candidate, not the crop used by the entity's library card.
+    /// Missing or invalid dimensions fall back to the canonical entity frame.
+    static func aspectRatio(
+        for image: AdministrativeImageCandidate,
+        in proposal: AdministrativeEntityMetadataProposal
+    ) -> Double {
+        guard let width = image.width, let height = image.height, width > 0, height > 0 else {
+            return proposal.targetKind.thumbnailAspectRatio
+        }
+        return Double(width) / Double(height)
+    }
+
     static func thumbnail(
         for proposal: AdministrativeEntityMetadataProposal,
         artworkPath: String? = nil,

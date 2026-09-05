@@ -10,60 +10,54 @@ import SwiftUI
 
         var body: some View {
             Button(action: onSelect) {
-                ZStack {
-                    EntityThumbnailCardView(
-                        item: MetadataReviewThumbnailPolicy.thumbnail(
-                            for: image,
-                            in: proposal
-                        ),
-                        layout: .compact
-                    )
-                    .frame(maxWidth: .infinity)
-
-                    VStack {
-                        HStack {
-                            Spacer(minLength: 0)
-                            if isSelected {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .symbolRenderingMode(.palette)
-                                    .foregroundStyle(PrismediaColor.onAccent, artworkPrimaryAccent)
-                                    .font(.title3)
-                            }
-                        }
-
-                        Spacer(minLength: 0)
-
-                        HStack(spacing: PrismediaSpacing.extraSmall) {
-                            Text(image.source)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                            if let dimensions {
-                                Text(dimensions)
-                            }
-                        }
-                        .font(.caption2.monospaced())
-                        .foregroundStyle(PrismediaColor.onMedia)
-                        .padding(.horizontal, PrismediaSpacing.small)
-                        .padding(.vertical, PrismediaSpacing.extraSmall)
-                        .background(.black.opacity(0.72))
+                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                    EntityThumbnailArtworkFrame(
+                        aspectRatio: MetadataReviewThumbnailPolicy.aspectRatio(for: image, in: proposal)
+                    ) {
+                        EntityThumbnailMediaView(
+                            item: MetadataReviewThumbnailPolicy.thumbnail(for: image, in: proposal),
+                            systemImage: proposal.targetKind.thumbnailFallbackSystemImage,
+                            contentMode: .fit
+                        )
+                        .accessibilityHidden(true)
                     }
-                    .padding(PrismediaSpacing.extraSmall)
+                    .overlay(alignment: .topTrailing) {
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(PrismediaColor.onAccent, PrismediaColor.accent)
+                                .font(.title3)
+                                .padding(PrismediaSpacing.small)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                        Text(image.source)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(PrismediaColor.textPrimary)
+                        if let dimensions {
+                            Text(dimensions)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(PrismediaColor.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, PrismediaSpacing.small)
+                    .padding(.bottom, PrismediaSpacing.small)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(PrismediaColor.controlFill)
+                .compositingGroup()
                 .clipShape(tileShape)
                 .overlay {
                     tileShape.stroke(
                         isSelected ? artworkPrimaryAccent : PrismediaColor.border,
-                        lineWidth: isSelected ? 2 : PrismediaLayout.hairline
+                        lineWidth: isSelected ? PrismediaLayout.selectionBorder : PrismediaLayout.hairline
                     )
                 }
-                .shadow(
-                    color: isSelected ? artworkPrimaryAccent.opacity(0.22) : .clear,
-                    radius: PrismediaSpacing.medium
-                )
                 .contentShape(tileShape)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Use \(image.kind) artwork from \(image.source)")
+            .accessibilityValue(dimensions ?? "Dimensions unavailable")
             .accessibilityHint(isSelected ? "Deselects this artwork" : "Selects this artwork")
             .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
@@ -73,7 +67,7 @@ import SwiftUI
         }
 
         private var dimensions: String? {
-            guard let width = image.width, let height = image.height else { return nil }
+            guard let width = image.width, let height = image.height, width > 0, height > 0 else { return nil }
             return "\(width)×\(height)"
         }
     }

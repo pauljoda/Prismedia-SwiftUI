@@ -15,7 +15,8 @@ final class EntityThumbnailPresentationTests: XCTestCase {
 
     func testThumbnailDecodesCanonicalSubtitle() throws {
         let data = Data(
-            #"{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","kind":"video-season","title":"Season 1","subtitle":"Example Series"}"#.utf8
+            #"{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","kind":"video-season","title":"Season 1","subtitle":"Example Series"}"#
+                .utf8
         )
 
         let thumbnail = try PrismediaJSON.decoder().decode(EntityThumbnail.self, from: data)
@@ -25,7 +26,8 @@ final class EntityThumbnailPresentationTests: XCTestCase {
 
     func testThumbnailDecodesAndPresentsEpisodesThatShareOneSource() throws {
         let data = Data(
-            #"{"id":"22222222-2222-2222-2222-222222222222","kind":"video-episode","title":"Friends Like","sortOrder":2,"sharedSourceEpisodes":[{"id":"22222222-2222-2222-2222-222222222222","title":"Friends Like","seasonNumber":7,"episodeNumber":2},{"id":"33333333-3333-3333-3333-333333333333","title":"Space Restaurant","seasonNumber":7,"episodeNumber":3}]}"#.utf8
+            #"{"id":"22222222-2222-2222-2222-222222222222","kind":"video-episode","title":"Friends Like","sortOrder":2,"sharedSourceEpisodes":[{"id":"22222222-2222-2222-2222-222222222222","title":"Friends Like","seasonNumber":7,"episodeNumber":2},{"id":"33333333-3333-3333-3333-333333333333","title":"Space Restaurant","seasonNumber":7,"episodeNumber":3}]}"#
+                .utf8
         )
 
         let thumbnail = try PrismediaJSON.decoder().decode(EntityThumbnail.self, from: data)
@@ -109,6 +111,25 @@ final class EntityThumbnailPresentationTests: XCTestCase {
         XCTAssertEqual(
             thumbnail.id,
             MetadataReviewThumbnailPolicy.thumbnail(for: image, in: proposal).id
+        )
+    }
+
+    func testArtworkReviewUsesCandidateDimensionsWithoutChangingEntityIdentity() {
+        let image = AdministrativeImageCandidate(
+            kind: "backdrop", url: "https://example.test/backdrop.jpg", source: "tmdb",
+            rank: 1, language: nil, width: 3840, height: 2160
+        )
+        let proposal = metadataProposal(kind: .movie, images: [image])
+        XCTAssertEqual(MetadataReviewThumbnailPolicy.aspectRatio(for: image, in: proposal), 16.0 / 9.0)
+        XCTAssertEqual(MetadataReviewThumbnailPolicy.thumbnail(for: image, in: proposal).kind, .movie)
+
+        let invalid = AdministrativeImageCandidate(
+            kind: "poster", url: "https://example.test/unknown.jpg", source: "tmdb",
+            rank: 1, language: nil, width: 0, height: -1
+        )
+        XCTAssertEqual(
+            MetadataReviewThumbnailPolicy.aspectRatio(for: invalid, in: proposal),
+            proposal.targetKind.thumbnailAspectRatio
         )
     }
 

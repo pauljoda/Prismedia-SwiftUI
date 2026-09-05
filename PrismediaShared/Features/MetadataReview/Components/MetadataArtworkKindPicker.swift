@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct MetadataArtworkKindPicker: View {
+        @ScaledMetric(relativeTo: .caption) private var minimumChoiceWidth = PrismediaLayout.artworkChoiceMinimumWidth
         let proposal: AdministrativeEntityMetadataProposal
         let kind: String
         let images: [AdministrativeImageCandidate]
@@ -13,7 +14,7 @@ import SwiftUI
                 LazyVGrid(
                     columns: [
                         GridItem(
-                            .adaptive(minimum: 112),
+                            .adaptive(minimum: minimumChoiceWidth),
                             spacing: PrismediaSpacing.medium,
                             alignment: .top
                         )
@@ -35,14 +36,14 @@ import SwiftUI
                 }
                 .padding(.top, PrismediaSpacing.small)
             } label: {
-                HStack {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
                     Text(kind.capitalized)
                         .font(.subheadline.weight(.semibold))
-                    Spacer(minLength: PrismediaSpacing.small)
                     Text(selectionSummary)
                         .font(.caption)
                         .foregroundStyle(PrismediaColor.textSecondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
 
@@ -54,6 +55,24 @@ import SwiftUI
     }
 
     #if DEBUG
+        #Preview("Artwork Choices · Accessibility") {
+            @Previewable @State var selectedURL: String?
+            PreviewShell {
+                ScrollView {
+                    MetadataArtworkKindPicker(
+                        proposal: MetadataReviewPreviewFixtures.proposal,
+                        kind: "poster",
+                        images: MetadataReviewPolicy.reviewableImages(
+                            in: MetadataReviewPreviewFixtures.proposal
+                        ).filter { $0.kind == "poster" },
+                        selectedURL: $selectedURL
+                    )
+                    .padding()
+                }
+                .environment(\.dynamicTypeSize, .accessibility3)
+            }
+        }
+
         #Preview("Artwork Kind · Poster") {
             @Previewable @State var selectedURL: String?
             PreviewShell {

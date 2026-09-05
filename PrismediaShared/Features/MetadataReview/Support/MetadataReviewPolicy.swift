@@ -1,6 +1,18 @@
 import Foundation
 
 public enum MetadataReviewPolicy {
+    /// Returns only selectable nodes displayed by one review group, excluding siblings and hidden descendants.
+    /// - Parameters:
+    ///   - nodes: The group's displayed proposals.
+    ///   - selectableIDs: All proposals the surrounding review allows the user to select.
+    /// - Returns: IDs used by this group's selection count and bulk actions.
+    public static func selectableProposalIDs(
+        in nodes: [AdministrativeEntityMetadataProposal],
+        from selectableIDs: Set<String>
+    ) -> Set<String> {
+        selectableIDs.intersection(nodes.map(\.proposalID))
+    }
+
     public static func seededSelection(
         for proposal: AdministrativeEntityMetadataProposal
     ) -> MetadataReviewSelection {

@@ -3,6 +3,7 @@ import CoreGraphics
 public enum PrismediaLayout {
     public static let hairline: CGFloat = 1
     public static let focusRing: CGFloat = 3
+    public static let selectionBorder: CGFloat = 2
 
     #if os(tvOS)
         public static let minimumHitTarget: CGFloat = 66
@@ -33,6 +34,8 @@ public enum PrismediaLayout {
         public static let loadingImpactGlowRadius: CGFloat = 42
     #endif
     public static let readableContentWidth: CGFloat = 760
+    /// Minimum artwork-choice width before Dynamic Type scaling; captions remain below the image.
+    public static let artworkChoiceMinimumWidth: CGFloat = 112
     public static let mediaContentWidth: CGFloat = 1_280
     public static let backdropBlur: CGFloat = 92
     public static let backdropOverscan: CGFloat = 1.24

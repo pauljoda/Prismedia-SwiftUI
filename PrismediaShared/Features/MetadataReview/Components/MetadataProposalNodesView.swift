@@ -34,23 +34,22 @@ import SwiftUI
         var body: some View {
             DisclosureGroup(isExpanded: $isExpanded) {
                 LazyVStack(spacing: 0) {
-                    if !selectableIDs.isEmpty, onSetSelected != nil {
+                    if !groupSelectableIDs.isEmpty, onSetSelected != nil {
                         HStack(spacing: PrismediaSpacing.small) {
-                            Spacer()
                             Button("All") { setAllSelected(true) }
-                                .buttonStyle(.borderless)
                                 .accessibilityLabel("Select all \(title)")
                             Button("None") { setAllSelected(false) }
-                                .buttonStyle(.borderless)
                                 .accessibilityLabel("Deselect all \(title)")
+                            Spacer()
                         }
-                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.glass)
+                        .controlSize(.regular)
                         .padding(.vertical, PrismediaSpacing.small)
                     }
                     ForEach(nodes, id: \.proposalID) { node in
                         MetadataProposalNodeRow(
                             proposal: node,
-                            isSelectable: selectableIDs.contains(node.proposalID),
+                            isSelectable: groupSelectableIDs.contains(node.proposalID),
                             isSelected: selectedIDs.contains(node.proposalID),
                             isIdentifying: identifyingIDs.contains(node.proposalID),
                             onSetSelected: onSetSelected.map { callback in
@@ -73,14 +72,18 @@ import SwiftUI
             if nodes.contains(where: { identifyingIDs.contains($0.proposalID) }) {
                 return "identifying…"
             }
-            guard !selectableIDs.isEmpty else { return nodes.count.formatted() }
-            let selectedCount = selectedIDs.intersection(selectableIDs).count
-            return "\(selectedCount) of \(selectableIDs.count) selected"
+            guard !groupSelectableIDs.isEmpty else { return nodes.count.formatted() }
+            let selectedCount = selectedIDs.intersection(groupSelectableIDs).count
+            return "\(selectedCount) of \(groupSelectableIDs.count) selected"
+        }
+
+        private var groupSelectableIDs: Set<String> {
+            MetadataReviewPolicy.selectableProposalIDs(in: nodes, from: selectableIDs)
         }
 
         private func setAllSelected(_ selected: Bool) {
             guard let onSetSelected else { return }
-            for proposalID in selectableIDs.sorted() {
+            for proposalID in groupSelectableIDs.sorted() {
                 onSetSelected(proposalID, selected)
             }
         }

@@ -3,6 +3,24 @@ import XCTest
 @testable import PrismediaCore
 
 final class MetadataReviewPolicyTests: XCTestCase {
+    func testBulkSelectionIsLimitedToVisibleSelectableNodes() {
+        let episode = proposal(id: "episode", kind: "video-episode", title: "Episode")
+        let season = proposal(id: "season", kind: "video-season", title: "Season", children: [episode])
+        let person = proposal(id: "person", kind: "person", title: "Person")
+        let allSelectable: Set<String> = ["season", "episode", "person"]
+
+        XCTAssertEqual(
+            MetadataReviewPolicy.selectableProposalIDs(in: [season], from: allSelectable),
+            ["season"]
+        )
+        XCTAssertEqual(
+            MetadataReviewPolicy.selectableProposalIDs(in: [person], from: allSelectable),
+            ["person"]
+        )
+        XCTAssertTrue(MetadataReviewPolicy.selectableProposalIDs(in: [], from: allSelectable).isEmpty)
+        XCTAssertTrue(MetadataReviewPolicy.selectableProposalIDs(in: [season], from: ["person"]).isEmpty)
+    }
+
     func testTypedReleaseDatesSurviveReviewedProposalApply() {
         let root = AdministrativeEntityMetadataProposal(
             proposalID: "root",
