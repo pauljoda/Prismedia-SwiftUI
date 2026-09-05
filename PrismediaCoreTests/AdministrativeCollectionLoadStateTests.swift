@@ -3,10 +3,24 @@ import XCTest
 
 @testable import PrismediaCore
 
-final class PluginCatalogLoadStateTests: XCTestCase {
+final class AdministrativeCollectionLoadStateTests: XCTestCase {
+    func testChangingCollectionClearsOldItemsAndRejectsItsPendingResponse() {
+        var state = AdministrativeCollectionLoadState<String>()
+        let oldFolder = state.begin()
+        state.succeed(["old-file"], request: oldFolder)
+        let oldRefresh = state.begin()
+        let newFolder = state.begin(clearingItems: true)
+        XCTAssertTrue(state.items.isEmpty)
+        state.succeed(["wrong-folder-file"], request: oldRefresh)
+        XCTAssertTrue(state.items.isEmpty)
+        XCTAssertTrue(state.isLoading)
+        state.succeed(["new-file"], request: newFolder)
+        XCTAssertEqual(state.items, ["new-file"])
+    }
+
     func testCancellationPreservesPreviouslyLoadedItemsWithoutFailure() {
         for error: any Error in [CancellationError(), URLError(.cancelled)] {
-            var state = PluginCatalogLoadState<String>()
+            var state = AdministrativeCollectionLoadState<String>()
             let initial = state.begin()
             state.succeed(["installed"], request: initial)
             let refresh = state.begin()
@@ -18,7 +32,7 @@ final class PluginCatalogLoadStateTests: XCTestCase {
     }
 
     func testCancelledTaskDoesNotPublishResponseOrUnrelatedError() {
-        var state = PluginCatalogLoadState<String>()
+        var state = AdministrativeCollectionLoadState<String>()
         let request = state.begin()
         state.succeed(["stale"], request: request, isCancelled: true)
         XCTAssertTrue(state.items.isEmpty)
@@ -30,7 +44,7 @@ final class PluginCatalogLoadStateTests: XCTestCase {
     }
 
     func testSupersededRequestCannotChangeCurrentItemsFailureOrLoading() {
-        var state = PluginCatalogLoadState<String>()
+        var state = AdministrativeCollectionLoadState<String>()
         let old = state.begin()
         let current = state.begin()
         state.fail(URLError(.timedOut), request: old, isCancelled: false)
@@ -43,7 +57,7 @@ final class PluginCatalogLoadStateTests: XCTestCase {
     }
 
     func testFailureRetainsItemsAndSuccessfulRetryClearsError() {
-        var state = PluginCatalogLoadState<String>()
+        var state = AdministrativeCollectionLoadState<String>()
         let initial = state.begin()
         state.succeed(["cached"], request: initial)
         let refresh = state.begin()

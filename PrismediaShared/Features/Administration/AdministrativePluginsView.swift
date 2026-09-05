@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct AdministrativePluginsView: View {
-    @State private var catalog = PluginCatalogLoadState<AdministrativePlugin>()
-    @State private var stashCatalog = PluginCatalogLoadState<AdministrativeStashScraper>()
+    @State private var catalog = AdministrativeCollectionLoadState<AdministrativePlugin>()
+    @State private var stashCatalog = AdministrativeCollectionLoadState<AdministrativeStashScraper>()
     @State private var selectedSection: AdministrativePluginsSection? = .installed
     @State private var selectedPlugin: AdministrativePlugin?
     @State private var searchText = ""
@@ -199,7 +199,9 @@ struct AdministrativePluginsView: View {
             ContentUnavailableView {
                 Label(hasActiveFilters ? "No Matching Plugins" : "No Plugins", systemImage: "puzzlepiece.extension")
             } description: {
-                Text(hasActiveFilters ? "Try a different search or content type." : "No plugins are available in this source.")
+                Text(
+                    hasActiveFilters
+                        ? "Try a different search or content type." : "No plugins are available in this source.")
             } actions: {
                 if hasActiveFilters {
                     Button("Clear Filters", systemImage: "line.3.horizontal.decrease.circle") {

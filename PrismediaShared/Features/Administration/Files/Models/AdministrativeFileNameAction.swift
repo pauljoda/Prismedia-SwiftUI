@@ -14,7 +14,7 @@ enum AdministrativeFileNameAction: Identifiable {
     var title: String {
         switch self {
         case .createFolder: "New Folder"
-        case .rename(let entry): "Rename \(entry.name)"
+        case .rename: "Rename"
         }
     }
 

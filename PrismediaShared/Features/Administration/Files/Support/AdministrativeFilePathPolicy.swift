@@ -30,4 +30,15 @@ public enum AdministrativeFilePathPolicy {
             throw AdministrativeFileValidationError.descendantDestination
         }
     }
+
+    /// Builds a move destination from a chosen folder without changing the item's filename.
+    public static func moveTargetPath(
+        for entry: AdministrativeFileEntry, into destination: AdministrativeFileLocation
+    ) throws -> String {
+        let folder = try validatedRelativePath(destination.path, allowsEmpty: true)
+        let name = try validatedName(entry.name)
+        let target = folder.isEmpty ? name : "\(folder)/\(name)"
+        try validateMove(sourcePath: entry.path, targetPath: target, sameRoot: entry.rootID == destination.rootID)
+        return target
+    }
 }

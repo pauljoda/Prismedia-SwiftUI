@@ -3,17 +3,15 @@ import UniformTypeIdentifiers
 
 #if os(iOS) || os(macOS)
     struct AdministrativeFileBrowserView: View {
-        @State private var entries: [AdministrativeFileEntry] = []
-        @State private var isLoading = true
+        @State private var listing = AdministrativeCollectionLoadState<AdministrativeFileEntry>()
+        @State private var loadedLocation: AdministrativeFileLocation?
         @State private var isBusy = false
         @State private var message: String?
-        @State private var nameAction: AdministrativeFileNameAction?
-        @State private var pendingName = ""
-        @State private var moveEntry: AdministrativeFileEntry?
+        @State private var notice: String?
+        @State private var presentation: AdministrativeFilePresentation?
+        @State private var deferredAction: (AdministrativeFileAction, AdministrativeFileEntry)?
         @State private var deleteEntry: AdministrativeFileEntry?
         @State private var exclusionEntry: AdministrativeFileEntry?
-        @State private var selectedEntry: AdministrativeFileEntry?
-        @State private var showsInspector = false
         @State private var showsFileImporter = false
         @State private var showsFolderImporter = false
         @State private var transferTitle = ""
@@ -28,57 +26,38 @@ import UniformTypeIdentifiers
         let location: AdministrativeFileLocation
         let roots: [AdministrativeFileRoot]
         let service: any FileAdministrationServicing
-        let navigatesInPlace: Bool
         let openDirectory: @MainActor (AdministrativeFileLocation) -> Void
 
         var body: some View {
             List {
-                if navigatesInPlace {
-                    HStack {
-                        if !location.path.isEmpty {
-                            Button("Up", systemImage: "chevron.up") { openDirectory(parentLocation) }
-                        }
-                        Spacer()
-                        Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
-                            .disabled(isBusy)
-                        fileActionsMenu
-                    }
+                if let notice {
+                    Label(notice, systemImage: "checkmark.circle")
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                ForEach(entries) { entry in
-                    if entry.isDirectory {
-                        Button {
-                            openDirectory(
-                                AdministrativeFileLocation(
-                                    rootID: entry.rootID,
-                                    rootLabel: location.rootLabel,
-                                    path: entry.path
-                                ))
-                        } label: {
-                            rowLabel(entry)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu { contextActions(entry) }
-                        .accessibilityHint("Opens folder")
-                        .accessibilityIdentifier("administration.files.row.\(entry.path)")
-                    } else {
-                        Button {
-                            selectedEntry = entry
-                            showsInspector = true
-                        } label: {
-                            rowLabel(entry)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu { contextActions(entry) }
-                        .accessibilityHint("Shows file details and actions")
-                        .accessibilityIdentifier("administration.files.row.\(entry.path)")
-                    }
+                if let error = listing.errorMessage {
+                    PrismediaRetryView(
+                        title: "Couldn't Load Folder", message: error, isRetrying: listing.isLoading,
+                        retry: { Task { await load() } })
+                }
+                ForEach(listing.items) { entry in
+                    AdministrativeFileEntryRow(
+                        entry: entry, isBusy: isBusy || transferTask != nil,
+                        open: {
+                            if entry.isDirectory {
+                                openDirectory(
+                                    .init(rootID: entry.rootID, rootLabel: location.rootLabel, path: entry.path))
+                            } else {
+                                handleAction(.details, entry: entry)
+                            }
+                        },
+                        perform: { handleAction($0, entry: entry) })
                 }
             }
             .prismediaScreenBackground()
             .navigationTitle(
                 location.path.isEmpty ? location.rootLabel : URL(fileURLWithPath: location.path).lastPathComponent
             )
-            .navigationSubtitle(location.path.isEmpty ? "Library root" : location.path)
             .toolbar { toolbarContent }
             .refreshable {
                 await PrismediaRefreshAction.perform {
@@ -86,9 +65,9 @@ import UniformTypeIdentifiers
                 }
             }
             .overlay {
-                if isLoading, entries.isEmpty {
+                if listing.isLoading, listing.items.isEmpty {
                     PrismediaLoadingView("Loading folder…")
-                } else if entries.isEmpty {
+                } else if listing.items.isEmpty && listing.errorMessage == nil {
                     ContentUnavailableView(
                         "Empty Folder",
                         systemImage: "folder",
@@ -96,19 +75,25 @@ import UniformTypeIdentifiers
                 }
             }
             .dropDestination(for: URL.self) { urls, _ in
+                guard !isBusy, transferTask == nil, !urls.isEmpty else { return false }
                 beginUpload(urls)
-                return !urls.isEmpty
+                return true
             }
             .task(id: location) { await load() }
-            .inspector(isPresented: $showsInspector) {
-                if let selectedEntry {
-                    AdministrativeFileDetailView(entry: selectedEntry, service: service)
-                        .inspectorColumnWidth(min: 260, ideal: 320, max: 440)
-                }
-            }
-            .sheet(item: $moveEntry) { entry in
-                AdministrativeFileMoveSheet(entry: entry, roots: roots, service: service) {
-                    Task { await load() }
+            .sheet(item: $presentation, onDismiss: performDeferredAction) { destination in
+                switch destination {
+                case .details(let entry):
+                    AdministrativeFileDetailView(entry: entry, service: service) {
+                        handleAction($0, entry: entry)
+                    }
+                case .name(let action):
+                    AdministrativeFileNameEditor(action: action, location: location, service: service) {
+                        Task { await load() }
+                    }
+                case .move(let entry):
+                    AdministrativeFileMoveSheet(entry: entry, roots: roots, service: service) {
+                        Task { await load() }
+                    }
                 }
             }
             .sheet(isPresented: $showsTransfer) {
@@ -142,16 +127,6 @@ import UniformTypeIdentifiers
                 exportDocument = nil
             }
             .alert(
-                nameAction?.title ?? "File Name",
-                isPresented: Binding(get: { nameAction != nil }, set: { if !$0 { nameAction = nil } })
-            ) {
-                TextField("Name", text: $pendingName)
-                Button(nameAction?.confirmLabel ?? "Save") { applyNameAction() }
-                Button("Cancel", role: .cancel) { nameAction = nil }
-            } message: {
-                Text("Names cannot contain slashes and must stay inside the selected library root.")
-            }
-            .alert(
                 deleteEntry.map { "Delete \($0.name)?" } ?? "Delete permanently?",
                 isPresented: Binding(get: { deleteEntry != nil }, set: { if !$0 { deleteEntry = nil } })
             ) {
@@ -179,43 +154,11 @@ import UniformTypeIdentifiers
             }
         }
 
-        private func rowLabel(_ entry: AdministrativeFileEntry) -> some View {
-            Label {
-                HStack {
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                        Text(entry.name)
-                        HStack(spacing: PrismediaSpacing.small) {
-                            if let size = entry.sizeBytes {
-                                Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                            }
-                            if let modifiedAt = entry.modifiedAt {
-                                Text(modifiedAt, style: .date)
-                            }
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if entry.excluded {
-                        Label("Excluded", systemImage: "eye.slash")
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(PrismediaColor.warning)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(.rect)
-            } icon: {
-                Image(systemName: entry.isDirectory ? "folder.fill" : "doc")
-            }
-            .accessibilityValue(entry.excluded ? "Excluded from scans" : "Included in scans")
-        }
-
         @ToolbarContentBuilder
         private var toolbarContent: some ToolbarContent {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
-                    .prismediaToolbarActionLabelStyle()
-                    .disabled(isBusy)
+                PrismediaToolbarActionButton("Refresh Folder", systemImage: "arrow.clockwise") { Task { await load() } }
+                    .disabled(isBusy || listing.isLoading || transferTask != nil)
                 fileActionsMenu
                     .prismediaToolbarActionLabelStyle()
             }
@@ -224,8 +167,7 @@ import UniformTypeIdentifiers
         private var fileActionsMenu: some View {
             Menu("File Actions", systemImage: "ellipsis.circle") {
                 Button("New Folder", systemImage: "folder.badge.plus") {
-                    nameAction = .createFolder
-                    pendingName = ""
+                    presentation = .name(.createFolder)
                 }
                 Button("Upload Files", systemImage: "square.and.arrow.up") { showsFileImporter = true }
                 Button("Upload Folder", systemImage: "folder.badge.plus") { showsFolderImporter = true }
@@ -233,35 +175,31 @@ import UniformTypeIdentifiers
                 Button("Download Folder", systemImage: "arrow.down.circle") { beginArchiveDownload() }
                 Button("Rescan", systemImage: "arrow.trianglehead.2.clockwise") { performRescan() }
             }
-            .disabled(isBusy)
+            .disabled(isBusy || transferTask != nil || listing.errorMessage != nil)
         }
 
-        private var parentLocation: AdministrativeFileLocation {
-            let parentPath = location.path.split(separator: "/").dropLast().joined(separator: "/")
-            return AdministrativeFileLocation(
-                rootID: location.rootID,
-                rootLabel: location.rootLabel,
-                path: parentPath
-            )
+        private func handleAction(_ action: AdministrativeFileAction, entry: AdministrativeFileEntry) {
+            guard !isBusy, transferTask == nil else { return }
+            if case .details = presentation {
+                deferredAction = (action, entry)
+                presentation = nil
+                return
+            }
+            switch action {
+            case .details: presentation = .details(entry)
+            case .rename: presentation = .name(.rename(entry))
+            case .move: presentation = .move(entry)
+            case .download:
+                if entry.isDirectory { beginArchiveDownload(entry) } else { beginFileDownload(entry) }
+            case .toggleExclusion: exclusionEntry = entry
+            case .delete: deleteEntry = entry
+            }
         }
 
-        @ViewBuilder
-        private func contextActions(_ entry: AdministrativeFileEntry) -> some View {
-            if entry.isDirectory {
-                Button("Download", systemImage: "arrow.down.circle") { beginArchiveDownload(entry) }
-            } else {
-                Button("Download", systemImage: "arrow.down.circle") { beginFileDownload(entry) }
-            }
-            Button("Rename", systemImage: "pencil") {
-                nameAction = .rename(entry)
-                pendingName = entry.name
-            }
-            Button("Move", systemImage: "folder") { moveEntry = entry }
-            Button(entry.excluded ? "Remove Exclusion" : "Exclude", systemImage: entry.excluded ? "eye" : "eye.slash") {
-                exclusionEntry = entry
-            }
-            Divider()
-            Button("Delete Permanently", systemImage: "trash", role: .destructive) { deleteEntry = entry }
+        private func performDeferredAction() {
+            guard let (action, entry) = deferredAction else { return }
+            deferredAction = nil
+            handleAction(action, entry: entry)
         }
 
         private var deleteMessage: String {
@@ -272,29 +210,15 @@ import UniformTypeIdentifiers
         }
 
         private func load() async {
-            isLoading = true
-            defer { isLoading = false }
-            do { entries = try await service.children(rootID: location.rootID, path: location.path).entries } catch {
-                message = error.localizedDescription
-            }
-        }
-
-        private func applyNameAction() {
-            guard let action = nameAction else { return }
-            nameAction = nil
-            Task {
-                await runMutation {
-                    switch action {
-                    case .createFolder:
-                        return try await service.createFolder(
-                            rootID: location.rootID,
-                            parentPath: location.path,
-                            name: pendingName
-                        )
-                    case .rename(let entry):
-                        return try await service.rename(rootID: entry.rootID, path: entry.path, name: pendingName)
-                    }
-                }
+            let requestedLocation = location
+            let request = listing.begin(clearingItems: loadedLocation != requestedLocation)
+            loadedLocation = requestedLocation
+            do {
+                let response = try await service.children(
+                    rootID: requestedLocation.rootID, path: requestedLocation.path)
+                listing.succeed(response.entries, request: request, isCancelled: Task.isCancelled)
+            } catch {
+                listing.fail(error, request: request, isCancelled: Task.isCancelled)
             }
         }
 
@@ -325,12 +249,14 @@ import UniformTypeIdentifiers
         private func runMutation(
             _ operation: @escaping @MainActor () async throws -> AdministrativeFileOperationResponse
         ) async {
+            guard !isBusy, transferTask == nil else { return }
             isBusy = true
+            notice = nil
             defer { isBusy = false }
             do {
                 let result = try await operation()
                 await load()
-                message =
+                notice =
                     result.scansQueued > 0
                     ? "Change complete. \(result.scansQueued) library scan job(s) queued." : "Change complete."
             } catch { message = error.localizedDescription }
@@ -344,7 +270,7 @@ import UniformTypeIdentifiers
         }
 
         private func beginUpload(_ urls: [URL]) {
-            guard !urls.isEmpty else { return }
+            guard !urls.isEmpty, !isBusy, transferTask == nil else { return }
             showsTransfer = true
             transferTitle = "Preparing Upload"
             transferDetail = "Reading selected files…"
@@ -386,6 +312,7 @@ import UniformTypeIdentifiers
         }
 
         private func beginFileDownload(_ entry: AdministrativeFileEntry) {
+            guard !isBusy, transferTask == nil else { return }
             showsTransfer = true
             transferTitle = "Downloading \(entry.name)"
             transferDetail = "Receiving an authenticated server transfer…"
@@ -403,6 +330,7 @@ import UniformTypeIdentifiers
         }
 
         private func beginArchiveDownload(_ entry: AdministrativeFileEntry? = nil) {
+            guard !isBusy, transferTask == nil else { return }
             let path = entry?.path ?? location.path
             let name =
                 entry?.name
@@ -448,7 +376,6 @@ import UniformTypeIdentifiers
                             enabled: true)
                     ],
                     service: Step4AdministrationPreviewService(),
-                    navigatesInPlace: false,
                     openDirectory: { _ in }
                 )
             }

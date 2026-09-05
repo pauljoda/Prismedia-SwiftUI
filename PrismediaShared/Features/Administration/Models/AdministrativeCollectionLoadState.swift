@@ -1,14 +1,15 @@
 import Foundation
 
-/// Retains the last catalog while refreshing and rejects results from superseded requests.
-struct PluginCatalogLoadState<Item: Sendable>: Sendable {
+/// Retains a refreshed collection, clears items when its location changes, and rejects superseded reads.
+struct AdministrativeCollectionLoadState<Item: Sendable>: Sendable {
     private(set) var items: [Item] = []
     private(set) var isLoading = true
     private(set) var errorMessage: String?
     private var generation = 0
 
-    mutating func begin() -> Int {
+    mutating func begin(clearingItems: Bool = false) -> Int {
         generation += 1
+        if clearingItems { items = [] }
         isLoading = true
         errorMessage = nil
         return generation
@@ -26,7 +27,8 @@ struct PluginCatalogLoadState<Item: Sendable>: Sendable {
         guard request == generation else { return }
         isLoading = false
         guard !isCancelled, !(error is CancellationError),
-              (error as? URLError)?.code != .cancelled else { return }
+            (error as? URLError)?.code != .cancelled
+        else { return }
         errorMessage = error.localizedDescription
     }
 }

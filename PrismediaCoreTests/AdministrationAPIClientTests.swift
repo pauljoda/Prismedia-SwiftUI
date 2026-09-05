@@ -287,6 +287,36 @@ final class AdministrativeFileAPIClientTests: XCTestCase {
         XCTAssertEqual(try AdministrativeFilePathPolicy.validatedRelativePath(" Movies/Arrival "), "Movies/Arrival")
     }
 
+    func testFolderDestinationKeepsTheOriginalFileName() throws {
+        let entry = fileEntry(path: "Old/Book.epub", name: "Book.epub")
+        let destination = AdministrativeFileLocation(rootID: rootID, rootLabel: "Books", path: "New")
+        XCTAssertEqual(try AdministrativeFilePathPolicy.moveTargetPath(for: entry, into: destination), "New/Book.epub")
+        let root = AdministrativeFileLocation(rootID: rootID, rootLabel: "Books", path: "")
+        XCTAssertEqual(try AdministrativeFilePathPolicy.moveTargetPath(for: entry, into: root), "Book.epub")
+    }
+
+    func testFolderDestinationRejectsUnchangedAndDescendantMovesButAllowsAnotherRoot() throws {
+        let folder = fileEntry(path: "Folder", name: "Folder", isDirectory: true)
+        let sameParent = AdministrativeFileLocation(rootID: rootID, rootLabel: "Books", path: "")
+        let descendant = AdministrativeFileLocation(rootID: rootID, rootLabel: "Books", path: "Folder/Child")
+        XCTAssertThrowsError(try AdministrativeFilePathPolicy.moveTargetPath(for: folder, into: sameParent))
+        XCTAssertThrowsError(try AdministrativeFilePathPolicy.moveTargetPath(for: folder, into: descendant))
+        let anotherRoot = AdministrativeFileLocation(rootID: UUID(), rootLabel: "Other", path: "Folder")
+        XCTAssertEqual(try AdministrativeFilePathPolicy.moveTargetPath(for: folder, into: anotherRoot), "Folder/Folder")
+    }
+
+    func testFolderDestinationCannotTraverseTheRoot() {
+        let entry = fileEntry(path: "Book.epub", name: "Book.epub")
+        let destination = AdministrativeFileLocation(rootID: rootID, rootLabel: "Books", path: "../outside")
+        XCTAssertThrowsError(try AdministrativeFilePathPolicy.moveTargetPath(for: entry, into: destination))
+    }
+
+    private func fileEntry(path: String, name: String, isDirectory: Bool = false) -> AdministrativeFileEntry {
+        .init(
+            rootID: rootID, path: path, name: name, kind: isDirectory ? "directory" : "file",
+            sizeBytes: nil, mimeType: nil, modifiedAt: nil, excluded: false)
+    }
+
     private func queryItem(_ name: String, in request: URLRequest) -> String? {
         URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == name }?.value
     }
