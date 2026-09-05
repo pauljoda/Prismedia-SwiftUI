@@ -2,6 +2,7 @@
 """Focused contract tests for the Prismedia UI-test mock server."""
 
 import importlib.util
+import copy
 import io
 import json
 import threading
@@ -264,6 +265,52 @@ class PlaybackFixtureTests(unittest.TestCase):
 
 
 class EntityListHTTPTests(unittest.TestCase):
+    def api(self, path, method="GET", body=None):
+        request = Request(
+            f"http://127.0.0.1:{self.server.server_address[1]}{path}",
+            method=method,
+            headers={"Authorization": f"Bearer {mock_server.TOKEN}", "Content-Type": "application/json"},
+            data=json.dumps(body).encode() if body is not None else None,
+        )
+        with urlopen(request) as response:
+            return json.load(response)
+
+    def test_identify_completion_is_pollable_and_removes_completed_queue_items(self):
+        original = copy.deepcopy(mock_server.IDENTIFY_QUEUE)
+        self.addCleanup(lambda: mock_server.IDENTIFY_QUEUE.__setitem__(slice(None), original))
+        item = original[0]
+        path = f"/api/identify/queue/entities/{item['entityId']}"
+        progress_id = "ABCDEFAB-2222-3333-4444-555555555555"
+        self.addCleanup(lambda: mock_server.IDENTIFY_APPLY_PROGRESS.pop(progress_id.lower(), None))
+        applied = self.api(path + "/apply", "POST", {"proposal": item["proposal"], "progressId": progress_id})
+        self.assertEqual("done", applied["state"])
+        progress = self.api(path + "/apply-progress/" + progress_id.lower())
+        self.assertEqual("done", progress["state"])
+        self.assertNotIn(item["entityId"], [entry["entityId"] for entry in self.api("/api/identify/queue")])
+        rejected = self.api(f"/api/identify/queue/entities/{original[1]['entityId']}", "DELETE")
+        self.assertEqual("deleted", rejected["state"])
+        self.assertEqual([], self.api("/api/identify/queue"))
+
+    def test_setting_save_round_trips_through_catalog_and_values(self):
+        original = copy.deepcopy(mock_server.IDENTIFY_DEFAULT_SETTING)
+        self.addCleanup(lambda: mock_server.IDENTIFY_DEFAULT_SETTING.update(original))
+        key = "identify.defaultProviders"
+        value = {"movie": "tmdb"}
+        updated = self.api("/api/settings/" + key, "PATCH", {"value": value})
+        self.assertEqual(value, updated["value"])
+        self.assertEqual(value, self.api("/api/settings/values")["values"][key])
+        setting = self.api("/api/settings/")["groups"][0]["settings"][0]
+        self.assertEqual(value, setting["value"])
+
+    def test_request_accessible_libraries_use_current_client_route(self):
+        port = self.server.server_address[1]
+        request = Request(
+            f"http://127.0.0.1:{port}/api/libraries/accessible",
+            headers={"Authorization": f"Bearer {mock_server.TOKEN}"},
+        )
+        with urlopen(request) as response:
+            self.assertEqual(mock_server.REQUEST_LIBRARY_ROOTS, json.load(response))
+
     def setUp(self):
         mock_server.AUDIOBOOK_PLAYBACK.update(
             {

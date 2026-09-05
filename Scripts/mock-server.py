@@ -7,6 +7,7 @@ source/preview media. Run on port 8899; credentials are test / test1234.
 """
 
 import base64
+import copy
 import io
 import json
 import os
@@ -19,6 +20,12 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 TOKEN = "mock-session-token"
+IDENTIFY_APPLY_PROGRESS = {}
+IDENTIFY_DEFAULT_SETTING = {
+    "key": "identify.defaultProviders", "groupKey": "identify", "label": "Default providers",
+    "description": "Choose the provider used for each media type.", "type": "stringMap",
+    "value": {}, "defaultValue": {}, "isDefault": True, "order": 0, "options": [],
+}
 MOCK_VIDEO_PATH = os.environ.get("PRISMEDIA_MOCK_VIDEO", "/tmp/prismedia-mock-video.mp4")
 DETAIL_DELAY_SECONDS = float(os.environ.get("PRISMEDIA_MOCK_DETAIL_DELAY", "0"))
 PLAYBACK_DELAY_SECONDS = float(os.environ.get("PRISMEDIA_MOCK_PLAYBACK_DELAY", "0.5"))
@@ -1573,6 +1580,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/auth/sessions":
             return self._send(200, ACCOUNT_SESSIONS)
 
+        if path == "/api/libraries/accessible":
+            return self._send(200, REQUEST_LIBRARY_ROOTS)
+
         if path == "/api/libraries":
             return self._send(200, [LIBRARY_ROOT])
 
@@ -1636,7 +1646,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, DATABASE_BACKUPS)
 
         if path in ("/api/settings", "/api/settings/"):
-            return self._send(200, {"groups": []})
+            return self._send(200, {"groups": [{
+                "key": "identify", "label": "Identify", "description": "", "order": 0,
+                "settings": [IDENTIFY_DEFAULT_SETTING],
+            }]})
 
         if path == "/api/settings/transcode-cache":
             return self._send(200, {"usedBytes": 1048576, "maxBytes": 1073741824})
@@ -1649,6 +1662,7 @@ class Handler(BaseHTTPRequestHandler):
                 200,
                 {
                     "values": {
+                        IDENTIFY_DEFAULT_SETTING["key"]: IDENTIFY_DEFAULT_SETTING["value"],
                         "subtitles.autoEnable": True,
                         "subtitles.preferredLanguages": ["en", "eng", "English"],
                         "subtitles.style": "outline",
@@ -1663,7 +1677,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, [METADATA_PROVIDER])
 
         if path == "/api/identify/queue":
-            return self._send(200, IDENTIFY_QUEUE)
+            include_completed = parse_qs(request_url.query).get("includeCompleted") == ["true"]
+            return self._send(200, [item for item in IDENTIFY_QUEUE
+                                   if include_completed or item["state"] not in ("done", "deleted")])
+
+        if "/apply-progress/" in path and path.startswith("/api/identify/queue/entities/"):
+            progress = IDENTIFY_APPLY_PROGRESS.get(path.rsplit("/", 1)[1].lower())
+            return self._send(200, progress) if progress else self._send(404, {"message": "No progress."})
 
         if path.startswith("/api/identify/queue/entities/"):
             entity_id = path.removeprefix("/api/identify/queue/entities/")
@@ -1808,6 +1828,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PATCH(self):
         request_url = urlsplit(self.path)
+        if request_url.path == "/api/settings/" + IDENTIFY_DEFAULT_SETTING["key"]:
+            if not self._authed():
+                return self._send(401, {"message": "Authentication is required."})
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            IDENTIFY_DEFAULT_SETTING["value"] = body["value"]
+            IDENTIFY_DEFAULT_SETTING["isDefault"] = body["value"] == IDENTIFY_DEFAULT_SETTING["defaultValue"]
+            return self._send(200, IDENTIFY_DEFAULT_SETTING)
         if request_url.path == "/api/auth/me":
             if not self._authed():
                 return self._send(401, {"code": "authentication_required", "message": "Authentication is required."})
@@ -1876,6 +1903,17 @@ class Handler(BaseHTTPRequestHandler):
         shallow["relationships"] = []
         return self._send(200, shallow)
 
+    def do_DELETE(self):
+        path = urlsplit(self.path).path
+        if not self._authed():
+            return self._send(401, {"message": "Authentication is required."})
+        if path.startswith("/api/identify/queue/entities/"):
+            item = next((item for item in IDENTIFY_QUEUE if item["entityId"] == path.rsplit("/", 1)[1]), None)
+            if item:
+                item.update(state="deleted", completedAt="2026-07-12T12:01:00Z")
+                return self._send(200, item)
+        return self._send(404, {"message": "No matching fixture."})
+
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
@@ -1889,6 +1927,28 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
 
         request_url = urlsplit(self.path)
+
+        if request_url.path.startswith("/api/identify/queue/entities/"):
+            if not self._authed():
+                return self._send(401, {"message": "Authentication is required."})
+            parts = request_url.path.strip("/").split("/")
+            item = next((item for item in IDENTIFY_QUEUE if item["entityId"] == parts[4]), None)
+            if item and len(parts) == 6 and parts[5] == "candidate":
+                proposal = copy.deepcopy(IDENTIFY_PROPOSAL)
+                proposal["patch"]["title"] = body["candidate"]["title"]
+                item.update(state="proposal", proposal=proposal)
+                return self._send(200, item)
+            if item and len(parts) == 6 and parts[5] == "apply":
+                item.update(state="done", completedAt="2026-07-12T12:01:00Z")
+                progress_id = body.get("progressId")
+                if progress_id:
+                    IDENTIFY_APPLY_PROGRESS[progress_id.lower()] = {
+                        "id": progress_id, "entityId": item["entityId"], "state": "done",
+                        "currentIndex": 1, "total": 1, "currentKind": item["entityKind"],
+                        "currentTitle": item["title"], "currentPath": [], "error": None,
+                        "updatedAt": "2026-07-12T12:01:00Z",
+                    }
+                return self._send(200, item)
 
         if request_url.path == "/api/requests/search":
             limit = body.get("limit") or len(REQUEST_SEARCH_RESULTS)
