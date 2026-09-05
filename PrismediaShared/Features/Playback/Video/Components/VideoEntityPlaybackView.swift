@@ -160,33 +160,19 @@ struct VideoEntityPlaybackView: View {
                     let options = TVPlaybackOptions(resumeSeconds: initialResumeSeconds(in: videoDetail))
                     HStack(spacing: PrismediaSpacing.section) {
                         ForEach(Array(options.actions.enumerated()), id: \.offset) { _, action in
-                            Button {
+                            TVPlaybackLaunchButton(
+                                title: label(for: action, resumeSeconds: options.resumeSeconds),
+                                systemImage: systemImage(for: action),
+                                isPrimary: action == options.actions.first
+                            ) {
                                 startTVPlayback(videoDetail, action: action)
-                            } label: {
-                                Label(
-                                    label(for: action, resumeSeconds: options.resumeSeconds),
-                                    systemImage: systemImage(for: action)
-                                )
-                                .font(
-                                    tvLayout == .compact
-                                        ? .system(size: 20, weight: .semibold)
-                                        : .title3.bold()
-                                )
-                                .padding(.horizontal, tvLayout == .compact ? 12 : 24)
-                                .frame(
-                                    minWidth: tvLayout == .compact ? 160 : 300,
-                                    minHeight: tvLayout == .compact ? 44 : 72
-                                )
                             }
-                            .buttonBorderShape(.capsule)
-                            .buttonStyle(.glass)
-                            .controlSize(tvLayout == .compact ? .small : .regular)
                             .accessibilityIdentifier(identifier(for: action))
                         }
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, PrismediaLayout.televisionContentInset)
-                    .padding(.vertical, tvLayout == .compact ? 6 : 14)
+                    .padding(.vertical, tvLayout == .compact ? PrismediaSpacing.small : PrismediaSpacing.large)
                     .prismediaFocusSection()
                 } else if loadFailed {
                     ContentUnavailableView("Video Unavailable", systemImage: "exclamationmark.triangle")

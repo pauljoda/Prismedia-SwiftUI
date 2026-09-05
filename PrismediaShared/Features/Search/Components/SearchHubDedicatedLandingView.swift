@@ -32,7 +32,7 @@ struct SearchHubDedicatedLandingView: View {
                 .foregroundStyle(PrismediaColor.textSecondary)
                 .multilineTextAlignment(.center)
 
-            TextField("Movies, music, books, and more", text: $searchText)
+            TextField("Search", text: $searchText)
                 #if os(tvOS)
                     .textFieldStyle(.plain)
                 #else

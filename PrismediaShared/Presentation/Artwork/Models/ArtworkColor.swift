@@ -21,6 +21,14 @@ public struct ArtworkColor: Equatable, Sendable {
         return (lighter + 0.05) / (darker + 0.05)
     }
 
+    /// Black or white ink with the greater WCAG contrast against this opaque
+    /// sRGB color. Translucent materials still require rendered validation.
+    public var contrastingForeground: ArtworkColor {
+        let dark = ArtworkColor(red: 0, green: 0, blue: 0)
+        let light = ArtworkColor(red: 1, green: 1, blue: 1)
+        return contrastRatio(with: dark) >= contrastRatio(with: light) ? dark : light
+    }
+
     public func perceptualDistance(to other: ArtworkColor) -> Double {
         let difference = perceptualComponents - other.perceptualComponents
         return sqrt(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z)

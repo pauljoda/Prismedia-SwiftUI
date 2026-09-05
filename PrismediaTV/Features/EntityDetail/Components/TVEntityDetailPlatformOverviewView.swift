@@ -31,11 +31,6 @@
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                    Text(presentation.detail.kind.displayLabel.uppercased())
-                        .font(.caption.weight(.bold))
-                        .tracking(1.4)
-                        .foregroundStyle(PrismediaColor.onMedia.opacity(0.72))
-
                     Text(presentation.detail.title)
                         .font(.system(size: 54, weight: .bold))
                         .foregroundStyle(PrismediaColor.textPrimary)

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct PrismediaGlassStatusChip: View {
+    @Environment(\.self) private var environment
+
     let title: String?
     let systemImage: String?
     let tint: Color?
@@ -48,6 +50,16 @@ struct PrismediaGlassStatusChip: View {
         tint.map { Glass.regular.tint($0) } ?? .regular
     }
 
+    private var foreground: Color {
+        guard let tint else { return PrismediaColor.textPrimary }
+        let resolved = tint.resolve(in: environment)
+        return ArtworkColor(
+            red: Double(resolved.red),
+            green: Double(resolved.green),
+            blue: Double(resolved.blue)
+        ).contrastingForeground.color
+    }
+
     private var chipContent: some View {
         HStack(spacing: PrismediaSpacing.extraSmall) {
             if iconAfterTitle {
@@ -58,6 +70,7 @@ struct PrismediaGlassStatusChip: View {
                 titleView
             }
         }
+        .foregroundStyle(foreground)
     }
 
     @ViewBuilder
@@ -90,6 +103,16 @@ struct PrismediaGlassStatusChip: View {
                     "Direct Play",
                     systemImage: "play.rectangle",
                     tint: PrismediaColor.success
+                )
+                PrismediaGlassStatusChip(
+                    "720p",
+                    systemImage: "rectangle.inset.filled",
+                    tint: Color(red: 0.96, green: 0.88, blue: 0.68)
+                )
+                PrismediaGlassStatusChip(
+                    "HEVC",
+                    systemImage: "film",
+                    tint: Color(red: 0.08, green: 0.12, blue: 0.25)
                 )
                 PrismediaGlassStatusChip(
                     "8.7",

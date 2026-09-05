@@ -72,10 +72,11 @@ import SwiftUI
 
         private func heroCopy(_ item: EntityThumbnail) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                Text(heroEyebrow(for: item))
-                    .font(.headline.weight(.bold))
-                    .tracking(2)
-                    .foregroundStyle(PrismediaColor.accent)
+                if (item.resumeSeconds ?? 0) > 1 || (item.progress ?? 0) > 0 {
+                    Text("Up next")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(PrismediaColor.accent)
+                }
                 Text(item.displayTitle)
                     .font(.system(size: 64, weight: .bold))
                     .foregroundStyle(PrismediaColor.onMedia)
@@ -147,12 +148,6 @@ import SwiftUI
             withAnimation(reduceMotion ? nil : .easeInOut(duration: duration)) {
                 selectedIndex = index
             }
-        }
-
-        private func heroEyebrow(for item: EntityThumbnail) -> String {
-            (item.resumeSeconds ?? 0) > 1 || (item.progress ?? 0) > 0
-                ? "UP NEXT"
-                : item.kind.displayLabel.uppercased()
         }
 
         private func heroAction(for item: EntityThumbnail) -> String {

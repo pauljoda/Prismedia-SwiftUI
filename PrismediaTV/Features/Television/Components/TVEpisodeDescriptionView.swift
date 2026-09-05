@@ -40,10 +40,10 @@ import SwiftUI
                 }
 
                 if isTruncated {
-                    Button("More") { showsFullDescription = true }
+                    Button("Read more") { showsFullDescription = true }
                         .buttonStyle(.glass)
                         .controlSize(.small)
-                        .font(.headline.weight(.semibold))
+                        .font(PrismediaTypography.captionEmphasized)
                         .accessibilityHint("Shows the full episode description")
                 }
             }

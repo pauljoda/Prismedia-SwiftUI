@@ -11,11 +11,6 @@ struct EntityDetailIdentityView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-            Text(presentation.detail.kind.displayLabel.uppercased())
-                .font(.caption.weight(.bold))
-                .tracking(1.4)
-                .foregroundStyle(PrismediaColor.textMuted)
-
             Text(presentation.detail.title)
                 .font(titleFont)
                 .foregroundStyle(PrismediaColor.textPrimary)

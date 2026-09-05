@@ -127,18 +127,18 @@ struct SearchHubView: View {
             .searchable(
                 text: $searchText,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Movies, music, books, and more"
+                prompt: "Search"
             )
         #elseif os(macOS)
             .prismediaMacToolbarSearch(
                 text: $searchText,
-                prompt: "Movies, music, books, and more",
+                prompt: "Search",
                 onSubmit: openTopResult
             )
         #else
             .searchable(
                 text: $searchText,
-                prompt: "Movies, music, books, and more"
+                prompt: "Search"
             )
         #endif
         .onSubmit(of: .search) {

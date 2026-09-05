@@ -23,7 +23,7 @@ import SwiftUI
                                 systemImage: isSelected ? "checkmark.circle.fill" : "circle"
                             )
                         }
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(PrismediaTypography.captionEmphasized)
                         .controlSize(.small)
                         .buttonStyle(.glass)
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
