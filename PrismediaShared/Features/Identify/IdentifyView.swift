@@ -71,8 +71,7 @@ import SwiftUI
             NavigationStack(path: $compactNavigationPath) {
                 IdentifySidebarList(
                     session: session,
-                    usesNavigationLinks: true,
-                    onOpenKind: { compactNavigationPath.append($0) }
+                    usesNavigationLinks: true
                 )
                 .navigationDestination(for: EntityKind.self) { kind in
                     IdentifyKindBrowseView(session: session, kind: kind)

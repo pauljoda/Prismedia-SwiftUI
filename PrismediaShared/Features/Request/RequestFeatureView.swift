@@ -60,7 +60,15 @@ import SwiftUI
                 } else if let kind {
                     searchSurface(for: kind)
                 } else {
-                    kindSelectionSurface
+                    #if os(iOS)
+                        if errorMessage == nil {
+                            RequestKindList(selection: $kind)
+                        } else {
+                            kindSelectionSurface
+                        }
+                    #else
+                        kindSelectionSurface
+                    #endif
                 }
             }
             .task { await loadProviders() }

@@ -6,56 +6,39 @@ import SwiftUI
         @Environment(\.scenePhase) private var scenePhase
         @Bindable var session: IdentifySession
         let usesNavigationLinks: Bool
-        var onOpenKind: (EntityKind) -> Void = { _ in }
 
         var body: some View {
             Group {
                 if usesNavigationLinks {
                     List {
-                        Section("Browse by Kind") {
-                            GlassEffectContainer(spacing: PrismediaSpacing.medium) {
-                                LazyVGrid(
-                                    columns: [GridItem(.flexible()), GridItem(.flexible())],
-                                    spacing: PrismediaSpacing.medium
-                                ) {
-                                    ForEach(session.kindSummaries) { summary in
-                                        kindCard(summary)
+                        Section {
+                            NavigationLink {
+                                IdentifyQueueView(
+                                    session: session,
+                                    presentsReviewInNavigationStack: true
+                                )
+                            } label: {
+                                Label {
+                                    LabeledContent("Review Queue") {
+                                        Text(session.queue.count, format: .number)
+                                            .monospacedDigit()
                                     }
+                                } icon: {
+                                    Image(systemName: "checklist")
                                 }
-                            }
-                            .padding(.vertical, PrismediaSpacing.small)
-                            .listRowBackground(Color.clear)
-                        }
-
-                        if !session.queue.isEmpty {
-                            Section {
-                                ForEach(session.queue) { item in
-                                    NavigationLink {
-                                        IdentifyReviewView(session: session)
-                                            .task { await session.open(entityID: item.entityID) }
-                                    } label: {
-                                        IdentifyQueueRow(item: item)
-                                    }
-                                }
-                            } header: {
-                                HStack {
-                                    Text("Review Queue")
-                                    Spacer(minLength: 0)
-                                    Text("\(session.queue.count) items")
-                                }
-                            } footer: {
-                                NavigationLink {
-                                    IdentifyQueueView(
-                                        session: session,
-                                        presentsReviewInNavigationStack: true
-                                    )
-                                } label: {
-                                    Label("Select and Review All", systemImage: "rectangle.stack")
-                                        .font(.callout)
-                                }
-                                .padding(.top, PrismediaSpacing.small)
                             }
                             .accessibilityIdentifier("identify.dashboard-queue")
+                        } footer: {
+                            Text("Review suggested matches before changing your library.")
+                        }
+
+                        Section("Find Items to Identify") {
+                            ForEach(session.kindSummaries) { summary in
+                                NavigationLink(value: summary.kind) {
+                                    kindLabel(summary)
+                                }
+                                .accessibilityIdentifier("identify.kind.\(summary.kind.rawValue)")
+                            }
                         }
                     }
                 } else {
@@ -107,47 +90,6 @@ import SwiftUI
             )
         }
 
-        private func kindCard(_ summary: IdentifyKindSummary) -> some View {
-            let shape = PrismediaStableRoundedRectangle(
-                cornerRadius: PrismediaRadius.card
-            )
-
-            return Button {
-                onOpenKind(summary.kind)
-            } label: {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                    Image(systemName: summary.kind.thumbnailFallbackSystemImage)
-                        .font(.title3)
-                        .foregroundStyle(PrismediaColor.entityAccent(for: summary.kind))
-
-                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                        Text(summary.kind.displayLabel)
-                            .font(.headline)
-                        Text(summary.kind.rawValue)
-                            .font(.caption2.monospaced())
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Divider()
-
-                    if summary.pendingCount > 0 {
-                        Text("\(summary.pendingCount) queued")
-                            .font(.caption)
-                            .foregroundStyle(PrismediaColor.accent)
-                    }
-                }
-                .padding(PrismediaSpacing.medium)
-                .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
-                .contentShape(.rect)
-                .glassEffect(.regular.interactive(), in: shape)
-                .overlay {
-                    shape.stroke(PrismediaColor.border, lineWidth: 1)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Browse \(summary.kind.displayLabel.lowercased()) items")
-        }
-
         private var queueLabel: some View {
             HStack {
                 Label("Identify Queue", systemImage: "checklist")
@@ -167,7 +109,8 @@ import SwiftUI
                 }
                 Spacer()
                 if summary.pendingCount > 0 {
-                    Text(summary.pendingCount, format: .number)
+                    Text("\(summary.pendingCount) queued")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
