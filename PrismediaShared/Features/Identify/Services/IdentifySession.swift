@@ -25,7 +25,9 @@ import Observation
         var searchValues: [String: String] = [:]
         private(set) var searchLimit = 25
         private(set) var activeCandidateID: PluginSearchCandidateIdentity?
-        var reviewSelection = MetadataReviewSelection()
+        var reviewSelection = MetadataReviewSelection() {
+            didSet { rememberReviewSelection() }
+        }
         var showsSearchForProposal = false
         var errorMessage: String?
 
@@ -40,6 +42,7 @@ import Observation
         private var searchValuesByEntityAndProvider: [String: [String: String]] = [:]
         private var retainedCandidatesBySearchContext: [String: [AdministrativeEntitySearchCandidate]] = [:]
         private var retryOperation: IdentifySearchRetryOperation?
+        @ObservationIgnored private var reviewDrafts: [UUID: IdentifyReviewDraft] = [:]
 
         private static let searchPageSize = PluginSearchPagingPolicy.pageSize
         private static let searchMaxLimit = PluginSearchPagingPolicy.maximumLimit
@@ -171,6 +174,7 @@ import Observation
                 )
                 if providers != nextProviders { providers = nextProviders }
                 if queue != nextQueue { queue = nextQueue }
+                retainReviewDrafts(for: nextQueue)
                 if let nextDefaults, defaultProviderIDs != nextDefaults {
                     defaultProviderIDs = nextDefaults
                 }
@@ -218,6 +222,7 @@ import Observation
                 return
             } catch PrismediaAPIError.httpStatus(404, _) {
                 queue.removeAll { $0.entityID == selectedItemID }
+                reviewDrafts.removeValue(forKey: selectedItemID)
                 self.selectedItemID = nil
             } catch {
                 // A live refresh retains the last usable review state and retries quietly.
@@ -483,6 +488,7 @@ import Observation
             do {
                 try await service.removeIdentifyItem(entityID: item.entityID)
                 queue.removeAll { $0.entityID == item.entityID }
+                reviewDrafts.removeValue(forKey: item.entityID)
                 if advance { selectNext() } else { selectedItemID = nil }
                 return true
             } catch {
@@ -530,6 +536,7 @@ import Observation
                 bulkProgress = .init(completed: index + 1, total: ids.count)
             }
             queue.removeAll { removedIDs.contains($0.entityID) }
+            reviewDrafts = reviewDrafts.filter { !removedIDs.contains($0.key) }
             selectedQueueIDs.subtract(removedIDs)
         }
 
@@ -570,7 +577,8 @@ import Observation
                 )
                 await refreshQueue()
                 guard response.enqueued == items.count else {
-                    let message = response.enqueued == 0
+                    let message =
+                        response.enqueued == 0
                         ? "No items were queued. Identify requires imported source media, not wanted items. Refresh the library and try again."
                         : "\(response.enqueued) of \(items.count) items were queued. Check Review Queue before retrying; the server did not identify which items were skipped."
                     return EntityGridMutationResult(
@@ -775,7 +783,7 @@ import Observation
                     retainedCandidatesBySearchContext.removeValue(forKey: key)
                 }
             }
-            reviewSelection = item.proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
+            restoreReviewSelection()
             if item.proposal != nil { showsSearchForProposal = false }
         }
 
@@ -792,6 +800,7 @@ import Observation
             let previousProposal = selectedItem?.proposal
             let previousProposalID = previousProposal?.proposalID
             queue = nextQueue
+            retainReviewDrafts(for: nextQueue)
 
             let validSelection = selectedQueueIDs.intersection(Set(nextQueue.map(\.entityID)))
             if selectedQueueIDs != validSelection { selectedQueueIDs = validSelection }
@@ -867,13 +876,32 @@ import Observation
         private func select(_ entityID: UUID?) {
             rememberCurrentSearchValues()
             selectedItemID = entityID
-            let proposal = queue.first { $0.entityID == entityID }?.proposal
-            reviewSelection = proposal.map(MetadataReviewPolicy.seededSelection) ?? .init()
+            restoreReviewSelection()
             showsSearchForProposal = false
             searchLimit = queue.first { $0.entityID == entityID }?.query?.limit ?? Self.searchPageSize
             activeCandidateID = nil
             retryOperation = nil
             reconcileProvider(preferConfiguredDefault: true)
+        }
+
+        private func retainReviewDrafts(for items: [AdministrativeIdentifyQueueItem]) {
+            let retainedIDs = Set(items.map(\.entityID))
+            reviewDrafts = reviewDrafts.filter { retainedIDs.contains($0.key) }
+        }
+
+        private func rememberReviewSelection() {
+            guard let item = selectedItem, let proposal = item.proposal else { return }
+            reviewDrafts[item.entityID] = IdentifyReviewDraft(proposal: proposal, selection: reviewSelection)
+        }
+
+        private func restoreReviewSelection() {
+            guard let item = selectedItem, let proposal = item.proposal else {
+                reviewSelection = .init()
+                return
+            }
+            reviewSelection =
+                reviewDrafts[item.entityID]?.selection(for: proposal)
+                ?? MetadataReviewPolicy.seededSelection(for: proposal)
         }
 
         private func rememberCurrentSearchValues() {

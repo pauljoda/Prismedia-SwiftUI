@@ -249,6 +249,126 @@ import XCTest
             )
         }
 
+        @MainActor
+        func testReopeningReviewRetainsUserChoices() async throws {
+            let root = proposal(id: "root", title: "Arrival", description: "Description")
+            let item = try queueItem(state: "proposal", proposal: root)
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: item, getItems: [item]),
+                browser: IdentifyPreviewEntityBrowser(), initialQueue: [item]
+            )
+            session.reviewSelection.selectedFieldsByProposal["root"]?.remove(.title)
+            let choices = session.reviewSelection
+
+            await session.open(entityID: item.entityID)
+
+            XCTAssertEqual(session.reviewSelection, choices)
+        }
+
+        @MainActor
+        func testMovingBetweenReviewsKeepsIndependentChoices() throws {
+            let first = try queueItem(
+                state: "proposal", proposal: proposal(id: "first", title: "Arrival", description: "First")
+            )
+            let second = try queueItem(
+                state: "proposal", proposal: proposal(id: "second", title: "Dune", description: "Second")
+            )
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: first),
+                browser: IdentifyPreviewEntityBrowser(), initialQueue: [first, second]
+            )
+            session.reviewSelection.selectedFieldsByProposal["first"]?.remove(.title)
+            let firstChoices = session.reviewSelection
+            session.selectNext()
+            session.reviewSelection.selectedFieldsByProposal["second"]?.remove(.description)
+            let secondChoices = session.reviewSelection
+
+            session.selectPrevious()
+            XCTAssertEqual(session.selectedItemID, first.entityID)
+            XCTAssertEqual(session.reviewSelection, firstChoices)
+            session.selectNext()
+            XCTAssertEqual(session.selectedItemID, second.entityID)
+            XCTAssertEqual(session.reviewSelection, secondChoices)
+        }
+
+        @MainActor
+        func testReturningToStreamedReviewKeepsChoicesAndIncludesNewChildren() async throws {
+            let root = proposal(id: "root", title: "Series", description: "Description")
+            let first = try queueItem(state: "proposal", proposal: root)
+            let second = try queueItem(
+                state: "proposal", proposal: proposal(id: "other", title: "Other", description: nil)
+            )
+            let updated = try queueItem(
+                entityID: first.entityID, state: "proposal",
+                proposal: proposal(
+                    id: "root", title: "Series", description: "Description",
+                    children: [proposal(id: "child", title: "Episode", description: nil)]
+                )
+            )
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: first, queue: [updated, second]),
+                browser: IdentifyPreviewEntityBrowser(), initialQueue: [first, second]
+            )
+            session.reviewSelection.selectedFieldsByProposal["root"]?.remove(.title)
+            session.selectNext()
+
+            await session.refreshQueue()
+            session.selectPrevious()
+
+            XCTAssertFalse(session.reviewSelection.selectedFieldsByProposal["root"]?.contains(.title) == true)
+            XCTAssertTrue(session.reviewSelection.selectedFieldsByProposal["child"]?.contains(.title) == true)
+        }
+
+        @MainActor
+        func testReopeningNewProposalStartsWithItsDefaults() async throws {
+            let first = try queueItem(
+                state: "proposal", proposal: proposal(id: "first", title: "Arrival", description: "First")
+            )
+            let replacement = proposal(id: "replacement", title: "Arrival", description: "Replacement")
+            let updated = try queueItem(entityID: first.entityID, state: "proposal", proposal: replacement)
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: first, getItems: [updated]),
+                browser: IdentifyPreviewEntityBrowser(), initialQueue: [first]
+            )
+            session.reviewSelection.selectedFieldsByProposal["first"]?.remove(.title)
+
+            await session.open(entityID: first.entityID)
+
+            XCTAssertEqual(session.reviewSelection, MetadataReviewPolicy.seededSelection(for: replacement))
+        }
+
+        @MainActor
+        func testReloadingQueueKeepsChoicesForTheSameProposal() async throws {
+            let root = proposal(id: "root", title: "Arrival", description: "Description")
+            let item = try queueItem(state: "proposal", proposal: root)
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: item, queue: [item]),
+                browser: IdentifyPreviewEntityBrowser(), initialQueue: [item]
+            )
+            session.reviewSelection.selectedFieldsByProposal["root"]?.remove(.title)
+            let choices = session.reviewSelection
+
+            await session.load()
+
+            XCTAssertEqual(session.reviewSelection, choices)
+        }
+
+        @MainActor
+        func testRemovedQueueItemDoesNotRestoreAnOldDraftWhenReadded() async throws {
+            let root = proposal(id: "root", title: "Arrival", description: "Description")
+            let item = try queueItem(state: "proposal", proposal: root)
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: item, getItems: [item]),
+                browser: IdentifyPreviewEntityBrowser(), initialQueue: [item]
+            )
+            session.reviewSelection.selectedFieldsByProposal["root"]?.remove(.title)
+
+            await session.refreshQueue()
+            await session.open(entityID: item.entityID)
+
+            XCTAssertEqual(session.reviewSelection, MetadataReviewPolicy.seededSelection(for: root))
+        }
+
         private func queueItem(
             entityID: UUID = UUID(),
             title: String = "Arrival",

@@ -9,6 +9,7 @@ import SwiftUI
         #endif
 
         @Bindable var session: IdentifySession
+        @State private var showsReview = false
         var presentsReviewInNavigationStack = false
 
         var body: some View {
@@ -31,6 +32,9 @@ import SwiftUI
                 }
             }
             .navigationTitle("Identify Queue")
+            .navigationDestination(isPresented: $showsReview) {
+                IdentifyReviewView(session: session)
+            }
             .safeAreaInset(edge: .bottom) {
                 if let progress = session.bulkProgress, progress.total > 0 {
                     ProgressView(value: progress.fraction) {
@@ -43,7 +47,12 @@ import SwiftUI
             }
             .toolbar {
                 ToolbarItemGroup(placement: trailingToolbarPlacement) {
-                    Button(action: session.reviewAll) {
+                    Button {
+                        session.reviewAll()
+                        if presentsReviewInNavigationStack {
+                            showsReview = session.selectedItem != nil
+                        }
+                    } label: {
                         Image(systemName: "rectangle.stack")
                     }
                     .accessibilityLabel("Review All")
