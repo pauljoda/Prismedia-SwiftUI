@@ -2,9 +2,9 @@ import Foundation
 
 @MainActor
 public struct FileArchiveDownloadUseCase {
-    private let service: any FileAdministrationServicing
+    private let service: any FileTransferServicing
 
-    public init(service: any FileAdministrationServicing) { self.service = service }
+    public init(service: any FileTransferServicing) { self.service = service }
 
     public func prepareAndDownload(
         rootID: UUID,

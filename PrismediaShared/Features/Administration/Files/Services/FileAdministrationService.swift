@@ -106,7 +106,7 @@ public struct FileAdministrationService: FileAdministrationServicing {
         let path = try AdministrativeFilePathPolicy.validatedRelativePath(path)
         let data = try await client.downloadAdministrativeFile(rootID: rootID, path: path)
         let name = URL(fileURLWithPath: path).lastPathComponent
-        return try storeDownload(data: data, suggestedName: name)
+        return try AdministrativeDownloadStorage().store(data, suggestedName: name)
     }
 
     public func downloadArchive(_ preparation: AdministrativeFileArchivePreparation) async throws
@@ -114,17 +114,10 @@ public struct FileAdministrationService: FileAdministrationServicing {
     {
         guard preparation.ready, preparation.error == nil else { throw AdministrativeFileArchiveError.notReady }
         let data = try await client.downloadAdministrativeFileArchive(id: preparation.id)
-        return try storeDownload(data: data, suggestedName: preparation.fileName)
+        return try AdministrativeDownloadStorage().store(data, suggestedName: preparation.fileName)
     }
 
-    private func storeDownload(data: Data, suggestedName: String) throws -> AdministrativeDownloadedFile {
-        let safeName = suggestedName.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "\\", with: "_")
-        let directory = FileManager.default.temporaryDirectory
-            .appending(path: "PrismediaDownloads", directoryHint: .isDirectory)
-            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appending(path: safeName.isEmpty ? "download" : safeName)
-        try data.write(to: url, options: .atomic)
-        return AdministrativeDownloadedFile(localURL: url, suggestedFileName: url.lastPathComponent)
+    public func discardDownload(_ downloaded: AdministrativeDownloadedFile) async throws {
+        try AdministrativeDownloadStorage().discard(downloaded)
     }
 }

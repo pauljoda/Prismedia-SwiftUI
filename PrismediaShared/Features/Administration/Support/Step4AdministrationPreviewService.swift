@@ -89,6 +89,7 @@ import Foundation
         func downloadFile(rootID: UUID, path: String) async throws -> AdministrativeDownloadedFile {
             throw CancellationError()
         }
+        func discardDownload(_ downloaded: AdministrativeDownloadedFile) async throws {}
         func downloadArchive(_ preparation: AdministrativeFileArchivePreparation) async throws
             -> AdministrativeDownloadedFile
         {

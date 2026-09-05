@@ -5,11 +5,15 @@ public struct AdministrativeUploadItemCollector: Sendable {
 
     public func collect(_ urls: [URL]) throws -> [AdministrativeFileUploadItem] {
         try urls.flatMap { url in
+            try Task.checkCancellation()
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey])
             guard values.isDirectory == true else {
-                return [AdministrativeFileUploadItem(localURL: url, relativePath: url.lastPathComponent, securityScopeURL: url)]
+                return [
+                    AdministrativeFileUploadItem(
+                        localURL: url, relativePath: url.lastPathComponent, securityScopeURL: url)
+                ]
             }
             return try collectDirectory(url)
         }
@@ -17,13 +21,16 @@ public struct AdministrativeUploadItemCollector: Sendable {
 
     private func collectDirectory(_ root: URL) throws -> [AdministrativeFileUploadItem] {
         let keys: [URLResourceKey] = [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey]
-        guard let enumerator = FileManager.default.enumerator(
-            at: root,
-            includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]
-        ) else { return [] }
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: root,
+                includingPropertiesForKeys: keys,
+                options: [.skipsHiddenFiles, .skipsPackageDescendants]
+            )
+        else { return [] }
         let base = root.deletingLastPathComponent().standardizedFileURL.path
         return try enumerator.compactMap { value in
+            try Task.checkCancellation()
             guard let url = value as? URL else { return nil }
             let properties = try url.resourceValues(forKeys: Set(keys))
             guard properties.isRegularFile == true, properties.isSymbolicLink != true else { return nil }

@@ -12,16 +12,10 @@ import UniformTypeIdentifiers
         @State private var deferredAction: (AdministrativeFileAction, AdministrativeFileEntry)?
         @State private var deleteEntry: AdministrativeFileEntry?
         @State private var exclusionEntry: AdministrativeFileEntry?
-        @State private var showsFileImporter = false
-        @State private var showsFolderImporter = false
-        @State private var transferTitle = ""
-        @State private var transferDetail = ""
-        @State private var transferProgress: Double?
+        @State private var showsImporter = false
+        @State private var importsFolder = false
+        @State private var transfer: AdministrativeFileTransferSession?
         @State private var showsTransfer = false
-        @State private var transferTask: Task<Void, Never>?
-        @State private var exportDocument: AdministrativeFileExportDocument?
-        @State private var exportFileName = "download"
-        @State private var showsExporter = false
 
         let location: AdministrativeFileLocation
         let roots: [AdministrativeFileRoot]
@@ -42,7 +36,7 @@ import UniformTypeIdentifiers
                 }
                 ForEach(listing.items) { entry in
                     AdministrativeFileEntryRow(
-                        entry: entry, isBusy: isBusy || transferTask != nil,
+                        entry: entry, isBusy: isBusy || transfer != nil,
                         open: {
                             if entry.isDirectory {
                                 openDirectory(
@@ -75,7 +69,7 @@ import UniformTypeIdentifiers
                 }
             }
             .dropDestination(for: URL.self) { urls, _ in
-                guard !isBusy, transferTask == nil, !urls.isEmpty else { return false }
+                guard !isBusy, transfer == nil, !urls.isEmpty else { return false }
                 beginUpload(urls)
                 return true
             }
@@ -96,36 +90,15 @@ import UniformTypeIdentifiers
                     }
                 }
             }
-            .sheet(isPresented: $showsTransfer) {
-                AdministrativeFileTransferStatusView(
-                    title: transferTitle,
-                    detail: transferDetail,
-                    progress: transferProgress,
-                    cancel: { transferTask?.cancel() }
-                )
-                .interactiveDismissDisabled(transferTask != nil)
+            .sheet(isPresented: $showsTransfer, onDismiss: finishTransfer) {
+                if let transfer { AdministrativeFileTransferView(session: transfer) }
             }
             .fileImporter(
-                isPresented: $showsFileImporter,
-                allowedContentTypes: [.data, .item],
+                isPresented: $showsImporter,
+                allowedContentTypes: importsFolder ? [.folder] : [.item],
                 allowsMultipleSelection: true,
                 onCompletion: handleImport
             )
-            .fileImporter(
-                isPresented: $showsFolderImporter,
-                allowedContentTypes: [.folder],
-                allowsMultipleSelection: true,
-                onCompletion: handleImport
-            )
-            .fileExporter(
-                isPresented: $showsExporter,
-                document: exportDocument,
-                contentType: .data,
-                defaultFilename: exportFileName
-            ) { result in
-                if case .failure(let error) = result { message = error.localizedDescription }
-                exportDocument = nil
-            }
             .alert(
                 deleteEntry.map { "Delete \($0.name)?" } ?? "Delete permanently?",
                 isPresented: Binding(get: { deleteEntry != nil }, set: { if !$0 { deleteEntry = nil } })
@@ -158,7 +131,7 @@ import UniformTypeIdentifiers
         private var toolbarContent: some ToolbarContent {
             ToolbarItemGroup(placement: .primaryAction) {
                 PrismediaToolbarActionButton("Refresh Folder", systemImage: "arrow.clockwise") { Task { await load() } }
-                    .disabled(isBusy || listing.isLoading || transferTask != nil)
+                    .disabled(isBusy || listing.isLoading || transfer != nil)
                 fileActionsMenu
                     .prismediaToolbarActionLabelStyle()
             }
@@ -169,17 +142,23 @@ import UniformTypeIdentifiers
                 Button("New Folder", systemImage: "folder.badge.plus") {
                     presentation = .name(.createFolder)
                 }
-                Button("Upload Files", systemImage: "square.and.arrow.up") { showsFileImporter = true }
-                Button("Upload Folder", systemImage: "folder.badge.plus") { showsFolderImporter = true }
+                Button("Upload Files", systemImage: "square.and.arrow.up") {
+                    importsFolder = false
+                    showsImporter = true
+                }
+                Button("Upload Folder", systemImage: "folder.badge.plus") {
+                    importsFolder = true
+                    showsImporter = true
+                }
                 Divider()
                 Button("Download Folder", systemImage: "arrow.down.circle") { beginArchiveDownload() }
                 Button("Rescan", systemImage: "arrow.trianglehead.2.clockwise") { performRescan() }
             }
-            .disabled(isBusy || transferTask != nil || listing.errorMessage != nil)
+            .disabled(isBusy || transfer != nil || listing.errorMessage != nil)
         }
 
         private func handleAction(_ action: AdministrativeFileAction, entry: AdministrativeFileEntry) {
-            guard !isBusy, transferTask == nil else { return }
+            guard !isBusy, transfer == nil else { return }
             if case .details = presentation {
                 deferredAction = (action, entry)
                 presentation = nil
@@ -249,7 +228,7 @@ import UniformTypeIdentifiers
         private func runMutation(
             _ operation: @escaping @MainActor () async throws -> AdministrativeFileOperationResponse
         ) async {
-            guard !isBusy, transferTask == nil else { return }
+            guard !isBusy, transfer == nil else { return }
             isBusy = true
             notice = nil
             defer { isBusy = false }
@@ -270,98 +249,40 @@ import UniformTypeIdentifiers
         }
 
         private func beginUpload(_ urls: [URL]) {
-            guard !urls.isEmpty, !isBusy, transferTask == nil else { return }
-            showsTransfer = true
-            transferTitle = "Preparing Upload"
-            transferDetail = "Reading selected files…"
-            transferProgress = nil
-            transferTask = Task {
-                do {
-                    let collector = AdministrativeUploadItemCollector()
-                    let items = try await Task.detached { try collector.collect(urls) }.value
-                    let result = await FileUploadUseCase(service: service).upload(
-                        items,
-                        rootID: location.rootID,
-                        targetPath: location.path
-                    ) { progress in
-                        transferTitle = "Uploading Files"
-                        transferDetail = progress.currentPath ?? "Finishing upload…"
-                        transferProgress = progress.fraction
-                    }
-                    transferTask = nil
-                    showsTransfer = false
-                    await load()
-                    let success = "Uploaded \(result.successfulPaths.count) of \(items.count) files."
-                    if result.failures.isEmpty {
-                        message = success
-                    } else {
-                        message =
-                            "\(success) \(result.failures.count) failed; successful files were preserved. \(result.failures.first?.message ?? "")"
-                    }
-                } catch is CancellationError {
-                    transferTask = nil
-                    showsTransfer = false
-                    await load()
-                    message = "Upload cancelled. Files already uploaded remain on the server."
-                } catch {
-                    transferTask = nil
-                    showsTransfer = false
-                    message = error.localizedDescription
-                }
-            }
+            guard !urls.isEmpty else { return }
+            beginTransfer(.upload(urls, location))
         }
 
         private func beginFileDownload(_ entry: AdministrativeFileEntry) {
-            guard !isBusy, transferTask == nil else { return }
-            showsTransfer = true
-            transferTitle = "Downloading \(entry.name)"
-            transferDetail = "Receiving an authenticated server transfer…"
-            transferProgress = nil
-            transferTask = Task {
-                do {
-                    let downloaded = try await service.downloadFile(rootID: entry.rootID, path: entry.path)
-                    try presentExport(downloaded)
-                } catch is CancellationError {
-                    message = "Download cancelled."
-                } catch { message = error.localizedDescription }
-                transferTask = nil
-                showsTransfer = false
-            }
+            beginTransfer(.download(entry))
         }
 
         private func beginArchiveDownload(_ entry: AdministrativeFileEntry? = nil) {
-            guard !isBusy, transferTask == nil else { return }
             let path = entry?.path ?? location.path
-            let name =
-                entry?.name
-                ?? (location.path.isEmpty ? location.rootLabel : URL(fileURLWithPath: path).lastPathComponent)
-            showsTransfer = true
-            transferTitle = "Preparing \(name).zip"
-            transferDetail = "Collecting visible files…"
-            transferProgress = nil
-            transferTask = Task {
-                do {
-                    let downloaded = try await FileArchiveDownloadUseCase(service: service).prepareAndDownload(
-                        rootID: location.rootID,
-                        path: path
-                    ) { preparation in
-                        transferTitle = preparation.ready ? "Archive Ready" : "Compressing Folder"
-                        transferDetail = "\(preparation.processedFiles) of \(preparation.totalFiles) files"
-                        transferProgress = Double(preparation.progressPercent) / 100
-                    }
-                    try presentExport(downloaded)
-                } catch is CancellationError {
-                    message = "Archive preparation cancelled. Its temporary server result will expire automatically."
-                } catch { message = error.localizedDescription }
-                transferTask = nil
-                showsTransfer = false
-            }
+            let name = entry?.name ?? (path.isEmpty ? location.rootLabel : URL(fileURLWithPath: path).lastPathComponent)
+            beginTransfer(
+                .archive(.init(rootID: location.rootID, rootLabel: location.rootLabel, path: path), name: name))
         }
 
-        private func presentExport(_ downloaded: AdministrativeDownloadedFile) throws {
-            exportDocument = try AdministrativeFileExportDocument(sourceURL: downloaded.localURL)
-            exportFileName = downloaded.suggestedFileName
-            showsExporter = true
+        private func beginTransfer(_ request: AdministrativeFileTransferRequest) {
+            guard !isBusy, transfer == nil else { return }
+            notice = nil
+            transfer = AdministrativeFileTransferSession(request: request, service: service)
+            showsTransfer = true
+        }
+
+        private func finishTransfer() {
+            guard let finished = transfer else { return }
+            Task {
+                await finished.close()
+                if let cleanupError = finished.cleanupError {
+                    message = "Couldn’t remove the temporary download: \(cleanupError)"
+                }
+                if finished.request.isUpload {
+                    await load()
+                }
+                transfer = nil
+            }
         }
     }
 
