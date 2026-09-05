@@ -5,41 +5,44 @@ import SwiftUI
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         let proposal: AdministrativeEntityMetadataProposal
         let selection: Binding<MetadataReviewSelection>?
+        @State private var isExpanded = false
 
         var body: some View {
-            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                HStack {
-                    Label("Release dates", systemImage: "calendar")
-                        .font(.headline)
-                    Spacer()
+            DisclosureGroup(isExpanded: $isExpanded) {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                     if let selection {
                         Toggle("Apply release dates", isOn: selectedBinding(selection))
-                            .labelsHidden()
                             .tint(artworkPrimaryAccent)
                     }
-                }
-
-                if dates.isEmpty {
-                    ContentUnavailableView {
-                        Label("No release date data yet", systemImage: "calendar.badge.questionmark")
-                    } description: {
-                        Text("The metadata provider did not include any release milestones in this proposal.")
-                    }
-                    .frame(maxWidth: .infinity)
-                } else {
                     ForEach(dates, id: \.code) { date in
-                        LabeledContent(
-                            date.type?.displayName ?? titleCase(date.code),
-                            value: date.value
-                        )
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                            Text(date.type?.displayName ?? titleCase(date.code))
+                                .font(.subheadline)
+                                .foregroundStyle(PrismediaColor.textSecondary)
+                            Text(date.value)
+                                .font(.body)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .padding(.top, PrismediaSpacing.medium)
+            } label: {
+                MetadataReviewSectionLabel(
+                    title: "Release dates", systemImage: "calendar", summary: selectionSummary
+                )
             }
             .accessibilityIdentifier("metadata-review.release-dates")
         }
 
         private var dates: [EntityDate] {
             MetadataReviewPolicy.proposedDates(in: proposal)
+        }
+
+        private var selectionSummary: String {
+            guard let selection else { return "\(dates.count) dates" }
+            let selected =
+                selection.wrappedValue.selectedFieldsByProposal[proposal.proposalID]?.contains(.dates) == true
+            return selected ? "\(dates.count) dates selected" : "Not selected"
         }
 
         private func selectedBinding(

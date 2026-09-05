@@ -21,14 +21,9 @@ import SwiftUI
                 }
                 .padding(.top, PrismediaSpacing.small)
             } label: {
-                HStack {
-                    Label("Tags", systemImage: "tag")
-                        .font(.headline)
-                    Spacer()
-                    Text("\(selectedCount) of \(tags.count) selected")
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
+                MetadataReviewSectionLabel(
+                    title: "Tags", systemImage: "tag", summary: "\(selectedCount) of \(tags.count) selected"
+                )
             }
         }
 

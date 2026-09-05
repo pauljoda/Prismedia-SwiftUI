@@ -3,6 +3,7 @@ import SwiftUI
 #if os(iOS) || os(macOS)
     struct MetadataProposalReviewView: View {
         let proposal: AdministrativeEntityMetadataProposal
+        let showsHeader: Bool
         let headerSubtitle: String?
         let fallbackArtworkPath: String?
         let selection: Binding<MetadataReviewSelection>?
@@ -18,6 +19,7 @@ import SwiftUI
 
         init(
             proposal: AdministrativeEntityMetadataProposal,
+            showsHeader: Bool = true,
             headerSubtitle: String? = nil,
             fallbackArtworkPath: String? = nil,
             selection: Binding<MetadataReviewSelection>? = nil,
@@ -32,6 +34,7 @@ import SwiftUI
             onActivateProposal: ((AdministrativeEntityMetadataProposal) -> Void)? = nil
         ) {
             self.proposal = proposal
+            self.showsHeader = showsHeader
             self.headerSubtitle = headerSubtitle
             self.fallbackArtworkPath = fallbackArtworkPath
             self.selection = selection
@@ -48,25 +51,32 @@ import SwiftUI
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
-                MetadataProposalHeaderView(
-                    proposal: proposal,
-                    subtitle: headerSubtitle,
-                    fallbackArtworkPath: fallbackArtworkPath
-                )
+                if showsHeader {
+                    MetadataProposalHeaderView(
+                        proposal: proposal,
+                        subtitle: headerSubtitle,
+                        fallbackArtworkPath: fallbackArtworkPath
+                    )
+                }
                 MetadataProposalFieldsView(
                     proposal: proposal,
                     selection: selection,
                     currentValues: currentValues,
                     excludedFields: separatelyReviewedFields
                 )
-                MetadataProposalDatesView(
-                    proposal: proposal,
-                    selection: selection
-                )
+                if !MetadataReviewPolicy.proposedDates(in: proposal).isEmpty {
+                    Divider()
+                    MetadataProposalDatesView(
+                        proposal: proposal,
+                        selection: selection
+                    )
+                }
                 if let selection, !reviewableImages.isEmpty {
+                    Divider()
                     MetadataArtworkPicker(proposal: proposal, selection: selection)
                 }
                 if let selection, !looseTags.isEmpty {
+                    Divider()
                     MetadataProposalTagsView(
                         proposalID: proposal.proposalID,
                         tags: looseTags,
@@ -75,6 +85,7 @@ import SwiftUI
                     )
                 }
                 if !children.isEmpty {
+                    Divider()
                     MetadataProposalNodesView(
                         title: childrenTitle,
                         nodes: children,
@@ -86,12 +97,14 @@ import SwiftUI
                     )
                 }
                 if !relationships.isEmpty {
+                    Divider()
                     MetadataProposalNodesView(
                         title: "Related Metadata",
                         nodes: relationships,
                         selectedIDs: selectedProposalIDs,
                         selectableIDs: selectableProposalIDs,
                         identifyingIDs: identifyingProposalIDs,
+                        startsExpanded: false,
                         onSetSelected: onSetProposalSelected,
                         onActivate: onActivateProposal
                     )

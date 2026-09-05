@@ -7,7 +7,7 @@ import SwiftUI
         let selection: Binding<MetadataReviewSelection>?
         let currentValues: [MetadataReviewField: String]
         let excludedFields: Set<MetadataReviewField>
-        @State private var isExpanded = true
+        @State private var isExpanded = false
 
         init(
             proposal: AdministrativeEntityMetadataProposal,
@@ -30,14 +30,9 @@ import SwiftUI
                     }
                 }
             } label: {
-                HStack {
-                    Label("Metadata", systemImage: "list.bullet.rectangle")
-                        .font(.headline)
-                    Spacer()
-                    Text("\(visibleFields.count) fields")
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
+                MetadataReviewSectionLabel(
+                    title: "Metadata", systemImage: "list.bullet.rectangle", summary: selectionSummary
+                )
             }
             .accessibilityIdentifier("metadata-review.fields")
         }
@@ -49,16 +44,24 @@ import SwiftUI
             }
         }
 
+        private var selectionSummary: String {
+            guard let selection else { return "\(visibleFields.count) fields" }
+            let selected = selection.wrappedValue.selectedFieldsByProposal[proposal.proposalID] ?? []
+            return "\(selected.intersection(visibleFields).count) of \(visibleFields.count) selected"
+        }
+
         private func fieldRow(_ field: MetadataReviewField) -> some View {
-            Group {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                 if let selection {
                     Toggle(isOn: fieldBinding(field, selection: selection)) {
-                        fieldDescription(field)
+                        Text(field.label)
+                            .font(.subheadline.weight(.medium))
                     }
                     .toggleStyle(.switch)
                     .tint(artworkPrimaryAccent)
                     .padding(.trailing, PrismediaSpacing.small)
                     .accessibilityLabel("Apply \(field.label)")
+                    fieldDescription(field)
                 } else {
                     fieldDescription(field)
                 }
@@ -68,17 +71,21 @@ import SwiftUI
 
         private func fieldDescription(_ field: MetadataReviewField) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                Text(field.label)
-                    .font(.subheadline.weight(.medium))
+                if selection == nil {
+                    Text(field.label)
+                        .font(.subheadline.weight(.medium))
+                }
                 if let current = currentValues[field], !current.isEmpty {
-                    LabeledContent("Current", value: current)
+                    Text("Current")
                         .font(.caption)
                         .foregroundStyle(PrismediaColor.textSecondary)
-                    LabeledContent(
-                        "Proposed",
-                        value: MetadataReviewPolicy.fieldValue(field, in: proposal)
-                    )
-                    .font(.callout)
+                    Text(current).font(.callout)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                    Text("Proposed")
+                        .font(.caption)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                    Text(MetadataReviewPolicy.fieldValue(field, in: proposal))
+                        .font(.callout)
                 } else {
                     Text(MetadataReviewPolicy.fieldValue(field, in: proposal))
                         .font(.callout)

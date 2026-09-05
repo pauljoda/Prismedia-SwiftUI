@@ -4,7 +4,7 @@ import SwiftUI
     struct MetadataArtworkPicker: View {
         let proposal: AdministrativeEntityMetadataProposal
         @Binding var selection: MetadataReviewSelection
-        @State private var isExpanded = true
+        @State private var isExpanded = false
 
         var body: some View {
             DisclosureGroup(isExpanded: $isExpanded) {
@@ -20,14 +20,9 @@ import SwiftUI
                 }
                 .padding(.top, PrismediaSpacing.medium)
             } label: {
-                HStack {
-                    Label("Artwork", systemImage: "photo.stack")
-                        .font(.headline)
-                    Spacer()
-                    Text(selectionSummary)
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
+                MetadataReviewSectionLabel(
+                    title: "Artwork", systemImage: "photo.stack", summary: selectionSummary
+                )
             }
         }
 

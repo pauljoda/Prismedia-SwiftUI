@@ -110,8 +110,6 @@ import SwiftUI
                 onSetProposalSelected: setProposalSelected,
                 onActivateProposal: openProposal,
                 leadingContent: {
-                    requestPanel(selection)
-
                     if proposalPath.count > 1 {
                         Button("Back", systemImage: "chevron.left") {
                             proposalPath.removeLast()
@@ -119,16 +117,20 @@ import SwiftUI
                         .buttonStyle(.borderless)
                         .accessibilityLabel("Back to previous proposal")
                     }
-                },
-                trailingContent: {
                     requestPanel(selection)
-                }
+                },
+                trailingContent: { EmptyView() }
             )
+            .safeAreaInset(edge: .bottom) {
+                requestAction(selection)
+                    .padding(PrismediaSpacing.large)
+                    .background(.bar)
+            }
         }
 
         private func requestPanel(_ selection: RequestReviewSelection) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                Label(requestPanelTitle(selection), systemImage: "paperplane")
+                Label("Request Options", systemImage: "slider.horizontal.3")
                     .font(.headline)
 
                 if selection.mode == .directChildren {
@@ -145,18 +147,24 @@ import SwiftUI
                     selectedRootID: $selectedRootID,
                     embedsInParentPanel: true
                 )
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PrismediaSpacing.large)
+            .prismediaPanel()
+        }
 
+        private func requestAction(_ selection: RequestReviewSelection) -> some View {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                 if let panelError = errorMessage ?? enrichmentErrorMessage {
                     Label(panelError, systemImage: "exclamationmark.triangle")
                         .font(.callout)
                         .foregroundStyle(PrismediaColor.destructive)
                 }
-
                 if review?.enrichment?.running == true {
                     HStack(spacing: PrismediaSpacing.small) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Identifying children and relationships… Request unlocks when finished.")
+                        Text("Finishing related metadata…")
                             .font(.caption)
                             .foregroundStyle(PrismediaColor.textSecondary)
                     }
@@ -179,16 +187,6 @@ import SwiftUI
                 )
                 .accessibilityIdentifier("request.commit")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
-        }
-
-        private func requestPanelTitle(_ selection: RequestReviewSelection) -> String {
-            guard selection.mode == .directChildren, let noun = route.kind.childNoun else {
-                return "Request This \(route.kind.label)"
-            }
-            return "Request \(noun.capitalized)s"
         }
 
         private func presetControls(_ selection: RequestReviewSelection) -> some View {

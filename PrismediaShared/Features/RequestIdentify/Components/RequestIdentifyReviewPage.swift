@@ -62,9 +62,17 @@ import SwiftUI
         var body: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
+                    MetadataProposalHeaderView(
+                        proposal: proposal,
+                        subtitle: headerSubtitle,
+                        fallbackArtworkPath: fallbackArtworkPath
+                    )
+                    .padding(PrismediaSpacing.large)
+                    .prismediaPanel()
                     leadingContent
                     MetadataProposalReviewView(
                         proposal: proposal,
+                        showsHeader: false,
                         headerSubtitle: headerSubtitle,
                         fallbackArtworkPath: fallbackArtworkPath,
                         selection: $selection,

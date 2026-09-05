@@ -7,55 +7,46 @@ import SwiftUI
         var fallbackArtworkPath: String?
 
         var body: some View {
-            HStack(alignment: .top, spacing: PrismediaSpacing.large) {
-                EntityThumbnailCardView(
-                    item: MetadataReviewThumbnailPolicy.thumbnail(
-                        for: proposal,
-                        fallbackArtworkPath: fallbackArtworkPath
-                    ),
-                    layout: .compact,
-                    preferredWidth: 72
-                )
+            VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                HStack(alignment: .top, spacing: PrismediaSpacing.large) {
+                    EntityThumbnailCardView(
+                        item: MetadataReviewThumbnailPolicy.thumbnail(
+                            for: proposal,
+                            fallbackArtworkPath: fallbackArtworkPath
+                        ),
+                        layout: .compact,
+                        preferredWidth: 72
+                    )
 
-                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                     Text(proposal.patch.title ?? "Untitled Proposal")
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(PrismediaColor.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .accessibilityElement(children: .combine)
 
-                    HStack(spacing: PrismediaSpacing.small) {
-                        Text(proposal.targetKind.rawValue)
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, PrismediaSpacing.small)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule().strokeBorder(PrismediaColor.textMuted.opacity(0.5))
-                            )
-                            .foregroundStyle(PrismediaColor.textSecondary)
-                        if let subtitle, !subtitle.isEmpty {
-                            Text(subtitle)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(PrismediaColor.textSecondary)
-                        }
-                    }
-
-                    HStack(spacing: PrismediaSpacing.medium) {
+                DisclosureGroup("Match details") {
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                        LabeledContent("Provider", value: proposal.provider)
                         if let confidence = proposal.confidence {
-                            Label(
-                                confidence.formatted(.percent.precision(.fractionLength(0))),
-                                systemImage: "checkmark.seal"
+                            LabeledContent(
+                                "Confidence",
+                                value: confidence.formatted(.percent.precision(.fractionLength(0)))
                             )
                         }
-                        Label(proposal.provider, systemImage: "puzzlepiece.extension")
                         if let matchReason = proposal.matchReason, !matchReason.isEmpty {
                             Text(matchReason)
                         }
+                        if let subtitle, !subtitle.isEmpty {
+                            Text(subtitle)
+                                .textSelection(.enabled)
+                        }
                     }
-                    .font(.caption)
-                    .foregroundStyle(PrismediaColor.textMuted)
+                    .padding(.top, PrismediaSpacing.small)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.subheadline)
+                .foregroundStyle(PrismediaColor.textSecondary)
             }
-            .accessibilityElement(children: .combine)
         }
     }
 

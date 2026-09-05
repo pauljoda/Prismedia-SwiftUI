@@ -63,14 +63,9 @@ import SwiftUI
                     }
                 }
             } label: {
-                HStack {
-                    Label(title, systemImage: "square.grid.2x2")
-                        .font(.headline)
-                    Spacer()
-                    Text(selectionSummary)
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
+                MetadataReviewSectionLabel(
+                    title: title, systemImage: "square.grid.2x2", summary: selectionSummary
+                )
             }
         }
 
