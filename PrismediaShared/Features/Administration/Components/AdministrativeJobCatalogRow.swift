@@ -43,13 +43,10 @@ struct AdministrativeJobCatalogRow: View {
                         .accessibilityLabel("\(actionTitle) \(title)")
                 }
                 if failedCount > 0 {
-                    Menu("More Actions", systemImage: "ellipsis") {
+                    PrismediaButton("More \(title) actions", systemImage: "ellipsis", form: .compactIcon, menuContent: {
                         Button(
                             "Clear Failures", systemImage: "xmark.circle", role: .destructive, action: onClearFailures)
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
-                    .accessibilityLabel("More \(title) actions")
+                    })
                 }
             }
             .fixedSize(horizontal: true, vertical: false)

@@ -4,6 +4,7 @@ import SwiftUI
     struct IdentifyKindBrowseView: View {
         @Bindable var session: IdentifySession
         let kind: EntityKind
+        @State private var identifyingItem: EntityThumbnail?
 
         var body: some View {
             EntityGridView(
@@ -55,9 +56,24 @@ import SwiftUI
                     .prismediaPanel()
                 },
                 itemContent: { item, layout in
-                    EntityThumbnailCardView(item: item, layout: layout)
+                    Button {
+                        identifyingItem = item
+                    } label: {
+                        EntityThumbnailCardView(item: item, layout: layout)
+                            .allowsHitTesting(false)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Identify \(item.title)")
+                    .accessibilityHint("Opens metadata search and review")
                 }
             )
+            .sheet(item: $identifyingItem) { item in
+                EntityIdentifyFlowView(session: session, entityID: item.id) {
+                    await session.refreshQueue()
+                }
+            }
             .task(id: kind) { session.prepareBrowse(kind: kind) }
             .accessibilityIdentifier("identify.browse")
         }

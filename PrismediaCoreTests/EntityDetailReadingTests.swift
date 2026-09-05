@@ -9,6 +9,33 @@ final class EntityDetailReadingTests: XCTestCase {
     private let chapterID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
     private let pageID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
 
+    func testMissingBookMediaDoesNotOfferReadingEvenWithSavedProgress() async {
+        let book = EntityDetail(
+            id: bookID, kind: .book, title: "Missing book",
+            parentEntityID: nil, sortOrder: nil, hasSourceMedia: false,
+            capabilities: [
+                .bookMetadata(.init(bookType: "book", format: .epub)),
+                .progress(makeSingleFileProgress(unit: .cfi, index: 100, total: 10000, mode: .paged, location: nil))
+            ], childrenByKind: [], relationships: []
+        )
+        let service = EntityDetailReadingService(reader: ReadingServiceStub(details: [bookID: book]))
+        XCTAssertFalse(EntityReadingPolicy.supportsReading(book))
+        let outcome = await service.load(detail: book)
+        guard case .unavailable = outcome else {
+            return XCTFail("Saved progress must not expose a missing document.")
+        }
+    }
+
+    func testEmptyPageSequenceDoesNotOfferReading() {
+        let book = EntityDetail(
+            id: bookID, kind: .book, title: "Pending comic",
+            parentEntityID: nil, sortOrder: nil, hasSourceMedia: false,
+            capabilities: [.pageSequence(.init(pageCount: 0, direction: .leftToRight, defaultMode: .paged, coverOrdinal: nil))],
+            childrenByKind: [], relationships: []
+        )
+        XCTAssertFalse(EntityReadingPolicy.supportsReading(book))
+    }
+
     func testNewerReadingRequestRejectsAnOlderResponse() throws {
         var state = EntityDetailReadingState()
         let older = state.beginLoad(entityID: bookID)

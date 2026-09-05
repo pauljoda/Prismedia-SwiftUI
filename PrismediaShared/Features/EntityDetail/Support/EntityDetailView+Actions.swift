@@ -95,7 +95,7 @@ extension EntityDetailView {
             #if os(tvOS)
                 return false
             #else
-                return readingService.isAvailable
+                return readingService.isAvailable && currentEntityUsesNativeReader
             #endif
         }
         return action.id == .favorite || action.id == .organized

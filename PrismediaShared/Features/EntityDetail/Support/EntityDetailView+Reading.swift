@@ -8,6 +8,7 @@ extension EntityDetailView {
 
     func openReader(command: BookReaderCommand) {
         guard case .content(let detail) = state.phase,
+            EntityReadingPolicy.supportsReading(detail),
             dependencies.readerService != nil
         else { return }
         #if os(iOS) || os(macOS)

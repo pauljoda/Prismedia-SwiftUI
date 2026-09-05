@@ -13,13 +13,13 @@ public struct MetaChipRow: View {
             chipRow(limit: 4)
             chipRow(limit: 3)
             chipRow(limit: 2)
-            chipRow(limit: 1, fillsAvailableWidth: true)
+            chipRow(limit: 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .clipped()
     }
 
-    private func chipRow(limit: Int, fillsAvailableWidth: Bool = false) -> some View {
+    private func chipRow(limit: Int) -> some View {
         let metrics = MetaChipMetrics.compact
 
         return HStack(spacing: metrics.rowSpacing) {
@@ -34,17 +34,9 @@ public struct MetaChipRow: View {
                         .foregroundStyle(PrismediaColor.textSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
-                        .frame(
-                            maxWidth: fillsAvailableWidth ? .infinity : nil,
-                            alignment: .leading
-                        )
                 }
                 .padding(.horizontal, metrics.horizontalPadding)
                 .padding(.vertical, metrics.verticalPadding)
-                .frame(
-                    maxWidth: fillsAvailableWidth ? .infinity : nil,
-                    alignment: .leading
-                )
                 .background(item.thumbnailTint.opacity(0.11))
                 .overlay {
                     RoundedRectangle(cornerRadius: PrismediaRadius.badge, style: .continuous)
