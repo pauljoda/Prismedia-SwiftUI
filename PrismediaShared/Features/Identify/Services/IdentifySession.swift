@@ -563,12 +563,22 @@ import Observation
             }
 
             do {
-                _ = try await service.startBulkIdentify(
+                let response = try await service.startBulkIdentify(
                     provider: providerID,
                     entityIDs: items.map(\.id),
                     query: nil
                 )
                 await refreshQueue()
+                guard response.enqueued == items.count else {
+                    let message = response.enqueued == 0
+                        ? "No items were queued. Identify requires imported source media, not wanted items. Refresh the library and try again."
+                        : "\(response.enqueued) of \(items.count) items were queued. Check Review Queue before retrying; the server did not identify which items were skipped."
+                    return EntityGridMutationResult(
+                        failures: items.map {
+                            EntityGridMutationFailure(entityID: $0.id, title: $0.title, message: message)
+                        }
+                    )
+                }
                 return EntityGridMutationResult(succeededIDs: Set(items.map(\.id)))
             } catch {
                 return EntityGridMutationResult(

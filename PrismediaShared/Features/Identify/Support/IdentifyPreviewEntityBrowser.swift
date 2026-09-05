@@ -8,13 +8,15 @@ import Foundation
                     id: UUID(uuidString: "a1000000-0000-0000-0000-000000000001")!,
                     kind: kind,
                     title: "Unmatched Example",
-                    isOrganized: false
+                    isOrganized: false,
+                    hasSourceMedia: true
                 ),
                 EntityThumbnail(
                     id: UUID(uuidString: "a1000000-0000-0000-0000-000000000002")!,
                     kind: kind,
                     title: "Another Library Item",
-                    isOrganized: organized ?? true
+                    isOrganized: organized ?? true,
+                    hasSourceMedia: true
                 ),
             ].filter { item in
                 guard let search, !search.isEmpty else { return true }

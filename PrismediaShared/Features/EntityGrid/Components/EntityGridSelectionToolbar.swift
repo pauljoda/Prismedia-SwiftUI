@@ -44,10 +44,7 @@
         }
 
         private var clearButton: some View {
-            Button(action: onClear) {
-                Image(systemName: "xmark.circle")
-            }
-            .accessibilityLabel("Clear Selection")
+            Button("Clear Selection", systemImage: "xmark.circle", action: onClear)
             .disabled(selectedCount == 0 || isProcessing)
             .accessibilityIdentifier("entity.grid.selection.clear")
         }

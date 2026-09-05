@@ -14,27 +14,29 @@ import SwiftUI
                     supportsSearch: true,
                     defaultDisplayMode: .grid,
                     availableDisplayModes: [.grid, .list],
-                    emptyTitle: "No Unorganized \(kind.displayLabel)",
+                    emptyTitle: "No Items to Identify",
                     emptyDescription:
-                        "Everything in this library is organized. Use Filters to include organized items.",
+                        "Identify works with imported media. Use Filters to include organized items, or import media first.",
                     preferencesID: "identify:\(kind.rawValue)"
                 ),
                 loader: session.browseGridLoader,
                 preferencesStore: .standard,
                 automaticRefreshInterval: .seconds(10),
-                startsInSelectionMode: true,
+                startsInSelectionMode: false,
                 actionPolicy: actionPolicy,
                 topContent: { context in
                     VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                        LabeledContent("Identify Provider") {
-                            Picker("Identify Provider", selection: providerSelection) {
-                                ForEach(eligibleProviders) { provider in
-                                    Text(provider.name).tag(provider.id)
-                                }
+                        PrismediaMenuPicker(
+                            title: "Identify Provider",
+                            systemImage: "sparkles",
+                            selectedValue: selectedProvider?.name ?? "No provider available",
+                            selection: providerSelection
+                        ) {
+                            ForEach(eligibleProviders) { provider in
+                                Text(provider.name).tag(provider.id)
                             }
-                            .labelsHidden()
-                            .pickerStyle(.menu)
                         }
+                        .disabled(eligibleProviders.isEmpty)
 
                         if eligibleProviders.isEmpty {
                             Label(
@@ -109,10 +111,10 @@ import SwiftUI
 
         private func gridSummary(_ context: EntityGridTopContentContext) -> String {
             if context.query.organized == false {
-                return "Showing items that still need metadata. Select items, then choose Identify."
+                return "Select imported items to find metadata matches."
             }
             return
-                "Select any library items that should be identified with \(selectedProvider?.name ?? "the chosen provider")."
+                "Select imported items to review a new metadata match."
         }
     }
 

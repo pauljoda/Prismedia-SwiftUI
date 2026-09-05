@@ -21,7 +21,7 @@ import Foundation
                 search: search
             )
             return try await StaticEntityGridLoader(
-                items: items,
+                items: items.filter { $0.hasSourceMedia && !$0.isWanted },
                 allowsNsfwContent: allowsNsfwContent
             ).load(
                 query: query,

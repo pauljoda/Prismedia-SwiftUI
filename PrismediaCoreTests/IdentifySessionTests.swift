@@ -5,6 +5,38 @@ import XCTest
 #if os(iOS) || os(macOS)
     final class IdentifySessionTests: XCTestCase {
         @MainActor
+        func testBulkIdentifyDoesNotClaimSkippedItemsSucceeded() async throws {
+            let item = try queueItem()
+            let items = [
+                EntityThumbnail(id: UUID(), kind: .movie, title: "First", hasSourceMedia: true),
+                EntityThumbnail(id: UUID(), kind: .movie, title: "Second", hasSourceMedia: true),
+            ]
+            let providers = [provider(id: "tmdb", name: "Movie provider")]
+            for enqueued in [0, 1, 2] {
+                let service = OpenIdentifyServiceSpy(
+                    item: item,
+                    bulkResponse: AdministrativeIdentifyBulkAcceptedResponse(requested: 2, enqueued: enqueued)
+                )
+                let session = IdentifySession(
+                    service: service,
+                    browser: IdentifyPreviewEntityBrowser(),
+                    initialProviders: providers
+                )
+
+                let result = await session.queueBrowseItems(items, kind: .movie, providerID: "tmdb")
+
+                if enqueued == 2 {
+                    XCTAssertEqual(result.succeededIDs, Set(items.map(\.id)))
+                    XCTAssertTrue(result.failures.isEmpty)
+                } else {
+                    // Aggregate counts cannot identify which items were skipped.
+                    XCTAssertTrue(result.succeededIDs.isEmpty)
+                    XCTAssertEqual(Set(result.failures.map(\.entityID)), Set(items.map(\.id)))
+                }
+            }
+        }
+
+        @MainActor
         func testOpeningMissingQueueItemCreatesItWithoutStartingSearch() async throws {
             let item = try queueItem()
             let service = OpenIdentifyServiceSpy(item: item)

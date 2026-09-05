@@ -13,19 +13,22 @@ import Foundation
         private let providers: [AdministrativePlugin]
         private let settingValues: [String: AdministrativeJSONValue]
         private var events: [String] = []
+        private let bulkResponse: AdministrativeIdentifyBulkAcceptedResponse?
 
         init(
             item: AdministrativeIdentifyQueueItem,
             queue: [AdministrativeIdentifyQueueItem] = [],
             getItems: [AdministrativeIdentifyQueueItem]? = nil,
             providers: [AdministrativePlugin] = [],
-            settingValues: [String: AdministrativeJSONValue] = [:]
+            settingValues: [String: AdministrativeJSONValue] = [:],
+            bulkResponse: AdministrativeIdentifyBulkAcceptedResponse? = nil
         ) {
             self.item = item
             self.queue = queue
             self.getItems = getItems
             self.providers = providers
             self.settingValues = settingValues
+            self.bulkResponse = bulkResponse
         }
 
         func callCounts() -> (get: Int, add: Int, search: Int) { (getCalls, addCalls, searchCalls) }
@@ -75,7 +78,10 @@ import Foundation
         { throw CancellationError() }
         func startBulkIdentify(provider: String?, entityIDs: [UUID], query: AdministrativeIdentifyQuery?) async throws
             -> AdministrativeIdentifyBulkAcceptedResponse
-        { throw CancellationError() }
+        {
+            guard let bulkResponse else { throw CancellationError() }
+            return bulkResponse
+        }
         func identifyEntity(
             entityID: UUID, provider: String, query: AdministrativeIdentifyQuery?, parentExternalIDs: [String: String]?
         ) async throws -> AdministrativeEntityMetadataProposal { throw CancellationError() }
