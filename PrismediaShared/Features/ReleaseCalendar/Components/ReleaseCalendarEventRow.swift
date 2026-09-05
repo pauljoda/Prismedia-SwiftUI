@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS) || os(macOS)
     struct ReleaseCalendarEventRow: View {
+        @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @State private var artworkPalette: ArtworkPalette?
 
         let event: ReleaseCalendarEvent
@@ -30,40 +31,32 @@ import SwiftUI
         }
 
         private var rowLabel: some View {
-            HStack(spacing: PrismediaSpacing.medium) {
-                AsyncImage(url: resolveAssetURL(event.posterURL)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Image(systemName: "photo")
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
-                .frame(width: 42, height: 58)
-                .background(PrismediaColor.controlFill)
-                .clipShape(.rect(cornerRadius: PrismediaRadius.compact))
-
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text(ReleaseCalendarPresentationPolicy.title(for: event))
-                        .font(.headline)
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                        .lineLimit(2)
-                    Text(event.dateType.displayName)
-                        .font(.subheadline)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                    if event.isSearchGate {
-                        Label(searchGateLabel, systemImage: "magnifyingglass")
-                            .font(.caption)
-                            .foregroundStyle(
-                                event.isSearchEligible == true
-                                    ? PrismediaColor.success
-                                    : PrismediaColor.warning
-                            )
+            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                HStack(alignment: .top, spacing: PrismediaSpacing.medium) {
+                    AsyncImage(url: resolveAssetURL(event.posterURL)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Image(systemName: "photo")
+                            .foregroundStyle(PrismediaColor.textSecondary)
                     }
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.forward")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(PrismediaColor.textMuted)
+                    .frame(width: 42, height: 58)
+                    .background(PrismediaColor.controlFill)
+                    .clipShape(.rect(cornerRadius: PrismediaRadius.compact))
                     .accessibilityHidden(true)
+                    if !dynamicTypeSize.isAccessibilitySize {
+                        ReleaseCalendarEventSummary(event: event)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Spacer(minLength: 0)
+                    }
+                    Image(systemName: "chevron.forward")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PrismediaColor.textMuted)
+                        .accessibilityHidden(true)
+                }
+                if dynamicTypeSize.isAccessibilitySize {
+                    ReleaseCalendarEventSummary(event: event)
+                }
             }
             .padding(PrismediaSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,6 +79,7 @@ import SwiftUI
                     .accessibilityHidden(true)
             }
             .contentShape(.rect)
+            .accessibilityElement(children: .combine)
         }
 
         private var cardBackground: some View {
@@ -111,15 +105,6 @@ import SwiftUI
             PrismediaStableRoundedRectangle(cornerRadius: PrismediaRadius.card)
         }
 
-        private var searchGateLabel: String {
-            if event.isSearchEligible == true { return "Search ready" }
-            if let searchNotBefore = event.searchNotBefore,
-                let date = ReleaseCalendarDatePolicy.date(from: searchNotBefore)
-            {
-                return "Searches \(date.formatted(.dateTime.month(.abbreviated).day()))"
-            }
-            return "Search gate"
-        }
     }
 #endif
 
@@ -136,5 +121,15 @@ import SwiftUI
             }
         }
         .preferredColorScheme(.dark)
+    }
+    #Preview("Release Calendar Event · Largest Text") {
+        PreviewShell {
+            List {
+                ReleaseCalendarEventRow(
+                    event: ReleaseCalendarPreviewFixtures.longTitleEvent,
+                    resolveAssetURL: { _ in nil }, onOpen: {})
+            }
+        }
+        .environment(\.dynamicTypeSize, .accessibility5)
     }
 #endif
