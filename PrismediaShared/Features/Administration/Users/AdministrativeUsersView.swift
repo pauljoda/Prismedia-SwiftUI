@@ -2,10 +2,9 @@ import SwiftUI
 
 struct AdministrativeUsersView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
-    @State private var users: [UserAccount] = []
-    @State private var roots: [AdministrativeLibraryRoot] = []
+    @State private var users = AdministrativeCollectionLoadState<UserAccount>()
+    @State private var roots = AdministrativeCollectionLoadState<AdministrativeLibraryRoot>()
     @State private var searchText = ""
-    @State private var isLoading = true
     @State private var editor: AdministrativeUserEditorTarget?
     @State private var passwordTarget: UserAccount?
     @State private var deleteTarget: UserAccount?
@@ -22,29 +21,49 @@ struct AdministrativeUsersView: View {
             } else {
                 List {
                     if let message { Section { Text(message) } }
+                    if let error = users.errorMessage {
+                        PrismediaRetryView(
+                            title: "Couldn't Load Users", message: error,
+                            retry: { Task { await loadUsers() } })
+                    }
+                    if let error = roots.errorMessage {
+                        PrismediaRetryView(
+                            title: "Library Access Unavailable",
+                            message: "Reload libraries before adding or editing users. \(error)",
+                            retry: { Task { await loadRoots() } })
+                    } else if roots.isLoading && !users.items.isEmpty {
+                        ProgressView("Loading library access…")
+                    }
                     ForEach(filteredUsers) { user in
                         AdministrativeUserRow(
                             user: user,
                             isCurrent: user.id == currentUser.id,
-                            isWorking: workingID != nil,
-                            libraryCount: roots.count,
+                            isWorking: workingID != nil || !users.isReady,
+                            canEdit: roots.isReady,
+                            libraryCount: roots.isReady ? roots.items.count : 0,
                             onEdit: { editor = AdministrativeUserEditorTarget(user: user) },
                             onPassword: { passwordTarget = user },
                             onToggleEnabled: { Task { await toggle(user) } },
                             onDelete: { deleteTarget = user }
                         )
                     }
+                    if users.isReady && filteredUsers.isEmpty {
+                        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            ContentUnavailableView("No Users", systemImage: "person.2.slash")
+                        } else {
+                            ContentUnavailableView.search(text: searchText)
+                        }
+                    }
                 }
                 .searchable(text: $searchText, prompt: "Search users")
                 .overlay {
-                    if isLoading && users.isEmpty {
+                    if users.isLoading && users.items.isEmpty && roots.errorMessage == nil {
                         PrismediaLoadingView("Loading users…")
-                    } else if users.isEmpty {
-                        ContentUnavailableView("No Users", systemImage: "person.2.slash")
                     }
                 }
                 .toolbar {
                     Button("Add User", systemImage: "person.badge.plus") { editor = AdministrativeUserEditorTarget() }
+                        .disabled(!users.isReady || !roots.isReady || workingID != nil)
                 }
             }
         }
@@ -60,7 +79,7 @@ struct AdministrativeUsersView: View {
             AdministrativeUserEditor(
                 target: target,
                 currentUserID: currentUser.id,
-                roots: roots,
+                roots: roots.items,
                 service: service,
                 onSaved: { saved in
                     if saved.id == currentUser.id { Task { await environment.verifyCurrentSession() } }
@@ -89,25 +108,43 @@ struct AdministrativeUsersView: View {
     }
 
     private var filteredUsers: [UserAccount] {
-        guard !searchText.isEmpty else { return users }
-        return users.filter {
-            $0.username.localizedStandardContains(searchText) || $0.displayName.localizedStandardContains(searchText)
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return users.items }
+        return users.items.filter {
+            $0.username.localizedStandardContains(query) || $0.displayName.localizedStandardContains(query)
         }
     }
 
     private func load() async {
-        isLoading = true
-        defer { isLoading = false }
+        guard currentUser.isAdmin else { return }
+        message = nil
+        async let accounts: () = loadUsers()
+        async let libraries: () = loadRoots()
+        _ = await (accounts, libraries)
+    }
+
+    private func loadUsers() async {
+        let request = users.begin()
         do {
-            async let loadedUsers = service.users()
-            async let loadedRoots = libraryService.roots()
-            (users, roots) = try await (loadedUsers, loadedRoots)
-            message = nil
-        } catch { message = error.localizedDescription }
+            let loaded = try await service.users()
+            users.succeed(loaded, request: request, isCancelled: Task.isCancelled)
+        } catch {
+            users.fail(error, request: request, isCancelled: Task.isCancelled)
+        }
+    }
+
+    private func loadRoots() async {
+        let request = roots.begin()
+        do {
+            let loaded = try await libraryService.roots()
+            roots.succeed(loaded, request: request, isCancelled: Task.isCancelled)
+        } catch {
+            roots.fail(error, request: request, isCancelled: Task.isCancelled)
+        }
     }
 
     private func toggle(_ user: UserAccount) async {
-        guard user.id != currentUser.id else { return }
+        guard user.id != currentUser.id, workingID == nil, users.isReady else { return }
         workingID = user.id
         defer { workingID = nil }
         do {
@@ -118,7 +155,7 @@ struct AdministrativeUsersView: View {
     }
 
     private func delete() async {
-        guard let user = deleteTarget, user.id != currentUser.id else { return }
+        guard let user = deleteTarget, user.id != currentUser.id, workingID == nil, users.isReady else { return }
         workingID = user.id
         defer {
             workingID = nil
@@ -132,6 +169,29 @@ struct AdministrativeUsersView: View {
 }
 
 #if DEBUG
+    #Preview("Users · Library Access Unavailable") {
+        NavigationStack {
+            AdministrativeUsersView(
+                currentUser: PrismediaPreviewData.user,
+                service: Step3AdministrationPreviewService(),
+                libraryService: Step3AdministrationPreviewService(rootsUnavailable: true)
+            )
+        }
+        .environment(PrismediaPreviewData.model(signedIn: true))
+        .environment(\.dynamicTypeSize, .accessibility3)
+    }
+
+    #Preview("Users · Empty") {
+        NavigationStack {
+            AdministrativeUsersView(
+                currentUser: PrismediaPreviewData.user,
+                service: Step3AdministrationPreviewService(emptyCollections: true),
+                libraryService: Step3AdministrationPreviewService()
+            )
+        }
+        .environment(PrismediaPreviewData.model(signedIn: true))
+    }
+
     #Preview("Users · Content") {
         NavigationStack {
             AdministrativeUsersView(

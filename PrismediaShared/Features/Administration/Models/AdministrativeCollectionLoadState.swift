@@ -4,6 +4,8 @@ import Foundation
 struct AdministrativeCollectionLoadState<Item: Sendable>: Sendable {
     private(set) var items: [Item] = []
     private(set) var isLoading = true
+    /// The latest read succeeded, including a confirmed empty result. Required by dependent editors.
+    private(set) var isReady = false
     private(set) var errorMessage: String?
     private var generation = 0
 
@@ -11,6 +13,7 @@ struct AdministrativeCollectionLoadState<Item: Sendable>: Sendable {
         generation += 1
         if clearingItems { items = [] }
         isLoading = true
+        isReady = false
         errorMessage = nil
         return generation
     }
@@ -20,6 +23,7 @@ struct AdministrativeCollectionLoadState<Item: Sendable>: Sendable {
         isLoading = false
         guard !isCancelled else { return }
         self.items = items
+        isReady = true
         errorMessage = nil
     }
 

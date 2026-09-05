@@ -4,10 +4,16 @@ import Foundation
     struct Step3AdministrationPreviewService: LibraryAdministrationServicing, UserAdministrationServicing,
         DiagnosticsServicing, DatabaseBackupServicing
     {
+        var rootsUnavailable = false
+        var usersUnavailable = false
+        var emptyCollections = false
         private static let rootID = UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!
         private static let backupID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
 
-        func roots() async throws -> [AdministrativeLibraryRoot] { [Self.root] }
+        func roots() async throws -> [AdministrativeLibraryRoot] {
+            if rootsUnavailable { throw URLError(.notConnectedToInternet) }
+            return emptyCollections ? [] : [Self.root]
+        }
         func browse(path: String?) async throws -> AdministrativeLibraryBrowseResponse {
             AdministrativeLibraryBrowseResponse(
                 path: path ?? "/media",
@@ -25,7 +31,10 @@ import Foundation
         func replaceAccess(id: UUID, userIDs: [UUID]) async throws {}
         func delete(id: UUID) async throws {}
 
-        func users() async throws -> [UserAccount] { [PrismediaPreviewData.user, Self.member] }
+        func users() async throws -> [UserAccount] {
+            if usersUnavailable { throw URLError(.notConnectedToInternet) }
+            return emptyCollections ? [] : [PrismediaPreviewData.user, Self.member]
+        }
         func create(_ mutation: AdministrativeUserCreateMutation) async throws -> UserAccount { Self.member }
         func update(id: UUID, mutation: AdministrativeUserUpdateMutation) async throws -> UserAccount { Self.member }
         func resetPassword(id: UUID, newPassword: String) async throws {}

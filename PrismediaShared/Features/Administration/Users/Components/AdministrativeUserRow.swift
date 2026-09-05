@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct AdministrativeUserRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let user: UserAccount
     let isCurrent: Bool
     let isWorking: Bool
+    var canEdit = true
     let libraryCount: Int
     let onEdit: () -> Void
     let onPassword: () -> Void
@@ -11,15 +13,20 @@ struct AdministrativeUserRow: View {
     let onDelete: () -> Void
 
     var body: some View {
+        let identityLayout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: PrismediaSpacing.extraSmall))
+            : AnyLayout(HStackLayout(spacing: PrismediaSpacing.small))
         HStack(spacing: PrismediaSpacing.medium) {
             Image(systemName: user.isAdmin ? "person.crop.circle.badge.checkmark" : "person.crop.circle")
                 .font(.title2)
                 .foregroundStyle(user.enabled ? PrismediaColor.accent : PrismediaColor.textSecondary)
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                HStack {
+                identityLayout {
                     Text(user.displayName).font(.headline)
-                    if user.isAdmin { Text("Admin").font(.caption2).foregroundStyle(PrismediaColor.warning) }
-                    if isCurrent { Text("You").font(.caption2).foregroundStyle(.tint) }
+                    HStack(spacing: PrismediaSpacing.small) {
+                        if user.isAdmin { Text("Admin").font(.caption2).foregroundStyle(PrismediaColor.warning) }
+                        if isCurrent { Text("You").font(.caption2).foregroundStyle(.tint) }
+                    }
                 }
                 Text("@\(user.username) · \(accessSummary)")
                     .font(.caption.monospaced()).foregroundStyle(.secondary)
@@ -31,6 +38,7 @@ struct AdministrativeUserRow: View {
             Spacer()
             Menu("User Actions", systemImage: "ellipsis.circle") {
                 Button("Edit", systemImage: "pencil", action: onEdit)
+                    .disabled(!canEdit)
                 Button("Reset Password", systemImage: "key", action: onPassword)
                 Button(user.enabled ? "Disable" : "Enable", systemImage: "power", action: onToggleEnabled)
                     .disabled(isCurrent)
@@ -54,6 +62,18 @@ struct AdministrativeUserRow: View {
 }
 
 #if DEBUG
+    #Preview("User · Accessibility") {
+        AdministrativeUserRow(
+            user: PrismediaPreviewData.user,
+            isCurrent: true,
+            isWorking: false,
+            libraryCount: 2,
+            onEdit: {}, onPassword: {}, onToggleEnabled: {}, onDelete: {}
+        )
+        .padding()
+        .environment(\.dynamicTypeSize, .accessibility3)
+    }
+
     #Preview {
         AdministrativeUserRow(
             user: PrismediaPreviewData.user,

@@ -3,6 +3,7 @@ import SwiftUI
 struct AdministrativeLibraryRootRow: View {
     let root: AdministrativeLibraryRoot
     let isWorking: Bool
+    var canEdit = true
     let onEdit: () -> Void
     let onToggle: () -> Void
     let onRescan: () -> Void
@@ -31,6 +32,7 @@ struct AdministrativeLibraryRootRow: View {
             Spacer()
             Menu("Actions", systemImage: "ellipsis.circle") {
                 Button("Edit", systemImage: "pencil", action: onEdit)
+                    .disabled(!canEdit)
                 Button(root.enabled ? "Disable" : "Enable", systemImage: "power", action: onToggle)
                 Button("Rescan", systemImage: "arrow.clockwise", action: onRescan)
                 Divider()

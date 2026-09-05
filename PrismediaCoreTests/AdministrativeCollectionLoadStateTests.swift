@@ -4,6 +4,34 @@ import XCTest
 @testable import PrismediaCore
 
 final class AdministrativeCollectionLoadStateTests: XCTestCase {
+    func testDependentEditingRequiresAnAcknowledgedCurrentLoadIncludingEmptyCollections() {
+        var state = AdministrativeCollectionLoadState<String>()
+        XCTAssertFalse(state.isReady)
+        let initial = state.begin()
+        state.succeed([], request: initial)
+        XCTAssertTrue(state.isReady)
+        let refresh = state.begin()
+        XCTAssertFalse(state.isReady)
+        state.fail(URLError(.timedOut), request: refresh, isCancelled: false)
+        XCTAssertFalse(state.isReady)
+        let retry = state.begin()
+        state.succeed(["current"], request: retry)
+        XCTAssertTrue(state.isReady)
+    }
+
+    func testCancelledAndSupersededReadsCannotEnableDependentEditing() {
+        var state = AdministrativeCollectionLoadState<String>()
+        let old = state.begin()
+        let current = state.begin()
+        state.succeed(["old"], request: old)
+        XCTAssertFalse(state.isReady)
+        state.succeed(["cancelled"], request: current, isCancelled: true)
+        XCTAssertFalse(state.isReady)
+        let retry = state.begin()
+        state.fail(CancellationError(), request: retry, isCancelled: false)
+        XCTAssertFalse(state.isReady)
+    }
+
     func testChangingCollectionClearsOldItemsAndRejectsItsPendingResponse() {
         var state = AdministrativeCollectionLoadState<String>()
         let oldFolder = state.begin()
