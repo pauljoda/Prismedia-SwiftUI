@@ -701,7 +701,11 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
 
     private var emptyDescription: String {
         guard let activeSearch = snapshot.activeSearch else {
+            #if os(tvOS)
+                return "Nothing is ready to play here yet. Manage your library on another device."
+            #else
             return configuration.emptyDescription
+            #endif
         }
         return "No items match “\(activeSearch)”."
     }

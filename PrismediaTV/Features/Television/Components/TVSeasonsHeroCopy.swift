@@ -40,7 +40,8 @@ import SwiftUI
 
                     playback()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .prismediaFocusSection()
 
                 if let description {
                     TVEpisodeDescriptionView(
@@ -48,12 +49,15 @@ import SwiftUI
                         text: description
                     )
                     .containerRelativeFrame(.horizontal) { length, _ in length / 3 }
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
                     .prismediaFocusSection()
                 }
             }
+            // Equal-height focus sections connect the controls even when the
+            // synopsis and episode information have different intrinsic heights.
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, PrismediaLayout.televisionContentInset)
             .frame(minHeight: PrismediaLayout.televisionDetailSummaryMinimumHeight, alignment: .bottomLeading)
-            .transaction { $0.disablesAnimations = true }
         }
 
         private func episodeSubtitle(_ episode: EntityThumbnail) -> String {

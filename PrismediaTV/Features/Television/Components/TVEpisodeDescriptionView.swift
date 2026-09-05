@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(tvOS)
     struct TVEpisodeDescriptionView: View {
+        @FocusState private var isReadMoreFocused: Bool
         @State private var collapsedHeight: CGFloat = 0
         @State private var fullHeight: CGFloat = 0
         @State private var measuredWidth: CGFloat = 0
@@ -40,11 +41,23 @@ import SwiftUI
                 }
 
                 if isTruncated {
-                    Button("Read more") { showsFullDescription = true }
-                        .buttonStyle(.borderless)
-                        .controlSize(.small)
-                        .font(PrismediaTypography.captionEmphasized)
-                        .accessibilityHint("Shows the full episode description")
+                    Button {
+                        showsFullDescription = true
+                    } label: {
+                        Text("Read more")
+                            .padding(.horizontal, PrismediaSpacing.small)
+                            .padding(.vertical, PrismediaSpacing.extraSmall)
+                            .foregroundStyle(isReadMoreFocused ? PrismediaColor.onAccent : PrismediaColor.onMedia)
+                            .background(
+                                isReadMoreFocused ? PrismediaColor.accent : .clear,
+                                in: .rect(cornerRadius: PrismediaRadius.control)
+                            )
+                    }
+                    .buttonStyle(.borderless)
+                    .focused($isReadMoreFocused)
+                    .controlSize(.small)
+                    .font(PrismediaTypography.captionEmphasized)
+                    .accessibilityHint("Shows the full episode description")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

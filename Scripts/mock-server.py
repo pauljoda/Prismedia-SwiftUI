@@ -530,6 +530,7 @@ def thumb(id_suffix, kind, title):
         "isFavorite": False,
         "isNsfw": False,
         "isOrganized": True,
+        "hasSourceMedia": kind in ("video", "movie", "video-series", "video-season", "video-episode", "image"),
         "progress": None,
         "accessCount": 0,
         "genres": [],

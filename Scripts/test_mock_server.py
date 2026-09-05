@@ -26,6 +26,12 @@ mock_server = load_mock_server_module()
 
 
 class EntityListResponseTests(unittest.TestCase):
+    def test_playback_catalog_fixtures_declare_source_availability(self):
+        for kind in ("movie", "video", "video-series", "video-season", "video-episode"):
+            with self.subTest(kind=kind):
+                self.assertTrue(mock_server.thumb("1", kind, "Playable").get("hasSourceMedia"))
+        self.assertFalse(mock_server.thumb("1", "collection", "Collection").get("hasSourceMedia"))
+
     def test_query_is_url_decoded_and_matches_titles_case_insensitively(self):
         response = mock_server.build_entity_list_response(
             "/api/entities",

@@ -9,17 +9,20 @@ import SwiftUI
         var body: some View {
             NavigationStack {
                 ScrollView {
-                    Text(text)
-                        .font(.system(size: 24))
-                        .lineSpacing(7)
-                        .foregroundStyle(PrismediaColor.textPrimary)
-                        .frame(maxWidth: PrismediaLayout.readableContentWidth, alignment: .leading)
-                        .padding(.horizontal, PrismediaLayout.televisionContentInset)
-                        .padding(.vertical, PrismediaSpacing.section)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
+                        Text(title)
+                            .font(PrismediaTypography.sectionTitle)
+                        Text(text)
+                            .font(PrismediaTypography.body)
+                            .lineSpacing(PrismediaSpacing.small)
+                    }
+                    .foregroundStyle(PrismediaColor.textPrimary)
+                    .frame(maxWidth: PrismediaLayout.readableContentWidth, alignment: .leading)
+                    .padding(.horizontal, PrismediaLayout.televisionContentInset)
+                    .padding(.vertical, PrismediaSpacing.section)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .prismediaScreenBackground()
-                .navigationTitle(title)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }
