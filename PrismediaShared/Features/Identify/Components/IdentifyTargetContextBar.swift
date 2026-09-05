@@ -1,7 +1,7 @@
 import SwiftUI
 
 #if os(iOS) || os(macOS)
-    /// Expandable "To Identify" context showing which library item the current
+    /// Expandable context showing which library item the current
     /// search or proposal applies to, mirroring the web target preview.
     struct IdentifyTargetContextBar: View {
         let item: AdministrativeIdentifyQueueItem
@@ -37,30 +37,11 @@ import SwiftUI
                 }
                 .padding(.top, PrismediaSpacing.medium)
             } label: {
-                HStack(spacing: PrismediaSpacing.medium) {
-                    Image(systemName: "scope")
-                        .foregroundStyle(PrismediaColor.textSecondary)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("To Identify")
-                            .font(.caption2.smallCaps().weight(.semibold))
-                            .foregroundStyle(PrismediaColor.textMuted)
-                        HStack(spacing: PrismediaSpacing.small) {
-                            Text(item.title)
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(1)
-                            Text(item.entityKind.rawValue)
-                                .font(.caption2.monospaced())
-                                .foregroundStyle(PrismediaColor.textSecondary)
-                        }
-                    }
-
-                    Spacer(minLength: 0)
-
-                    Text(statusLabel)
-                        .font(.caption)
-                        .foregroundStyle(PrismediaColor.textSecondary)
-                }
+                MetadataReviewSectionLabel(
+                    title: "Current library item",
+                    systemImage: "scope",
+                    summary: item.title
+                )
             }
             .padding(.horizontal, PrismediaSpacing.large)
             .padding(.vertical, PrismediaSpacing.medium)
@@ -115,15 +96,6 @@ import SwiftUI
             )
         }
 
-        private var statusLabel: String {
-            let state = IdentifyQueueState(rawServerValue: item.state)
-            switch state {
-            case .proposal: return "match found"
-            case .choice: return "awaiting match"
-            case .queued, .searching: return "searching…"
-            default: return state.label.lowercased()
-            }
-        }
     }
 
     #if DEBUG
@@ -140,6 +112,14 @@ import SwiftUI
                     )
                 )
                 .padding()
+            }
+        }
+
+        #Preview("Target Context · Large Text") {
+            PreviewShell {
+                IdentifyTargetContextBar(item: IdentifyPreviewFixtures.reviewItem)
+                    .padding()
+                    .environment(\.dynamicTypeSize, .accessibility3)
             }
         }
     #endif

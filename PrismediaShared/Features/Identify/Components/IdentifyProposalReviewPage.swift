@@ -4,6 +4,7 @@ import SwiftUI
     struct IdentifyProposalReviewPage: View {
         @Environment(\.prismediaPageIsActive) private var pageIsActive
         @Environment(\.scenePhase) private var scenePhase
+        @Environment(\.artworkPrimaryAccent) private var inheritedPrimaryAccent
         @Bindable var session: IdentifySession
         let item: AdministrativeIdentifyQueueItem
         let proposal: AdministrativeEntityMetadataProposal
@@ -51,16 +52,24 @@ import SwiftUI
                         )
                     }
 
-                    if isRoot {
-                        IdentifyReviewActions(
-                            session: session,
-                            item: currentItem,
-                            onApplied: onApplied,
-                            onRejected: onRejected
-                        )
-                    }
                 }
             )
+            .safeAreaInset(edge: .bottom) {
+                if isRoot {
+                    IdentifyReviewActions(
+                        session: session,
+                        item: currentItem,
+                        onApplied: onApplied,
+                        onRejected: onRejected
+                    )
+                    .environment(
+                        \.artworkPrimaryAccent,
+                        artworkPalette?.primary.color ?? inheritedPrimaryAccent
+                    )
+                    .padding(PrismediaSpacing.large)
+                    .background(.bar)
+                }
+            }
             .navigationDestination(item: $childDestination) { child in
                 IdentifyProposalReviewPage(
                     session: session,

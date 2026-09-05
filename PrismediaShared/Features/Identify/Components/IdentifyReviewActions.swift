@@ -10,9 +10,6 @@ import SwiftUI
 
         var body: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                Label("Review Actions", systemImage: "checkmark.seal")
-                    .font(.headline)
-
                 if let progress = session.applyProgress {
                     ProgressView(
                         value: Double(progress.currentIndex),
@@ -30,63 +27,48 @@ import SwiftUI
                 }
 
                 GlassEffectContainer(spacing: PrismediaSpacing.medium) {
-                    VStack(spacing: PrismediaSpacing.medium) {
+                    HStack(alignment: .center, spacing: PrismediaSpacing.medium) {
                         PrismediaButton(
-                            "Back to Search",
-                            systemImage: "magnifyingglass",
-                            form: .fill
+                            "More actions",
+                            systemImage: "ellipsis",
+                            form: .compactIcon
                         ) {
-                            session.returnToSearch()
-                        }
-                        .foregroundStyle(PrismediaColor.info)
-                        .disabled(session.isApplying)
+                            Button("Back to Search", systemImage: "magnifyingglass") {
+                                session.returnToSearch()
+                            }
 
-                        PrismediaButton(
-                            "Reject",
-                            systemImage: "xmark",
-                            variant: .destructive,
-                            form: .fill
-                        ) {
-                            Button("Reject") {
-                                Task {
-                                    if await session.reject(advance: false) {
-                                        onRejected()
-                                    }
+                            if session.reviewableIDs.count > 1 {
+                                Button("Accept & Next", systemImage: "checkmark") {
+                                    apply(advance: true)
                                 }
+                                .disabled(!canAccept)
                             }
-                            Button("Reject & Next") {
-                                Task {
-                                    if await session.reject(advance: true) {
-                                        onRejected()
-                                    }
+
+                            Divider()
+
+                            Button("Reject", systemImage: "xmark", role: .destructive) {
+                                reject(advance: false)
+                            }
+                            if session.reviewableIDs.count > 1 {
+                                Button("Reject & Next", systemImage: "forward.end", role: .destructive) {
+                                    reject(advance: true)
                                 }
                             }
                         }
                         .disabled(session.isApplying)
+                        .accessibilityIdentifier("identify.review-actions.more")
 
                         PrismediaButton(
                             session.isApplying ? "Applying…" : "Accept",
                             systemImage: "checkmark",
                             variant: .prominent,
                             form: .fill,
-                            primaryTint: artworkPrimaryAccent
-                        ) {
-                            Button("Accept") {
-                                Task {
-                                    if await session.apply(advance: false) {
-                                        await onApplied()
-                                    }
-                                }
-                            }
-                            Button("Accept & Next") {
-                                Task {
-                                    if await session.apply(advance: true) {
-                                        await onApplied()
-                                    }
-                                }
-                            }
-                        }
+                            primaryTint: artworkPrimaryAccent,
+                            isLoading: session.isApplying,
+                            action: { apply(advance: false) }
+                        )
                         .disabled(!canAccept)
+                        .accessibilityIdentifier("identify.review-actions.accept")
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -98,9 +80,23 @@ import SwiftUI
                         .accessibilityIdentifier("identify.review-actions.disabled-reason")
                 }
             }
-            .padding(PrismediaSpacing.large)
-            .prismediaPanel()
             .accessibilityIdentifier("identify.review-actions")
+        }
+
+        private func apply(advance: Bool) {
+            Task {
+                if await session.apply(advance: advance) {
+                    await onApplied()
+                }
+            }
+        }
+
+        private func reject(advance: Bool) {
+            Task {
+                if await session.reject(advance: advance) {
+                    onRejected()
+                }
+            }
         }
 
         private var canAccept: Bool {
@@ -109,10 +105,10 @@ import SwiftUI
 
         private var disabledReason: String? {
             if session.isApplying {
-                return "Review actions will be available when the current update finishes."
+                return nil
             }
             if item.cascadeRunning {
-                return "Accept will be available when related metadata finishes identifying."
+                return "Waiting for related metadata to finish."
             }
             if item.proposal == nil {
                 return "Choose a metadata match before accepting this item."
@@ -134,6 +130,22 @@ import SwiftUI
                     item: IdentifyPreviewFixtures.reviewItem
                 )
                 .padding()
+            }
+        }
+
+        #Preview("Review Actions · Large Text") {
+            PreviewShell {
+                IdentifyReviewActions(
+                    session: .init(
+                        service: AdministrativePreviewService(),
+                        browser: IdentifyPreviewEntityBrowser(),
+                        initialQueue: [IdentifyPreviewFixtures.reviewItem],
+                        initialProviders: [IdentifyPreviewFixtures.provider]
+                    ),
+                    item: IdentifyPreviewFixtures.reviewItem
+                )
+                .padding()
+                .environment(\.dynamicTypeSize, .accessibility3)
             }
         }
     #endif
