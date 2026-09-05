@@ -4,11 +4,20 @@ struct AdministrativePluginDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showsCredentials = false
     @State private var confirmsRemoval = false
-    @State private var isWorking = false
-    @State private var errorMessage: String?
-    let plugin: AdministrativePlugin
+    @State private var session: PluginManagementSession
     let service: any PluginAdministrationServicing
     let onChanged: @MainActor () -> Void
+
+    init(
+        plugin: AdministrativePlugin, service: any PluginAdministrationServicing,
+        onChanged: @escaping @MainActor () -> Void
+    ) {
+        _session = State(initialValue: PluginManagementSession(plugin: plugin, service: service))
+        self.service = service
+        self.onChanged = onChanged
+    }
+
+    private var plugin: AdministrativePlugin { session.plugin }
 
     var body: some View {
         NavigationStack {
@@ -22,25 +31,32 @@ struct AdministrativePluginDetailView: View {
                         LabeledContent("Available Update", value: plugin.availableVersion ?? "Latest")
                     }
                 }
-                Section("Capabilities") {
-                    ForEach(plugin.supports, id: \.entityKind) { support in
-                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                            Text(support.contentTypeLabel).font(.headline)
-                            Text(support.actionSummary)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                if let message = session.refreshError {
+                    Section {
+                        Label("Couldn't refresh provider status", systemImage: "exclamationmark.triangle")
+                        Text(message).font(.subheadline).foregroundStyle(.secondary)
+                        Button("Retry", systemImage: "arrow.clockwise") { Task { await session.refresh() } }
                     }
                 }
                 if !plugin.auth.isEmpty {
                     Section("Credentials") {
-                        LabeledContent(
-                            "Readiness",
-                            value: plugin.missingAuthKeys.isEmpty
-                                ? "Ready" : "Missing \(plugin.missingAuthKeys.count) required field(s)"
+                        Label(
+                            plugin.missingAuthKeys.isEmpty ? "Ready" : "Setup required",
+                            systemImage: plugin.missingAuthKeys.isEmpty ? "checkmark.circle" : "key"
                         )
-                        Button("Configure Credentials", systemImage: "key") { showsCredentials = true }
+                        if !plugin.missingAuthKeys.isEmpty {
+                            Text(
+                                plugin.auth.filter { plugin.missingAuthKeys.contains($0.key) }.map(\.label).joined(
+                                    separator: ", ")
+                            )
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Button("Edit Credentials", systemImage: "key") { showsCredentials = true }
+                    }
+                }
+                if !plugin.supports.isEmpty {
+                    Section {
+                        AdministrativePluginCapabilitiesView(supports: plugin.supports)
                     }
                 }
                 Section("Actions") {
@@ -71,18 +87,23 @@ struct AdministrativePluginDetailView: View {
                     }
                 #endif
             }
-            .disabled(isWorking)
+            .disabled(session.isWorking)
             .prismediaScreenBackground()
             .navigationTitle(plugin.name)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     PrismediaToolbarActionButton("Done", systemImage: "checkmark") { dismiss() }
+                        .disabled(session.isWorking)
                 }
             }
-            .overlay { if isWorking { ProgressView("Updating provider…") } }
+            .overlay { if session.isWorking { ProgressView("Updating provider…") } }
+            .interactiveDismissDisabled(session.isWorking)
             .sheet(isPresented: $showsCredentials) {
                 AdministrativePluginCredentialEditor(plugin: plugin, service: service) {
-                    onChanged()
+                    Task {
+                        await session.refresh()
+                        onChanged()
+                    }
                 }
             }
             .alert("Remove \(plugin.name)?", isPresented: $confirmsRemoval) {
@@ -95,11 +116,12 @@ struct AdministrativePluginDetailView: View {
             }
             .alert(
                 "Plugin Action Failed",
-                isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+                isPresented: Binding(
+                    get: { session.errorMessage != nil }, set: { if !$0 { session.errorMessage = nil } })
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(errorMessage ?? "")
+                Text(session.errorMessage ?? "")
             }
         }
         #if os(macOS)
@@ -116,23 +138,16 @@ struct AdministrativePluginDetailView: View {
     }
 
     private func install() async {
-        await mutate { _ = try await PluginAdministrationUseCase(service: service).install(id: plugin.id) }
+        if await session.install() { onChanged() }
     }
     private func update() async {
-        await mutate { _ = try await PluginAdministrationUseCase(service: service).update(id: plugin.id) }
+        if await session.update() { onChanged() }
     }
     private func remove() async {
-        await mutate { try await PluginAdministrationUseCase(service: service).remove(id: plugin.id) }
-        if errorMessage == nil { dismiss() }
-    }
-
-    private func mutate(_ operation: @escaping @MainActor () async throws -> Void) async {
-        isWorking = true
-        defer { isWorking = false }
-        do {
-            try await operation()
+        if await session.remove() {
             onChanged()
-        } catch { errorMessage = error.localizedDescription }
+            dismiss()
+        }
     }
 }
 

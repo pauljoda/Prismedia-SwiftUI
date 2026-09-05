@@ -2,10 +2,10 @@ import SwiftUI
 
 struct AdministrativePluginCredentialEditor: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var values: [String: String] = [:]
-    @State private var clearedKeys = Set<String>()
+    @State private var draft = PluginCredentialDraft()
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var confirmsDiscard = false
     let plugin: AdministrativePlugin
     let service: any PluginAdministrationServicing
     let onSaved: @MainActor () -> Void
@@ -13,41 +13,57 @@ struct AdministrativePluginCredentialEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Text(
-                        "Stored credentials are never read back. Leave a field blank to keep its saved value, enter a replacement, or explicitly clear it."
-                    )
-                    .foregroundStyle(.secondary)
-                }
                 ForEach(plugin.auth) { field in
                     Section {
-                        SecureField(field.label, text: valueBinding(for: field.key))
-                            .textContentType(.password)
+                        SecureField("Enter a replacement", text: $draft[field.key])
+                            .accessibilityLabel(field.label)
+                            .autocorrectionDisabled()
+                            #if os(iOS) || os(tvOS)
+                                .textInputAutocapitalization(.never)
+                            #endif
                             .privacySensitive()
-                            .disabled(clearedKeys.contains(field.key))
+                            .disabled(draft.clearedKeys.contains(field.key))
                         if !plugin.missingAuthKeys.contains(field.key) {
-                            Toggle("Clear saved value", isOn: clearBinding(for: field.key))
+                            Toggle("Remove existing value", isOn: clearBinding(for: field.key))
                         }
                         if let value = field.url, let url = URL(string: value) {
-                            Link("Open Credential Provider", destination: url)
+                            Link("Get Credentials", destination: url)
                         }
                     } header: {
-                        Text(field.required ? "\(field.label) · Required" : field.label)
+                        Text(field.label)
+                    } footer: {
+                        if draft.clearedKeys.contains(field.key) {
+                            Text("This value will be removed when you save.")
+                        } else if field.required, plugin.missingAuthKeys.contains(field.key) {
+                            Text("Required to use \(plugin.name).")
+                        } else {
+                            Text("Saved values aren't shown. Leave blank to keep the existing value.")
+                        }
                     }
                 }
             }
+            .disabled(isSaving)
             .prismediaScreenBackground()
-            .navigationTitle("\(plugin.name) Credentials")
+            .navigationTitle("Credentials")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark") {
+                        if draft.hasChanges { confirmsDiscard = true } else { dismiss() }
+                    }
+                    .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
                         Task { await save() }
                     }
-                    .disabled(isSaving || !hasChanges)
+                    .disabled(isSaving || !draft.hasChanges)
                 }
+            }
+            .interactiveDismissDisabled(isSaving || draft.hasChanges)
+            .confirmationDialog("Discard credential changes?", isPresented: $confirmsDiscard, titleVisibility: .visible)
+            {
+                Button("Discard Changes", role: .destructive) { dismiss() }
+                Button("Keep Editing", role: .cancel) {}
             }
             .overlay { if isSaving { ProgressView("Saving securely…") } }
             .alert(
@@ -59,42 +75,30 @@ struct AdministrativePluginCredentialEditor: View {
                 Text(errorMessage ?? "")
             }
         }
-        .frame(minWidth: 380, minHeight: 420)
-    }
-
-    private var hasChanges: Bool {
-        values.values.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } || !clearedKeys.isEmpty
-    }
-
-    private func valueBinding(for key: String) -> Binding<String> {
-        Binding(get: { values[key, default: ""] }, set: { values[key] = $0 })
+        #if os(macOS)
+            .frame(minWidth: 380, minHeight: 420)
+        #endif
     }
 
     private func clearBinding(for key: String) -> Binding<Bool> {
         Binding(
-            get: { clearedKeys.contains(key) },
-            set: { clearing in
-                if clearing {
-                    clearedKeys.insert(key)
-                    values[key] = ""
-                } else {
-                    clearedKeys.remove(key)
-                }
-            }
+            get: { draft.clearedKeys.contains(key) },
+            set: { draft.setCleared($0, for: key) }
         )
     }
 
     private func save() async {
+        guard !isSaving, draft.hasChanges else { return }
         isSaving = true
+        errorMessage = nil
         defer { isSaving = false }
         do {
             try await PluginAdministrationUseCase(service: service).saveAuth(
                 id: plugin.id,
-                replacements: values,
-                clearedKeys: clearedKeys
+                replacements: draft.values,
+                clearedKeys: draft.clearedKeys
             )
-            values.removeAll()
-            clearedKeys.removeAll()
+            draft = .init()
             onSaved()
             dismiss()
         } catch { errorMessage = error.localizedDescription }
