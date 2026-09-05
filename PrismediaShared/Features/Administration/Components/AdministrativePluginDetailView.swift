@@ -13,21 +13,24 @@ struct AdministrativePluginDetailView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Status") {
-                    LabeledContent("Provider ID", value: plugin.id)
-                    LabeledContent("Version", value: plugin.version)
-                    LabeledContent("Installed", value: plugin.installed ? "Yes" : "No")
-                    LabeledContent("Enabled", value: plugin.enabled ? "Yes" : "No")
+                Section {
                     LabeledContent(
-                        "Source", value: plugin.id.hasPrefix("stash-") ? "Stash Community" : "Prismedia Community")
-                    LabeledContent("Content", value: plugin.isNsfw ? "NSFW" : "SFW")
+                        "Status", value: plugin.installed ? (plugin.enabled ? "Installed" : "Disabled") : "Available"
+                    )
+                    LabeledContent("Version", value: plugin.version)
                     if plugin.updateAvailable {
                         LabeledContent("Available Update", value: plugin.availableVersion ?? "Latest")
                     }
                 }
                 Section("Capabilities") {
                     ForEach(plugin.supports, id: \.entityKind) { support in
-                        LabeledContent(support.entityKind, value: support.actions.joined(separator: ", "))
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
+                            Text(support.contentTypeLabel).font(.headline)
+                            Text(support.actionSummary)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 if !plugin.auth.isEmpty {
@@ -60,14 +63,15 @@ struct AdministrativePluginDetailView: View {
                         Button("Remove Provider", systemImage: "trash", role: .destructive) { confirmsRemoval = true }
                     }
                 }
-                Section {
-                    Text(
-                        "The server does not expose a disable-only command. Installing an existing disabled provider enables it; removing it clears installed configuration while preserving plugin files."
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                }
+                #if os(tvOS)
+                    Section("Technical Details") { technicalDetails }
+                #else
+                    Section {
+                        DisclosureGroup("Technical Details") { technicalDetails }
+                    }
+                #endif
             }
+            .disabled(isWorking)
             .prismediaScreenBackground()
             .navigationTitle(plugin.name)
             .toolbar {
@@ -98,7 +102,17 @@ struct AdministrativePluginDetailView: View {
                 Text(errorMessage ?? "")
             }
         }
-        .frame(minWidth: 380, minHeight: 520)
+        #if os(macOS)
+            .frame(minWidth: 380, minHeight: 520)
+        #endif
+    }
+
+    @ViewBuilder
+    private var technicalDetails: some View {
+        LabeledContent("Provider ID", value: plugin.id)
+        LabeledContent(
+            "Source", value: plugin.id.hasPrefix("stash-") ? "Stash Community" : "Prismedia Community")
+        LabeledContent("Content", value: plugin.isNsfw ? "NSFW" : "SFW")
     }
 
     private func install() async {

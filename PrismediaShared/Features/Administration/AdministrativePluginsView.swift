@@ -1,14 +1,12 @@
 import SwiftUI
 
 struct AdministrativePluginsView: View {
-    @State private var plugins: [AdministrativePlugin] = []
-    @State private var stashScrapers: [AdministrativeStashScraper] = []
+    @State private var catalog = PluginCatalogLoadState<AdministrativePlugin>()
+    @State private var stashCatalog = PluginCatalogLoadState<AdministrativeStashScraper>()
     @State private var selectedSection: AdministrativePluginsSection? = .installed
     @State private var selectedPlugin: AdministrativePlugin?
     @State private var searchText = ""
     @State private var capabilityFilter = "all"
-    @State private var isLoading = true
-    @State private var isRefreshingStash = false
     @State private var installingStashID: String?
     @State private var errorMessage: String?
     private let service: any PluginAdministrationServicing
@@ -23,10 +21,12 @@ struct AdministrativePluginsView: View {
         platformContent
             .prismediaScreenBackground()
             .task { await loadCatalog() }
+            .task(id: selectedSection) {
+                if selectedSection == .stashCommunity, stashScrapers.isEmpty { await loadStash() }
+            }
             .onChange(of: selectedSection) {
                 searchText = ""
                 capabilityFilter = "all"
-                if selectedSection == .stashCommunity, stashScrapers.isEmpty { Task { await loadStash() } }
             }
             .sheet(item: $selectedPlugin) { plugin in
                 AdministrativePluginDetailView(plugin: plugin, service: service) {
@@ -59,6 +59,8 @@ struct AdministrativePluginsView: View {
                         .pickerStyle(.segmented)
                     }
                     .listRowBackground(Color.clear)
+
+                    catalogFailure
 
                     if selectedSection == .stashCommunity {
                         stashContent
@@ -93,6 +95,7 @@ struct AdministrativePluginsView: View {
                 .navigationTitle("Plugins")
             } detail: {
                 List {
+                    catalogFailure
                     if selectedSection == .stashCommunity {
                         stashContent
                     } else {
@@ -103,20 +106,7 @@ struct AdministrativePluginsView: View {
                 .navigationTitle(selectedSection?.label ?? "Plugins")
                 .searchable(text: $searchText, prompt: "Search plugins")
                 .toolbar {
-                    ToolbarItemGroup(placement: .primaryAction) {
-                        if selectedSection != .stashCommunity {
-                            Menu("Filter Capabilities", systemImage: "line.3.horizontal.decrease.circle") {
-                                Picker("Entity Kind", selection: $capabilityFilter) {
-                                    Text("All Capabilities").tag("all")
-                                    ForEach(capabilityKinds, id: \.self) { kind in Text(kind).tag(kind) }
-                                }
-                            }
-                            .prismediaToolbarActionLabelStyle()
-                        }
-                        Button("Refresh", systemImage: "arrow.clockwise") { Task { await refreshSelected() } }
-                            .prismediaToolbarActionLabelStyle()
-                            .disabled(isLoading || isRefreshingStash)
-                    }
+                    pluginToolbar
                 }
                 .overlay { emptyOrLoadingOverlay }
                 .refreshable {
@@ -133,9 +123,11 @@ struct AdministrativePluginsView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             if selectedSection != .stashCommunity {
                 Menu("Filter Capabilities", systemImage: "line.3.horizontal.decrease.circle") {
-                    Picker("Entity Kind", selection: $capabilityFilter) {
-                        Text("All Capabilities").tag("all")
-                        ForEach(capabilityKinds, id: \.self) { kind in Text(kind).tag(kind) }
+                    Picker("Content Type", selection: $capabilityFilter) {
+                        Text("All Content Types").tag("all")
+                        ForEach(capabilityKinds, id: \.self) { kind in
+                            Text(EntityKind(rawValue: kind).displayLabel).tag(kind)
+                        }
                     }
                 }
                 .prismediaToolbarActionLabelStyle()
@@ -145,7 +137,7 @@ struct AdministrativePluginsView: View {
                 Task { await refreshSelected() }
             }
             .prismediaToolbarActionLabelStyle()
-            .disabled(isLoading || isRefreshingStash)
+            .disabled(selectedCatalogIsLoading)
         }
     }
 
@@ -155,41 +147,7 @@ struct AdministrativePluginsView: View {
             Button {
                 selectedPlugin = plugin
             } label: {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                    HStack {
-                        Text(plugin.name).font(.headline)
-                        Spacer()
-                        Text("v\(plugin.version)").font(.caption).foregroundStyle(.secondary)
-                    }
-                    HStack(spacing: PrismediaSpacing.small) {
-                        Label(
-                            plugin.installed ? (plugin.enabled ? "Installed" : "Disabled") : "Available",
-                            systemImage: plugin.installed ? "checkmark.circle" : "arrow.down.circle"
-                        )
-                        .foregroundStyle(
-                            plugin.installed && plugin.enabled
-                                ? PrismediaColor.materialSpectrumGreen
-                                : PrismediaColor.textSecondary
-                        )
-                        if plugin.updateAvailable {
-                            Label("v\(plugin.availableVersion ?? "latest") available", systemImage: "sparkles")
-                        }
-                        if !plugin.missingAuthKeys.isEmpty {
-                            Label("Credentials required", systemImage: "key.fill")
-                                .foregroundStyle(PrismediaColor.warning)
-                        }
-                    }
-                    .font(.caption)
-                    Text(
-                        plugin.supports.map { "\($0.entityKind): \($0.actions.joined(separator: ", "))" }.joined(
-                            separator: "  ·  ")
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(.rect)
+                AdministrativePluginCatalogRow(plugin: plugin)
             }
             .buttonStyle(.plain)
             .contextMenu {
@@ -233,21 +191,61 @@ struct AdministrativePluginsView: View {
 
     @ViewBuilder
     private var emptyOrLoadingOverlay: some View {
-        if isLoading, plugins.isEmpty {
-            PrismediaLoadingView("Loading plugin catalog…")
-        } else if selectedSection == .stashCommunity, isRefreshingStash, stashScrapers.isEmpty {
-            PrismediaLoadingView("Loading Stash Community…")
-        } else if selectedSection == .stashCommunity, filteredStashScrapers.isEmpty {
-            ContentUnavailableView.search(text: searchText)
-        } else if selectedSection != .stashCommunity, filteredPlugins.isEmpty {
-            ContentUnavailableView(
-                searchText.isEmpty ? "No Plugins" : "No Matching Plugins",
-                systemImage: "puzzlepiece.extension",
-                description: Text(
-                    searchText.isEmpty
-                        ? "Refresh the community catalog or change visibility settings."
-                        : "Try a different search or capability filter."))
+        if selectedCatalogIsLoading, selectedCatalogIsEmpty {
+            PrismediaLoadingView("Loading plugins…")
+        } else if selectedCatalogError != nil {
+            EmptyView()
+        } else if selectedSection == .stashCommunity ? filteredStashScrapers.isEmpty : filteredPlugins.isEmpty {
+            ContentUnavailableView {
+                Label(hasActiveFilters ? "No Matching Plugins" : "No Plugins", systemImage: "puzzlepiece.extension")
+            } description: {
+                Text(hasActiveFilters ? "Try a different search or content type." : "No plugins are available in this source.")
+            } actions: {
+                if hasActiveFilters {
+                    Button("Clear Filters", systemImage: "line.3.horizontal.decrease.circle") {
+                        searchText = ""
+                        capabilityFilter = "all"
+                    }
+                } else if selectedSection == .installed {
+                    Button("Browse Community", systemImage: "puzzlepiece.extension") {
+                        selectedSection = .prismediaCommunity
+                    }
+                }
+            }
         }
+    }
+
+    @ViewBuilder
+    private var catalogFailure: some View {
+        if let message = selectedCatalogError {
+            Section {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                    Label(
+                        selectedCatalogIsEmpty ? "Couldn't Load Plugins" : "Couldn't Refresh Plugins",
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .font(.headline)
+                    Text(message).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Button("Retry", systemImage: "arrow.clockwise") { Task { await refreshSelected() } }
+                    .disabled(selectedCatalogIsLoading)
+            }
+        }
+    }
+
+    private var plugins: [AdministrativePlugin] { catalog.items }
+    private var stashScrapers: [AdministrativeStashScraper] { stashCatalog.items }
+    private var selectedCatalogIsLoading: Bool {
+        selectedSection == .stashCommunity ? stashCatalog.isLoading : catalog.isLoading
+    }
+    private var selectedCatalogIsEmpty: Bool {
+        selectedSection == .stashCommunity ? stashScrapers.isEmpty : plugins.isEmpty
+    }
+    private var selectedCatalogError: String? {
+        selectedSection == .stashCommunity ? stashCatalog.errorMessage : catalog.errorMessage
+    }
+    private var hasActiveFilters: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || capabilityFilter != "all"
     }
 
     private var visibleSections: [AdministrativePluginsSection] {
@@ -299,9 +297,13 @@ struct AdministrativePluginsView: View {
     }
 
     private func loadCatalog() async {
-        isLoading = true
-        defer { isLoading = false }
-        do { plugins = try await service.catalog() } catch { errorMessage = error.localizedDescription }
+        let request = catalog.begin()
+        do {
+            let items = try await service.catalog()
+            catalog.succeed(items, request: request, isCancelled: Task.isCancelled)
+        } catch {
+            catalog.fail(error, request: request, isCancelled: Task.isCancelled)
+        }
     }
 
     private func loadStash() async {
@@ -309,9 +311,13 @@ struct AdministrativePluginsView: View {
             selectedSection = .installed
             return
         }
-        isRefreshingStash = true
-        defer { isRefreshingStash = false }
-        do { stashScrapers = try await service.stashCatalog() } catch { errorMessage = error.localizedDescription }
+        let request = stashCatalog.begin()
+        do {
+            let items = try await service.stashCatalog()
+            stashCatalog.succeed(items, request: request, isCancelled: Task.isCancelled)
+        } catch {
+            stashCatalog.fail(error, request: request, isCancelled: Task.isCancelled)
+        }
     }
 
     private func install(_ id: String) async {
