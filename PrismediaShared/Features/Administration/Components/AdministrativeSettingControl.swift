@@ -7,15 +7,21 @@ struct AdministrativeSettingControl: View {
     @FocusState private var isEditingText: Bool
     let setting: AdministrativeSetting
     let stringListOptions: [AdministrativeSettingOption]
+    let plugins: [AdministrativePlugin]
+    let hidesNsfw: Bool
     let onSave: (AdministrativeJSONValue) async -> Bool
 
     init(
         setting: AdministrativeSetting,
         stringListOptions: [AdministrativeSettingOption] = [],
+        plugins: [AdministrativePlugin] = [],
+        hidesNsfw: Bool = true,
         onSave: @escaping (AdministrativeJSONValue) async -> Bool
     ) {
         self.setting = setting
         self.stringListOptions = stringListOptions
+        self.plugins = plugins
+        self.hidesNsfw = hidesNsfw
         self.onSave = onSave
         _draftText = State(initialValue: Self.textValue(for: setting.value))
         _draftNumber = State(initialValue: setting.value.numberValue ?? setting.constraints?.minimum ?? 0)
@@ -123,6 +129,9 @@ struct AdministrativeSettingControl: View {
                 setting: setting,
                 onSave: onSave
             )
+        case .providerDefaults:
+            AdministrativeProviderDefaultsControl(
+                setting: setting, plugins: plugins, hidesNsfw: hidesNsfw, onSave: onSave)
         case .unsupported:
             LabeledContent(setting.label, value: setting.value.displayValue)
                 .foregroundStyle(.secondary)

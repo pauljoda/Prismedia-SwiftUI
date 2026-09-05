@@ -8,5 +8,6 @@ public enum AdministrativeSettingControlKind: Hashable, Sendable {
     case text
     case stringList
     case weightedTermList
+    case providerDefaults
     case unsupported
 }

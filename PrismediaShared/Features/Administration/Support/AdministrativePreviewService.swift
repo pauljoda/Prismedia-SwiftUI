@@ -5,6 +5,12 @@ import Foundation
         var settingsUnavailable = false
         var cacheUnavailable = false
         var pluginsUnavailable = false
+        static let providerDefaultsSetting = AdministrativeSetting(
+            key: PrismediaContractCodes.SettingKey.identifyDefaultProviders, groupKey: "identify",
+            label: "Default metadata providers", description: "Choose a preferred provider for each media type.",
+            type: "stringMap", value: .stringMap([EntityKind.movie.rawValue: "removed-provider"]),
+            defaultValue: .stringMap([:]), isDefault: false, order: 0, constraints: nil, options: [],
+            inputKind: nil, applyHint: nil)
         static let setting = AdministrativeSetting(
             key: "scan.intervalMinutes",
             groupKey: "library",

@@ -4,6 +4,48 @@ import XCTest
 
 #if os(iOS) || os(macOS)
     final class RequestIdentifyProviderPreferencePolicyTests: XCTestCase {
+        func testEditableKindsIncludeCompatibleFallbacksAndRetainUnavailableDefaults() {
+            let providers = [provider(id: "video-source", name: "Video", entityKind: EntityKind.video.rawValue)]
+            let kinds = RequestIdentifyProviderPreferencePolicy.editableKinds(
+                providers: providers,
+                defaults: [EntityKind.book.rawValue: "removed", "future-kind": "future-provider"],
+                hidesNsfw: false)
+
+            XCTAssertTrue(kinds.contains(.movie))
+            XCTAssertTrue(kinds.contains(.video))
+            XCTAssertTrue(kinds.contains(.book))
+            XCTAssertTrue(kinds.contains(EntityKind(rawValue: "future-kind")))
+            XCTAssertFalse(kinds.contains(.tag))
+            XCTAssertEqual(Set(kinds).count, kinds.count)
+        }
+
+        func testHiddenProvidersAreNotOfferedButTheirStoredDefaultsRemainEditable() {
+            let hidden = provider(id: "hidden", name: "Hidden", isNsfw: true)
+            XCTAssertTrue(
+                RequestIdentifyProviderPreferencePolicy.editableKinds(
+                    providers: [hidden], defaults: [:], hidesNsfw: true
+                ).isEmpty)
+            XCTAssertEqual(
+                RequestIdentifyProviderPreferencePolicy.editableKinds(
+                    providers: [hidden], defaults: [EntityKind.movie.rawValue: hidden.id], hidesNsfw: true), [.movie])
+        }
+
+        func testChangingOneDefaultPreservesUnknownMappingsAndAutomaticRemovesCaseVariants() {
+            let original = ["MOVIE": "old", EntityKind.book.rawValue: "missing", "future-kind": "future-provider"]
+            let changed = RequestIdentifyProviderPreferencePolicy.updatingDefaults(
+                original, kind: .movie, providerID: "new")
+            XCTAssertEqual(
+                changed,
+                [
+                    EntityKind.movie.rawValue: "new", EntityKind.book.rawValue: "missing",
+                    "future-kind": "future-provider",
+                ])
+            let automatic = RequestIdentifyProviderPreferencePolicy.updatingDefaults(
+                changed, kind: .movie, providerID: nil)
+            XCTAssertEqual(automatic, [EntityKind.book.rawValue: "missing", "future-kind": "future-provider"])
+            XCTAssertEqual(original["MOVIE"], "old")
+        }
+
         func testConfiguredProviderIsFirstAndMatchedCaseInsensitively() {
             let providers = [
                 provider(id: "alpha", name: "Alpha"),

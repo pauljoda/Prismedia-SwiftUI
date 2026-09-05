@@ -111,7 +111,7 @@ final class AdministrativeSettingsCatalogTests: XCTestCase {
             setting.value.stringMapValue,
             ["movie": "tmdb", "book": "openlibrary"]
         )
-        XCTAssertEqual(setting.controlKind, .unsupported)
+        XCTAssertEqual(setting.controlKind, .providerDefaults)
     }
 
     func testAutoIdentifyKindsUseTheFixedNativeSelectionCatalog() throws {

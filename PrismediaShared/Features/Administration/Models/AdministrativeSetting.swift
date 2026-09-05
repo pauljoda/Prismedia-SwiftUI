@@ -17,7 +17,10 @@ public struct AdministrativeSetting: Decodable, Identifiable, Hashable, Sendable
     public var id: String { key }
 
     public var controlKind: AdministrativeSettingControlKind {
-        switch type {
+        if key == PrismediaContractCodes.SettingKey.identifyDefaultProviders, value.stringMapValue != nil {
+            return .providerDefaults
+        }
+        return switch type {
         case "boolean": .boolean
         case "integer": .integer
         case "decimal": .decimal

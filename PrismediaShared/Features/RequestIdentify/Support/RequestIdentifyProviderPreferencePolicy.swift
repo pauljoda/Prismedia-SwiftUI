@@ -1,7 +1,31 @@
 import Foundation
 
 enum RequestIdentifyProviderPreferencePolicy {
-    static let settingKey = "identify.defaultProviders"
+    static let settingKey = PrismediaContractCodes.SettingKey.identifyDefaultProviders
+
+    /// Offers compatible kinds without hiding saved mappings from older or newer plugin catalogs.
+    static func editableKinds(
+        providers: [AdministrativePlugin], defaults: [String: String], hidesNsfw: Bool
+    ) -> [EntityKind] {
+        let savedKinds = Set(defaults.keys.map { EntityKind(rawValue: $0.lowercased()) })
+        let candidates = Set(generatedEntityKindDefinitions.keys).union(savedKinds)
+        return candidates.filter { kind in
+            savedKinds.contains(kind)
+                || !identifyProviders(
+                    providers, entityKind: kind.rawValue,
+                    defaultProviderIDs: [:], hidesNsfw: hidesNsfw
+                ).isEmpty
+        }.sorted { $0.displayLabel.localizedStandardCompare($1.displayLabel) == .orderedAscending }
+    }
+
+    /// Changes only one kind's override; nil restores automatic selection and preserves unrelated entries.
+    static func updatingDefaults(
+        _ defaults: [String: String], kind: EntityKind, providerID: String?
+    ) -> [String: String] {
+        var updated = defaults.filter { $0.key.caseInsensitiveCompare(kind.rawValue) != .orderedSame }
+        if let providerID, !providerID.isEmpty { updated[kind.rawValue] = providerID }
+        return updated
+    }
 
     static func eligibleProviders(
         _ providers: [AdministrativePlugin],

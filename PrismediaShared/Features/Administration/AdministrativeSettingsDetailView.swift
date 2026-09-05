@@ -74,7 +74,9 @@ struct AdministrativeSettingsDetailView: View {
                                 for: setting,
                                 plugins: plugins,
                                 hidesNsfw: hidesNsfw
-                            )
+                            ),
+                            plugins: plugins,
+                            hidesNsfw: hidesNsfw
                         ) { value in
                             guard let updated = await onSave(setting, value) else { return false }
                             section = updated
@@ -83,11 +85,11 @@ struct AdministrativeSettingsDetailView: View {
                         .disabled(
                             !canEditSettings
                                 || (!arePluginsAvailable
-                                    && setting.key == PrismediaContractCodes.SettingKey.autoIdentifyProviders)
+                                    && requiresProviders(setting))
                         )
                         .id(setting.value)
                         if !arePluginsAvailable
-                            && setting.key == PrismediaContractCodes.SettingKey.autoIdentifyProviders
+                            && requiresProviders(setting)
                         {
                             Text("Reload provider choices from Settings before changing this selection.")
                                 .font(.footnote).foregroundStyle(.secondary)
@@ -140,6 +142,11 @@ struct AdministrativeSettingsDetailView: View {
 
     private var settings: [AdministrativeSetting] {
         section.groups.flatMap(\.settings)
+    }
+
+    private func requiresProviders(_ setting: AdministrativeSetting) -> Bool {
+        setting.key == PrismediaContractCodes.SettingKey.autoIdentifyProviders
+            || setting.controlKind == .providerDefaults
     }
 
     private func performCacheClear() async {
