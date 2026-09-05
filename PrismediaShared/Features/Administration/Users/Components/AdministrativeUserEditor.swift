@@ -2,18 +2,8 @@ import SwiftUI
 
 struct AdministrativeUserEditor: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var username: String
-    @State private var displayName: String
-    @State private var password = ""
-    @State private var role: UserRole
-    @State private var allowNsfw: Bool
-    @State private var canCreateLibraries: Bool
-    @State private var canRequestContent: Bool
-    @State private var enabled: Bool
-    @State private var rootIDs: Set<UUID>
-    @State private var isSaving = false
-    @State private var error: String?
-    let target: AdministrativeUserEditorTarget
+    @State private var draft: AdministrativeUserDraft
+    @State private var saveSession: AdministrativeUserSaveSession
     let currentUserID: UUID
     let roots: [AdministrativeLibraryRoot]
     let service: any UserAdministrationServicing
@@ -26,134 +16,115 @@ struct AdministrativeUserEditor: View {
         service: any UserAdministrationServicing,
         onSaved: @escaping (UserAccount) -> Void
     ) {
-        self.target = target
         self.currentUserID = currentUserID
         self.roots = roots
         self.service = service
         self.onSaved = onSaved
-        let user = target.user
-        _username = State(initialValue: user?.username ?? "")
-        _displayName = State(initialValue: user?.displayName ?? "")
-        _role = State(initialValue: user?.role ?? .member)
-        _allowNsfw = State(initialValue: user?.allowNsfw ?? false)
-        _canCreateLibraries = State(initialValue: user?.canCreateLibraries ?? false)
-        _canRequestContent = State(initialValue: user?.canRequestContent ?? false)
-        _enabled = State(initialValue: user?.enabled ?? true)
-        _rootIDs = State(initialValue: Set(user?.libraryRootIDs ?? []))
+        _draft = State(initialValue: AdministrativeUserDraft(user: target.user))
+        _saveSession = State(initialValue: AdministrativeUserSaveSession(user: target.user))
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Account") {
-                    TextField("Username", text: $username).prismediaPlainTextInput()
-                    TextField("Display name", text: $displayName)
-                    if target.user == nil {
-                        SecureField("Password", text: $password).textContentType(.newPassword)
-                        if !password.isEmpty && password.count < 8 {
-                            Text("Use at least 8 characters.").font(.footnote).foregroundStyle(
-                                PrismediaColor.destructive)
-                        }
+                if saveSession.libraryAccessNeedsRetry && !saveSession.isSaving {
+                    Section {
+                        Text("Account saved. Library access still needs to be saved.")
+                        Button("Retry Save", systemImage: "arrow.clockwise") { Task { await save() } }
+                            .disabled(!isValid)
                     }
-                    Picker("Role", selection: $role) {
+                }
+                if saveSession.isSaving { Section { ProgressView("Saving user…") } }
+                AdministrativeUserAccountFields(draft: $draft, requiresPassword: saveSession.account == nil)
+                Section {
+                    Picker("Role", selection: $draft.role) {
                         Text("Member").tag(UserRole.member)
                         Text("Administrator").tag(UserRole.admin)
                     }
                     .disabled(isSelf)
+                    Toggle("Account enabled", isOn: $draft.enabled).disabled(isSelf)
+                } header: {
+                    Text("Account Access")
+                } footer: {
+                    if isSelf { Text("You cannot disable your own account or change your own role.") }
                 }
                 Section("Permissions") {
-                    Toggle(
-                        "Allow NSFW content",
-                        isOn: Binding(get: { allowNsfw }, set: { setAllowNsfw($0) })
-                    )
-                    Toggle("Can create libraries", isOn: $canCreateLibraries)
-                    Toggle("Can request content", isOn: $canRequestContent)
-                    Toggle("Account enabled", isOn: $enabled).disabled(isSelf)
+                    Toggle("Allow NSFW content", isOn: Binding(
+                        get: { draft.allowNsfw },
+                        set: { draft.setAllowNsfw($0, roots: roots) }
+                    ))
+                    Toggle("Create libraries", isOn: $draft.canCreateLibraries)
+                    Toggle("Request content", isOn: $draft.canRequestContent)
                 }
-                if role == .admin {
-                    Section { Text("Administrators always have access to every library.").foregroundStyle(.secondary) }
-                } else {
-                    Section("Library Access") {
+                Section {
+                    if draft.role == .admin {
+                        Label("All libraries", systemImage: "checkmark.shield")
+                    } else if grantableRoots.isEmpty {
+                        Text("No libraries available.").foregroundStyle(.secondary)
+                    } else {
                         ForEach(grantableRoots) { root in
-                            Toggle(
-                                root.label,
-                                isOn: Binding(
-                                    get: { rootIDs.contains(root.id) },
-                                    set: { selected in
-                                        if selected { rootIDs.insert(root.id) } else { rootIDs.remove(root.id) }
-                                    }
-                                )
-                            )
+                            Toggle(root.label, isOn: Binding(
+                                get: { draft.rootIDs.contains(root.id) },
+                                set: { selected in
+                                    if selected { draft.rootIDs.insert(root.id) }
+                                    else { draft.rootIDs.remove(root.id) }
+                                }
+                            ))
                         }
                     }
+                } header: {
+                    Text("Library Access")
+                } footer: {
+                    if draft.role == .admin { Text("Administrators have access to every library.") }
+                    else { Text("Select the libraries this member can use.") }
                 }
-                if let error { Section { Text(error).foregroundStyle(PrismediaColor.destructive) } }
             }
+            .disabled(saveSession.isSaving)
             .prismediaScreenBackground()
-            .navigationTitle(target.user == nil ? "Add User" : "Edit User")
+            .navigationTitle(saveSession.account == nil ? "Add User" : "Edit User")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    PrismediaToolbarActionButton("Cancel", systemImage: "xmark") { dismiss() }
+                    PrismediaToolbarActionButton("Close", systemImage: "xmark") { dismiss() }
+                        .disabled(saveSession.isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    PrismediaToolbarActionButton("Save", systemImage: "checkmark") {
-                        Task { await save() }
-                    }
-                    .disabled(!isValid || isSaving)
+                    PrismediaToolbarActionButton("Save", systemImage: "checkmark") { Task { await save() } }
+                        .disabled(!isValid || saveSession.isSaving)
                 }
+            }
+        }
+        .interactiveDismissDisabled(saveSession.isSaving)
+        .alert(
+            saveSession.libraryAccessNeedsRetry ? "Library Access Not Saved" : "Unable to Save User",
+            isPresented: Binding(
+                get: { saveSession.error != nil },
+                set: { if !$0 { saveSession.dismissError() } }
+            )
+        ) {
+            Button("Retry Save") { Task { await save() } }
+                .disabled(!isValid)
+            Button("Keep Editing", role: .cancel) { }
+        } message: {
+            if saveSession.libraryAccessNeedsRetry {
+                Text("The account was saved. Retry to finish saving its library access. \(saveSession.error ?? "")")
+            } else {
+                Text(saveSession.error ?? "")
             }
         }
     }
 
-    private var isSelf: Bool { target.user?.id == currentUserID }
-    private var isValid: Bool {
-        let usernameCount = username.trimmingCharacters(in: .whitespacesAndNewlines).count
-        return (1...64).contains(usernameCount) && (target.user != nil || password.count >= 8)
-    }
-    private var grantableRoots: [AdministrativeLibraryRoot] { allowNsfw ? roots : roots.filter { !$0.isNsfw } }
-
-    private func setAllowNsfw(_ allowed: Bool) {
-        allowNsfw = allowed
-        if !allowed { rootIDs.subtract(roots.filter(\.isNsfw).map(\.id)) }
-    }
+    private var isSelf: Bool { saveSession.account?.id == currentUserID }
+    private var isValid: Bool { draft.isValid(requiresPassword: saveSession.account == nil) }
+    private var grantableRoots: [AdministrativeLibraryRoot] { draft.allowNsfw ? roots : roots.filter { !$0.isNsfw } }
 
     private func save() async {
-        isSaving = true
-        defer { isSaving = false }
-        do {
-            let saved: UserAccount
-            if let user = target.user {
-                saved = try await service.update(
-                    id: user.id,
-                    mutation: AdministrativeUserUpdateMutation(
-                        username: username.trimmingCharacters(in: .whitespacesAndNewlines),
-                        displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines),
-                        role: isSelf ? nil : role,
-                        allowNsfw: allowNsfw,
-                        canCreateLibraries: canCreateLibraries,
-                        canRequestContent: canRequestContent,
-                        enabled: isSelf ? nil : enabled
-                    )
-                )
-            } else {
-                saved = try await service.create(
-                    AdministrativeUserCreateMutation(
-                        username: username.trimmingCharacters(in: .whitespacesAndNewlines),
-                        password: password,
-                        displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            ? nil : displayName.trimmingCharacters(in: .whitespacesAndNewlines),
-                        role: role,
-                        allowNsfw: allowNsfw,
-                        canCreateLibraries: canCreateLibraries,
-                        canRequestContent: canRequestContent,
-                        enabled: enabled
-                    )
-                )
-            }
-            if role != .admin { try await service.replaceLibraryAccess(id: saved.id, rootIDs: Array(rootIDs)) }
-            onSaved(saved)
-            dismiss()
-        } catch let caught { error = caught.localizedDescription }
+        guard !saveSession.isSaving, isValid else { return }
+        let result = await saveSession.save(draft, currentUserID: currentUserID, service: service)
+        if saveSession.hasSavedAccount, let account = saveSession.account {
+            draft.password = ""
+            onSaved(account)
+        }
+        if result != nil { dismiss() }
     }
 }
 
@@ -162,9 +133,7 @@ struct AdministrativeUserEditor: View {
         AdministrativeUserEditor(
             target: AdministrativeUserEditorTarget(),
             currentUserID: PrismediaPreviewData.user.id,
-            roots: [],
-            service: Step3AdministrationPreviewService(),
-            onSaved: { _ in }
+            roots: [], service: Step3AdministrationPreviewService(), onSaved: { _ in }
         )
     }
 #endif

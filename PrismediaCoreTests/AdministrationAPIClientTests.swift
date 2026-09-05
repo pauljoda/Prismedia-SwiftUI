@@ -157,6 +157,87 @@ final class AdministrationAPIClientTests: XCTestCase {
         XCTAssertEqual(loader.requests[6].url?.path, "/api/health/database-restore")
     }
 
+    @MainActor
+    func testUserSaveRetriesLibraryFailureAgainstTheConfirmedAccount() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(userJSON), .json("{}", statusCode: 500),
+            .json(userJSON), .json("", statusCode: 204),
+        ])
+        let service = UserAdministrationService(
+            client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+        )
+        let session = AdministrativeUserSaveSession(user: nil)
+        var draft = AdministrativeUserDraft(user: nil)
+        draft.username = " reader "
+        draft.password = "eightchars"
+        draft.rootIDs = [rootID]
+
+        let first = await session.save(draft, currentUserID: UUID(), service: service)
+        XCTAssertNil(first)
+        XCTAssertEqual(session.account?.id, userID)
+        XCTAssertTrue(session.libraryAccessNeedsRetry)
+        XCTAssertFalse(session.isSaving)
+
+        draft.password = ""
+        let retried = await session.save(draft, currentUserID: UUID(), service: service)
+        XCTAssertEqual(retried?.id, userID)
+        XCTAssertFalse(session.libraryAccessNeedsRetry)
+        XCTAssertNil(session.error)
+        XCTAssertEqual(loader.requests.map(\.httpMethod), ["POST", "PUT", "PATCH", "PUT"])
+        XCTAssertEqual(try jsonBody(loader.requests[0])["username"] as? String, "reader")
+        XCTAssertEqual(try jsonBody(loader.requests[3])["libraryRootIds"] as? [String], [rootID.uuidString])
+    }
+
+    @MainActor
+    func testUserSaveCannotDisableOrDemoteTheCurrentAdministrator() async throws {
+        let admin = UserAccount(id: userID, username: "admin", displayName: "Admin", role: .admin)
+        let loader = MockHTTPDataLoader(responses: [
+            .json(userJSON.replacingOccurrences(of: #""role":"member""#, with: #""role":"admin""#))
+        ])
+        let service = UserAdministrationService(
+            client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+        )
+        let session = AdministrativeUserSaveSession(user: admin)
+        var draft = AdministrativeUserDraft(user: admin)
+        draft.role = .member
+        draft.enabled = false
+
+        let saved = await session.save(draft, currentUserID: userID, service: service)
+        XCTAssertNotNil(saved)
+        XCTAssertEqual(loader.requests.count, 1)
+        let body = try jsonBody(loader.requests[0])
+        XCTAssertNil(body["role"])
+        XCTAssertNil(body["enabled"])
+    }
+
+    @MainActor
+    func testInvalidNewUserDraftDoesNotSubmitAnAccount() async {
+        let loader = MockHTTPDataLoader(responses: [])
+        let service = UserAdministrationService(
+            client: PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+        )
+        let session = AdministrativeUserSaveSession(user: nil)
+        var draft = AdministrativeUserDraft(user: nil)
+        draft.username = "reader"
+        draft.password = "short"
+        let saved = await session.save(draft, currentUserID: userID, service: service)
+        XCTAssertNil(saved)
+        XCTAssertTrue(loader.requests.isEmpty)
+    }
+
+    func testDisablingNsfwRemovesOnlyRestrictedLibraryGrantsFromTheDraft() throws {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let restricted = try decoder.decode(AdministrativeLibraryRoot.self, from: Data(nsfwRootJSON.utf8))
+        let regularID = UUID()
+        var draft = AdministrativeUserDraft(user: nil)
+        draft.allowNsfw = true
+        draft.rootIDs = [restricted.id, regularID]
+        draft.setAllowNsfw(false, roots: [restricted])
+        XCTAssertFalse(draft.allowNsfw)
+        XCTAssertEqual(draft.rootIDs, [regularID])
+    }
+
     private var userJSON: String {
         #"{"id":"\#(userID)","username":"reader","displayName":"Reader","role":"member","allowNsfw":false,"canCreateLibraries":false,"canRequestContent":true,"enabled":true,"lastLoginAt":null,"createdAt":"2026-07-01T12:00:00Z","updatedAt":"2026-07-01T12:00:00Z","libraryRootIds":[]}"#
     }
