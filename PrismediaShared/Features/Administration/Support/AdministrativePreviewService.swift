@@ -7,7 +7,7 @@ import Foundation
             groupKey: "library",
             label: "Scan interval",
             description: "Minutes between automatic library scans.",
-            type: "number",
+            type: "integer",
             value: .number(30),
             defaultValue: .number(60),
             isDefault: false,

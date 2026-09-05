@@ -4,6 +4,7 @@ struct AdministrativeSettingControl: View {
     @State private var draftText: String
     @State private var draftNumber: Double
     @State private var isSaving = false
+    @FocusState private var isEditingText: Bool
     let setting: AdministrativeSetting
     let stringListOptions: [AdministrativeSettingOption]
     let onSave: (AdministrativeJSONValue) async -> Bool
@@ -23,27 +24,31 @@ struct AdministrativeSettingControl: View {
     var body: some View {
         switch setting.controlKind {
         case .boolean:
-            Toggle(isOn: booleanBinding) {
-                settingLabel
+            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                Toggle(setting.label, isOn: booleanBinding)
+                    .disabled(isSaving)
+                settingHelp
             }
-            .disabled(isSaving)
         case .integer:
             #if os(tvOS)
                 numericButtonControl(step: integerStep, fractionLength: 0)
             #else
-                LabeledContent {
+                VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                    Text(setting.label)
                     Stepper(
                         draftNumber.formatted(.number.precision(.fractionLength(0))),
                         value: $draftNumber,
                         in: numericRange,
                         step: integerStep
                     )
+                    .monospacedDigit()
+                    .accessibilityLabel(setting.label)
+                    .accessibilityValue(draftNumber.formatted(.number.precision(.fractionLength(0))))
                     .onChange(of: draftNumber) { _, value in
                         Task { await save(.number(value.rounded())) }
                     }
                     .disabled(isSaving)
-                } label: {
-                    settingLabel
+                    settingHelp
                 }
             #endif
         case .decimal:
@@ -51,13 +56,11 @@ struct AdministrativeSettingControl: View {
                 numericButtonControl(step: decimalStep, fractionLength: 2)
             #else
                 VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                    HStack {
-                        settingLabel
-                        Spacer()
-                        Text(draftNumber.formatted(.number.precision(.fractionLength(2))))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
+                    LabeledContent(
+                        setting.label,
+                        value: draftNumber.formatted(.number.precision(.fractionLength(2)))
+                    )
+                    .monospacedDigit()
                     Slider(
                         value: $draftNumber,
                         in: numericRange,
@@ -65,38 +68,49 @@ struct AdministrativeSettingControl: View {
                     ) { editing in
                         if !editing { Task { await save(.number(draftNumber)) } }
                     }
+                    .accessibilityLabel(setting.label)
+                    .accessibilityValue(draftNumber.formatted(.number.precision(.fractionLength(2))))
                     .disabled(isSaving)
+                    settingHelp
                 }
             #endif
         case .select:
-            LabeledContent {
+            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                 Picker(setting.label, selection: selectionBinding) {
                     ForEach(setting.options) { option in
                         Text(option.label).tag(option.value)
                     }
                 }
-                .labelsHidden()
                 .disabled(isSaving)
-            } label: {
-                settingLabel
+                settingHelp
             }
         case .text:
             VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-                settingLabel
+                Text(setting.label)
                 #if os(tvOS)
                     TextField(setting.label, text: $draftText)
                         .prismediaTextInputStyle(surface: .embedded)
+                        .focused($isEditingText)
                         .onSubmit { Task { await saveText() } }
                         .disabled(isSaving)
                 #else
                     TextField(setting.label, text: $draftText, axis: .vertical)
                         .lineLimit(1...2)
                         .prismediaTextInputStyle(surface: .embedded)
+                        .focused($isEditingText)
                         .onSubmit { Task { await saveText() } }
                         .disabled(isSaving)
                 #endif
-                Button("Save \(setting.label)") { Task { await saveText() } }
-                    .disabled(isSaving || draftValue == setting.value)
+                settingHelp
+                if draftText != Self.textValue(for: setting.value) || isSaving {
+                    AdministrativeSettingTextActions(
+                        settingLabel: setting.label,
+                        isSaving: isSaving,
+                        canSave: draftValue != setting.value,
+                        onCancel: cancelTextEditing,
+                        onSave: { Task { await saveText() } }
+                    )
+                }
             }
         case .stringList:
             AdministrativeStringListControl(
@@ -115,13 +129,11 @@ struct AdministrativeSettingControl: View {
         }
     }
 
-    private var settingLabel: some View {
-        VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-            Text(setting.label)
-            Text(setting.applyHint.map { "\(setting.description) \($0)" } ?? setting.description)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
+    private var settingHelp: some View {
+        Text(setting.applyHint.map { "\(setting.description) \($0)" } ?? setting.description)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var booleanBinding: Binding<Bool> {
@@ -154,18 +166,21 @@ struct AdministrativeSettingControl: View {
 
     #if os(tvOS)
         private func numericButtonControl(step: Double, fractionLength: Int) -> some View {
-            HStack {
-                settingLabel
-                Spacer()
-                Button("Decrease", systemImage: "minus") { adjustNumber(by: -step) }
-                    .labelStyle(.iconOnly)
-                    .disabled(isSaving || draftNumber <= numericRange.lowerBound)
-                Text(draftNumber.formatted(.number.precision(.fractionLength(fractionLength))))
-                    .monospacedDigit()
-                    .frame(minWidth: 90)
-                Button("Increase", systemImage: "plus") { adjustNumber(by: step) }
-                    .labelStyle(.iconOnly)
-                    .disabled(isSaving || draftNumber >= numericRange.upperBound)
+            VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
+                HStack {
+                    Text(setting.label)
+                    Spacer()
+                    Button("Decrease", systemImage: "minus") { adjustNumber(by: -step) }
+                        .labelStyle(.iconOnly)
+                        .disabled(isSaving || draftNumber <= numericRange.lowerBound)
+                    Text(draftNumber.formatted(.number.precision(.fractionLength(fractionLength))))
+                        .monospacedDigit()
+                        .frame(minWidth: 90)
+                    Button("Increase", systemImage: "plus") { adjustNumber(by: step) }
+                        .labelStyle(.iconOnly)
+                        .disabled(isSaving || draftNumber >= numericRange.upperBound)
+                }
+                settingHelp
             }
         }
 
@@ -181,6 +196,11 @@ struct AdministrativeSettingControl: View {
 
     private func saveText() async {
         await save(draftValue)
+    }
+
+    private func cancelTextEditing() {
+        draftText = Self.textValue(for: setting.value)
+        isEditingText = false
     }
 
     private func save(_ value: AdministrativeJSONValue) async {
