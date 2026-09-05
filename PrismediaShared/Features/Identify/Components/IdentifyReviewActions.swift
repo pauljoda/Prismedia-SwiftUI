@@ -55,7 +55,7 @@ import SwiftUI
                                 }
                             }
                         }
-                        .disabled(session.isApplying)
+                        .disabled(session.isMutatingQueue)
                         .accessibilityIdentifier("identify.review-actions.more")
 
                         PrismediaButton(
@@ -67,7 +67,7 @@ import SwiftUI
                             isLoading: session.isApplying,
                             action: { apply(advance: false) }
                         )
-                        .disabled(!canAccept)
+                        .disabled(!canAccept || session.isMutatingQueue)
                         .accessibilityIdentifier("identify.review-actions.accept")
                     }
                     .frame(maxWidth: .infinity)

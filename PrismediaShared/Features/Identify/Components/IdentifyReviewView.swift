@@ -60,19 +60,26 @@ import SwiftUI
         }
 
         @ToolbarContentBuilder private var reviewNavigation: some ToolbarContent {
+            if session.showsSearchForProposal, session.selectedItem?.proposal != nil {
+                ToolbarItem {
+                    Button("Review Match", systemImage: "checklist", action: session.returnToReview)
+                        .labelStyle(.iconOnly)
+                        .disabled(session.isSearchBusy || session.isMutatingQueue)
+                }
+            }
             if session.reviewableIDs.count > 1 {
                 ToolbarItemGroup {
                     Button(action: session.selectPrevious) {
                         Image(systemName: "chevron.left")
                     }
                     .accessibilityLabel("Previous")
-                    .disabled(session.isApplying)
+                    .disabled(session.isMutatingQueue)
 
                     Button(action: session.selectNext) {
                         Image(systemName: "chevron.right")
                     }
                     .accessibilityLabel("Next")
-                    .disabled(session.isApplying)
+                    .disabled(session.isMutatingQueue)
                 }
             }
         }

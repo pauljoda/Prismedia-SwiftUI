@@ -14,8 +14,11 @@ import Observation
         private(set) var isSeeking = false
         private(set) var isResolving = false
         private(set) var isApplying = false
+        private(set) var isRejecting = false
         private(set) var applyProgress: AdministrativeIdentifyApplyProgress?
         private(set) var bulkProgress: IdentifyBulkProgress?
+        private(set) var bulkResultMessage: String?
+        var isMutatingQueue: Bool { isApplying || isRejecting || bulkProgress != nil }
         private(set) var entityDetailsByID: [UUID: EntityDetail] = [:]
         private(set) var entityDetailLoadingIDs = Set<UUID>()
         var selectedItemID: UUID?
@@ -161,6 +164,7 @@ import Observation
         }
 
         func load() async {
+            guard !isMutatingQueue else { return }
             isLoading = true
             defer { isLoading = false }
             do {
@@ -172,6 +176,7 @@ import Observation
                     loadedQueue,
                     loadedDefaults
                 )
+                guard !isMutatingQueue else { return }
                 if providers != nextProviders { providers = nextProviders }
                 if queue != nextQueue { queue = nextQueue }
                 retainReviewDrafts(for: nextQueue)
@@ -190,8 +195,10 @@ import Observation
         }
 
         func refreshQueue() async {
+            guard !isMutatingQueue else { return }
             do {
                 let nextQueue = try await service.identifyQueue()
+                guard !isMutatingQueue else { return }
                 receiveQueueRefresh(nextQueue)
             } catch is CancellationError {
                 return
@@ -201,10 +208,11 @@ import Observation
         }
 
         func refreshSelectedItem() async {
-            guard let selectedItemID else { return }
+            guard !isMutatingQueue, let selectedItemID else { return }
             do {
                 let previousProposal = selectedItem?.proposal
                 let refreshedItem = try await service.identifyQueueItem(entityID: selectedItemID)
+                guard !isMutatingQueue, self.selectedItemID == selectedItemID else { return }
                 let previousProposalID = previousProposal?.proposalID
                 replace(refreshedItem)
                 if previousProposalID != refreshedItem.proposal?.proposalID {
@@ -447,7 +455,7 @@ import Observation
         }
 
         func apply(advance: Bool) async -> Bool {
-            guard let item = selectedItem, let proposal = item.proposal, !item.cascadeRunning else {
+            guard !isMutatingQueue, let item = selectedItem, let proposal = item.proposal, !item.cascadeRunning else {
                 return false
             }
             isApplying = true
@@ -483,7 +491,9 @@ import Observation
         }
 
         func reject(advance: Bool) async -> Bool {
-            guard let item = selectedItem else { return false }
+            guard !isMutatingQueue, let item = selectedItem else { return false }
+            isRejecting = true
+            defer { isRejecting = false }
             errorMessage = nil
             do {
                 try await service.removeIdentifyItem(entityID: item.entityID)
@@ -498,17 +508,27 @@ import Observation
         }
 
         func acceptSelected() async {
+            guard !isMutatingQueue, !Task.isCancelled else { return }
             let items = queue.filter {
                 selectedQueueIDs.contains($0.entityID)
                     && IdentifyBulkBehavior.canAccept(
                         state: .init(rawServerValue: $0.state), hasProposal: $0.proposal != nil,
                         cascadeRunning: $0.cascadeRunning)
             }
+            guard !items.isEmpty else { return }
+            errorMessage = nil
+            bulkResultMessage = nil
             bulkProgress = .init(completed: 0, total: items.count)
+            defer { bulkProgress = nil }
+            var submitted = 0
+            var failures = 0
             for (index, item) in items.enumerated() {
+                guard !Task.isCancelled else { break }
                 guard let proposal = item.proposal else { continue }
                 do {
-                    let selection = MetadataReviewPolicy.seededSelection(for: proposal)
+                    let selection =
+                        reviewDrafts[item.entityID]?.selection(for: proposal)
+                        ?? MetadataReviewPolicy.seededSelection(for: proposal)
                     let updated = try await service.applyIdentifyItem(
                         entityID: item.entityID,
                         proposal: MetadataReviewPolicy.proposalForApply(proposal, selection: selection),
@@ -516,21 +536,43 @@ import Observation
                         selectedImages: MetadataReviewPolicy.selectedRootImages(for: proposal, selection: selection),
                         progressID: nil)
                     replace(updated)
-                } catch { errorMessage = error.localizedDescription }
+                    selectedQueueIDs.remove(item.entityID)
+                    submitted += 1
+                } catch is CancellationError {
+                    break
+                } catch {
+                    failures += 1
+                    errorMessage = error.localizedDescription
+                }
                 bulkProgress = .init(completed: index + 1, total: items.count)
             }
-            selectedQueueIDs.removeAll()
+            // The endpoint queues application; it does not confirm metadata was applied.
+            bulkResultMessage = "Submitted \(submitted) of \(items.count) for application."
+            if failures > 0 {
+                errorMessage =
+                    "\(failures) could not be submitted. Failed and unprocessed items remain selected. \(errorMessage ?? "")"
+            }
         }
 
         func rejectSelected() async {
-            let ids = selectedQueueIDs
+            guard !isMutatingQueue, !Task.isCancelled else { return }
+            let ids = queue.map(\.entityID).filter { selectedQueueIDs.contains($0) }
+            guard !ids.isEmpty else { return }
             var removedIDs = Set<UUID>()
+            var failures = 0
+            errorMessage = nil
+            bulkResultMessage = nil
             bulkProgress = .init(completed: 0, total: ids.count)
+            defer { bulkProgress = nil }
             for (index, id) in ids.enumerated() {
+                guard !Task.isCancelled else { break }
                 do {
                     try await service.removeIdentifyItem(entityID: id)
                     removedIDs.insert(id)
+                } catch is CancellationError {
+                    break
                 } catch {
+                    failures += 1
                     errorMessage = error.localizedDescription
                 }
                 bulkProgress = .init(completed: index + 1, total: ids.count)
@@ -538,6 +580,16 @@ import Observation
             queue.removeAll { removedIDs.contains($0.entityID) }
             reviewDrafts = reviewDrafts.filter { !removedIDs.contains($0.key) }
             selectedQueueIDs.subtract(removedIDs)
+            if let selectedItemID, removedIDs.contains(selectedItemID) { selectNext() }
+            bulkResultMessage = "Removed \(removedIDs.count) of \(ids.count) from the queue."
+            if failures > 0 {
+                errorMessage =
+                    "\(failures) could not be removed. Failed and unprocessed items remain selected. \(errorMessage ?? "")"
+            }
+        }
+
+        func dismissBulkResult() {
+            bulkResultMessage = nil
         }
 
         func prepareBrowse(kind: EntityKind) {
@@ -619,6 +671,11 @@ import Observation
         func returnToSearch() {
             activeCandidateID = nil
             showsSearchForProposal = true
+        }
+
+        func returnToReview() {
+            guard selectedItem?.proposal != nil, !isSearchBusy else { return }
+            showsSearchForProposal = false
         }
 
         func cancelPolling() {

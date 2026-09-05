@@ -14,13 +14,7 @@ import SwiftUI
                     browseSection
                     queueSection
 
-                    if let progress = session.bulkProgress, progress.total > 0 {
-                        ProgressView(value: progress.fraction) {
-                            Text("Processed \(progress.completed) of \(progress.total)")
-                        }
-                        .padding(PrismediaSpacing.large)
-                        .prismediaPanel()
-                    }
+                    IdentifyBulkStatusView(session: session)
                 }
                 .padding(PrismediaSpacing.extraExtraLarge)
             }

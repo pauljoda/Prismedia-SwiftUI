@@ -5,7 +5,7 @@ import SwiftUI
         @Environment(\.prismediaPageIsActive) private var pageIsActive
         @Environment(\.scenePhase) private var scenePhase
         #if os(iOS)
-            @Environment(\.editMode) private var editMode
+            @State private var editMode: EditMode = .inactive
         #endif
 
         @Bindable var session: IdentifySession
@@ -13,12 +13,15 @@ import SwiftUI
         var presentsReviewInNavigationStack = false
 
         var body: some View {
-            List(selection: $session.selectedQueueIDs) {
+            List(selection: queueSelection) {
                 ForEach(session.queue) { item in
                     queueRow(item)
                         .tag(item.entityID)
                 }
             }
+            #if os(iOS)
+                .environment(\.editMode, $editMode)
+            #endif
             .prismediaScreenBackground()
             .overlay {
                 if session.isLoading && session.queue.isEmpty {
@@ -36,14 +39,8 @@ import SwiftUI
                 IdentifyReviewView(session: session)
             }
             .safeAreaInset(edge: .bottom) {
-                if let progress = session.bulkProgress, progress.total > 0 {
-                    ProgressView(value: progress.fraction) {
-                        Text("Processed \(progress.completed) of \(progress.total)")
-                    }
-                    .padding()
-                    .prismediaPanel()
+                IdentifyBulkStatusView(session: session)
                     .padding(.horizontal)
-                }
             }
             .toolbar {
                 ToolbarItemGroup(placement: trailingToolbarPlacement) {
@@ -56,9 +53,9 @@ import SwiftUI
                         Image(systemName: "rectangle.stack")
                     }
                     .accessibilityLabel("Review All")
-                    .disabled(session.reviewableIDs.isEmpty)
+                    .disabled(session.reviewableIDs.isEmpty || isSelecting || session.isMutatingQueue)
 
-                    if !session.selectedQueueIDs.isEmpty {
+                    if queueSelection != nil, !session.selectedQueueIDs.isEmpty {
                         Menu {
                             Button("Accept Selected", systemImage: "checkmark") {
                                 Task { await session.acceptSelected() }
@@ -71,6 +68,7 @@ import SwiftUI
                             Image(systemName: "ellipsis")
                         }
                         .accessibilityLabel("Selected Item Actions")
+                        .disabled(session.isMutatingQueue)
                     }
                 }
 
@@ -101,21 +99,38 @@ import SwiftUI
             presentsReviewInNavigationStack && pageIsActive && scenePhase == .active
         }
 
+        private var isSelecting: Bool {
+            #if os(iOS)
+                editMode.isEditing
+            #else
+                false
+            #endif
+        }
+
+        private var queueSelection: Binding<Set<UUID>>? {
+            #if os(iOS)
+                isSelecting ? $session.selectedQueueIDs : nil
+            #else
+                $session.selectedQueueIDs
+            #endif
+        }
+
         #if os(iOS)
             private var selectionToggleButton: some View {
                 Button {
                     withAnimation {
-                        if editMode?.wrappedValue.isEditing == true {
-                            editMode?.wrappedValue = .inactive
+                        if editMode.isEditing {
+                            editMode = .inactive
                             session.selectedQueueIDs.removeAll()
                         } else {
-                            editMode?.wrappedValue = .active
+                            editMode = .active
                         }
                     }
                 } label: {
-                    Image(systemName: editMode?.wrappedValue.isEditing == true ? "checkmark" : "checkmark.circle")
+                    Image(systemName: editMode.isEditing ? "checkmark" : "checkmark.circle")
                 }
-                .accessibilityLabel(editMode?.wrappedValue.isEditing == true ? "Done Selecting" : "Select Items")
+                .accessibilityLabel(editMode.isEditing ? "Done Selecting" : "Select Items")
+                .disabled(session.isMutatingQueue || session.queue.isEmpty)
             }
         #endif
 
@@ -129,7 +144,9 @@ import SwiftUI
 
         @ViewBuilder
         private func queueRow(_ item: AdministrativeIdentifyQueueItem) -> some View {
-            if presentsReviewInNavigationStack {
+            if isSelecting {
+                IdentifyQueueRow(item: item)
+            } else if presentsReviewInNavigationStack {
                 NavigationLink {
                     IdentifyReviewView(session: session)
                         .task { await session.open(entityID: item.entityID) }

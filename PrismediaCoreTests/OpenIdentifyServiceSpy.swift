@@ -14,6 +14,12 @@ import Foundation
         private let settingValues: [String: AdministrativeJSONValue]
         private var events: [String] = []
         private let bulkResponse: AdministrativeIdentifyBulkAcceptedResponse?
+        private let mutationFailures: Set<UUID>
+        private var appliedFields: [UUID: [String]] = [:]
+        private var removedIDs: [UUID] = []
+        private let suspendsApply: Bool
+        private var applyContinuation: CheckedContinuation<Void, Never>?
+        private var applyStartedContinuation: CheckedContinuation<Void, Never>?
 
         init(
             item: AdministrativeIdentifyQueueItem,
@@ -21,7 +27,9 @@ import Foundation
             getItems: [AdministrativeIdentifyQueueItem]? = nil,
             providers: [AdministrativePlugin] = [],
             settingValues: [String: AdministrativeJSONValue] = [:],
-            bulkResponse: AdministrativeIdentifyBulkAcceptedResponse? = nil
+            bulkResponse: AdministrativeIdentifyBulkAcceptedResponse? = nil,
+            mutationFailures: Set<UUID> = [],
+            suspendsApply: Bool = false
         ) {
             self.item = item
             self.queue = queue
@@ -29,10 +37,22 @@ import Foundation
             self.providers = providers
             self.settingValues = settingValues
             self.bulkResponse = bulkResponse
+            self.mutationFailures = mutationFailures
+            self.suspendsApply = suspendsApply
         }
 
         func callCounts() -> (get: Int, add: Int, search: Int) { (getCalls, addCalls, searchCalls) }
         func callOrder() -> [String] { events }
+        func applyFields() -> [UUID: [String]] { appliedFields }
+        func removalCalls() -> [UUID] { removedIDs }
+        func waitForApply() async {
+            guard appliedFields.isEmpty else { return }
+            await withCheckedContinuation { applyStartedContinuation = $0 }
+        }
+        func resumeApply() {
+            applyContinuation?.resume()
+            applyContinuation = nil
+        }
         func identifyQueueItem(entityID: UUID) async throws -> AdministrativeIdentifyQueueItem {
             getCalls += 1
             events.append("get")
@@ -70,7 +90,19 @@ import Foundation
         func applyIdentifyItem(
             entityID: UUID, proposal: AdministrativeEntityMetadataProposal?, selectedFields: [String],
             selectedImages: [String: String?]?, progressID: UUID?
-        ) async throws -> AdministrativeIdentifyQueueItem { throw CancellationError() }
+        ) async throws -> AdministrativeIdentifyQueueItem {
+            appliedFields[entityID] = selectedFields
+            if suspendsApply {
+                await withCheckedContinuation {
+                    applyContinuation = $0
+                    applyStartedContinuation?.resume()
+                    applyStartedContinuation = nil
+                }
+            }
+            if mutationFailures.contains(entityID) { throw PrismediaAPIError.httpStatus(503, nil) }
+            guard let response = queue.first(where: { $0.entityID == entityID }) else { throw CancellationError() }
+            return response
+        }
         func saveIdentifyProposal(entityID: UUID, proposal: AdministrativeEntityMetadataProposal) async throws
             -> AdministrativeIdentifyQueueItem
         { throw CancellationError() }
@@ -89,7 +121,11 @@ import Foundation
             entityID: UUID, proposal: AdministrativeEntityMetadataProposal, selectedFields: [String],
             selectedImages: [String: String?]?
         ) async throws { throw CancellationError() }
-        func removeIdentifyItem(entityID: UUID) async throws { throw CancellationError() }
+        func removeIdentifyItem(entityID: UUID) async throws {
+            removedIDs.append(entityID)
+            if mutationFailures.contains(entityID) { throw PrismediaAPIError.httpStatus(503, nil) }
+            queue.removeAll { $0.entityID == entityID }
+        }
         func plugins() async throws -> [AdministrativePlugin] { throw CancellationError() }
         func updatePlugin(id: String) async throws -> AdministrativePlugin { throw CancellationError() }
         func searchRequests(kind: String, pluginID: String, fields: [String: String], limit: Int?) async throws

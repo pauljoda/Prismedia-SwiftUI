@@ -5,6 +5,118 @@ import XCTest
 #if os(iOS) || os(macOS)
     final class IdentifySessionTests: XCTestCase {
         @MainActor
+        func testBulkApplyPreventsOverlappingRemovalAndKeepsCancelledRemainderSelected() async throws {
+            let first = try queueItem(
+                state: "proposal", proposal: proposal(id: "first", title: "First", description: nil))
+            let second = try queueItem(
+                state: "proposal", proposal: proposal(id: "second", title: "Second", description: nil))
+            let service = OpenIdentifyServiceSpy(item: first, queue: [first, second], suspendsApply: true)
+            let session = IdentifySession(
+                service: service, browser: IdentifyPreviewEntityBrowser(), initialQueue: [first, second])
+            session.selectedQueueIDs = [first.entityID, second.entityID]
+            let task = Task { await session.acceptSelected() }
+            await service.waitForApply()
+
+            XCTAssertTrue(session.isMutatingQueue)
+            await session.rejectSelected()
+            let rejected = await session.reject(advance: false)
+            XCTAssertFalse(rejected)
+            let removals = await service.removalCalls()
+            XCTAssertTrue(removals.isEmpty)
+            task.cancel()
+            await service.resumeApply()
+            await task.value
+
+            let fields = await service.applyFields()
+            XCTAssertEqual(Set(fields.keys), [first.entityID])
+            XCTAssertEqual(session.selectedQueueIDs, [second.entityID])
+            XCTAssertFalse(session.isMutatingQueue)
+            XCTAssertNil(session.bulkProgress)
+        }
+
+        @MainActor
+        func testReturningFromSearchToExistingReviewPreservesChoices() throws {
+            let item = try queueItem(
+                state: "proposal", proposal: proposal(id: "root", title: "First", description: nil))
+            let session = IdentifySession(
+                service: OpenIdentifyServiceSpy(item: item), browser: IdentifyPreviewEntityBrowser(),
+                initialQueue: [item])
+            session.reviewSelection.selectedFieldsByProposal["root"]?.remove(.title)
+            let choices = session.reviewSelection
+
+            session.returnToSearch()
+            XCTAssertTrue(session.showsSearchForProposal)
+            session.returnToReview()
+
+            XCTAssertFalse(session.showsSearchForProposal)
+            XCTAssertEqual(session.reviewSelection, choices)
+        }
+
+        @MainActor
+        func testBulkAcceptPreservesFailedAndIneligibleSelectionsAndReviewChoices() async throws {
+            let first = try queueItem(
+                state: "proposal", proposal: proposal(id: "first", title: "First", description: "Details"))
+            let failed = try queueItem(
+                state: "proposal", proposal: proposal(id: "failed", title: "Second", description: nil))
+            let waiting = try queueItem(state: "search")
+            let service = OpenIdentifyServiceSpy(
+                item: first, queue: [first, failed, waiting], mutationFailures: [failed.entityID])
+            let session = IdentifySession(
+                service: service, browser: IdentifyPreviewEntityBrowser(), initialQueue: [first, failed, waiting])
+            session.reviewSelection.selectedFieldsByProposal["first"]?.remove(.title)
+            session.selectNext()
+            session.selectedQueueIDs = [first.entityID, failed.entityID, waiting.entityID]
+
+            await session.acceptSelected()
+
+            let fields = await service.applyFields()
+            XCTAssertFalse(fields[first.entityID]?.contains(MetadataReviewField.title.rawValue) == true)
+            XCTAssertNotNil(fields[failed.entityID])
+            XCTAssertNil(fields[waiting.entityID])
+            XCTAssertEqual(session.selectedQueueIDs, [failed.entityID, waiting.entityID])
+            XCTAssertNotNil(session.errorMessage)
+            XCTAssertNil(session.bulkProgress)
+        }
+
+        @MainActor
+        func testBulkRejectRetainsOnlyFailedItemsAndClearsFinishedProgress() async throws {
+            let first = try queueItem()
+            let failed = try queueItem()
+            let service = OpenIdentifyServiceSpy(
+                item: first, queue: [first, failed], mutationFailures: [failed.entityID])
+            let session = IdentifySession(
+                service: service, browser: IdentifyPreviewEntityBrowser(), initialQueue: [first, failed])
+            session.selectedQueueIDs = [first.entityID, failed.entityID]
+
+            await session.rejectSelected()
+
+            XCTAssertEqual(session.queue.map(\.entityID), [failed.entityID])
+            XCTAssertEqual(session.selectedQueueIDs, [failed.entityID])
+            XCTAssertNotNil(session.errorMessage)
+            XCTAssertNil(session.bulkProgress)
+        }
+
+        @MainActor
+        func testCancelledBulkAcceptLeavesUnattemptedItemsSelected() async throws {
+            let item = try queueItem(
+                state: "proposal", proposal: proposal(id: "root", title: "First", description: nil))
+            let service = OpenIdentifyServiceSpy(item: item, queue: [item])
+            let session = IdentifySession(
+                service: service, browser: IdentifyPreviewEntityBrowser(), initialQueue: [item])
+            session.selectedQueueIDs = [item.entityID]
+            let task = Task { @MainActor in
+                withUnsafeCurrentTask { $0?.cancel() }
+                await session.acceptSelected()
+            }
+            await task.value
+
+            let fields = await service.applyFields()
+            XCTAssertTrue(fields.isEmpty)
+            XCTAssertEqual(session.selectedQueueIDs, [item.entityID])
+            XCTAssertNil(session.bulkProgress)
+        }
+
+        @MainActor
         func testBulkIdentifyDoesNotClaimSkippedItemsSucceeded() async throws {
             let item = try queueItem()
             let items = [
