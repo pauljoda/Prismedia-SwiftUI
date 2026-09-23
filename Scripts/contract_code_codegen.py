@@ -27,6 +27,8 @@ NATIVE_ENUM_TYPES = {
     "DownloadProtocol": "RequestActivityDownloadProtocol",
     "EntityEngagementMode": "EntityEngagementMode",
     "EntitySequenceRole": "EntitySequenceRole",
+    "ManagedRequestPhase": "EntityManagedRequestPhase",
+    "ManagedTrackingStatus": "EntityManagedTrackingStatus",
     "MonitorStatus": "EntityMonitorStatus",
     "PageReadingDirection": "PageReadingDirection",
     "PageType": "PageType",

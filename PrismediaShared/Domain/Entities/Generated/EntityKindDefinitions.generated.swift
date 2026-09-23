@@ -963,8 +963,8 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         containableKinds: nil,
         supportsManualManagement: false,
         manualAcquisition: EntityManualAcquisitionPolicy(
-            supportsUpload: false,
-            supportsReplacement: false
+            supportsUpload: true,
+            supportsReplacement: true
         ),
         mediaQualityFamily: EntityMediaQualityFamily(rawValue: "video"),
         supportsAtomicMediaUpgrade: true,

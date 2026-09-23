@@ -434,8 +434,8 @@ final class AppShellNavigationTests: XCTestCase {
                 .map(\.kind)
         )
 
-        XCTAssertEqual(uploadableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video, .videoSeason])
-        XCTAssertEqual(replaceableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video])
+        XCTAssertEqual(uploadableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video, .videoEpisode, .videoSeason])
+        XCTAssertEqual(replaceableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video, .videoEpisode])
         XCTAssertTrue(replaceableKinds.isSubset(of: uploadableKinds))
     }
 

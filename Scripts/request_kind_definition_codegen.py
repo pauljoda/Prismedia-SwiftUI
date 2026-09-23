@@ -81,7 +81,7 @@ def render_manifest(manifest: dict) -> str:
         "",
         "    public static var discoverable: [Self] { allCases.filter(\\.isDiscoverable) }",
         "",
-        "    public func supports(root: AdministrativeLibraryRoot) -> Bool {",
+        "    public func supports(root: any RequestLibraryRootCapabilities) -> Bool {",
         "        switch self {",
         *[f"        case .{request_member(x)}: return root.{x['rootFlag']}" for x in kinds],
         "        }",

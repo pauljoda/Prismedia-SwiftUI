@@ -196,13 +196,13 @@ public enum RequestKindDefinition: String, CaseIterable, Identifiable, Hashable,
         case .comicInstallment: return false
         case .artist: return true
         case .album: return true
-        case .track: return false
+        case .track: return true
         }
     }
 
     public static var discoverable: [Self] { allCases.filter(\.isDiscoverable) }
 
-    public func supports(root: RequestLibraryRoot) -> Bool {
+    public func supports(root: any RequestLibraryRootCapabilities) -> Bool {
         switch self {
         case .book: return root.scanBooks
         case .audiobook: return root.scanBooks

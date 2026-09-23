@@ -17,6 +17,7 @@ OUTPUT = (
 # decoding concern, registered once here and expanded into the enum, decoder, discriminator, and
 # generic payload accessor. Manifest parity makes an unregistered backend capability fail CI.
 CAPABILITY_PAYLOAD_TYPES = {
+    "acquisition-attribution": "EntityAcquisitionAttributionCapability",
     "book-metadata": "EntityBookMetadataCapability",
     "classification": "EntityClassificationCapability",
     "collection-configuration": "EntityCollectionConfigurationCapability",
@@ -26,6 +27,7 @@ CAPABILITY_PAYLOAD_TYPES = {
     "dates": "EntityItemsCapability<EntityDate>",
     "description": "EntityDescriptionCapability",
     "embedded-audio-metadata": "EntityEmbeddedAudioMetadataCapability",
+    "external-library-provenance": "EntityExternalLibraryProvenanceCapability",
     "file-management": "EntityFileManagementCapability",
     "files": "EntityItemsCapability<EntityFile>",
     "fingerprints": "EntityItemsCapability<EntityFingerprint>",

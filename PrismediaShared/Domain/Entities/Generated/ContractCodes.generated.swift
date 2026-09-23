@@ -5,14 +5,25 @@ import Foundation
 
 /// Complete generated snapshot of backend closed-set wire identifiers.
 public enum PrismediaContractCodes {
+    public enum AcquisitionAccessKind {
+        public static let `download` = "download"
+        public static let `borrow` = "borrow"
+        public static let `purchase` = "purchase"
+        public static let `sample` = "sample"
+        public static let `external` = "external"
+        public static let `request` = "request"
+    }
+
     public enum AcquisitionCheckpointProtocol {
         public static let `placement` = "placement"
         public static let `television` = "television"
+        public static let `atomicUpgrade` = "atomic-upgrade"
     }
 
     public enum AcquisitionHistoryEvent {
         public static let `grabbed` = "grabbed"
         public static let `imported` = "imported"
+        public static let `mappingRepaired` = "mapping-repaired"
         public static let `importFailed` = "import-failed"
         public static let `downloadFailed` = "download-failed"
         public static let `blocklisted` = "blocklisted"
@@ -40,6 +51,7 @@ public enum PrismediaContractCodes {
         public static let `holdStructuralConflict` = "hold-structural-conflict"
         public static let `unsupported` = "unsupported"
         public static let `ambiguous` = "ambiguous"
+        public static let `holdVerification` = "hold-verification"
     }
 
     public enum AcquisitionImportFileRole {
@@ -250,6 +262,14 @@ public enum PrismediaContractCodes {
         public static let `oneShot` = "one-shot"
     }
 
+    public enum ConnectionStatus {
+        public static let `unverified` = "unverified"
+        public static let `ready` = "ready"
+        public static let `unavailable` = "unavailable"
+        public static let `identityChanged` = "identity-changed"
+        public static let `disabled` = "disabled"
+    }
+
     public enum ConsumptionActivityKind {
         public static let `viewing` = "viewing"
         public static let `listening` = "listening"
@@ -353,6 +373,7 @@ public enum PrismediaContractCodes {
 
     public enum EntityFileRole {
         public static let `source` = "source"
+        public static let `unavailableSource` = "unavailable-source"
         public static let `thumbnail` = "thumbnail"
         public static let `gridThumbnail` = "grid-thumbnail"
         public static let `gridThumbnail2x` = "grid-thumbnail-2x"
@@ -485,6 +506,11 @@ public enum PrismediaContractCodes {
         public static let `error` = "error"
     }
 
+    public enum FulfillmentOwnerKind {
+        public static let `externalManager` = "external-manager"
+        public static let `connectedLibrary` = "connected-library"
+    }
+
     public enum GalleryType {
         public static let `virtual` = "virtual"
         public static let `folder` = "folder"
@@ -547,6 +573,66 @@ public enum PrismediaContractCodes {
         public static let `slskd` = "slskd"
     }
 
+    public enum IntegrationArtifactRole {
+        public static let `content` = "content"
+        public static let `cover` = "cover"
+        public static let `sidecar` = "sidecar"
+    }
+
+    public enum IntegrationErrorCode {
+        public static let `managedItemNotFound` = "managed-item-not-found"
+    }
+
+    public enum IntegrationOperation {
+        public static let `probe` = "probe"
+        public static let `search` = "search"
+        public static let `browse` = "browse"
+        public static let `inspect` = "inspect"
+        public static let `resolve` = "resolve"
+        public static let `submit` = "submit"
+        public static let `findSubmission` = "find-submission"
+        public static let `cancelSubmission` = "cancel-submission"
+        public static let `getJob` = "get-job"
+        public static let `cancel` = "cancel"
+        public static let `listArtifacts` = "list-artifacts"
+        public static let `authorizeArtifact` = "authorize-artifact"
+        public static let `renewRetention` = "renew-retention"
+        public static let `acknowledge` = "acknowledge"
+        public static let `lookupManaged` = "lookup-managed"
+        public static let `discoverManaged` = "discover-managed"
+        public static let `managerOptions` = "manager-options"
+        public static let `ensureManaged` = "ensure-managed"
+        public static let `requestManaged` = "request-managed"
+        public static let `configureManaged` = "configure-managed"
+        public static let `reconcileManaged` = "reconcile-managed"
+        public static let `inspectManagedRelease` = "inspect-managed-release"
+        public static let `searchLibrary` = "search-library"
+        public static let `getLibraryItem` = "get-library-item"
+        public static let `listLibraries` = "list-libraries"
+        public static let `requestSource` = "request-source"
+        public static let `observeSource` = "observe-source"
+    }
+
+    public enum IntegrationTransferMode {
+        public static let `remoteExecutor` = "remote-executor"
+        public static let `sourceDownload` = "source-download"
+        public static let `sourceRequest` = "source-request"
+    }
+
+    public enum IntegrationTransferPhase {
+        public static let `pendingSubmission` = "pending-submission"
+        public static let `submissionUncertain` = "submission-uncertain"
+        public static let `awaitingRemote` = "awaiting-remote"
+        public static let `awaitingArtifacts` = "awaiting-artifacts"
+        public static let `transferring` = "transferring"
+        public static let `importing` = "importing"
+        public static let `awaitingAcknowledgement` = "awaiting-acknowledgement"
+        public static let `completed` = "completed"
+        public static let `needsReview` = "needs-review"
+        public static let `failed` = "failed"
+        public static let `cancelled` = "cancelled"
+    }
+
     public enum JobGraphOrigin {
         public static let `background` = "background"
         public static let `interactive` = "interactive"
@@ -571,6 +657,7 @@ public enum PrismediaContractCodes {
     public enum JobNodeImportance {
         public static let `required` = "required"
         public static let `bestEffort` = "best-effort"
+        public static let `deferred` = "deferred"
     }
 
     public enum JobResourceClass {
@@ -594,6 +681,7 @@ public enum PrismediaContractCodes {
         public static let `scanBook` = "scan-book"
         public static let `scanComic` = "scan-comic"
         public static let `scanAudio` = "scan-audio"
+        public static let `applyVideoSidecarMetadata` = "apply-video-sidecar-metadata"
         public static let `reconcileEntity` = "reconcile-entity"
         public static let `probeVideo` = "probe-video"
         public static let `probeAudio` = "probe-audio"
@@ -601,6 +689,7 @@ public enum PrismediaContractCodes {
         public static let `fingerprintImage` = "fingerprint-image"
         public static let `fingerprintAudio` = "fingerprint-audio"
         public static let `generatePreview` = "generate-preview"
+        public static let `generateTrickplay` = "generate-trickplay"
         public static let `generateImageThumbnail` = "generate-image-thumbnail"
         public static let `generateGridThumbnail` = "generate-grid-thumbnail"
         public static let `gridThumbnailSweep` = "grid-thumbnail-sweep"
@@ -622,6 +711,9 @@ public enum PrismediaContractCodes {
         public static let `bulkIdentify` = "bulk-identify"
         public static let `autoIdentify` = "auto-identify"
         public static let `identifyCascade` = "identify-cascade"
+        public static let `integrationTransfer` = "integration-transfer"
+        public static let `managedLibraryReconcile` = "managed-library-reconcile"
+        public static let `managedControl` = "managed-control"
         public static let `acquisitionSearch` = "acquisition-search"
         public static let `acquisitionMonitor` = "acquisition-monitor"
         public static let `acquisitionImport` = "acquisition-import"
@@ -638,6 +730,56 @@ public enum PrismediaContractCodes {
         public static let `scanBooks` = "scanBooks"
         public static let `scanVideos` = "scanVideos"
         public static let `scanAudio` = "scanAudio"
+    }
+
+    public enum ManagedCommandStatus {
+        public static let `pending` = "pending"
+        public static let `running` = "running"
+        public static let `completed` = "completed"
+        public static let `failed` = "failed"
+        public static let `cancelled` = "cancelled"
+        public static let `unknown` = "unknown"
+    }
+
+    public enum ManagedControlPhase {
+        public static let `pendingConfiguration` = "pending-configuration"
+        public static let `configurationUncertain` = "configuration-uncertain"
+        public static let `pendingSearch` = "pending-search"
+        public static let `searchUncertain` = "search-uncertain"
+        public static let `awaitingCommand` = "awaiting-command"
+        public static let `completed` = "completed"
+        public static let `rejected` = "rejected"
+        public static let `failed` = "failed"
+        public static let `cancelled` = "cancelled"
+        public static let `closedUnverified` = "closed-unverified"
+    }
+
+    public enum ManagedMutationOutcome {
+        public static let `applied` = "applied"
+        public static let `accepted` = "accepted"
+        public static let `rejected` = "rejected"
+    }
+
+    public enum ManagedRequestPhase {
+        public static let `pendingCreation` = "pending-creation"
+        public static let `creationUncertain` = "creation-uncertain"
+        public static let `awaitingFiles` = "awaiting-files"
+        public static let `remoteRemoved` = "remote-removed"
+        public static let `completed` = "completed"
+        public static let `rejected` = "rejected"
+        public static let `cancelled` = "cancelled"
+        public static let `ownershipReleased` = "ownership-released"
+    }
+
+    public enum ManagedTrackingStatus {
+        public static let `pending` = "pending"
+        public static let `waitingForFiles` = "waiting-for-files"
+        public static let `tracking` = "tracking"
+        public static let `needsReview` = "needs-review"
+        public static let `stale` = "stale"
+        public static let `removed` = "removed"
+        public static let `releasePending` = "release-pending"
+        public static let `released` = "released"
     }
 
     public enum MediaFileIgnoreReason {
@@ -662,6 +804,16 @@ public enum PrismediaContractCodes {
         public static let `background` = "background"
     }
 
+    public enum MediaResolutionTier {
+        public static let `uhd8K` = "8K"
+        public static let `uhd4K` = "4K"
+        public static let `qhd` = "1440p"
+        public static let `fullHd` = "1080p"
+        public static let `hd` = "720p"
+        public static let `standard480` = "480p"
+        public static let `sd` = "SD"
+    }
+
     public enum MetadataPatchField {
         public static let `title` = "title"
         public static let `description` = "description"
@@ -676,6 +828,13 @@ public enum PrismediaContractCodes {
         public static let `studio` = "studio"
         public static let `credits` = "credits"
         public static let `images` = "images"
+    }
+
+    public enum MetadataValueOrigin {
+        public static let `unknown` = "unknown"
+        public static let `user` = "user"
+        public static let `provider` = "provider"
+        public static let `scan` = "scan"
     }
 
     public enum MonitorPreset {
@@ -730,6 +889,15 @@ public enum PrismediaContractCodes {
     public enum PlaybackMode {
         public static let `direct` = "direct"
         public static let `hls` = "hls"
+    }
+
+    public enum PluginCapability {
+        public static let `metadata` = "metadata"
+        public static let `catalogDiscovery` = "catalog-discovery"
+        public static let `acquisitionSource` = "acquisition-source"
+        public static let `transferExecutor` = "transfer-executor"
+        public static let `externalManager` = "external-manager"
+        public static let `connectedLibrary` = "connected-library"
     }
 
     public enum PluginSearchFieldType {
@@ -795,6 +963,16 @@ public enum PrismediaContractCodes {
         public static let `wrongInstallment` = "wrong-installment"
     }
 
+    public enum RemoteJobState {
+        public static let `queued` = "queued"
+        public static let `running` = "running"
+        public static let `waiting` = "waiting"
+        public static let `partial` = "partial"
+        public static let `succeeded` = "succeeded"
+        public static let `failed` = "failed"
+        public static let `cancelled` = "cancelled"
+    }
+
     public enum RequestCommitOutcome {
         public static let `requested` = "requested"
         public static let `alreadyOwned` = "already-owned"
@@ -826,6 +1004,14 @@ public enum PrismediaContractCodes {
         public static let `root` = "root"
         public static let `directChildren` = "direct-children"
         public static let `directChildrenWhenPresent` = "direct-children-when-present"
+    }
+
+    public enum SourceAcquisitionState {
+        public static let `notObserved` = "not-observed"
+        public static let `queued` = "queued"
+        public static let `downloading` = "downloading"
+        public static let `ready` = "ready"
+        public static let `failed` = "failed"
     }
 
     public enum StreamKind {
@@ -887,6 +1073,7 @@ public enum PrismediaContractCodes {
     }
 
     public enum CapabilityKind {
+        public static let `acquisitionAttribution` = "acquisition-attribution"
         public static let `bookMetadata` = "book-metadata"
         public static let `classification` = "classification"
         public static let `collectionConfiguration` = "collection-configuration"
@@ -897,6 +1084,7 @@ public enum PrismediaContractCodes {
         public static let `dates` = "dates"
         public static let `description` = "description"
         public static let `embeddedAudioMetadata` = "embedded-audio-metadata"
+        public static let `externalLibraryProvenance` = "external-library-provenance"
         public static let `fileManagement` = "file-management"
         public static let `files` = "files"
         public static let `fingerprints` = "fingerprints"
@@ -925,8 +1113,10 @@ public enum PrismediaContractCodes {
 
     public enum ExternalIDProvider {
         public static let `aniDb` = "anidb"
+        public static let `comicVine` = "comicvine"
         public static let `imdb` = "imdb"
         public static let `musicBrainz` = "musicbrainz"
+        public static let `openLibraryWork` = "openlibrarywork"
         public static let `stash` = "stash"
         public static let `tmdb` = "tmdb"
         public static let `tvdb` = "tvdb"
@@ -949,6 +1139,11 @@ public enum PrismediaContractCodes {
         public static let `calendarRangeInvalid` = "calendar_range_invalid"
         public static let `changelogNotFound` = "changelog_not_found"
         public static let `collectionNotFound` = "collection_not_found"
+        public static let `connectionConflict` = "connection_conflict"
+        public static let `connectionInUse` = "connection_in_use"
+        public static let `connectionInvalid` = "connection_invalid"
+        public static let `connectionNotFound` = "connection_not_found"
+        public static let `connectionUnavailable` = "connection_unavailable"
         public static let `databaseBackupInvalid` = "database_backup_invalid"
         public static let `databaseBackupNotFound` = "database_backup_not_found"
         public static let `databaseRestoreInvalid` = "database_restore_invalid"
@@ -964,6 +1159,7 @@ public enum PrismediaContractCodes {
         public static let `entityReaderPageNotFound` = "entity_reader_page_not_found"
         public static let `externalIdentityAmbiguous` = "external_identity_ambiguous"
         public static let `fileConflict` = "file_conflict"
+        public static let `fulfillmentOwnershipConflict` = "fulfillment_ownership_conflict"
         public static let `identifyApplyProgressNotFound` = "identify_apply_progress_not_found"
         public static let `identifyFailed` = "identify_failed"
         public static let `identifyQueueApplyInvalid` = "identify_queue_apply_invalid"
@@ -972,6 +1168,10 @@ public enum PrismediaContractCodes {
         public static let `identifyTargetNotEligible` = "identify_target_not_eligible"
         public static let `indexerInvalid` = "indexer_invalid"
         public static let `indexerUnreachable` = "indexer_unreachable"
+        public static let `integrationTransferConflict` = "integration_transfer_conflict"
+        public static let `integrationTransferInvalid` = "integration_transfer_invalid"
+        public static let `integrationTransferNotFound` = "integration_transfer_not_found"
+        public static let `integrationTransferUnavailable` = "integration_transfer_unavailable"
         public static let `invalidBookChapterMapping` = "invalid_book_chapter_mapping"
         public static let `invalidCollection` = "invalid_collection"
         public static let `invalidCollectionItems` = "invalid_collection_items"
@@ -988,13 +1188,20 @@ public enum PrismediaContractCodes {
         public static let `invalidUpload` = "invalid_upload"
         public static let `lastAdminRequired` = "last_admin_required"
         public static let `libraryRootPathConflict` = "library_root_path_conflict"
+        public static let `managedControlConflict` = "managed_control_conflict"
+        public static let `managedRequestConflict` = "managed_request_conflict"
+        public static let `metadataFieldConflict` = "metadata_field_conflict"
         public static let `notFound` = "not_found"
         public static let `passwordInvalid` = "password_invalid"
         public static let `playbackItemNotFound` = "playback_item_not_found"
         public static let `playbackSourceNotFound` = "playback_source_not_found"
+        public static let `pluginInUse` = "plugin_in_use"
         public static let `pluginNotFound` = "plugin_not_found"
+        public static let `pluginProviderUnavailable` = "plugin_provider_unavailable"
         public static let `pluginUpdateNotFound` = "plugin_update_not_found"
+        public static let `readOnlyLibrary` = "read_only_library"
         public static let `requestInvalid` = "request_invalid"
+        public static let `requestPermissionRequired` = "request_permission_required"
         public static let `requestProposalChanged` = "request_proposal_changed"
         public static let `requestServiceInvalid` = "request_service_invalid"
         public static let `rootNotFound` = "root_not_found"
@@ -1176,6 +1383,28 @@ public extension EntitySequenceRole {
     static let `item` = Self(rawValue: PrismediaContractCodes.EntitySequenceRole.`item`)
 }
 
+public extension EntityManagedRequestPhase {
+    static let `pendingCreation` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`pendingCreation`)
+    static let `creationUncertain` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`creationUncertain`)
+    static let `awaitingFiles` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`awaitingFiles`)
+    static let `remoteRemoved` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`remoteRemoved`)
+    static let `completed` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`completed`)
+    static let `rejected` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`rejected`)
+    static let `cancelled` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`cancelled`)
+    static let `ownershipReleased` = Self(rawValue: PrismediaContractCodes.ManagedRequestPhase.`ownershipReleased`)
+}
+
+public extension EntityManagedTrackingStatus {
+    static let `pending` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`pending`)
+    static let `waitingForFiles` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`waitingForFiles`)
+    static let `tracking` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`tracking`)
+    static let `needsReview` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`needsReview`)
+    static let `stale` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`stale`)
+    static let `removed` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`removed`)
+    static let `releasePending` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`releasePending`)
+    static let `released` = Self(rawValue: PrismediaContractCodes.ManagedTrackingStatus.`released`)
+}
+
 public extension EntityMonitorStatus {
     static let `active` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`active`)
     static let `paused` = Self(rawValue: PrismediaContractCodes.MonitorStatus.`paused`)
@@ -1239,6 +1468,7 @@ public extension RequestActivityReleaseRejection {
 public extension RequestActivityHistoryEvent {
     static let `grabbed` = Self(rawValue: PrismediaContractCodes.AcquisitionHistoryEvent.`grabbed`)
     static let `imported` = Self(rawValue: PrismediaContractCodes.AcquisitionHistoryEvent.`imported`)
+    static let `mappingRepaired` = Self(rawValue: PrismediaContractCodes.AcquisitionHistoryEvent.`mappingRepaired`)
     static let `importFailed` = Self(rawValue: PrismediaContractCodes.AcquisitionHistoryEvent.`importFailed`)
     static let `downloadFailed` = Self(rawValue: PrismediaContractCodes.AcquisitionHistoryEvent.`downloadFailed`)
     static let `blocklisted` = Self(rawValue: PrismediaContractCodes.AcquisitionHistoryEvent.`blocklisted`)
@@ -1252,6 +1482,7 @@ public extension UserRole {
 }
 
 public extension EntityCapabilityKind {
+    static let `acquisitionAttribution` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`acquisitionAttribution`)
     static let `bookMetadata` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`bookMetadata`)
     static let `classification` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`classification`)
     static let `collectionConfiguration` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`collectionConfiguration`)
@@ -1262,6 +1493,7 @@ public extension EntityCapabilityKind {
     static let `dates` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`dates`)
     static let `description` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`description`)
     static let `embeddedAudioMetadata` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`embeddedAudioMetadata`)
+    static let `externalLibraryProvenance` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`externalLibraryProvenance`)
     static let `fileManagement` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`fileManagement`)
     static let `files` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`files`)
     static let `fingerprints` = Self(rawValue: PrismediaContractCodes.CapabilityKind.`fingerprints`)

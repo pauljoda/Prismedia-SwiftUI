@@ -101,6 +101,13 @@ final class EntityDomainModelsTests: XCTestCase {
 
     func testKindSpecificCapabilityWireShapesDecode() throws {
         let cases: [(json: String, matches: (EntityCapability) -> Bool)] = [
+            (#"{"kind":"acquisition-attribution","items":[{"operationId":"11111111-1111-1111-1111-111111111111","acceptedAt":"2026-09-23T19:43:26Z","attribution":{"sourceUrl":"https://archive.org/details/book","creator":"Library","credit":"Courtesy of Library","licenseName":"Public Domain","licenseUrl":null,"usageTerms":null,"attributionRequired":false}}],"unavailable":false}"#, {
+                if case .acquisitionAttribution(let value) = $0 {
+                    return value.items.first?.attribution.sourceURL == "https://archive.org/details/book"
+                        && value.items.first?.attribution.attributionRequired == false
+                }
+                return false
+            }),
             (#"{"kind":"book-metadata","bookType":"novel","format":"epub"}"#, {
                 if case .bookMetadata(let value) = $0 { return value.format == .epub }
                 return false
@@ -119,6 +126,14 @@ final class EntityDomainModelsTests: XCTestCase {
             }),
             (#"{"kind":"embedded-audio-metadata","artist":"Artist","album":"Album"}"#, {
                 if case .embeddedAudioMetadata(let value) = $0 { return value.album == "Album" }
+                return false
+            }),
+            (#"{"kind":"external-library-provenance","connectionId":"11111111-1111-1111-1111-111111111111","connectionName":"Books","pluginId":"lazylibrarian","libraryRootId":"22222222-2222-2222-2222-222222222222","libraryLabel":"Audiobooks","bookRenditions":[{"rendition":"audiobook","connectionId":"11111111-1111-1111-1111-111111111111","connectionName":"Books","pluginId":"lazylibrarian","libraryRootId":"22222222-2222-2222-2222-222222222222","libraryLabel":"Audiobooks","holding":{"holdingId":"33333333-3333-3333-3333-333333333333","item":{"entityKind":"book","remoteId":"work-id","expectedExternalIds":{"openlibrary":"OL1W"},"bookRendition":"audiobook"},"status":"tracking"},"request":{"requestId":"44444444-4444-4444-4444-444444444444","phase":"awaiting-files","updatedAt":"2026-09-23T19:43:26Z","problem":null}}]}"#, {
+                if case .externalLibraryProvenance(let value) = $0 {
+                    return value.bookRenditions?.first?.rendition == .audiobook
+                        && value.bookRenditions?.first?.holding.item.entityKind == .book
+                        && value.bookRenditions?.first?.request.phase == .awaitingFiles
+                }
                 return false
             }),
             (#"{"kind":"gallery-metadata","galleryType":"images"}"#, {
