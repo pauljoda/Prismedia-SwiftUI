@@ -11,15 +11,17 @@ public struct BookChapterAudioMapping: Codable, Equatable, Hashable, Sendable {
 
     public let readableChapterKey: String
     public let audioTrackID: UUID
+    public let audioMarkerID: UUID?
 
     /// Mapping provenance (`manual` or `auto`). Absent on saves and on responses from servers
     /// that predate persisted automatic matching, both of which mean manual.
     public let origin: String?
 
-    public init(readableChapterKey: String, audioTrackID: UUID, origin: String? = nil) {
+    public init(readableChapterKey: String, audioTrackID: UUID, origin: String? = nil, audioMarkerID: UUID? = nil) {
         self.readableChapterKey = readableChapterKey
         self.audioTrackID = audioTrackID
         self.origin = origin
+        self.audioMarkerID = audioMarkerID
     }
 
     /// Whether the server derived this pair automatically. Automatic rows render like any other
@@ -30,6 +32,7 @@ public struct BookChapterAudioMapping: Codable, Equatable, Hashable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case readableChapterKey
         case audioTrackID = "audioTrackId"
+        case audioMarkerID = "audioMarkerId"
         case origin
     }
 }

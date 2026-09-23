@@ -626,10 +626,11 @@ public final class MusicPlayerController {
         else { return }
 
         guard
-            let mapping = context.progressMappings?.first(where: {
+            let duration = reportingTrackDuration,
+            let mapping = context.progressMappings?.last(where: {
                 $0.itemID == currentTrack.id
-            }),
-            let duration = reportingTrackDuration
+                    && $0.containsSourceOffset(trackOffsetSeconds ?? elapsedTime, duration: duration)
+            })
         else {
             if stopsActivity { _ = consumptionActivityClock.stop(at: playbackClock.now) }
             return

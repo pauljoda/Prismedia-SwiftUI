@@ -11,12 +11,16 @@ public struct PlaybackProgressMapping: Codable, Equatable, Sendable {
     public let mode: ReaderMode?
     /// Optional portable resource advanced as playback moves through the item.
     public let resourceLocation: String?
+    /// Inclusive chapter window in the physical audio file, when it has embedded markers.
+    public let sourceStartSeconds: Double?
+    public let sourceEndSeconds: Double?
 
     private enum CodingKeys: String, CodingKey {
         case itemID = "itemId"
         case legacyTrackID = "trackId"
         case currentEntityID = "currentEntityId"
         case unit, startIndex, endIndex, total, mode, resourceLocation
+        case sourceStartSeconds, sourceEndSeconds
         case legacyReaderLocation = "readerLocation"
     }
 
@@ -28,7 +32,9 @@ public struct PlaybackProgressMapping: Codable, Equatable, Sendable {
         endIndex: Int,
         total: Int,
         mode: ReaderMode?,
-        resourceLocation: String? = nil
+        resourceLocation: String? = nil,
+        sourceStartSeconds: Double? = nil,
+        sourceEndSeconds: Double? = nil
     ) {
         self.itemID = itemID
         self.currentEntityID = currentEntityID
@@ -38,6 +44,8 @@ public struct PlaybackProgressMapping: Codable, Equatable, Sendable {
         self.total = total
         self.mode = mode
         self.resourceLocation = resourceLocation
+        self.sourceStartSeconds = sourceStartSeconds
+        self.sourceEndSeconds = sourceEndSeconds
     }
 
     public init(from decoder: Decoder) throws {
@@ -52,6 +60,8 @@ public struct PlaybackProgressMapping: Codable, Equatable, Sendable {
         mode = try container.decodeIfPresent(ReaderMode.self, forKey: .mode)
         resourceLocation = try container.decodeIfPresent(String.self, forKey: .resourceLocation)
             ?? container.decodeIfPresent(String.self, forKey: .legacyReaderLocation)
+        sourceStartSeconds = try container.decodeIfPresent(Double.self, forKey: .sourceStartSeconds)
+        sourceEndSeconds = try container.decodeIfPresent(Double.self, forKey: .sourceEndSeconds)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -64,5 +74,19 @@ public struct PlaybackProgressMapping: Codable, Equatable, Sendable {
         try container.encode(total, forKey: .total)
         try container.encodeIfPresent(mode, forKey: .mode)
         try container.encodeIfPresent(resourceLocation, forKey: .resourceLocation)
+        try container.encodeIfPresent(sourceStartSeconds, forKey: .sourceStartSeconds)
+        try container.encodeIfPresent(sourceEndSeconds, forKey: .sourceEndSeconds)
+    }
+
+    public func containsSourceOffset(_ offset: Double, duration: Double) -> Bool {
+        let start = sourceStartSeconds ?? 0
+        let end = sourceEndSeconds ?? duration
+        return offset >= start && (offset < end || (offset >= duration && end >= duration))
+    }
+
+    public func sourceOffset(for fraction: Double, duration: Double) -> Double {
+        let start = sourceStartSeconds ?? 0
+        let end = sourceEndSeconds ?? duration
+        return start + min(max(0, fraction), 1) * max(0, end - start)
     }
 }

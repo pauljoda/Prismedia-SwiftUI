@@ -10,7 +10,10 @@ struct AudioProgressMappingResolver: Sendable {
     ) -> EntityProgressUpdateRequest {
         let duration = durationSeconds.isFinite ? max(0, durationSeconds) : 0
         let offset = offsetSeconds.isFinite ? max(0, offsetSeconds) : 0
-        let fraction = duration > 0 ? bounded(offset / duration) : 0
+        let sourceStart = mapping.sourceStartSeconds ?? 0
+        let sourceEnd = mapping.sourceEndSeconds ?? duration
+        let sourceSpan = max(0, sourceEnd - sourceStart)
+        let fraction = sourceSpan > 0 ? bounded((offset - sourceStart) / sourceSpan) : 0
         let index: Int
         if mapping.unit == .page {
             index = max(

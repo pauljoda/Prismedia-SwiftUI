@@ -8,6 +8,8 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
     let activitySeconds: Double?
     let isLoading: Bool
     let isBusy: Bool
+    let combinedActionLabel: String?
+    let combinedExplanation: String?
 
     init(
         progress: EntityProgressCapability?,
@@ -15,7 +17,9 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         chapterLabel: String? = nil,
         activitySeconds: Double?,
         isLoading: Bool,
-        isBusy: Bool
+        isBusy: Bool,
+        combinedActionLabel: String? = nil,
+        combinedExplanation: String? = nil
     ) {
         let completed = progress?.completedAt != nil
         let rawPercent: Int
@@ -49,5 +53,7 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         }
         self.isLoading = isLoading
         self.isBusy = isBusy
+        self.combinedActionLabel = combinedActionLabel
+        self.combinedExplanation = combinedExplanation
     }
 }

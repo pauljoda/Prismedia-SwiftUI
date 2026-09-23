@@ -32,7 +32,7 @@ struct BookProgressMappingResolver: Sendable {
         }
 
         if let mapping = mapping(for: progress, in: mappings),
-            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.itemID })
+            let chapter = chapter(for: mapping, in: chapters)
         {
             return chapter.id
         }
@@ -76,10 +76,13 @@ struct BookProgressMappingResolver: Sendable {
                 title: "",
                 tracks: tracks
             ).resumePoint(at: legacyResumeSeconds),
-            let candidateOrder = mappings.firstIndex(where: { $0.itemID == resume.trackID }),
             let duration = tracks.first(where: { $0.id == resume.trackID })?.duration,
             duration.isFinite,
-            duration > 0
+            duration > 0,
+            let candidateOrder = mappings.lastIndex(where: {
+                $0.itemID == resume.trackID
+                    && $0.containsSourceOffset(resume.trackOffsetSeconds, duration: duration)
+            })
         else { return nil }
 
         let candidateMapping = mappings[candidateOrder]
@@ -118,10 +121,23 @@ struct BookProgressMappingResolver: Sendable {
 
         let fraction = fraction(for: progress, mapping: mapping)
         let duration = track.duration.flatMap { $0.isFinite ? max(0, $0) : nil } ?? 0
+        let estimatedOffset = mapping.sourceOffset(for: fraction, duration: duration)
+        let start = mapping.sourceStartSeconds ?? 0
         return AudiobookResumePoint(
             trackID: track.id,
-            trackOffsetSeconds: runwayStart(fraction * duration)
+            trackOffsetSeconds: max(start, runwayStart(estimatedOffset))
         )
+    }
+
+    func chapter(
+        for mapping: PlaybackProgressMapping,
+        in chapters: [BookChapterMapping]
+    ) -> BookChapterMapping? {
+        chapters.first {
+            $0.audioTrack?.id == mapping.itemID
+                && $0.audioStartSeconds == mapping.sourceStartSeconds
+                && $0.audioEndSeconds == mapping.sourceEndSeconds
+        }
     }
 
     func fraction(

@@ -25,6 +25,7 @@ extension EntityDetailView {
             return BookChapterMappingEditorPresentation(
                 readableChapters: readableBookChapters,
                 audioTracks: tracks,
+                audioChapters: bookChapterMappingState.audioChapters,
                 mappings: bookChapterMappingState.mappings,
                 loadErrorMessage: bookChapterMappingState.errorMessage
             )
@@ -45,10 +46,10 @@ extension EntityDetailView {
 
             let generation = bookChapterMappingState.beginLoad(bookID: detail.id)
             do {
-                let mappings = try await mappingService.loadBookChapterMappings(bookID: detail.id)
+                let response = try await mappingService.loadBookChapterMappings(bookID: detail.id)
                 guard currentDetail?.id == detail.id else { return }
                 bookChapterMappingState.finishLoad(
-                    .success(mappings),
+                    .success(response),
                     bookID: detail.id,
                     generation: generation
                 )
@@ -79,10 +80,10 @@ extension EntityDetailView {
         )
         guard currentDetail?.id == detail.id,
             bookChapterMappingState.replace(persisted, bookID: detail.id)
-        else { return persisted }
+        else { return persisted.mappings }
         #if os(iOS) || os(macOS)
             refreshBookChapterMappings(for: detail)
         #endif
-        return persisted
+        return persisted.mappings
     }
 }

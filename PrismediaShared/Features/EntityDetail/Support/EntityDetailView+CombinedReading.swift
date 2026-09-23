@@ -6,6 +6,7 @@ extension EntityDetailView {
         var chapters = BookChapterMappingBuilder().build(
             readableChapters: readableBookChapters,
             audioTracks: audiobookProjection?.tracks ?? [],
+            audioChapters: bookChapterMappingState.audioChapters,
             explicitMappings: bookChapterMappingState.mappings
         )
         let mappings = BookProgressMappingBuilder().build(
@@ -52,6 +53,11 @@ extension EntityDetailView {
         guard hasCombinedProgressCard(for: detail) else { return nil }
         let mappingsAreReady = !bookProgressMappings(for: detail).isEmpty
         let currentChapter = mappedBookChapters.first(where: \.isCurrentProgress)
+        let hasUnpairedPosition = detail.capability(EntityProgressCapability.self) != nil
+            && combinedResumeTarget(for: detail) == nil
+        let firstPairedChapter = mappedBookChapters.first {
+            $0.readTarget != nil && $0.audioTrack != nil
+        }
         return BookCombinedProgressPresentation(
             progress: detail.capability(),
             reading: readingState.progressPresentation,
@@ -59,7 +65,11 @@ extension EntityDetailView {
             activitySeconds: detail.capability(EntityConsumptionCapability.self)?.activeSeconds,
             isLoading: bookProgressLoadingState.isLoading,
             isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
-                || bookProgressLoadingState.isLoading || !mappingsAreReady
+                || bookProgressLoadingState.isLoading || !mappingsAreReady,
+            combinedActionLabel: hasUnpairedPosition ? "Start Both at First Paired Chapter" : nil,
+            combinedExplanation: hasUnpairedPosition
+                ? "Your current chapter has no paired audio. Starting both begins at \(firstPairedChapter?.title ?? "the first paired chapter")."
+                : nil
         )
     }
 
@@ -172,7 +182,13 @@ extension EntityDetailView {
     }
 
     func openCombinedReader(for detail: EntityDetail) {
-        guard let target = combinedResumeTarget(for: detail) else { return }
+        let target = combinedResumeTarget(for: detail)
+            ?? BookCombinedResumeResolver().resolveContinuation(
+                chapters: mappedBookChapters,
+                mappings: bookProgressMappings(for: detail),
+                progress: nil
+            )
+        guard let target else { return }
         let isCurrentBook =
             musicPlayer.context?.playbackOwnerEntityID == detail.id
             && musicPlayer.context?.playbackOwnerEntityKind == .book

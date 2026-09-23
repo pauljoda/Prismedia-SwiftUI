@@ -92,6 +92,37 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(mappings.map(\.total), [302, 302])
     }
 
+    func testEmbeddedChapterUsesItsOwnAudioWindowForProgressAndResume() throws {
+        let track = musicTrack(number: 1, duration: 300)
+        let chapters = [
+            BookChapterMapping(id: "one", title: "One", order: 0, depth: 0,
+                readTarget: .epub(location: "Text/one.xhtml"),
+                readStartFraction: 0, readEndFraction: 0.5, audioTrack: track,
+                audioStartSeconds: 0, audioEndSeconds: 100),
+            BookChapterMapping(id: "two", title: "Two", order: 1, depth: 0,
+                readTarget: .epub(location: "Text/two.xhtml"),
+                readStartFraction: 0.5, readEndFraction: 1, audioTrack: track,
+                audioStartSeconds: 100, audioEndSeconds: 300),
+        ]
+        let mappings = BookProgressMappingBuilder().build(
+            bookID: bookID, chapters: chapters, readerMode: .paged, hasReadableRendition: true
+        )
+        let request = AudioProgressMappingResolver().progressRequest(
+            mapping: try XCTUnwrap(mappings.last), offsetSeconds: 150,
+            durationSeconds: 300, activitySeconds: nil, completed: false
+        )
+        XCTAssertEqual(request.index, 6_250)
+        XCTAssertEqual(request.location, "Text/two.xhtml#prismedia-progress=0.25")
+        let progress = canonicalProgress(index: 6_250, location: request.location)
+        let resume = try XCTUnwrap(BookProgressMappingResolver().audioResume(
+            tracks: [track], mappings: mappings, progress: progress
+        ))
+        XCTAssertEqual(resume.trackOffsetSeconds, 145, accuracy: 0.001)
+        XCTAssertEqual(BookProgressMappingResolver().currentChapterID(
+            bookID: bookID, chapters: chapters, mappings: mappings, progress: progress
+        ), "two")
+    }
+
     func testUnmatchedAudioPartIsNotGivenAReadableCursor() {
         let chapter = BookChapterMapping(
             id: "audio-only-part",

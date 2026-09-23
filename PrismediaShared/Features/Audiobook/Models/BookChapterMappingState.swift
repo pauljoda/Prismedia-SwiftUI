@@ -3,6 +3,7 @@ import Foundation
 /// View-owned persisted alignment state, guarded against responses from a previous Book.
 struct BookChapterMappingState: Equatable, Sendable {
     private(set) var mappings: [BookChapterAudioMapping] = []
+    private(set) var audioChapters: [BookAudioChapter] = []
     private(set) var errorMessage: String?
 
     private var bookID: UUID?
@@ -12,6 +13,7 @@ struct BookChapterMappingState: Equatable, Sendable {
         generation += 1
         if self.bookID != bookID {
             mappings = []
+            audioChapters = []
         }
         self.bookID = bookID
         errorMessage = nil
@@ -19,29 +21,32 @@ struct BookChapterMappingState: Equatable, Sendable {
     }
 
     mutating func finishLoad(
-        _ result: Result<[BookChapterAudioMapping], Error>,
+        _ result: Result<BookChapterMappingsResponse, Error>,
         bookID: UUID,
         generation requestGeneration: Int
     ) {
         guard self.bookID == bookID, generation == requestGeneration else { return }
         switch result {
-        case .success(let mappings):
-            self.mappings = mappings
+        case .success(let response):
+            mappings = response.mappings
+            audioChapters = response.audioChapters
             errorMessage = nil
         case .failure(let error):
             mappings = []
+            audioChapters = []
             errorMessage = error.localizedDescription
         }
     }
 
     @discardableResult
     mutating func replace(
-        _ mappings: [BookChapterAudioMapping],
+        _ response: BookChapterMappingsResponse,
         bookID: UUID
     ) -> Bool {
         guard self.bookID == bookID else { return false }
         generation += 1
-        self.mappings = mappings
+        mappings = response.mappings
+        audioChapters = response.audioChapters
         errorMessage = nil
         return true
     }
@@ -50,6 +55,7 @@ struct BookChapterMappingState: Equatable, Sendable {
         generation += 1
         bookID = nil
         mappings = []
+        audioChapters = []
         errorMessage = nil
     }
 }

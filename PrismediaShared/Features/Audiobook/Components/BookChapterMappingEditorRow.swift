@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BookChapterMappingEditorRow: View {
     let number: Int
-    let track: MusicTrack
+    let audioChapter: BookAudioChapter
     let chapters: [ReadableBookChapter]
     let automaticChapterTitle: String?
     let isDisabled: Bool
@@ -17,7 +17,7 @@ struct BookChapterMappingEditorRow: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text(track.title)
+                    Text(audioChapter.title)
                         .font(.headline)
                         .foregroundStyle(PrismediaColor.textPrimary)
                     Text(selection == nil ? "Automatic title matching" : "Explicit mapping")
@@ -26,7 +26,7 @@ struct BookChapterMappingEditorRow: View {
                 }
             }
 
-            Picker("Readable chapter for \(track.title)", selection: $selection) {
+            Picker("Readable chapter for \(audioChapter.title)", selection: $selection) {
                 Text(automaticSelectionTitle)
                     .tag(String?.none)
                 ForEach(chapters) { chapter in

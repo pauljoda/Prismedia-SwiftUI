@@ -121,6 +121,39 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         XCTAssertEqual(mappings.map(\.audioTrackID), tracks.map(\.id))
     }
 
+    func testOneM4BMapsMultipleEmbeddedChaptersWithoutConsumingTheWholeFile() {
+        let track = track(id: 1, title: "Complete audiobook", order: 0)
+        let firstMarker = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
+        let secondMarker = UUID(uuidString: "00000000-0000-0000-0000-000000000102")!
+        let audioChapters = [
+            BookAudioChapter(audioTrackID: track.id, audioMarkerID: firstMarker,
+                title: "One", startSeconds: 0, endSeconds: 100),
+            BookAudioChapter(audioTrackID: track.id, audioMarkerID: secondMarker,
+                title: "Two", startSeconds: 100, endSeconds: 250),
+        ]
+        let readable = [
+            chapter(id: "one", title: "One", order: 0),
+            chapter(id: "two", title: "Two", order: 1),
+        ]
+        let mappings = BookChapterMappingBuilder().sequentialMappings(
+            readableChapters: readable,
+            audioTracks: [track],
+            audioChapters: audioChapters,
+            firstReadableChapterKey: "one"
+        )
+        let rows = BookChapterMappingBuilder().build(
+            readableChapters: readable,
+            audioTracks: [track],
+            audioChapters: audioChapters,
+            explicitMappings: mappings
+        )
+
+        XCTAssertEqual(mappings.map(\.audioMarkerID), [firstMarker, secondMarker])
+        XCTAssertEqual(rows.map(\.audioTrack?.id), [track.id, track.id])
+        XCTAssertEqual(rows.map(\.audioStartSeconds), [0, 100])
+        XCTAssertEqual(rows.map(\.audioEndSeconds), [100, 250])
+    }
+
     func testEditorSurfacesEditOnlyTheManualLayer() {
         let manual = BookChapterAudioMapping(
             readableChapterKey: "one",
@@ -143,6 +176,7 @@ final class BookChapterMappingBuilderTests: XCTestCase {
                 chapter(id: "three", title: "Three", order: 2),
             ],
             audioTracks: [],
+            audioChapters: [],
             mappings: [manual, auto, legacy],
             loadErrorMessage: nil
         )
@@ -150,8 +184,12 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         // Automatic rows must never reach a save request; origin-less rows are legacy manual.
         XCTAssertEqual(presentation.manualMappings, [manual, legacy])
         XCTAssertFalse(presentation.revision.contains(auto.readableChapterKey))
-        XCTAssertEqual(presentation.automaticChapterTitle(for: auto.audioTrackID), "Two")
-        XCTAssertNil(presentation.automaticChapterTitle(for: manual.audioTrackID))
+        XCTAssertEqual(presentation.automaticChapterTitle(for: BookAudioChapter(
+            audioTrackID: auto.audioTrackID, audioMarkerID: nil, title: "Two", startSeconds: 0, endSeconds: nil
+        )), "Two")
+        XCTAssertNil(presentation.automaticChapterTitle(for: BookAudioChapter(
+            audioTrackID: manual.audioTrackID, audioMarkerID: nil, title: "One", startSeconds: 0, endSeconds: nil
+        )))
     }
 
     private func chapter(id: String, title: String, order: Int) -> ReadableBookChapter {

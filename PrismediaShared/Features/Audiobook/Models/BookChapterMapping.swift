@@ -10,6 +10,9 @@ struct BookChapterMapping: Equatable, Identifiable, Sendable {
     let readEndFraction: Double?
     let readPageCount: Int?
     let audioTrack: MusicTrack?
+    let audioMarkerID: UUID?
+    let audioStartSeconds: Double?
+    let audioEndSeconds: Double?
     var isCurrentProgress: Bool
 
     init(
@@ -22,6 +25,9 @@ struct BookChapterMapping: Equatable, Identifiable, Sendable {
         readEndFraction: Double? = nil,
         readPageCount: Int? = nil,
         audioTrack: MusicTrack?,
+        audioMarkerID: UUID? = nil,
+        audioStartSeconds: Double? = nil,
+        audioEndSeconds: Double? = nil,
         isCurrentProgress: Bool = false
     ) {
         self.id = id
@@ -33,6 +39,9 @@ struct BookChapterMapping: Equatable, Identifiable, Sendable {
         self.readEndFraction = readEndFraction
         self.readPageCount = readPageCount
         self.audioTrack = audioTrack
+        self.audioMarkerID = audioMarkerID
+        self.audioStartSeconds = audioStartSeconds
+        self.audioEndSeconds = audioEndSeconds
         self.isCurrentProgress = isCurrentProgress
     }
 }

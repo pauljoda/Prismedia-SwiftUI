@@ -13,6 +13,11 @@ struct BookCombinedProgressCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
             header
+            if let explanation = presentation.combinedExplanation {
+                Text(explanation)
+                    .font(.subheadline)
+                    .foregroundStyle(PrismediaColor.textSecondary)
+            }
             progress
             actions
         }
@@ -140,7 +145,7 @@ struct BookCombinedProgressCard: View {
             }
 
             PrismediaButton(
-                "Continue Combined",
+                presentation.combinedActionLabel ?? "Continue Combined",
                 systemImage: "book.pages",
                 variant: .prominent,
                 form: .fill,
@@ -148,7 +153,8 @@ struct BookCombinedProgressCard: View {
                 action: onContinueCombined
             )
             .accessibilityHint(
-                "Opens the reader and starts the audiobook near the saved Book position"
+                presentation.combinedExplanation
+                    ?? "Opens the reader and starts the audiobook near the saved Book position"
             )
             .accessibilityIdentifier("combined-book-progress.continue-combined")
         }

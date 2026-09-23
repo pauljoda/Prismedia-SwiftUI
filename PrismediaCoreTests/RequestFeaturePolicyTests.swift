@@ -150,6 +150,35 @@ final class RequestFeaturePolicyTests: XCTestCase {
         XCTAssertEqual(owned.title, "Already in Library")
     }
 
+    func testBookFormatOutcomesKeepSuccessfulWorkLinkWhenAudioFails() {
+        let bookID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
+        let item = AdministrativeRequestCommitItem(
+            externalID: "books:example", title: "Example Book",
+            outcome: PrismediaContractCodes.RequestCommitOutcome.requested,
+            entityID: bookID, acquisitionID: UUID()
+        )
+        let result = RequestCommitOutcomePolicy.resolve(
+            response: AdministrativeRequestCommitResponse(
+                containerEntityID: nil, items: [item], bookRenditions: [
+                    AdministrativeBookRenditionCommitResult(
+                        rendition: PrismediaContractCodes.BookRendition.ebook, item: item),
+                    AdministrativeBookRenditionCommitResult(
+                        rendition: PrismediaContractCodes.BookRendition.audiobook, item: nil,
+                        error: "This format could not be requested.")
+                ]
+            ),
+            review: review(
+                kind: RequestKindDefinition.book.rawValue,
+                proposal: proposal(id: "root", kind: EntityKind.book.rawValue),
+                targets: [target(id: "root", requestable: true)]
+            )
+        )
+
+        XCTAssertEqual(result.title, "Some Formats Need Attention")
+        XCTAssertEqual(result.navigationIntent?.entityID, bookID)
+        XCTAssertTrue(result.message.contains("Audiobook"))
+    }
+
     private func proposal(
         id: String,
         kind: String,

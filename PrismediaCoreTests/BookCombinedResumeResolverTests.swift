@@ -3,6 +3,27 @@ import XCTest
 @testable import PrismediaCore
 
 final class BookCombinedResumeResolverTests: XCTestCase {
+    func testEmbeddedMarkerOffsetSelectsTheReadableChapterWithinOneM4B() throws {
+        let track = MusicTrack(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            title: "Complete audiobook", duration: 300, sortOrder: 0
+        )
+        let chapters = [
+            BookChapterMapping(id: "one", title: "One", order: 0, depth: 0,
+                readTarget: .epub(location: "Text/one.xhtml"), audioTrack: track,
+                audioStartSeconds: 0, audioEndSeconds: 100),
+            BookChapterMapping(id: "two", title: "Two", order: 1, depth: 0,
+                readTarget: .epub(location: "Text/two.xhtml"), audioTrack: track,
+                audioStartSeconds: 100, audioEndSeconds: 300),
+        ]
+
+        let target = try XCTUnwrap(BookCombinedResumeResolver().resolveReadingTarget(
+            chapters: chapters, trackID: track.id, trackOffsetSeconds: 150
+        ))
+        XCTAssertEqual(target.location, "Text/two.xhtml")
+        XCTAssertEqual(target.progression, 0.25, accuracy: 0.001)
+    }
+
     func testCanonicalCursorResumesBothRenditionsInTheSameChapter() throws {
         let chapters = [
             mappedChapter(order: 0, duration: 300, startFraction: 0, endFraction: 0.5),

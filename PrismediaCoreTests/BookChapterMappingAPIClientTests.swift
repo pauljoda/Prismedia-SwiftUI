@@ -7,10 +7,13 @@ final class BookChapterMappingAPIClientTests: XCTestCase {
         let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let trackID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
         let autoTrackID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let markerID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
         let response = #"""
             {"mappings":[
-                {"readableChapterKey":"Text/prologue.xhtml","audioTrackId":"\#(trackID)","origin":"manual"},
+                {"readableChapterKey":"Text/prologue.xhtml","audioTrackId":"\#(trackID)","audioMarkerId":"\#(markerID)","origin":"manual"},
                 {"readableChapterKey":"Text/chapter-01.xhtml","audioTrackId":"\#(autoTrackID)","origin":"auto"}
+            ],"audioChapters":[
+                {"audioTrackId":"\#(trackID)","audioMarkerId":"\#(markerID)","title":"Prologue","startSeconds":12.5,"endSeconds":80.0}
             ]}
             """#
         let loader = MockHTTPDataLoader(responses: [
@@ -26,12 +29,14 @@ final class BookChapterMappingAPIClientTests: XCTestCase {
         let loaded = try await client.loadBookChapterMappings(bookID: bookID)
         let saved = try await client.replaceBookChapterMappings(
             bookID: bookID,
-            mappings: loaded.filter { !$0.isAutomatic }
+            mappings: loaded.mappings.filter { !$0.isAutomatic }
         )
 
-        XCTAssertEqual(loaded.first?.readableChapterKey, "Text/prologue.xhtml")
-        XCTAssertEqual(loaded.map(\.isAutomatic), [false, true])
-        XCTAssertEqual(saved.first?.audioTrackID, trackID)
+        XCTAssertEqual(loaded.mappings.first?.readableChapterKey, "Text/prologue.xhtml")
+        XCTAssertEqual(loaded.mappings.map(\.isAutomatic), [false, true])
+        XCTAssertEqual(loaded.mappings.first?.audioMarkerID, markerID)
+        XCTAssertEqual(loaded.audioChapters.first?.startSeconds, 12.5)
+        XCTAssertEqual(saved.mappings.first?.audioTrackID, trackID)
         XCTAssertEqual(
             loader.requests.map { $0.url?.path },
             [
@@ -52,6 +57,7 @@ final class BookChapterMappingAPIClientTests: XCTestCase {
         XCTAssertEqual(mappings.count, 1)
         XCTAssertEqual(mappings.first?["readableChapterKey"] as? String, "Text/prologue.xhtml")
         XCTAssertEqual(mappings.first?["audioTrackId"] as? String, trackID.uuidString)
+        XCTAssertEqual(mappings.first?["audioMarkerId"] as? String, markerID.uuidString)
         XCTAssertNil(mappings.first?["audioTrackID"])
     }
 }

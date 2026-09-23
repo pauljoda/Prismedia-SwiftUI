@@ -34,7 +34,9 @@ struct BookProgressMappingBuilder: Sendable {
                     endIndex: Int((bounded(end) * Double(epubProgressTotal)).rounded()),
                     total: epubProgressTotal,
                     mode: readerMode,
-                    resourceLocation: location
+                    resourceLocation: location,
+                    sourceStartSeconds: chapter.audioStartSeconds,
+                    sourceEndSeconds: chapter.audioEndSeconds
                 )
             case .entityChapter(let chapterID):
                 let pageCount = max(0, chapter.readPageCount ?? 0)
@@ -46,7 +48,9 @@ struct BookProgressMappingBuilder: Sendable {
                     startIndex: 0,
                     endIndex: pageCount - 1,
                     total: pageCount,
-                    mode: readerMode
+                    mode: readerMode,
+                    sourceStartSeconds: chapter.audioStartSeconds,
+                    sourceEndSeconds: chapter.audioEndSeconds
                 )
             }
         }
@@ -57,8 +61,9 @@ struct BookProgressMappingBuilder: Sendable {
         chapters: [BookChapterMapping]
     ) -> [PlaybackProgressMapping] {
         let durations = chapters.map { chapter in
-            guard let duration = chapter.audioTrack?.duration, duration.isFinite else { return 0 }
-            return max(0, Int(duration.rounded(.up)))
+            guard let duration = chapter.audioEndSeconds ?? chapter.audioTrack?.duration,
+                duration.isFinite else { return 0 }
+            return max(0, Int((duration - (chapter.audioStartSeconds ?? 0)).rounded(.up)))
         }
         let total = durations.reduce(0, +)
         guard total > 0 else { return [] }
@@ -75,7 +80,9 @@ struct BookProgressMappingBuilder: Sendable {
                 startIndex: startIndex,
                 endIndex: startIndex + duration,
                 total: total,
-                mode: nil
+                mode: nil,
+                sourceStartSeconds: chapter.audioStartSeconds,
+                sourceEndSeconds: chapter.audioEndSeconds
             )
         }
     }

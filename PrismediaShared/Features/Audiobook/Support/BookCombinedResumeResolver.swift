@@ -8,15 +8,22 @@ struct BookCombinedResumeResolver: Sendable {
         trackID: UUID,
         trackOffsetSeconds: Double
     ) -> BookReaderLocationTarget? {
-        guard let chapter = chapters.first(where: { $0.audioTrack?.id == trackID }),
+        guard let chapter = chapters.last(where: {
+            guard $0.audioTrack?.id == trackID,
+                let duration = $0.audioTrack?.duration
+            else { return false }
+            return trackOffsetSeconds >= ($0.audioStartSeconds ?? 0)
+                && trackOffsetSeconds < ($0.audioEndSeconds ?? duration)
+        }),
             case .epub(let location) = chapter.readTarget,
-            let duration = chapter.audioTrack?.duration,
+            let duration = chapter.audioEndSeconds ?? chapter.audioTrack?.duration,
             duration.isFinite,
-            duration > 0
+            duration > (chapter.audioStartSeconds ?? 0)
         else { return nil }
         return BookReaderLocationTarget(
             location: location,
-            progression: bounded(trackOffsetSeconds / duration)
+            progression: bounded((trackOffsetSeconds - (chapter.audioStartSeconds ?? 0))
+                / (duration - (chapter.audioStartSeconds ?? 0)))
         )
     }
 
@@ -27,7 +34,7 @@ struct BookCombinedResumeResolver: Sendable {
     ) -> BookCombinedResumeTarget? {
         if let progress, progress.completedAt == nil {
             guard let mapping = BookProgressMappingResolver().mapping(for: progress, in: mappings),
-                let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.itemID })
+                let chapter = BookProgressMappingResolver().chapter(for: mapping, in: chapters)
             else {
                 // The readable cursor is authoritative when no audio part maps to it.
                 return nil
@@ -36,7 +43,7 @@ struct BookCombinedResumeResolver: Sendable {
         }
 
         guard let mapping = mappings.first,
-            let chapter = chapters.first(where: { $0.audioTrack?.id == mapping.itemID })
+            let chapter = BookProgressMappingResolver().chapter(for: mapping, in: chapters)
         else { return nil }
         return target(chapter: chapter, mapping: mapping, progress: nil)
     }
@@ -47,7 +54,11 @@ struct BookCombinedResumeResolver: Sendable {
         progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
         guard let trackID = chapter.audioTrack?.id,
-            let mapping = mappings.first(where: { $0.itemID == trackID })
+            let mapping = mappings.first(where: {
+                $0.itemID == trackID
+                    && $0.sourceStartSeconds == chapter.audioStartSeconds
+                    && $0.sourceEndSeconds == chapter.audioEndSeconds
+            })
         else { return nil }
         let matchingProgress = progress.flatMap {
             BookProgressMappingResolver().mapping(for: $0, in: [mapping]) == nil ? nil : $0
@@ -98,13 +109,12 @@ struct BookCombinedResumeResolver: Sendable {
                 : .savedLocation(nil)
         }
 
-        let estimatedOffset = fraction * duration
+        let estimatedOffset = mapping.sourceOffset(for: fraction, duration: duration)
+        let sourceStart = mapping.sourceStartSeconds ?? 0
         return BookCombinedResumeTarget(
             readingTarget: readingTarget,
             audioTrackID: track.id,
-            audioStartSeconds: estimatedOffset <= audioRunwaySeconds
-                ? 0
-                : estimatedOffset - audioRunwaySeconds
+            audioStartSeconds: max(sourceStart, estimatedOffset - audioRunwaySeconds)
         )
     }
 
