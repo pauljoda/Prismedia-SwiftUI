@@ -17,7 +17,8 @@ import WebKit
             Group {
                 if let page {
                     WebView(page)
-                        .background(PrismediaColor.background)
+                        .webViewContentBackground(.hidden)
+                        .background(PrismediaBackdrop())
                 } else if let loadError {
                     ContentUnavailableView(
                         "Could not open administration",
