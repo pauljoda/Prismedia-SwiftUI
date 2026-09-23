@@ -66,19 +66,24 @@ struct EntityDetailSectionPanel: View {
             case .transcript:
                 transcriptContent
             case .acquisition:
-                EntityAcquisitionPanel(
-                    entityID: presentation.detail.id,
-                    entityTitle: presentation.detail.title,
-                    entityKind: presentation.detail.kind,
-                    hasOwnedContent: presentation.detail.hasSourceMedia,
-                    canDeleteFiles: canDeleteAcquisitionFiles,
-                    childGroups: presentation.detail.childrenByKind,
-                    acquisitionService: acquisitionService,
-                    requestActivityService: requestActivityService,
-                    onMutated: onAcquisitionMutated,
-                    onEntityPruned: onEntityPruned,
-                    onEnterReleaseDate: onEnterReleaseDate
-                )
+                if !managedBookRenditions.isEmpty {
+                    EntityManagedBookRenditionsView(renditions: managedBookRenditions)
+                }
+                if !bothBookRenditionsManaged {
+                    EntityAcquisitionPanel(
+                        entityID: presentation.detail.id,
+                        entityTitle: presentation.detail.title,
+                        entityKind: presentation.detail.kind,
+                        hasOwnedContent: presentation.detail.hasSourceMedia,
+                        canDeleteFiles: canDeleteAcquisitionFiles,
+                        childGroups: presentation.detail.childrenByKind,
+                        acquisitionService: acquisitionService,
+                        requestActivityService: requestActivityService,
+                        onMutated: onAcquisitionMutated,
+                        onEntityPruned: onEntityPruned,
+                        onEnterReleaseDate: onEnterReleaseDate
+                    )
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -93,6 +98,20 @@ struct EntityDetailSectionPanel: View {
         #else
             false
         #endif
+    }
+
+    private var managedBookRenditions: [EntityExternalBookRenditionProvenance] {
+        guard presentation.detail.kind == .book else { return [] }
+        return presentation.detail.capability(EntityExternalLibraryProvenanceCapability.self)?
+            .bookRenditions ?? []
+    }
+
+    private var bothBookRenditionsManaged: Bool {
+        let formats = Set(managedBookRenditions
+            .map(EntityManagedBookRenditionPresentation.init)
+            .filter(\.isManagerOwned)
+            .map(\.provenance.rendition))
+        return formats.contains(.ebook) && formats.contains(.audiobook)
     }
 
     @ViewBuilder
