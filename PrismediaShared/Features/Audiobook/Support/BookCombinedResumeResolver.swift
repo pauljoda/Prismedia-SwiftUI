@@ -71,10 +71,29 @@ struct BookCombinedResumeResolver: Sendable {
         mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> AudiobookResumePoint? {
-        BookProgressMappingResolver().audioResume(
+        if let exact = exactAudioResume(chapters: chapters, progress: progress) {
+            return exact
+        }
+        return BookProgressMappingResolver().audioResume(
             tracks: chapters.compactMap(\.audioTrack),
             mappings: mappings,
             progress: progress
+        )
+    }
+
+    func exactAudioResume(
+        chapters: [BookChapterMapping],
+        progress: EntityProgressCapability?
+    ) -> AudiobookResumePoint? {
+        guard progress?.completedAt == nil,
+            let listening = progress?.listening,
+            listening.offsetSeconds.isFinite,
+            listening.offsetSeconds >= 0,
+            chapters.contains(where: { $0.audioTrack?.id == listening.trackEntityID })
+        else { return nil }
+        return AudiobookResumePoint(
+            trackID: listening.trackEntityID,
+            trackOffsetSeconds: listening.offsetSeconds
         )
     }
 

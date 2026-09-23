@@ -12,10 +12,11 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
     public let activitySeconds: Double?
     public let activityKind: ConsumptionActivityKind?
     public let utcOffsetMinutes: Int
+    public let listening: BookListeningPositionRequest?
 
     private enum CodingKeys: String, CodingKey {
         case currentEntityID = "currentEntityId"
-        case unit, index, total, mode, completed, reset, location, activitySeconds, activityKind, utcOffsetMinutes
+        case unit, index, total, mode, completed, reset, location, activitySeconds, activityKind, utcOffsetMinutes, listening
     }
 
     public init(
@@ -29,7 +30,8 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         location: String? = nil,
         activitySeconds: Double? = nil,
         activityKind: ConsumptionActivityKind? = nil,
-        utcOffsetMinutes: Int = TimeZone.current.secondsFromGMT() / 60
+        utcOffsetMinutes: Int = TimeZone.current.secondsFromGMT() / 60,
+        listening: BookListeningPositionRequest? = nil
     ) {
         self.currentEntityID = currentEntityID
         self.unit = unit
@@ -42,8 +44,9 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         self.activitySeconds = activitySeconds.flatMap {
             $0.isFinite && $0 > 0 ? min($0, 60) : nil
         }
-        self.activityKind = self.activitySeconds == nil ? nil : activityKind
+        self.activityKind = activityKind
         self.utcOffsetMinutes = utcOffsetMinutes
+        self.listening = listening
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -62,6 +65,7 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
         try container.encodeIfPresent(activitySeconds, forKey: .activitySeconds)
         try container.encodeIfPresent(activityKind, forKey: .activityKind)
         try container.encode(utcOffsetMinutes, forKey: .utcOffsetMinutes)
+        try container.encodeIfPresent(listening, forKey: .listening)
     }
 
     func recordingActivity(
@@ -79,7 +83,8 @@ public struct EntityProgressUpdateRequest: Encodable, Hashable, Sendable {
             location: location,
             activitySeconds: seconds,
             activityKind: kind,
-            utcOffsetMinutes: utcOffsetMinutes
+            utcOffsetMinutes: utcOffsetMinutes,
+            listening: listening
         )
     }
 }

@@ -431,6 +431,78 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(PlaybackProgressMapping.self, from: data), mapping)
     }
 
+    func testBookHeartbeatCarriesExactTrackMarkerAndOffset() throws {
+        let markerID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
+        let track = musicTrack(number: 1, duration: 300)
+        let mapping = PlaybackProgressMapping(
+            itemID: track.id,
+            currentEntityID: bookID,
+            unit: .cfi,
+            startIndex: 2_000,
+            endIndex: 4_000,
+            total: 10_000,
+            mode: .paged,
+            sourceStartSeconds: 100,
+            sourceEndSeconds: 200,
+            audioMarkerID: markerID
+        )
+        let request = AudioProgressMappingResolver().progressRequest(
+            mapping: mapping,
+            offsetSeconds: 125.5,
+            durationSeconds: 300,
+            activitySeconds: nil,
+            completed: false,
+            includesBookListeningPosition: true
+        )
+
+        XCTAssertEqual(request.listening?.trackEntityID, track.id)
+        XCTAssertEqual(request.listening?.markerID, markerID)
+        XCTAssertEqual(request.listening?.offsetSeconds, 125.5)
+        XCTAssertEqual(request.activityKind, .listening)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any])
+        let listening = try XCTUnwrap(json["listening"] as? [String: Any])
+        XCTAssertEqual(listening["trackEntityId"] as? String, track.id.uuidString)
+        XCTAssertEqual(listening["markerId"] as? String, markerID.uuidString)
+        XCTAssertEqual(listening["offsetSeconds"] as? Double, 125.5)
+    }
+
+    func testBookProgressDecodesIndependentReadableAndPhysicalAudioPositions() throws {
+        let track = musicTrack(number: 1, duration: 300)
+        let json = """
+            {
+              "currentEntityId": "\(bookID.uuidString)", "unit": "cfi", "index": 6000,
+              "total": 10000, "mode": "paged", "completedAt": null,
+              "updatedAt": "2026-09-22T11:00:00Z", "location": "/OPS/chapter-6.xhtml",
+              "reading": {
+                "currentEntityId": "\(bookID.uuidString)", "unit": "cfi", "index": 2300,
+                "total": 10000, "mode": "paged", "location": "epubcfi(/6/12!/4/2)",
+                "updatedAt": "2026-09-22T10:00:00Z"
+              },
+              "listening": {
+                "trackEntityId": "\(track.id.uuidString)", "markerId": null,
+                "offsetSeconds": 112.5, "currentEntityId": "\(bookID.uuidString)",
+                "unit": "cfi", "index": 6000, "total": 10000,
+                "updatedAt": "2026-09-22T11:00:00Z"
+              }
+            }
+            """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let progress = try decoder.decode(EntityProgressCapability.self, from: Data(json.utf8))
+        let chapter = BookChapterMapping(
+            id: "chapter-1", title: "Chapter 1", order: 0, depth: 0,
+            readTarget: .epub(location: "Text/chapter-1.xhtml"),
+            audioTrack: track
+        )
+
+        XCTAssertEqual(progress.readablePosition.index, 2300)
+        XCTAssertEqual(progress.readablePosition.location, "epubcfi(/6/12!/4/2)")
+        XCTAssertEqual(
+            BookCombinedResumeResolver().exactAudioResume(chapters: [chapter], progress: progress)?.trackOffsetSeconds,
+            112.5
+        )
+    }
+
     private let bookID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
     private func canonicalProgress(index: Int, location: String?) -> EntityProgressCapability {

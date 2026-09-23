@@ -36,7 +36,8 @@ struct BookProgressMappingBuilder: Sendable {
                     mode: readerMode,
                     resourceLocation: location,
                     sourceStartSeconds: chapter.audioStartSeconds,
-                    sourceEndSeconds: chapter.audioEndSeconds
+                    sourceEndSeconds: chapter.audioEndSeconds,
+                    audioMarkerID: chapter.audioMarkerID
                 )
             case .entityChapter(let chapterID):
                 let pageCount = max(0, chapter.readPageCount ?? 0)
@@ -50,7 +51,8 @@ struct BookProgressMappingBuilder: Sendable {
                     total: pageCount,
                     mode: readerMode,
                     sourceStartSeconds: chapter.audioStartSeconds,
-                    sourceEndSeconds: chapter.audioEndSeconds
+                    sourceEndSeconds: chapter.audioEndSeconds,
+                    audioMarkerID: chapter.audioMarkerID
                 )
             }
         }
@@ -82,7 +84,8 @@ struct BookProgressMappingBuilder: Sendable {
                 total: total,
                 mode: nil,
                 sourceStartSeconds: chapter.audioStartSeconds,
-                sourceEndSeconds: chapter.audioEndSeconds
+                sourceEndSeconds: chapter.audioEndSeconds,
+                audioMarkerID: chapter.audioMarkerID
             )
         }
     }

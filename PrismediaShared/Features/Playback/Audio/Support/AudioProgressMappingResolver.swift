@@ -6,7 +6,8 @@ struct AudioProgressMappingResolver: Sendable {
         offsetSeconds: Double,
         durationSeconds: Double,
         activitySeconds: Double?,
-        completed: Bool
+        completed: Bool,
+        includesBookListeningPosition: Bool = false
     ) -> EntityProgressUpdateRequest {
         let duration = durationSeconds.isFinite ? max(0, durationSeconds) : 0
         let offset = offsetSeconds.isFinite ? max(0, offsetSeconds) : 0
@@ -48,7 +49,14 @@ struct AudioProgressMappingResolver: Sendable {
                 )
             },
             activitySeconds: activitySeconds,
-            activityKind: .listening
+            activityKind: .listening,
+            listening: includesBookListeningPosition
+                ? BookListeningPositionRequest(
+                    trackEntityID: mapping.itemID,
+                    markerID: mapping.audioMarkerID,
+                    offsetSeconds: offset
+                )
+                : nil
         )
     }
 

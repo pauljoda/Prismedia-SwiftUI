@@ -13,14 +13,14 @@ extension EntityDetailView {
             bookID: detail.id,
             chapters: chapters,
             readerMode: readingState.manifest?.readerMode
-                ?? detail.capability(EntityProgressCapability.self)?.mode,
+                ?? detail.capability(EntityProgressCapability.self)?.readablePosition.mode,
             hasReadableRendition: detail.bookFormat != .audio
         )
         let currentChapterID = BookProgressMappingResolver().currentChapterID(
             bookID: detail.id,
             chapters: chapters,
             mappings: mappings,
-            progress: detail.capability()
+            progress: detail.capability(EntityProgressCapability.self)?.readablePosition
         )
         if let index = chapters.firstIndex(where: { $0.id == currentChapterID }) {
             chapters[index].isCurrentProgress = true
@@ -33,7 +33,7 @@ extension EntityDetailView {
             bookID: detail.id,
             chapters: mappedBookChapters,
             readerMode: readingState.manifest?.readerMode
-                ?? detail.capability(EntityProgressCapability.self)?.mode,
+                ?? detail.capability(EntityProgressCapability.self)?.readablePosition.mode,
             hasReadableRendition: detail.bookFormat != .audio
         )
     }
@@ -85,7 +85,7 @@ extension EntityDetailView {
         return BookCombinedResumeResolver().resolveContinuation(
             chapters: mappedBookChapters,
             mappings: bookProgressMappings(for: detail),
-            progress: detail.capability()
+            progress: detail.capability(EntityProgressCapability.self)?.readablePosition
         )
     }
 
@@ -157,7 +157,7 @@ extension EntityDetailView {
                 let target = BookCombinedResumeResolver().resolveChapter(
                     chapter,
                     mappings: bookProgressMappings(for: detail),
-                    progress: detail.capability()
+                    progress: detail.capability(EntityProgressCapability.self)?.readablePosition
                 )
             else { return }
             let isCurrentBook =
@@ -206,7 +206,7 @@ extension EntityDetailView {
                 detail: detail,
                 command: .resume,
                 initialEPUBLocation: location,
-                initialEPUBUpdatedAt: detail.capability(EntityProgressCapability.self)?.updatedAt,
+                initialEPUBUpdatedAt: detail.capability(EntityProgressCapability.self)?.readablePosition.updatedAt,
                 companionAudiobookBookID: detail.id,
                 companionAudiobookTrackID: target.audioTrackID,
                 companionAudiobookStartSeconds: target.audioStartSeconds

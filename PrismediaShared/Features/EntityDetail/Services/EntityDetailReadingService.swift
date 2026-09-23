@@ -176,6 +176,6 @@ struct EntityDetailReadingService {
     }
 
     private func progress(in detail: EntityDetail) -> EntityProgressCapability? {
-        detail.capability()
+        detail.capability(EntityProgressCapability.self)?.readablePosition
     }
 }

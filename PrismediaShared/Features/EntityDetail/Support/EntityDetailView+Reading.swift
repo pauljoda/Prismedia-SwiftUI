@@ -19,7 +19,7 @@ extension EntityDetailView {
         #else
             let unifiedTarget: BookCombinedReadingTarget? = nil
         #endif
-        let progress: EntityProgressCapability? = detail.capability()
+        let progress: EntityProgressCapability? = detail.capability(EntityProgressCapability.self)?.readablePosition
         let initialEPUBLocation: String?
         let initialEPUBProgression: Double?
         switch unifiedTarget {
@@ -116,7 +116,7 @@ extension EntityDetailView {
             command: .read,
             initialEPUBLocation: location,
             initialEPUBProgression: progression,
-            initialEPUBUpdatedAt: detail.capability(EntityProgressCapability.self)?.updatedAt,
+            initialEPUBUpdatedAt: detail.capability(EntityProgressCapability.self)?.readablePosition.updatedAt,
             companionAudiobookBookID: companionAudiobookBookID,
             companionAudiobookTrackID: companionAudiobookTrackID,
             companionAudiobookStartSeconds: companionAudiobookStartSeconds
@@ -279,9 +279,9 @@ extension EntityDetailView {
                     storedLocation: storedLocation,
                     ranges: epubReadingProgressRanges,
                     mode: readingState.manifest?.readerMode
-                        ?? detail.capability(EntityProgressCapability.self)?.mode
+                        ?? detail.capability(EntityProgressCapability.self)?.readablePosition.mode
                         ?? .paged,
-                    progress: detail.capability()
+                    progress: detail.capability(EntityProgressCapability.self)?.readablePosition
                 )
             else { return }
 

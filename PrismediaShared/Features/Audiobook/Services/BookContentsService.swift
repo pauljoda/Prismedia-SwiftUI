@@ -15,7 +15,7 @@ struct BookContentsService: Sendable {
 
         let entries = try await loader.loadBookContents(bookID: book.id)
         let chapters = entries.compactMap { chapter(from: $0, format: book.bookFormat) }
-        let progress: EntityProgressCapability? = book.capability()
+        let progress: EntityProgressCapability? = book.capability(EntityProgressCapability.self)?.readablePosition
         return BookChapterContents(
             chapters: chapters,
             currentChapterID: currentChapterID(progress: progress, chapters: chapters),

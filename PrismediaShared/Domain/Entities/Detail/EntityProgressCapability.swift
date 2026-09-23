@@ -14,6 +14,8 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
     public let consumedCount: Int
     public let consumedTotal: Int?
     public let consumedPercent: Double
+    public let reading: BookReadingProgress?
+    public let listening: BookListeningProgress?
 
     private enum CodingKeys: String, CodingKey {
         case currentEntityID = "currentEntityId"
@@ -29,6 +31,7 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         case consumedCount
         case consumedTotal
         case consumedPercent
+        case reading, listening
     }
 
     public init(from decoder: Decoder) throws {
@@ -46,6 +49,8 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         consumedCount = try container.decodeFlexibleIntIfPresent(forKey: .consumedCount) ?? 0
         consumedTotal = try container.decodeFlexibleIntIfPresent(forKey: .consumedTotal)
         consumedPercent = try container.decodeFlexibleDoubleIfPresent(forKey: .consumedPercent) ?? 0
+        reading = try container.decodeIfPresent(BookReadingProgress.self, forKey: .reading)
+        listening = try container.decodeIfPresent(BookListeningProgress.self, forKey: .listening)
     }
 
     public init(
@@ -61,7 +66,9 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         location: String?,
         consumedCount: Int = 0,
         consumedTotal: Int? = nil,
-        consumedPercent: Double = 0
+        consumedPercent: Double = 0,
+        reading: BookReadingProgress? = nil,
+        listening: BookListeningProgress? = nil
     ) {
         self.currentEntityID = currentEntityID
         self.unit = unit
@@ -76,5 +83,29 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         self.consumedCount = consumedCount
         self.consumedTotal = consumedTotal
         self.consumedPercent = consumedPercent
+        self.reading = reading
+        self.listening = listening
+    }
+
+    /// Presents the saved readable cursor while preserving work-level completion and coverage.
+    public var readablePosition: Self {
+        guard let reading else { return self }
+        return Self(
+            currentEntityID: reading.currentEntityID,
+            unit: reading.unit,
+            index: reading.index,
+            total: reading.total,
+            mode: reading.mode,
+            completedAt: completedAt,
+            updatedAt: reading.updatedAt,
+            workIndex: nil,
+            workTotal: nil,
+            location: reading.location,
+            consumedCount: consumedCount,
+            consumedTotal: consumedTotal,
+            consumedPercent: consumedPercent,
+            reading: reading,
+            listening: listening
+        )
     }
 }

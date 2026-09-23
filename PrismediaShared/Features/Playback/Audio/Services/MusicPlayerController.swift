@@ -646,7 +646,8 @@ public final class MusicPlayerController {
             offsetSeconds: trackOffsetSeconds ?? elapsedTime,
             durationSeconds: duration,
             activitySeconds: activitySeconds,
-            completed: completed
+            completed: completed,
+            includesBookListeningPosition: context.playbackOwnerEntityKind == .book
         )
         enqueuePlaybackReport { service in
             try? await service.reportEntityProgress(

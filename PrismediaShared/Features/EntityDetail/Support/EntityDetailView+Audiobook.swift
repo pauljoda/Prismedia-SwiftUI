@@ -8,10 +8,17 @@ extension EntityDetailView {
                 projection.bookID == detail.id,
                 let track = chapter.audioTrack
             else { return }
-            play(projection, startingAt: track.id, startSeconds: 0)
+            play(projection, startingAt: track.id, startSeconds: chapter.audioStartSeconds ?? 0)
         }
 
         func unifiedAudiobookResume(for detail: EntityDetail) -> AudiobookResumePoint? {
+            let progress: EntityProgressCapability? = detail.capability()
+            if let exact = BookCombinedResumeResolver().exactAudioResume(
+                chapters: mappedBookChapters,
+                progress: progress
+            ) {
+                return exact
+            }
             if detail.bookFormat != .audio,
                 let target = combinedResumeTarget(for: detail)
             {
@@ -23,7 +30,7 @@ extension EntityDetailView {
             return BookCombinedResumeResolver().resolveAudioResume(
                 chapters: mappedBookChapters,
                 mappings: bookProgressMappings(for: detail),
-                progress: detail.capability()
+                progress: progress
             )
         }
 
@@ -144,7 +151,13 @@ extension EntityDetailView {
                         mode: mapping.mode,
                         completed: false,
                         reset: true,
-                        location: nil
+                        location: nil,
+                        activityKind: .listening,
+                        listening: BookListeningPositionRequest(
+                            trackEntityID: mapping.itemID,
+                            markerID: mapping.audioMarkerID,
+                            offsetSeconds: 0
+                        )
                     )
                 )
                 play(projection, startingAt: mapping.itemID, startSeconds: 0)
@@ -178,7 +191,15 @@ extension EntityDetailView {
                         total: progress.total,
                         mode: progress.mode,
                         completed: marksCompleted,
-                        location: progress.location
+                        location: progress.location,
+                        activityKind: .listening,
+                        listening: progress.listening.map {
+                            BookListeningPositionRequest(
+                                trackEntityID: $0.trackEntityID,
+                                markerID: $0.markerID,
+                                offsetSeconds: $0.offsetSeconds
+                            )
+                        }
                     )
                 )
                 await refreshAudiobookDetail()

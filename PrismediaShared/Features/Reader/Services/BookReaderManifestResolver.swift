@@ -23,7 +23,7 @@ public struct BookReaderManifestResolver: Sendable {
         let pages = source.pages
             .sorted { $0.ordinal < $1.ordinal }
             .map { BookReaderPage(entityID: selected.id, page: $0) }
-        let progress: EntityProgressCapability? = selected.capability()
+        let progress: EntityProgressCapability? = selected.capability(EntityProgressCapability.self)?.readablePosition
         let initialIndex: Int
         switch command {
         case .read:
