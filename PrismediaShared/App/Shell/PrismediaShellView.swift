@@ -276,7 +276,8 @@ public struct PrismediaShellView: View {
                 client: client,
                 user: user,
                 hidesNsfw: !environment.allowsNsfwContent,
-                onRestoreScheduled: { await environment.beginDatabaseRestore() }
+                onRestoreScheduled: { await environment.beginDatabaseRestore() },
+                session: environment.session
             )
 
         case .entityList(let entityList):
@@ -324,7 +325,8 @@ public struct PrismediaShellView: View {
                         for: destination.id,
                         videoPlaybackSession: videoPlaybackSession
                     ),
-                    showsAdministrativeTools: user.isAdmin
+                    showsAdministrativeTools: user.isAdmin,
+                    session: environment.session
                 )
         #endif
         }

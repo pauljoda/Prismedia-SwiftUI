@@ -175,6 +175,25 @@ public final class PrismediaAppRouter {
         setPath(path, for: destinationID)
     }
 
+    /// Opens a server link in the matching native library destination.
+    public func openLinkedEntity(_ link: EntityLink) {
+        guard let destinationID = link.kind.definition?.navigation?.destinationID,
+              let mode = ModeCatalog.mode(containing: destinationID),
+              let destination = mode.destination(id: destinationID)
+        else {
+            open(link: link)
+            return
+        }
+
+        onWillOpenEntity?()
+        select(mode: mode, destination: destination)
+        var destinationPath = path(for: destinationID)
+        if destinationPath.last != link {
+            destinationPath.append(link)
+            setPath(destinationPath, for: destinationID)
+        }
+    }
+
     public func restoreVideoPlayback(_ link: EntityLink) async {
         let destinationID = link.kind.definition?.navigation?.destinationID ?? "videos"
         guard let destination = ModeCatalog.video.destination(id: destinationID) else { return }

@@ -9,6 +9,7 @@ import SwiftUI
         let detailDependencies: EntityDetailDependencies
         let navigationPath: Binding<[EntityLink]>
         let showsAdministrativeTools: Bool
+        let session: AuthSession?
 
         init(
             destination: ManageDestination,
@@ -17,6 +18,7 @@ import SwiftUI
             detailDependencies: EntityDetailDependencies,
             navigationPath: Binding<[EntityLink]>,
             showsAdministrativeTools: Bool,
+            session: AuthSession? = nil,
             fileService: (any FileAdministrationServicing)? = nil
         ) {
             self.destination = destination
@@ -25,6 +27,7 @@ import SwiftUI
             self.detailDependencies = detailDependencies
             self.navigationPath = navigationPath
             self.showsAdministrativeTools = showsAdministrativeTools
+            self.session = session
             if let fileService {
                 self.fileService = fileService
             } else {
@@ -40,6 +43,34 @@ import SwiftUI
         }
 
         var body: some View {
+            #if os(iOS)
+                if let session, !usesNativePreviewFixtures {
+                    EmbeddedAdminContentView(session: session, path: embeddedPath)
+                } else {
+                    nativeContent
+                }
+            #else
+                nativeContent
+            #endif
+        }
+
+        private var embeddedPath: String {
+            switch destination {
+            case .files: "/files?nativeContent"
+            case .identify: "/identify?nativeContent"
+            case .request: "/request?nativeContent"
+            }
+        }
+
+        private var usesNativePreviewFixtures: Bool {
+            #if DEBUG
+                PrismediaUITestBootstrap.usesStep4AdministrationFixtures()
+            #else
+                false
+            #endif
+        }
+
+        private var nativeContent: some View {
             Group {
                 switch destination {
                 case .files: AdministrativeFilesView(service: fileService)
@@ -52,17 +83,21 @@ import SwiftUI
                         )
                     )
                 case .request:
-                    RequestWorkspaceView(
-                        administrationService: service,
-                        activityService: client,
-                        detailDependencies: detailDependencies,
-                        navigationPath: navigationPath,
-                        hidesNsfw: !client.allowsNsfwContent,
-                        showsAdministrativeTools: showsAdministrativeTools,
-                        resolveAssetURL: client.assetURL
-                    )
+                    nativeRequestWorkspace
                 }
             }
+        }
+
+        private var nativeRequestWorkspace: some View {
+            RequestWorkspaceView(
+                administrationService: service,
+                activityService: client,
+                detailDependencies: detailDependencies,
+                navigationPath: navigationPath,
+                hidesNsfw: !client.allowsNsfwContent,
+                showsAdministrativeTools: showsAdministrativeTools,
+                resolveAssetURL: client.assetURL
+            )
         }
     }
 
