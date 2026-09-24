@@ -1,7 +1,8 @@
 import Foundation
-import WebKit
 
 #if os(iOS)
+    import WebKit
+
     /// Keeps the signed-in administration surface on its configured server.
     @MainActor
     struct EmbeddedAdminNavigationDecider: WebPage.NavigationDeciding {

@@ -1,7 +1,8 @@
 import SwiftUI
-import WebKit
 
 #if os(iOS)
+    import WebKit
+
     /// Presents the server's responsive administration content inside native navigation.
     struct EmbeddedAdminContentView: View {
         @Environment(\.openURL) private var openURL
