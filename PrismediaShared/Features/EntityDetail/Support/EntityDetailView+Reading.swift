@@ -281,7 +281,8 @@ extension EntityDetailView {
                     mode: readingState.manifest?.readerMode
                         ?? detail.capability(EntityProgressCapability.self)?.readingPosition.mode
                         ?? .paged,
-                    progress: detail.capability(EntityProgressCapability.self)?.readingPosition
+                    progress: detail.capability(EntityProgressCapability.self)?.readingPosition,
+                    format: BookReadingReportFormat(kind: detail.kind, alignment: nil)
                 )
             else { return }
 

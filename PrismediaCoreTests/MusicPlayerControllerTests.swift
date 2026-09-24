@@ -675,6 +675,50 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrackDuration, 3_600)
     }
 
+    func testListeningCheckpointsReportPositionsOutsidePairedChaptersAndCompletion() async throws {
+        let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        let track = makeTrack(idSuffix: 1, duration: 3_600)
+        let service = MusicPlaybackServiceStub()
+        let clock = TestMusicPlaybackClock()
+        let controller = MusicPlayerController(
+            engine: AudioPlaybackEngineSpy(),
+            service: service,
+            playbackClock: clock
+        )
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: bookID,
+                playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book,
+                progressModality: .listening,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
+            )
+        )
+
+        controller.updatePlaybackProgress(elapsedTime: 1_800, duration: 3_600, isAdvancing: true)
+        clock.advance(by: 12)
+        controller.updatePlaybackProgress(elapsedTime: 1_812, duration: 3_600, isAdvancing: true)
+        await controller.flushPendingPlaybackReports()
+
+        let heartbeat = try XCTUnwrap(service.entityProgressUpdates.last)
+        XCTAssertEqual(heartbeat.id, bookID)
+        XCTAssertEqual(heartbeat.request.modality, .listening)
+        XCTAssertEqual(heartbeat.request.listening?.trackEntityID, track.id)
+        XCTAssertEqual(heartbeat.request.listening?.offsetSeconds, 1_812)
+        XCTAssertNil(heartbeat.request.currentEntityID)
+        XCTAssertNil(heartbeat.request.completed)
+        XCTAssertEqual(heartbeat.request.activitySeconds, 12)
+
+        await controller.handlePlaybackEnded()
+        await controller.flushPendingPlaybackReports()
+
+        let completion = try XCTUnwrap(service.entityProgressUpdates.last)
+        XCTAssertEqual(completion.request.completed, true)
+        XCTAssertEqual(completion.request.listening?.offsetSeconds, 3_600)
+    }
+
     func testActiveAudiobookRestartsActivityAfterLifecycleFlush() async throws {
         let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
         let track = makeTrack(idSuffix: 1, duration: 3_600)

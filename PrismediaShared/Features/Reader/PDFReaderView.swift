@@ -24,13 +24,16 @@
 
         private let command: BookReaderCommand
         private let useCase: DocumentReaderUseCase
+        private let readingReportFormat: BookReadingReportFormat
 
         public init(
             book: EntityDetail,
             command: BookReaderCommand,
-            service: any BookReaderServicing
+            service: any BookReaderServicing,
+            readingReportFormat: BookReadingReportFormat = .legacyCursor
         ) {
             self.command = command
+            self.readingReportFormat = readingReportFormat
             let readerUseCase = DocumentReaderUseCase(book: book, service: service)
             useCase = readerUseCase
             _layoutMode = State(
@@ -175,7 +178,8 @@
                 total: document.pageCount,
                 unit: .page,
                 mode: layoutMode.readerMode,
-                location: nil
+                location: nil,
+                modality: readingReportFormat.modality
             )
             progressWriter.queue(
                 bookID: useCase.book.id,

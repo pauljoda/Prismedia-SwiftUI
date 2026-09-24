@@ -625,36 +625,54 @@ public final class MusicPlayerController {
             completed || !mappedProgressCompleted
         else { return }
 
-        guard
-            let duration = reportingTrackDuration,
-            let mapping = context.progressMappings?.last(where: {
-                $0.itemID == currentTrack.id
-                    && $0.containsSourceOffset(trackOffsetSeconds ?? elapsedTime, duration: duration)
-            })
-        else {
-            if stopsActivity { _ = consumptionActivityClock.stop(at: playbackClock.now) }
-            return
+        let offset = trackOffsetSeconds ?? elapsedTime
+        let request: EntityProgressUpdateRequest
+        if context.reportsListeningCheckpoints {
+            // Every heartbeat reports the exact physical position, paired chapter or not; the
+            // server keeps the listening checkpoint and places the owner's cursor from it.
+            request = .listening(
+                BookListeningPositionRequest(
+                    trackEntityID: currentTrack.id,
+                    markerID: nil,
+                    offsetSeconds: offset.isFinite ? max(0, offset) : 0
+                ),
+                completed: completed ? true : nil,
+                activitySeconds: reportedActivitySeconds(stopsActivity: stopsActivity)
+            )
+        } else {
+            guard
+                let duration = reportingTrackDuration,
+                let mapping = context.progressMappings?.last(where: {
+                    $0.itemID == currentTrack.id
+                        && $0.containsSourceOffset(offset, duration: duration)
+                })
+            else {
+                if stopsActivity { _ = consumptionActivityClock.stop(at: playbackClock.now) }
+                return
+            }
+            request = LegacyAudioProgressMappingResolver().progressRequest(
+                mapping: mapping,
+                offsetSeconds: offset,
+                durationSeconds: duration,
+                activitySeconds: reportedActivitySeconds(stopsActivity: stopsActivity),
+                completed: completed,
+                includesBookListeningPosition: context.playbackOwnerEntityKind == .book
+            )
         }
-        let activitySeconds =
-            stopsActivity
-            ? consumptionActivityClock.stop(at: playbackClock.now)
-            : isPlaybackAdvancing
-                ? consumptionActivityClock.take(at: playbackClock.now)
-                : nil
-        let request = LegacyAudioProgressMappingResolver().progressRequest(
-            mapping: mapping,
-            offsetSeconds: trackOffsetSeconds ?? elapsedTime,
-            durationSeconds: duration,
-            activitySeconds: activitySeconds,
-            completed: completed,
-            includesBookListeningPosition: context.playbackOwnerEntityKind == .book
-        )
         enqueuePlaybackReport { service in
             try? await service.reportEntityProgress(
                 id: ownerID,
                 request: request
             )
         }
+    }
+
+    private func reportedActivitySeconds(stopsActivity: Bool) -> Double? {
+        stopsActivity
+            ? consumptionActivityClock.stop(at: playbackClock.now)
+            : isPlaybackAdvancing
+                ? consumptionActivityClock.take(at: playbackClock.now)
+                : nil
     }
 
     private func reportCurrentConsumption(stopsActivity: Bool = false) {
@@ -703,12 +721,7 @@ public final class MusicPlayerController {
             if stopsActivity { _ = consumptionActivityClock.stop(at: playbackClock.now) }
             return
         }
-        let activitySeconds =
-            stopsActivity
-            ? consumptionActivityClock.stop(at: playbackClock.now)
-            : isPlaybackAdvancing
-                ? consumptionActivityClock.take(at: playbackClock.now)
-                : nil
+        let activitySeconds = reportedActivitySeconds(stopsActivity: stopsActivity)
         let position = elapsedTime
         enqueuePlaybackReport { service in
             try? await service.updateEntityConsumption(

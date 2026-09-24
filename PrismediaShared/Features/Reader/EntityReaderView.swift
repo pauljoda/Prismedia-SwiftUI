@@ -12,8 +12,9 @@ public struct EntityReaderView: View {
     let initialEPUBProgression: Double?
     let initialEPUBUpdatedAt: Date?
     let epubProgressRanges: [EPUBReadingProgressRange]
+    let readingReportFormat: BookReadingReportFormat
     let companionPlayer: MusicPlayerController?
-    let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
+    let findCurrentAudiobookReadingTarget: @MainActor () async -> BookReaderLocationTarget?
     let onEPUBReady: () -> Void
 
     public init(
@@ -26,8 +27,9 @@ public struct EntityReaderView: View {
         initialEPUBProgression: Double? = nil,
         initialEPUBUpdatedAt: Date? = nil,
         epubProgressRanges: [EPUBReadingProgressRange] = [],
+        readingReportFormat: BookReadingReportFormat = .legacyCursor,
         companionPlayer: MusicPlayerController? = nil,
-        findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
+        findCurrentAudiobookReadingTarget: @escaping @MainActor () async -> BookReaderLocationTarget? = { nil },
         onEPUBReady: @escaping () -> Void = {}
     ) {
         self.selected = selected
@@ -39,6 +41,7 @@ public struct EntityReaderView: View {
         self.initialEPUBProgression = initialEPUBProgression
         self.initialEPUBUpdatedAt = initialEPUBUpdatedAt
         self.epubProgressRanges = epubProgressRanges
+        self.readingReportFormat = readingReportFormat
         self.companionPlayer = companionPlayer
         self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
         self.onEPUBReady = onEPUBReady
@@ -59,7 +62,12 @@ public struct EntityReaderView: View {
                     case .unavailable:
                         UnsupportedBookReaderView(message: "This book does not expose a readable source format.")
                     case .pdf:
-                        PDFReaderView(book: selected, command: command, service: service)
+                        PDFReaderView(
+                            book: selected,
+                            command: command,
+                            service: service,
+                            readingReportFormat: readingReportFormat
+                        )
                     case .epub:
                         EPUBReaderView(
                             book: selected,
@@ -71,6 +79,7 @@ public struct EntityReaderView: View {
                             initialProgression: initialEPUBProgression,
                             initialUpdatedAt: initialEPUBUpdatedAt,
                             progressRanges: epubProgressRanges,
+                            readingReportFormat: readingReportFormat,
                             companionPlayer: companionPlayer,
                             findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
                             onReady: onEPUBReady

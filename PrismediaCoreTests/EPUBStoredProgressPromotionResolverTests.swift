@@ -11,7 +11,8 @@ final class EPUBStoredProgressPromotionResolverTests: XCTestCase {
                 storedLocation: storedLocation,
                 ranges: ranges,
                 mode: .paged,
-                progress: progress(index: 9_500, location: "epubcfi(/6/144!/4/2/2:10)")
+                progress: progress(index: 9_500, location: "epubcfi(/6/144!/4/2/2:10)"),
+                format: .legacyCursor
             )
         )
 
@@ -30,7 +31,8 @@ final class EPUBStoredProgressPromotionResolverTests: XCTestCase {
                 storedLocation: storedLocation,
                 ranges: ranges,
                 mode: .paged,
-                progress: progress(index: 9_700, location: nil)
+                progress: progress(index: 9_700, location: nil),
+                format: .legacyCursor
             )
         )
     }
@@ -45,7 +47,8 @@ final class EPUBStoredProgressPromotionResolverTests: XCTestCase {
                 storedLocation: storedLocation,
                 ranges: ranges,
                 mode: .paged,
-                progress: progress(index: 9_500, location: serverLocation)
+                progress: progress(index: 9_500, location: serverLocation),
+                format: .legacyCursor
             )
         )
     }

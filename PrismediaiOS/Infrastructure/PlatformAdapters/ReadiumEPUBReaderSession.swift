@@ -40,6 +40,7 @@
         private let initialProgression: Double?
         private let initialUpdatedAt: Date?
         private let progressRanges: [EPUBReadingProgressRange]
+        private let readingReportFormat: BookReadingReportFormat
         private let progressWriter: BookReaderProgressWriter
         private var publication: Publication?
         private var navigator: EPUBNavigatorViewController?
@@ -98,7 +99,8 @@
             initialLocation: String? = nil,
             initialProgression: Double? = nil,
             initialUpdatedAt: Date? = nil,
-            progressRanges: [EPUBReadingProgressRange] = []
+            progressRanges: [EPUBReadingProgressRange] = [],
+            readingReportFormat: BookReadingReportFormat = .legacyCursor
         ) {
             self.book = book
             self.command = command
@@ -109,6 +111,7 @@
             self.initialProgression = initialProgression
             self.initialUpdatedAt = initialUpdatedAt
             self.progressRanges = progressRanges
+            self.readingReportFormat = readingReportFormat
             progressWriter = BookReaderProgressWriter(service: service)
             preferences = preferencesStore.loadEPUB()
         }
@@ -570,7 +573,8 @@
                 progression: mappedProgression ?? progression,
                 mode: preferences.flow,
                 location: exactLocation.acceptedLocation,
-                closing: closing
+                closing: closing,
+                format: readingReportFormat
             )
             progressWriter.queue(
                 bookID: book.id,

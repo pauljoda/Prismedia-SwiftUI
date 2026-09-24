@@ -107,7 +107,7 @@ struct LegacyBookProgressMappingResolver: Sendable {
         if candidateOrder != currentOrder {
             return candidateOrder > currentOrder ? candidate : nil
         }
-        return candidate.index > progress.index ? candidate : nil
+        return (candidate.index ?? 0) > progress.index ? candidate : nil
     }
 
     func audioResume(

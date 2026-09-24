@@ -228,6 +228,52 @@ final class BookAlignmentContractTests: XCTestCase {
         XCTAssertEqual(loader.requests.first?.httpMethod, "PUT")
     }
 
+    // MARK: - Progress reports
+
+    func testReadingReportsNameTheirModalityInTheServerPositionTotal() throws {
+        let request = DocumentReaderProgressMapper.epubRequest(
+            bookID: Self.bookID,
+            progression: 0.25,
+            mode: .paged,
+            location: Self.readiumLocator,
+            closing: false,
+            format: BookReadingReportFormat(positionTotal: 20_000, modality: .reading)
+        )
+
+        let body = try Self.encodedBody(request)
+        XCTAssertEqual(body["modality"] as? String, "reading")
+        XCTAssertEqual(body["currentEntityId"] as? String, Self.bookID.uuidString)
+        XCTAssertEqual(body["unit"] as? String, "cfi")
+        XCTAssertEqual(body["index"] as? Int, 5_000)
+        XCTAssertEqual(body["total"] as? Int, 20_000)
+        XCTAssertEqual(body["mode"] as? String, "paged")
+        XCTAssertEqual(body["location"] as? String, Self.readiumLocator)
+        XCTAssertNil(body["listening"])
+        XCTAssertEqual(BookReadingReportFormat(kind: .book, alignment: nil).modality, .reading)
+        XCTAssertNil(BookReadingReportFormat(kind: .comicInstallment, alignment: nil).modality)
+    }
+
+    func testListeningReportsCarryOnlyTheExactTrackPosition() throws {
+        let request = EntityProgressUpdateRequest.listening(
+            BookListeningPositionRequest(trackEntityID: Self.trackID, markerID: nil, offsetSeconds: 412.5),
+            completed: nil,
+            activitySeconds: 10
+        )
+
+        let body = try Self.encodedBody(request)
+        XCTAssertEqual(body["modality"] as? String, "listening")
+        let listening = try XCTUnwrap(body["listening"] as? [String: Any])
+        XCTAssertEqual(listening["trackEntityId"] as? String, Self.trackID.uuidString)
+        XCTAssertTrue(listening["markerId"] is NSNull)
+        XCTAssertEqual(listening["offsetSeconds"] as? Double, 412.5)
+        XCTAssertTrue(body["completed"] is NSNull)
+        XCTAssertEqual(body["reset"] as? Bool, false)
+        XCTAssertEqual(body["activitySeconds"] as? Double, 10)
+        for cursorKey in ["currentEntityId", "unit", "index", "total", "mode", "location", "activityKind"] {
+            XCTAssertNil(body[cursorKey], "A listening report must not name a cursor field: \(cursorKey)")
+        }
+    }
+
     // MARK: - Fixtures
 
     private static let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
@@ -236,6 +282,11 @@ final class BookAlignmentContractTests: XCTestCase {
     private static let readiumLocator = #"{"href":"Text/one.xhtml","locations":{"progression":0.4}}"#
     private static let alignmentPath = "/api/books/\(bookID.uuidString.lowercased())/alignment"
     private static let mappingsPath = "/api/books/\(bookID.uuidString.lowercased())/chapter-mappings"
+
+    private static func encodedBody(_ request: EntityProgressUpdateRequest) throws -> [String: Any] {
+        let data = try PrismediaJSON.encoder().encode(request)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
 
     private static func client(loader: MockHTTPDataLoader) -> PrismediaAPIClient {
         PrismediaAPIClient(

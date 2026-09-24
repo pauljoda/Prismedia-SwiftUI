@@ -3,7 +3,7 @@ import Foundation
 /// Builds the client-side progress mappings older servers need to place the Book cursor from
 /// the audiobook (before 3.8).
 struct LegacyBookProgressMappingBuilder: Sendable {
-    private let epubProgressTotal = 10_000
+    private let epubProgressTotal = BookReadingReportFormat.legacyCursor.positionTotal
 
     func build(
         bookID: UUID,

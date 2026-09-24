@@ -25,8 +25,9 @@
         private let initialProgression: Double?
         private let initialUpdatedAt: Date?
         private let progressRanges: [EPUBReadingProgressRange]
+        private let readingReportFormat: BookReadingReportFormat
         private let companionPlayer: MusicPlayerController?
-        private let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
+        private let findCurrentAudiobookReadingTarget: @MainActor () async -> BookReaderLocationTarget?
         private let onReady: () -> Void
 
         public init(
@@ -39,8 +40,9 @@
             initialProgression: Double? = nil,
             initialUpdatedAt: Date? = nil,
             progressRanges: [EPUBReadingProgressRange] = [],
+            readingReportFormat: BookReadingReportFormat = .legacyCursor,
             companionPlayer: MusicPlayerController? = nil,
-            findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
+            findCurrentAudiobookReadingTarget: @escaping @MainActor () async -> BookReaderLocationTarget? = { nil },
             onReady: @escaping () -> Void = {}
         ) {
             self.command = command
@@ -51,6 +53,7 @@
             self.initialProgression = initialProgression
             self.initialUpdatedAt = initialUpdatedAt
             self.progressRanges = progressRanges
+            self.readingReportFormat = readingReportFormat
             self.companionPlayer = companionPlayer
             self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
             self.onReady = onReady
@@ -71,6 +74,7 @@
                     initialProgression: initialProgression,
                     initialUpdatedAt: initialUpdatedAt,
                     progressRanges: progressRanges,
+                    readingReportFormat: readingReportFormat,
                     companionPlayer: companionPlayer,
                     findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
                     onReady: onReady
@@ -275,7 +279,7 @@
 
         private func moveToCurrentAudiobookPosition() async -> Bool {
             guard
-                let target = findCurrentAudiobookReadingTarget(),
+                let target = await findCurrentAudiobookReadingTarget(),
                 let publication,
                 let matchedLocation = EPUBResourceLocationMatcher().bestMatch(
                     for: target.location,
@@ -425,7 +429,8 @@
                 progression: bookProgression,
                 mode: .scrolled,
                 location: location,
-                closing: false
+                closing: false,
+                format: readingReportFormat
             )
             progressWriter.queue(
                 bookID: useCase.book.id,
