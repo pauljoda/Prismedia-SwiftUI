@@ -21,7 +21,7 @@ extension EntityDetailView {
                     trackOffsetSeconds: target.audioStartSeconds
                 )
             }
-            return BookCombinedResumeResolver().resolveAudioResume(
+            return LegacyBookCombinedResumeResolver().resolveAudioResume(
                 chapters: mappedBookChapters,
                 mappings: bookProgressMappings(for: detail),
                 progress: progress
@@ -209,7 +209,7 @@ extension EntityDetailView {
                 )
             }
             let progress: EntityProgressCapability? = detail.capability()
-            let resume = BookCombinedResumeResolver().resolveAudioResume(
+            let resume = LegacyBookCombinedResumeResolver().resolveAudioResume(
                 chapters: mappedBookChapters,
                 mappings: bookProgressMappings(for: detail),
                 progress: progress

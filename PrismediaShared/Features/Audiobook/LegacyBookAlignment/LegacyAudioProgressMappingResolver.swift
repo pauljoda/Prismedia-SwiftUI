@@ -1,6 +1,8 @@
 import Foundation
 
-struct AudioProgressMappingResolver: Sendable {
+/// Converts a player position into an older server's Book cursor through a client-built
+/// `PlaybackProgressMapping`. Servers from 3.8 receive listening checkpoints instead.
+struct LegacyAudioProgressMappingResolver: Sendable {
     func progressRequest(
         mapping: PlaybackProgressMapping,
         offsetSeconds: Double,

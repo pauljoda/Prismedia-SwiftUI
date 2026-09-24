@@ -17,7 +17,7 @@ extension EntityDetailView {
                 ? unifiedBookReadingTarget(for: detail)
                 : nil
         #else
-            let unifiedTarget: BookCombinedReadingTarget? = nil
+            let unifiedTarget: LegacyBookCombinedReadingTarget? = nil
         #endif
         let progress: EntityProgressCapability? = detail.capability(EntityProgressCapability.self)?.readingPosition
         let initialEPUBLocation: String?

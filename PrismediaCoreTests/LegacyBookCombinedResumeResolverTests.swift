@@ -2,7 +2,8 @@ import XCTest
 
 @testable import PrismediaCore
 
-final class BookCombinedResumeResolverTests: XCTestCase {
+/// Client-side resume alignment for servers before 3.8; removed with the legacy folder.
+final class LegacyBookCombinedResumeResolverTests: XCTestCase {
     func testEmbeddedMarkerOffsetSelectsTheReadableChapterWithinOneM4B() throws {
         let track = MusicTrack(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
@@ -17,7 +18,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
                 audioStartSeconds: 100, audioEndSeconds: 300),
         ]
 
-        let target = try XCTUnwrap(BookCombinedResumeResolver().resolveReadingTarget(
+        let target = try XCTUnwrap(LegacyBookCombinedResumeResolver().resolveReadingTarget(
             chapters: chapters, trackID: track.id, trackOffsetSeconds: 150
         ))
         XCTAssertEqual(target.location, "Text/two.xhtml")
@@ -29,7 +30,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             mappedChapter(order: 0, duration: 300, startFraction: 0, endFraction: 0.5),
             mappedChapter(order: 1, duration: 400, startFraction: 0.5, endFraction: 1),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -38,7 +39,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         let progress = canonicalProgress(index: 6_250, location: nil)
 
         let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveContinuation(
+            LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: chapters,
                 mappings: mappings,
                 progress: progress
@@ -60,7 +61,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             startFraction: 0,
             endFraction: 1
         )
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: [chapter],
             readerMode: .paged,
@@ -74,7 +75,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             }
             """
         let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveContinuation(
+            LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: [chapter],
                 mappings: mappings,
                 progress: canonicalProgress(index: 5_000, location: savedLocation)
@@ -92,7 +93,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             startFraction: 0.4,
             endFraction: 0.6
         )
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: [chapter],
             readerMode: .paged,
@@ -101,7 +102,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         let savedLocation = "Text/chapter-1.xhtml#prismedia-progress=0.25"
 
         let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveContinuation(
+            LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: [chapter],
                 mappings: mappings,
                 progress: canonicalProgress(index: 4_000, location: savedLocation)
@@ -117,7 +118,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             mappedChapter(order: 0, duration: 300, startFraction: 0, endFraction: 0.5),
             mappedChapter(order: 1, duration: 400, startFraction: 0.5, endFraction: 1),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -125,7 +126,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         )
 
         let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveContinuation(
+            LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: chapters,
                 mappings: mappings,
                 progress: canonicalProgress(
@@ -148,7 +149,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             startFraction: 0,
             endFraction: 1
         )
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: [chapter],
             readerMode: .paged,
@@ -156,7 +157,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         )
 
         let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveContinuation(
+            LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: [chapter],
                 mappings: mappings,
                 progress: nil
@@ -177,7 +178,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             startFraction: 0,
             endFraction: 0.5
         )
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: [chapter],
             readerMode: .paged,
@@ -185,7 +186,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         )
 
         XCTAssertNil(
-            BookCombinedResumeResolver().resolveContinuation(
+            LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: [chapter],
                 mappings: mappings,
                 progress: EntityProgressCapability(
@@ -215,7 +216,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             readPageCount: 20,
             audioTrack: track(number: 1, duration: 200)
         )
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: [chapter],
             readerMode: .paged,
@@ -235,7 +236,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         )
 
         let target = try XCTUnwrap(
-            BookCombinedResumeResolver().resolveContinuation(
+            LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: [chapter],
                 mappings: mappings,
                 progress: progress
@@ -252,7 +253,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             readTarget: .epub(location: "Text/one.xhtml"),
             readStartFraction: 0, readEndFraction: 1, audioTrack: track,
             audioStartSeconds: 0, audioEndSeconds: 90)
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID, chapters: [chapter], readerMode: .paged,
             hasReadableRendition: true
         )
@@ -261,7 +262,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             updatedAt: "2026-09-24T01:45:00.000Z"
         )
 
-        let target = try XCTUnwrap(BookCombinedResumeResolver().resolveLatestContinuation(
+        let target = try XCTUnwrap(LegacyBookCombinedResumeResolver().resolveLatestContinuation(
             chapters: [chapter], mappings: mappings, progress: progress
         ))
         XCTAssertEqual(target.readingTarget,
@@ -275,7 +276,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             readTarget: .epub(location: "Text/one.xhtml"),
             readStartFraction: 0, readEndFraction: 1, audioTrack: track,
             audioStartSeconds: 0, audioEndSeconds: 90)
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID, chapters: [chapter], readerMode: .paged,
             hasReadableRendition: true
         )
@@ -284,7 +285,7 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             updatedAt: "2026-09-24T01:30:00.000Z"
         )
 
-        let target = try XCTUnwrap(BookCombinedResumeResolver().resolveLatestContinuation(
+        let target = try XCTUnwrap(LegacyBookCombinedResumeResolver().resolveLatestContinuation(
             chapters: [chapter], mappings: mappings, progress: progress
         ))
         XCTAssertEqual(target.readingTarget,

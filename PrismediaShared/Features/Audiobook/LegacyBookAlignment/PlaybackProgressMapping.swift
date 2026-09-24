@@ -1,6 +1,7 @@
 import Foundation
 
-/// Converts one concrete player item into its owning Entity's canonical progress cursor.
+/// Converts one concrete player item into its owning Entity's canonical progress cursor, for
+/// servers before 3.8. It stays decodable in persisted player state for one release.
 public struct PlaybackProgressMapping: Codable, Equatable, Sendable {
     public let itemID: UUID
     public let currentEntityID: UUID

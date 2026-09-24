@@ -1,6 +1,8 @@
 import Foundation
 
-struct BookCombinedResumeResolver: Sendable {
+/// Aligns an older server's shared Book cursor with the audiobook on the client, for servers
+/// before 3.8. Servers from 3.8 return resume, switch, and combined targets themselves.
+struct LegacyBookCombinedResumeResolver: Sendable {
     private let audioRunwaySeconds = 5.0
 
     func resolveReadingTarget(
@@ -31,13 +33,13 @@ struct BookCombinedResumeResolver: Sendable {
         chapters: [BookChapterMapping],
         mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
-    ) -> BookCombinedResumeTarget? {
+    ) -> LegacyBookCombinedResumeTarget? {
         if let progress,
             progress.completedAt == nil
                 || (progress.updatedAt ?? .distantPast) > (progress.completedAt ?? .distantFuture)
         {
-            guard let mapping = BookProgressMappingResolver().mapping(for: progress, in: mappings),
-                let chapter = BookProgressMappingResolver().chapter(for: mapping, in: chapters)
+            guard let mapping = LegacyBookProgressMappingResolver().mapping(for: progress, in: mappings),
+                let chapter = LegacyBookProgressMappingResolver().chapter(for: mapping, in: chapters)
             else {
                 // The readable cursor is authoritative when no audio part maps to it.
                 return nil
@@ -46,7 +48,7 @@ struct BookCombinedResumeResolver: Sendable {
         }
 
         guard let mapping = mappings.first,
-            let chapter = BookProgressMappingResolver().chapter(for: mapping, in: chapters)
+            let chapter = LegacyBookProgressMappingResolver().chapter(for: mapping, in: chapters)
         else { return nil }
         return target(chapter: chapter, mapping: mapping, progress: nil)
     }
@@ -56,7 +58,7 @@ struct BookCombinedResumeResolver: Sendable {
         chapters: [BookChapterMapping],
         mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
-    ) -> BookCombinedResumeTarget? {
+    ) -> LegacyBookCombinedResumeTarget? {
         resolveContinuation(
             chapters: chapters,
             mappings: mappings,
@@ -68,7 +70,7 @@ struct BookCombinedResumeResolver: Sendable {
         _ chapter: BookChapterMapping,
         mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
-    ) -> BookCombinedResumeTarget? {
+    ) -> LegacyBookCombinedResumeTarget? {
         guard let trackID = chapter.audioTrack?.id,
             let mapping = mappings.first(where: {
                 $0.itemID == trackID
@@ -77,7 +79,7 @@ struct BookCombinedResumeResolver: Sendable {
             })
         else { return nil }
         let matchingProgress = progress.flatMap {
-            BookProgressMappingResolver().mapping(for: $0, in: [mapping]) == nil ? nil : $0
+            LegacyBookProgressMappingResolver().mapping(for: $0, in: [mapping]) == nil ? nil : $0
         }
         return target(chapter: chapter, mapping: mapping, progress: matchingProgress)
     }
@@ -87,7 +89,7 @@ struct BookCombinedResumeResolver: Sendable {
         mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> AudiobookResumePoint? {
-        BookProgressMappingResolver().audioResume(
+        LegacyBookProgressMappingResolver().audioResume(
             tracks: chapters.compactMap(\.audioTrack),
             mappings: mappings,
             progress: progress
@@ -98,7 +100,7 @@ struct BookCombinedResumeResolver: Sendable {
         chapter: BookChapterMapping,
         mapping: PlaybackProgressMapping,
         progress: EntityProgressCapability?
-    ) -> BookCombinedResumeTarget? {
+    ) -> LegacyBookCombinedResumeTarget? {
         guard let track = chapter.audioTrack,
             let duration = track.duration,
             duration.isFinite,
@@ -107,9 +109,9 @@ struct BookCombinedResumeResolver: Sendable {
         else { return nil }
 
         let fraction = progress.map {
-            BookProgressMappingResolver().fraction(for: $0, mapping: mapping)
+            LegacyBookProgressMappingResolver().fraction(for: $0, mapping: mapping)
         } ?? 0
-        let readingTarget: BookCombinedReadingTarget
+        let readingTarget: LegacyBookCombinedReadingTarget
         switch readTarget {
         case .epub(let location):
             if let savedLocation = progress?.location,
@@ -127,7 +129,7 @@ struct BookCombinedResumeResolver: Sendable {
 
         let estimatedOffset = mapping.sourceOffset(for: fraction, duration: duration)
         let sourceStart = mapping.sourceStartSeconds ?? 0
-        return BookCombinedResumeTarget(
+        return LegacyBookCombinedResumeTarget(
             readingTarget: readingTarget,
             audioTrackID: track.id,
             audioStartSeconds: max(sourceStart, estimatedOffset - audioRunwaySeconds)

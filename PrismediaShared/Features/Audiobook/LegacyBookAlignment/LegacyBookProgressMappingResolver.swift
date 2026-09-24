@@ -1,6 +1,8 @@
 import Foundation
 
-struct BookProgressMappingResolver: Sendable {
+/// Resolves an older server's shared Book cursor against client-side progress mappings (before
+/// 3.8), including the one-time promotion of legacy absolute audiobook resume seconds.
+struct LegacyBookProgressMappingResolver: Sendable {
     private let audioRunwaySeconds = 5.0
 
     func mapping(
@@ -86,7 +88,7 @@ struct BookProgressMappingResolver: Sendable {
         else { return nil }
 
         let candidateMapping = mappings[candidateOrder]
-        let candidate = AudioProgressMappingResolver().progressRequest(
+        let candidate = LegacyAudioProgressMappingResolver().progressRequest(
             mapping: candidateMapping,
             offsetSeconds: resume.trackOffsetSeconds,
             durationSeconds: duration,

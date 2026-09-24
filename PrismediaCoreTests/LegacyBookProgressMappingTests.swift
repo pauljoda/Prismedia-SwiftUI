@@ -2,13 +2,14 @@ import XCTest
 
 @testable import PrismediaCore
 
-final class BookProgressMappingTests: XCTestCase {
+/// Client-side progress mappings for servers before 3.8; removed with the legacy folder.
+final class LegacyBookProgressMappingTests: XCTestCase {
     func testEPUBMappingsUseNormalizedCFIRangesAndListeningActivity() throws {
         let chapters = [
             epubChapter(number: 1, start: 0, end: 0.2, duration: 100),
             epubChapter(number: 2, start: 0.2, end: 0.6, duration: 200),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -20,7 +21,7 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(mappings.map(\.total), [10_000, 10_000])
         XCTAssertTrue(mappings.allSatisfy { $0.unit == .cfi && $0.currentEntityID == bookID })
 
-        let request = AudioProgressMappingResolver().progressRequest(
+        let request = LegacyAudioProgressMappingResolver().progressRequest(
             mapping: try XCTUnwrap(mappings.last),
             offsetSeconds: 50,
             durationSeconds: 200,
@@ -50,7 +51,7 @@ final class BookProgressMappingTests: XCTestCase {
             audioTrack: track
         )
         let mapping = try XCTUnwrap(
-            BookProgressMappingBuilder().build(
+            LegacyBookProgressMappingBuilder().build(
                 bookID: bookID,
                 chapters: [chapter],
                 readerMode: .webtoon,
@@ -64,7 +65,7 @@ final class BookProgressMappingTests: XCTestCase {
         XCTAssertEqual(mapping.endIndex, 19)
         XCTAssertEqual(mapping.total, 20)
 
-        let request = AudioProgressMappingResolver().progressRequest(
+        let request = LegacyAudioProgressMappingResolver().progressRequest(
             mapping: mapping,
             offsetSeconds: 50,
             durationSeconds: 100,
@@ -79,7 +80,7 @@ final class BookProgressMappingTests: XCTestCase {
             audioOnlyChapter(number: 1, duration: 100.2),
             audioOnlyChapter(number: 2, duration: 200.1),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: nil,
@@ -104,21 +105,21 @@ final class BookProgressMappingTests: XCTestCase {
                 readStartFraction: 0.5, readEndFraction: 1, audioTrack: track,
                 audioStartSeconds: 100, audioEndSeconds: 300),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID, chapters: chapters, readerMode: .paged, hasReadableRendition: true
         )
-        let request = AudioProgressMappingResolver().progressRequest(
+        let request = LegacyAudioProgressMappingResolver().progressRequest(
             mapping: try XCTUnwrap(mappings.last), offsetSeconds: 150,
             durationSeconds: 300, activitySeconds: nil, completed: false
         )
         XCTAssertEqual(request.index, 6_250)
         XCTAssertEqual(request.location, "Text/two.xhtml#prismedia-progress=0.25")
         let progress = canonicalProgress(index: 6_250, location: request.location)
-        let resume = try XCTUnwrap(BookProgressMappingResolver().audioResume(
+        let resume = try XCTUnwrap(LegacyBookProgressMappingResolver().audioResume(
             tracks: [track], mappings: mappings, progress: progress
         ))
         XCTAssertEqual(resume.trackOffsetSeconds, 145, accuracy: 0.001)
-        XCTAssertEqual(BookProgressMappingResolver().currentChapterID(
+        XCTAssertEqual(LegacyBookProgressMappingResolver().currentChapterID(
             bookID: bookID, chapters: chapters, mappings: mappings, progress: progress
         ), "two")
     }
@@ -134,7 +135,7 @@ final class BookProgressMappingTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            BookProgressMappingBuilder().build(
+            LegacyBookProgressMappingBuilder().build(
                 bookID: bookID,
                 chapters: [chapter],
                 readerMode: .paged,
@@ -168,7 +169,7 @@ final class BookProgressMappingTests: XCTestCase {
         )
 
         let resume = try XCTUnwrap(
-            BookProgressMappingResolver().audioResume(
+            LegacyBookProgressMappingResolver().audioResume(
                 tracks: [track],
                 mappings: [mapping],
                 progress: progress
@@ -197,7 +198,7 @@ final class BookProgressMappingTests: XCTestCase {
         )
 
         let resume = try XCTUnwrap(
-            BookProgressMappingResolver().audioResume(
+            LegacyBookProgressMappingResolver().audioResume(
                 tracks: [track],
                 mappings: [mapping],
                 progress: progress
@@ -213,7 +214,7 @@ final class BookProgressMappingTests: XCTestCase {
             epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
             epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -222,7 +223,7 @@ final class BookProgressMappingTests: XCTestCase {
         let progress = canonicalProgress(index: 5_000, location: nil)
 
         let mapping = try XCTUnwrap(
-            BookProgressMappingResolver().mapping(for: progress, in: mappings)
+            LegacyBookProgressMappingResolver().mapping(for: progress, in: mappings)
         )
 
         XCTAssertEqual(mapping.itemID, chapters[1].audioTrack?.id)
@@ -233,14 +234,14 @@ final class BookProgressMappingTests: XCTestCase {
             epubChapter(number: 1, start: 0.8, end: 0.96, duration: 100),
             epubChapter(number: 2, start: 0.96, end: 1, duration: 100),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
             hasReadableRendition: true
         )
 
-        let chapterID = BookProgressMappingResolver().currentChapterID(
+        let chapterID = LegacyBookProgressMappingResolver().currentChapterID(
             bookID: bookID,
             chapters: chapters,
             mappings: mappings,
@@ -258,7 +259,7 @@ final class BookProgressMappingTests: XCTestCase {
             epubChapter(number: 1, start: 0, end: 0.96, duration: 100),
             epubChapter(number: 2, start: 0.96, end: 1, duration: 100),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -268,7 +269,7 @@ final class BookProgressMappingTests: XCTestCase {
             {"href":"Text/chapter-2.xhtml","locations":{"progression":0.1}}
             """
 
-        let chapterID = BookProgressMappingResolver().currentChapterID(
+        let chapterID = LegacyBookProgressMappingResolver().currentChapterID(
             bookID: bookID,
             chapters: chapters,
             mappings: mappings,
@@ -302,10 +303,10 @@ final class BookProgressMappingTests: XCTestCase {
         let progress = canonicalProgress(index: 9_000, location: "authoritative-text-position")
 
         XCTAssertNil(
-            BookProgressMappingResolver().mapping(for: progress, in: [mapping])
+            LegacyBookProgressMappingResolver().mapping(for: progress, in: [mapping])
         )
         XCTAssertNil(
-            BookProgressMappingResolver().currentChapterID(
+            LegacyBookProgressMappingResolver().currentChapterID(
                 bookID: bookID,
                 chapters: [chapter],
                 mappings: [mapping],
@@ -313,7 +314,7 @@ final class BookProgressMappingTests: XCTestCase {
             )
         )
         XCTAssertNil(
-            BookProgressMappingResolver().legacyProgressPromotionRequest(
+            LegacyBookProgressMappingResolver().legacyProgressPromotionRequest(
                 tracks: [track],
                 mappings: [mapping],
                 legacyResumeSeconds: 50,
@@ -327,7 +328,7 @@ final class BookProgressMappingTests: XCTestCase {
             epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
             epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -335,7 +336,7 @@ final class BookProgressMappingTests: XCTestCase {
         )
 
         let request = try XCTUnwrap(
-            BookProgressMappingResolver().legacyProgressPromotionRequest(
+            LegacyBookProgressMappingResolver().legacyProgressPromotionRequest(
                 tracks: chapters.compactMap(\.audioTrack),
                 mappings: mappings,
                 legacyResumeSeconds: 175,
@@ -356,7 +357,7 @@ final class BookProgressMappingTests: XCTestCase {
             epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
             epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -364,7 +365,7 @@ final class BookProgressMappingTests: XCTestCase {
         )
 
         XCTAssertNil(
-            BookProgressMappingResolver().legacyProgressPromotionRequest(
+            LegacyBookProgressMappingResolver().legacyProgressPromotionRequest(
                 tracks: chapters.compactMap(\.audioTrack),
                 mappings: mappings,
                 legacyResumeSeconds: 175,
@@ -378,7 +379,7 @@ final class BookProgressMappingTests: XCTestCase {
             epubChapter(number: 1, start: 0, end: 0.5, duration: 100),
             epubChapter(number: 2, start: 0.5, end: 1, duration: 100),
         ]
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: bookID,
             chapters: chapters,
             readerMode: .paged,
@@ -398,7 +399,7 @@ final class BookProgressMappingTests: XCTestCase {
         )
 
         XCTAssertNil(
-            BookProgressMappingResolver().legacyProgressPromotionRequest(
+            LegacyBookProgressMappingResolver().legacyProgressPromotionRequest(
                 tracks: chapters.compactMap(\.audioTrack),
                 mappings: mappings,
                 legacyResumeSeconds: 175,
@@ -446,7 +447,7 @@ final class BookProgressMappingTests: XCTestCase {
             sourceEndSeconds: 200,
             audioMarkerID: markerID
         )
-        let request = AudioProgressMappingResolver().progressRequest(
+        let request = LegacyAudioProgressMappingResolver().progressRequest(
             mapping: mapping,
             offsetSeconds: 125.5,
             durationSeconds: 300,

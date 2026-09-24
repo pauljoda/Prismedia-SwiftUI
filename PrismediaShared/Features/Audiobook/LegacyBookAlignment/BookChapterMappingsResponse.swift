@@ -1,5 +1,6 @@
 import Foundation
 
+/// An older server's persisted chapter map and audio chapter catalog (before 3.8).
 public struct BookChapterMappingsResponse: Codable, Equatable, Sendable {
     public let mappings: [BookChapterAudioMapping]
     public let audioChapters: [BookAudioChapter]

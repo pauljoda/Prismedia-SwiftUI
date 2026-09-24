@@ -641,7 +641,7 @@ public final class MusicPlayerController {
             : isPlaybackAdvancing
                 ? consumptionActivityClock.take(at: playbackClock.now)
                 : nil
-        let request = AudioProgressMappingResolver().progressRequest(
+        let request = LegacyAudioProgressMappingResolver().progressRequest(
             mapping: mapping,
             offsetSeconds: trackOffsetSeconds ?? elapsedTime,
             durationSeconds: duration,

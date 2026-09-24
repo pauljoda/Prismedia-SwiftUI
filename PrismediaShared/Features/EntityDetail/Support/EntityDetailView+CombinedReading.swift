@@ -3,20 +3,20 @@ import Foundation
 
 extension EntityDetailView {
     func refreshBookChapterMappings(for detail: EntityDetail) {
-        var chapters = BookChapterMappingBuilder().build(
+        var chapters = LegacyBookChapterRowBuilder().build(
             readableChapters: readableBookChapters,
             audioTracks: audiobookProjection?.tracks ?? [],
             audioChapters: bookChapterMappingState.audioChapters,
             explicitMappings: bookChapterMappingState.mappings
         )
-        let mappings = BookProgressMappingBuilder().build(
+        let mappings = LegacyBookProgressMappingBuilder().build(
             bookID: detail.id,
             chapters: chapters,
             readerMode: readingState.manifest?.readerMode
                 ?? detail.capability(EntityProgressCapability.self)?.readingPosition.mode,
             hasReadableRendition: detail.bookFormat != .audio
         )
-        let currentChapterID = BookProgressMappingResolver().currentChapterID(
+        let currentChapterID = LegacyBookProgressMappingResolver().currentChapterID(
             bookID: detail.id,
             chapters: chapters,
             mappings: mappings,
@@ -29,7 +29,7 @@ extension EntityDetailView {
     }
 
     func bookProgressMappings(for detail: EntityDetail) -> [PlaybackProgressMapping] {
-        BookProgressMappingBuilder().build(
+        LegacyBookProgressMappingBuilder().build(
             bookID: detail.id,
             chapters: mappedBookChapters,
             readerMode: readingState.manifest?.readerMode
@@ -81,8 +81,8 @@ extension EntityDetailView {
 
     func combinedResumeTarget(
         for detail: EntityDetail
-    ) -> BookCombinedResumeTarget? {
-        return BookCombinedResumeResolver().resolveLatestContinuation(
+    ) -> LegacyBookCombinedResumeTarget? {
+        return LegacyBookCombinedResumeResolver().resolveLatestContinuation(
             chapters: mappedBookChapters,
             mappings: bookProgressMappings(for: detail),
             progress: detail.capability(EntityProgressCapability.self)
@@ -91,8 +91,8 @@ extension EntityDetailView {
 
     func unifiedBookReadingTarget(
         for detail: EntityDetail
-    ) -> BookCombinedReadingTarget? {
-        BookCombinedResumeResolver().resolveContinuation(
+    ) -> LegacyBookCombinedReadingTarget? {
+        LegacyBookCombinedResumeResolver().resolveContinuation(
             chapters: mappedBookChapters,
             mappings: bookProgressMappings(for: detail),
             progress: detail.capability(EntityProgressCapability.self)?.readingPosition
@@ -108,7 +108,7 @@ extension EntityDetailView {
         else { return }
 
         let mappings = bookProgressMappings(for: detail)
-        guard let request = BookProgressMappingResolver().legacyProgressPromotionRequest(
+        guard let request = LegacyBookProgressMappingResolver().legacyProgressPromotionRequest(
             tracks: projection.tracks,
             mappings: mappings,
             legacyResumeSeconds: legacyPlayback.resumeSeconds,
@@ -144,7 +144,7 @@ extension EntityDetailView {
         for detail: EntityDetail
     ) -> BookReaderLocationTarget? {
         guard let track = musicPlayer.currentTrack else { return nil }
-        return BookCombinedResumeResolver().resolveReadingTarget(
+        return LegacyBookCombinedResumeResolver().resolveReadingTarget(
             chapters: mappedBookChapters,
             trackID: track.id,
             trackOffsetSeconds: musicPlayer.elapsedTime
@@ -158,7 +158,7 @@ extension EntityDetailView {
 
         if combined {
             guard
-                let target = BookCombinedResumeResolver().resolveChapter(
+                let target = LegacyBookCombinedResumeResolver().resolveChapter(
                     chapter,
                     mappings: bookProgressMappings(for: detail),
                     progress: detail.capability(EntityProgressCapability.self)?.readingPosition
@@ -199,7 +199,7 @@ extension EntityDetailView {
         else { return }
         refreshBookChapterMappings(for: refreshedDetail)
         let target = combinedResumeTarget(for: refreshedDetail)
-            ?? BookCombinedResumeResolver().resolveContinuation(
+            ?? LegacyBookCombinedResumeResolver().resolveContinuation(
                 chapters: mappedBookChapters,
                 mappings: bookProgressMappings(for: refreshedDetail),
                 progress: nil
@@ -210,7 +210,7 @@ extension EntityDetailView {
 
     func presentCombinedReader(
         detail: EntityDetail,
-        target: BookCombinedResumeTarget
+        target: LegacyBookCombinedResumeTarget
     ) {
         switch target.readingTarget {
         case .savedLocation(let location):
