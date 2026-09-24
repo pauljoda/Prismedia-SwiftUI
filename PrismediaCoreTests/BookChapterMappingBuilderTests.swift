@@ -154,6 +154,28 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         XCTAssertEqual(rows.map(\.audioEndSeconds), [100, 250])
     }
 
+    func testRepeatedAudioChaptersKeepTheirFirstOccurrence() {
+        let track = track(id: 1, title: "Complete audiobook", order: 0)
+        let marker = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
+        let audioChapters = [
+            BookAudioChapter(audioTrackID: track.id, audioMarkerID: marker,
+                title: "One", startSeconds: 0, endSeconds: 100),
+            BookAudioChapter(audioTrackID: track.id, audioMarkerID: marker,
+                title: "One (repeated)", startSeconds: 0, endSeconds: 100),
+        ]
+        let rows = BookChapterMappingBuilder().build(
+            readableChapters: [chapter(id: "one", title: "One", order: 0)],
+            audioTracks: [track, track],
+            audioChapters: audioChapters,
+            explicitMappings: [
+                BookChapterAudioMapping(readableChapterKey: "one", audioTrackID: track.id, audioMarkerID: marker)
+            ]
+        )
+
+        XCTAssertEqual(rows.map(\.title), ["One"])
+        XCTAssertEqual(rows.map(\.audioMarkerID), [marker])
+    }
+
     func testEditorSurfacesEditOnlyTheManualLayer() {
         let manual = BookChapterAudioMapping(
             readableChapterKey: "one",

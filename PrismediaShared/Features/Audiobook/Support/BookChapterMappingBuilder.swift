@@ -17,8 +17,11 @@ struct BookChapterMappingBuilder: Sendable {
         var matches: [String: Int] = [:]
 
         let readableIDs = Set(readable.map(\.id))
-        let candidateIndexByIdentity = Dictionary(uniqueKeysWithValues: candidates.enumerated().map { ($1.identity, $0) })
-        let trackByID = Dictionary(uniqueKeysWithValues: tracks.map { ($0.id, $0) })
+        let candidateIndexByIdentity = Dictionary(
+            candidates.enumerated().map { ($1.identity, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let trackByID = Dictionary(tracks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for mapping in explicitMappings {
             guard readableIDs.contains(mapping.readableChapterKey),
                 matches[mapping.readableChapterKey] == nil,
