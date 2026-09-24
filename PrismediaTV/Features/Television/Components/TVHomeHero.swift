@@ -72,7 +72,7 @@ import SwiftUI
 
         private func heroCopy(_ item: EntityThumbnail) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
-                if (item.resumeSeconds ?? 0) > 1 || (item.progress ?? 0) > 0 {
+                if (item.resumeSeconds ?? 0) > 1 || item.hasStartedProgress {
                     Text("Up next")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(PrismediaColor.accent)
@@ -151,7 +151,7 @@ import SwiftUI
         }
 
         private func heroAction(for item: EntityThumbnail) -> String {
-            (item.resumeSeconds ?? 0) > 1 || (item.progress ?? 0) > 0
+            (item.resumeSeconds ?? 0) > 1 || item.hasStartedProgress
                 ? "Resume"
                 : "View Details"
         }

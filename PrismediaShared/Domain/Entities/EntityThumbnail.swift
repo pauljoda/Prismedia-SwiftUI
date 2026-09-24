@@ -39,6 +39,24 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
     public let referenceCounts: [EntityKindCount]
     public let sharedSourceEpisodes: [EntitySharedSourceEpisode]
 
+    /// Whether the viewer has started this item: watched or read any of it, or listened to a Book that
+    /// keeps reading and listening Separate (whose ``progress`` measures reading alone).
+    public var hasStartedProgress: Bool {
+        (progress ?? 0) > 0 || (progressSeparate && (listeningProgress ?? 0) > 0)
+    }
+
+    /// Whether the item is finished. The server marks a Book Separate only while it is unfinished, so
+    /// a Separate Book that has read to the end is still in progress.
+    public var isFinished: Bool {
+        !progressSeparate && (progress ?? 0) >= 1
+    }
+
+    /// Whether the item is started but not finished, so it belongs on in-progress shelves and resumes
+    /// rather than starts.
+    public var isInProgress: Bool {
+        hasStartedProgress && !isFinished
+    }
+
     public var bestCoverPath: String? {
         if thumbnailArtworkPresentation.usesBrandPlate {
             return coverURL ?? coverThumb2xURL ?? coverThumbURL
