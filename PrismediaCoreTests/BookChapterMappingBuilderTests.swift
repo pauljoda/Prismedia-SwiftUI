@@ -64,6 +64,38 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         )))
     }
 
+    func testEditorFromTheServerAlignmentListsEachAudioWindowOnce() {
+        let track = track(id: 1, title: "Complete audiobook", order: 0)
+        let marker = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
+        let window = BookAudioChapterWindow(
+            trackEntityID: track.id, markerID: marker, title: "One", startSeconds: 0, endSeconds: 100
+        )
+        let alignment = BookAlignmentResponse(
+            modalities: [.reading, .listening],
+            readablePositionTotal: 10_000,
+            rows: [
+                BookAlignmentRow(
+                    id: "r0", order: 0, matchState: .paired, provenance: .auto,
+                    readable: BookReadableChapterWindow(chapterKey: "one", title: "One", location: "Text/one.xhtml"),
+                    audio: window
+                ),
+                BookAlignmentRow(id: "a0", order: 1, matchState: .audioOnly, audio: window),
+            ]
+        )
+
+        let presentation = BookChapterMappingEditorPresentation(
+            alignment: alignment,
+            audioTracks: [track],
+            loadErrorMessage: nil
+        )
+
+        // A server list that names the same audio window twice must not trap the editor.
+        XCTAssertEqual(presentation.orderedAudioChapters.map(\.audioMarkerID), [marker])
+        XCTAssertEqual(presentation.orderedReadableChapters.map(\.target), [.epub(location: "Text/one.xhtml")])
+        XCTAssertTrue(presentation.manualMappings.isEmpty)
+        XCTAssertEqual(presentation.automaticChapterTitle(for: window.audioChapter), "One")
+    }
+
     private func chapter(id: String, title: String, order: Int) -> ReadableBookChapter {
         ReadableBookChapter(
             id: id,

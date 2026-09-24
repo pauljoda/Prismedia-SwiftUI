@@ -30,3 +30,19 @@ struct ReadableBookChapter: Equatable, Identifiable, Sendable {
         self.pageCount = pageCount
     }
 }
+
+extension ReadableBookChapter {
+    /// The readable chapter of a server alignment row, at its display position `order`.
+    init(window: BookReadableChapterWindow, order: Int) {
+        self.init(
+            id: window.chapterKey,
+            title: window.title,
+            order: order,
+            depth: window.depth,
+            target: window.readTarget,
+            startFraction: window.startFraction,
+            endFraction: window.endFraction,
+            pageCount: window.pageCount
+        )
+    }
+}

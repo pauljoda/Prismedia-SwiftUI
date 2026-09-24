@@ -59,7 +59,7 @@ enum PrismediaEntityDetailComposition {
                 onOpenProviders: onOpenIdentifyProviders
             ),
             bookContentsLoader: client,
-            chapterMappingService: client
+            alignmentService: client
         )
     }
 

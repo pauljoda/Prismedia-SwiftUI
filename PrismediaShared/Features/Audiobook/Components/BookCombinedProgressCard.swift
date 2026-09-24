@@ -13,7 +13,7 @@ struct BookCombinedProgressCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
             header
-            if let explanation = presentation.combinedExplanation {
+            if let explanation = presentation.actions.combinedExplanation {
                 Text(explanation)
                     .font(.subheadline)
                     .foregroundStyle(PrismediaColor.textSecondary)
@@ -128,32 +128,35 @@ struct BookCombinedProgressCard: View {
         PrismediaGlassButtonStack(spacing: PrismediaSpacing.medium) {
             HStack(spacing: PrismediaSpacing.medium) {
                 PrismediaButton(
-                    "Continue Reading",
+                    presentation.actions.readingTitle,
                     systemImage: "book.fill",
                     form: .fillIcon,
                     action: onContinueReading
                 )
+                .accessibilityHint(presentation.actions.readingHint ?? "")
                 .accessibilityIdentifier("combined-book-progress.continue-reading")
 
                 PrismediaButton(
-                    "Continue Listening",
+                    presentation.actions.listeningTitle,
                     systemImage: "headphones",
                     form: .fillIcon,
                     action: onContinueListening
                 )
+                .accessibilityHint(presentation.actions.listeningHint ?? "")
                 .accessibilityIdentifier("combined-book-progress.continue-listening")
             }
 
             PrismediaButton(
-                presentation.combinedActionLabel ?? "Continue Combined",
+                presentation.actions.combinedTitle,
                 systemImage: "book.pages",
                 variant: .prominent,
                 form: .fill,
                 primaryTint: artworkPrimaryAccent,
                 action: onContinueCombined
             )
+            .disabled(!presentation.actions.isCombinedAvailable)
             .accessibilityHint(
-                presentation.combinedExplanation
+                presentation.actions.combinedExplanation
                     ?? "Opens the reader and starts the audiobook near the saved Book position"
             )
             .accessibilityIdentifier("combined-book-progress.continue-combined")
@@ -195,6 +198,32 @@ struct BookCombinedProgressCard: View {
                     activitySeconds: 7_420,
                     isLoading: false,
                     isBusy: false
+                ),
+                onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
+                onStartOver: {}, onToggleCompletion: {}
+            )
+            .padding(PrismediaSpacing.extraLarge)
+        }
+    }
+
+    #Preview("Combined Book Progress · Estimated and Unpaired") {
+        PreviewShell {
+            BookCombinedProgressCard(
+                presentation: BookCombinedProgressPresentation(
+                    progress: nil,
+                    reading: nil,
+                    chapterLabel: "Bonus Interview",
+                    activitySeconds: 1_200,
+                    isLoading: false,
+                    isBusy: false,
+                    actions: BookCombinedProgressActions(
+                        readingTitle: "Continue Reading ≈",
+                        readingHint: "Reading estimated from where you stopped listening.",
+                        listeningTitle: "Continue Listening",
+                        combinedTitle: "Read & Listen",
+                        combinedExplanation: "“Bonus Interview” has no matching ebook chapter.",
+                        isCombinedAvailable: false
+                    )
                 ),
                 onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
                 onStartOver: {}, onToggleCompletion: {}

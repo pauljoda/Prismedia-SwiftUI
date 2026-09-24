@@ -1,288 +1,290 @@
 #if os(iOS) || os(macOS)
-import Foundation
+    import Foundation
 
-extension EntityDetailView {
-    func refreshBookChapterMappings(for detail: EntityDetail) {
-        var chapters = LegacyBookChapterRowBuilder().build(
-            readableChapters: readableBookChapters,
-            audioTracks: audiobookProjection?.tracks ?? [],
-            audioChapters: bookChapterMappingState.audioChapters,
-            explicitMappings: bookChapterMappingState.mappings
-        )
-        let mappings = LegacyBookProgressMappingBuilder().build(
-            bookID: detail.id,
-            chapters: chapters,
-            readerMode: readingState.manifest?.readerMode
-                ?? detail.capability(EntityProgressCapability.self)?.readingPosition.mode,
-            hasReadableRendition: detail.bookFormat != .audio
-        )
-        let currentChapterID = LegacyBookProgressMappingResolver().currentChapterID(
-            bookID: detail.id,
-            chapters: chapters,
-            mappings: mappings,
-            progress: detail.capability(EntityProgressCapability.self)?.readingPosition
-        )
-        if let index = chapters.firstIndex(where: { $0.id == currentChapterID }) {
-            chapters[index].isCurrentProgress = true
-        }
-        mappedBookChapters = chapters
-    }
+    extension EntityDetailView {
+        // MARK: - Actions - Chapter Rows
 
-    func bookProgressMappings(for detail: EntityDetail) -> [PlaybackProgressMapping] {
-        LegacyBookProgressMappingBuilder().build(
-            bookID: detail.id,
-            chapters: mappedBookChapters,
-            readerMode: readingState.manifest?.readerMode
-                ?? detail.capability(EntityProgressCapability.self)?.readingPosition.mode,
-            hasReadableRendition: detail.bookFormat != .audio
-        )
-    }
-
-    func bookChapterProgressLabel(for detail: EntityDetail) -> String? {
-        if let progress = readingState.progressPresentation {
-            if let positionLabel = progress.positionLabel { return positionLabel }
-            if progress.status == .completed { return "Complete" }
-            return "\(progress.percent)% read"
-        }
-        return audiobookPresentation(for: detail)?.progress.positionLabel
-    }
-
-    func combinedProgressPresentation(
-        for detail: EntityDetail
-    ) -> BookCombinedProgressPresentation? {
-        guard hasCombinedProgressCard(for: detail) else { return nil }
-        let mappingsAreReady = !bookProgressMappings(for: detail).isEmpty
-        let currentChapter = mappedBookChapters.first(where: \.isCurrentProgress)
-        let hasUnpairedPosition = detail.capability(EntityProgressCapability.self) != nil
-            && combinedResumeTarget(for: detail) == nil
-        let firstPairedChapter = mappedBookChapters.first {
-            $0.readTarget != nil && $0.audioTrack != nil
-        }
-        return BookCombinedProgressPresentation(
-            progress: detail.capability(),
-            reading: readingState.progressPresentation,
-            chapterLabel: currentChapter?.title,
-            activitySeconds: detail.capability(EntityConsumptionCapability.self)?.activeSeconds,
-            isLoading: bookProgressLoadingState.isLoading,
-            isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
-                || bookProgressLoadingState.isLoading || !mappingsAreReady,
-            combinedActionLabel: hasUnpairedPosition ? "Start Both at First Paired Chapter" : nil,
-            combinedExplanation: hasUnpairedPosition
-                ? "Your current chapter has no paired audio. Starting both begins at \(firstPairedChapter?.title ?? "the first paired chapter")."
-                : nil
-        )
-    }
-
-    func hasCombinedProgressCard(for detail: EntityDetail) -> Bool {
-        detail.kind == .book
-            && detail.bookFormat != .audio
-            && AudiobookPlaybackProjection(detail: detail) != nil
-    }
-
-    func combinedResumeTarget(
-        for detail: EntityDetail
-    ) -> LegacyBookCombinedResumeTarget? {
-        return LegacyBookCombinedResumeResolver().resolveLatestContinuation(
-            chapters: mappedBookChapters,
-            mappings: bookProgressMappings(for: detail),
-            progress: detail.capability(EntityProgressCapability.self)
-        )
-    }
-
-    func unifiedBookReadingTarget(
-        for detail: EntityDetail
-    ) -> LegacyBookCombinedReadingTarget? {
-        LegacyBookCombinedResumeResolver().resolveContinuation(
-            chapters: mappedBookChapters,
-            mappings: bookProgressMappings(for: detail),
-            progress: detail.capability(EntityProgressCapability.self)?.readingPosition
-        )?.readingTarget
-    }
-
-    func promoteLegacyAudiobookProgressIfNeeded(for detail: EntityDetail) async {
-        guard detail.kind == .book,
-            let projection = audiobookProjection,
-            projection.bookID == detail.id,
-            let legacyPlayback: EntityConsumptionCapability = detail.capability(),
-            legacyPlayback.resumeSeconds > 0
-        else { return }
-
-        let mappings = bookProgressMappings(for: detail)
-        guard let request = LegacyBookProgressMappingResolver().legacyProgressPromotionRequest(
-            tracks: projection.tracks,
-            mappings: mappings,
-            legacyResumeSeconds: legacyPlayback.resumeSeconds,
-            progress: detail.capability()
-        ) else { return }
-
-        do {
-            if let playbackService = dependencies.audioPlaybackService {
-                try await playbackService.reportEntityProgress(id: detail.id, request: request)
-            } else if let readerService = dependencies.readerService {
-                try await readerService.updateReadingProgress(id: detail.id, request: request)
-            } else {
+        /// Rebuilds the chapter rows: the server's alignment rows when it serves them, otherwise the
+        /// rows built from an older server's chapter map.
+        func refreshBookChapterRows(for detail: EntityDetail) {
+            guard let alignment = bookAlignmentState.alignment else {
+                refreshLegacyBookChapterRows(for: detail)
                 return
             }
-        } catch is CancellationError {
-            return
-        } catch {
-            // A later refresh can retry the idempotent, forward-only promotion.
-            return
+            let tracksByID = Dictionary(
+                (audiobookProjection?.tracks ?? []).map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let currentRowID = alignment.resume?.continueTarget?.rowID
+            mappedBookChapters = alignment.rows.map { row in
+                BookChapterMapping(row: row, tracksByID: tracksByID, isCurrentProgress: row.id == currentRowID)
+            }
         }
 
-        await loadDetail()
-        guard !Task.isCancelled,
-            case .content(let refreshedDetail) = state.phase,
-            refreshedDetail.id == detail.id
-        else { return }
-        await loadReadingState(for: refreshedDetail)
-        refreshBookChapterMappings(for: refreshedDetail)
-        dependencies.onEntityMutated()
-    }
+        func bookChapterProgressLabel(for detail: EntityDetail) -> String? {
+            if let progress = readingState.progressPresentation {
+                if let positionLabel = progress.positionLabel { return positionLabel }
+                if progress.status == .completed { return "Complete" }
+                return "\(progress.percent)% read"
+            }
+            return audiobookPresentation(for: detail)?.progress.positionLabel
+        }
 
-    func currentAudiobookReadingTarget(
-        for detail: EntityDetail
-    ) -> BookReaderLocationTarget? {
-        guard let track = musicPlayer.currentTrack else { return nil }
-        return LegacyBookCombinedResumeResolver().resolveReadingTarget(
-            chapters: mappedBookChapters,
-            trackID: track.id,
-            trackOffsetSeconds: musicPlayer.elapsedTime
-        )
-    }
+        // MARK: - Actions - Progress Card
 
-    func openBookChapter(_ chapter: BookChapterMapping, combined: Bool) {
-        guard case .content(let detail) = state.phase,
-            let readTarget = chapter.readTarget
-        else { return }
-
-        if combined {
-            guard
-                let target = LegacyBookCombinedResumeResolver().resolveChapter(
-                    chapter,
-                    mappings: bookProgressMappings(for: detail),
-                    progress: detail.capability(EntityProgressCapability.self)?.readingPosition
+        func combinedProgressPresentation(
+            for detail: EntityDetail
+        ) -> BookCombinedProgressPresentation? {
+            guard hasCombinedProgressCard(for: detail) else { return nil }
+            guard let alignment = bookAlignmentState.alignment else {
+                return legacyCombinedProgressPresentation(for: detail)
+            }
+            let progress: EntityProgressCapability? = detail.capability()
+            return BookCombinedProgressPresentation(
+                progress: progress,
+                reading: readingState.progressPresentation,
+                chapterLabel: mappedBookChapters.first(where: \.isCurrentProgress)?.title,
+                activitySeconds: detail.capability(EntityConsumptionCapability.self)?.activeSeconds,
+                isLoading: bookProgressLoadingState.isLoading,
+                isBusy: readingState.isMutating || isListeningMutating || isAudiobookLoading
+                    || bookProgressLoadingState.isLoading,
+                actions: BookCombinedProgressActions(
+                    resume: alignment.resume,
+                    isCompleted: progress?.completedAt != nil
                 )
+            )
+        }
+
+        /// Whether the Book offers reading and listening together. The server decides from the
+        /// modalities the Book has content for; older servers fall back to the local check.
+        func hasCombinedProgressCard(for detail: EntityDetail) -> Bool {
+            guard AudiobookPlaybackProjection(detail: detail) != nil else { return false }
+            if let alignment = bookAlignmentState.alignment {
+                return alignment.supportsReadingAndListening
+            }
+            return !bookAlignmentState.usesServerAlignment && legacyHasCombinedProgressCard(for: detail)
+        }
+
+        // MARK: - Actions - Resume Targets
+
+        /// Where "Continue Reading" opens: the server's exact reading position (resumed against the
+        /// device's own checkpoint), else the reading position it aligned from listening (opened as
+        /// given). Nil resumes the reader from its own position.
+        func readingResumeOpening(
+            for detail: EntityDetail
+        ) -> (destination: BookReadingDestination, command: BookReaderCommand)? {
+            guard bookAlignmentState.usesServerAlignment else {
+                return legacyReadingResumeDestination(for: detail).map { ($0, .resume) }
+            }
+            guard let resume = bookAlignmentState.alignment?.resume else { return nil }
+            if let exact = resume.exactReading {
+                return exact.destination(inWork: detail.id).map { ($0, .resume) }
+            }
+            return resume.switchToReading.aligned?.reading?.destination(inWork: detail.id).map { ($0, .read) }
+        }
+
+        /// The reading position aligned from the audiobook that is playing, fetched from the server
+        /// after the latest listening position has been reported.
+        func currentAudiobookReadingTarget(
+            for detail: EntityDetail
+        ) async -> BookReaderLocationTarget? {
+            guard musicPlayer.currentTrack != nil else { return nil }
+            guard bookAlignmentState.usesServerAlignment else {
+                return legacyCurrentAudiobookReadingTarget()
+            }
+            guard musicPlayer.context?.playbackOwnerEntityID == detail.id else { return nil }
+            musicPlayer.persistProgressHeartbeat()
+            await musicPlayer.flushPendingPlaybackReports()
+            await loadBookAlignment(for: detail)
+            guard let reading = bookAlignmentState.alignment?.resume?.switchToReading.aligned?.reading,
+                let chapterLocation = reading.chapterLocation
+            else { return nil }
+            return BookReaderLocationTarget(location: chapterLocation, progression: reading.chapterFraction ?? 0)
+        }
+
+        // MARK: - Actions - Opening
+
+        func openBookChapter(_ chapter: BookChapterMapping, combined: Bool) {
+            guard case .content(let detail) = state.phase,
+                let readTarget = chapter.readTarget
             else { return }
+
+            if combined {
+                if bookAlignmentState.usesServerAlignment {
+                    openCombinedChapter(chapter, detail: detail)
+                } else {
+                    openLegacyCombinedChapter(chapter, detail: detail)
+                }
+                return
+            }
+
+            switch readTarget {
+            case .epub(let location):
+                presentReader(
+                    detail: detail,
+                    location: location,
+                    companionAudiobookBookID: nil,
+                    companionAudiobookTrackID: nil
+                )
+            case .entityChapter(let chapterID):
+                Task { await presentEntityChapterReader(chapterID: chapterID, command: .read) }
+            }
+        }
+
+        /// Starts both sides of a chosen chapter: the server's combined position when it sits in
+        /// that chapter, otherwise the start of the chapter on both sides.
+        private func openCombinedChapter(_ chapter: BookChapterMapping, detail: EntityDetail) {
+            if let combined = bookAlignmentState.alignment?.resume?.combined.aligned,
+                combined.rowID == chapter.id,
+                combined.reading != nil,
+                combined.listening != nil
+            {
+                Task { await openCombinedReader(for: detail) }
+                return
+            }
+            guard let track = chapter.audioTrack, let readTarget = chapter.readTarget else { return }
+            pauseCompanionAudiobook(of: detail)
+            presentBookReader(
+                detail: detail,
+                destination: readTarget.chapterStart,
+                command: .read,
+                companion: AudiobookResumePoint(
+                    trackID: track.id,
+                    trackOffsetSeconds: chapter.audioStartSeconds ?? 0
+                )
+            )
+        }
+
+        func openCombinedReader(for detail: EntityDetail) async {
+            if musicPlayer.context?.playbackOwnerEntityID == detail.id,
+                musicPlayer.context?.playbackOwnerEntityKind == .book
+            {
+                if musicPlayer.isPlaying { musicPlayer.pause() }
+                await musicPlayer.flushPendingPlaybackReports()
+            }
+            await loadDetail()
+            guard case .content(let refreshedDetail) = state.phase,
+                refreshedDetail.id == detail.id
+            else { return }
+            guard bookAlignmentState.usesServerAlignment else {
+                openLegacyCombinedReader(for: refreshedDetail)
+                return
+            }
+
+            await loadBookAlignment(for: refreshedDetail)
+            guard let combined = bookAlignmentState.alignment?.resume?.combined.aligned,
+                let reading = combined.reading,
+                let listening = combined.listening
+            else { return }
+            presentBookReader(
+                detail: refreshedDetail,
+                destination: reading.destination(inWork: refreshedDetail.id),
+                command: .read,
+                companion: listening.resumePoint
+            )
+        }
+
+        /// Opens the reader at `destination`, optionally starting the audiobook alongside. A nil
+        /// destination resumes the reader from its own saved position.
+        func presentBookReader(
+            detail: EntityDetail,
+            destination: BookReadingDestination?,
+            command: BookReaderCommand,
+            companion: AudiobookResumePoint? = nil
+        ) {
+            guard dependencies.readerService != nil else { return }
+            let readingUpdatedAt = detail.capability(EntityProgressCapability.self)?.readingPosition.updatedAt
+            let companionBookID = companion == nil ? nil : detail.id
+            switch destination {
+            case .epubLocator(let location):
+                readerPresentation = .init(
+                    detail: detail,
+                    command: command,
+                    initialEPUBLocation: location,
+                    initialEPUBUpdatedAt: readingUpdatedAt,
+                    companionAudiobookBookID: companionBookID,
+                    companionAudiobookTrackID: companion?.trackID,
+                    companionAudiobookStartSeconds: companion?.trackOffsetSeconds ?? 0
+                )
+            case .epubChapter(let target):
+                readerPresentation = .init(
+                    detail: detail,
+                    command: command,
+                    initialEPUBLocation: target.location,
+                    initialEPUBProgression: target.progression,
+                    initialEPUBUpdatedAt: readingUpdatedAt,
+                    companionAudiobookBookID: companionBookID,
+                    companionAudiobookTrackID: companion?.trackID,
+                    companionAudiobookStartSeconds: companion?.trackOffsetSeconds ?? 0
+                )
+            case .chapterPage(let chapterID, let pageIndex):
+                Task {
+                    guard let chapter = try? await dependencies.detailLoader.loadEntity(id: chapterID) else {
+                        return
+                    }
+                    readerPresentation = .init(
+                        detail: chapter,
+                        command: .page(pageIndex),
+                        companionAudiobookBookID: companionBookID,
+                        companionAudiobookTrackID: companion?.trackID,
+                        companionAudiobookStartSeconds: companion?.trackOffsetSeconds ?? 0
+                    )
+                }
+            case nil:
+                readerPresentation = .init(
+                    detail: detail,
+                    command: .resume,
+                    initialEPUBUpdatedAt: readingUpdatedAt,
+                    companionAudiobookBookID: companionBookID,
+                    companionAudiobookTrackID: companion?.trackID,
+                    companionAudiobookStartSeconds: companion?.trackOffsetSeconds ?? 0
+                )
+            }
+        }
+
+        func presentEntityChapterReader(
+            chapterID: UUID,
+            command: BookReaderCommand
+        ) async {
+            guard let chapter = try? await dependencies.detailLoader.loadEntity(id: chapterID) else {
+                return
+            }
+            presentReader(detail: chapter, command: command)
+        }
+
+        /// Pauses this Book's audiobook before the reader takes over the combined session.
+        func pauseCompanionAudiobook(of detail: EntityDetail) {
             let isCurrentBook =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
                 && musicPlayer.context?.playbackOwnerEntityKind == .book
             if isCurrentBook, musicPlayer.isPlaying { musicPlayer.pause() }
-            presentCombinedReader(detail: detail, target: target)
-            return
         }
 
-        switch readTarget {
-        case .epub(let location):
-            presentReader(
-                detail: detail,
-                location: location,
-                companionAudiobookBookID: nil,
-                companionAudiobookTrackID: nil
-            )
-        case .entityChapter(let chapterID):
-            Task { await presentEntityChapterReader(chapterID: chapterID, command: .read) }
-        }
-    }
-
-    func openCombinedReader(for detail: EntityDetail) async {
-        let isCurrentBook =
-            musicPlayer.context?.playbackOwnerEntityID == detail.id
-            && musicPlayer.context?.playbackOwnerEntityKind == .book
-        if isCurrentBook {
-            if musicPlayer.isPlaying { musicPlayer.pause() }
-            await musicPlayer.flushPendingPlaybackReports()
-        }
-        await loadDetail()
-        guard case .content(let refreshedDetail) = state.phase,
-            refreshedDetail.id == detail.id
-        else { return }
-        refreshBookChapterMappings(for: refreshedDetail)
-        let target = combinedResumeTarget(for: refreshedDetail)
-            ?? LegacyBookCombinedResumeResolver().resolveContinuation(
-                chapters: mappedBookChapters,
-                mappings: bookProgressMappings(for: refreshedDetail),
-                progress: nil
-            )
-        guard let target else { return }
-        presentCombinedReader(detail: refreshedDetail, target: target)
-    }
-
-    func presentCombinedReader(
-        detail: EntityDetail,
-        target: LegacyBookCombinedResumeTarget
-    ) {
-        switch target.readingTarget {
-        case .savedLocation(let location):
-            readerPresentation = .init(
-                detail: detail,
-                command: .resume,
-                initialEPUBLocation: location,
-                initialEPUBUpdatedAt: detail.capability(EntityProgressCapability.self)?.readingPosition.updatedAt,
-                companionAudiobookBookID: detail.id,
-                companionAudiobookTrackID: target.audioTrackID,
-                companionAudiobookStartSeconds: target.audioStartSeconds
-            )
-        case .chapter(let location, let progression):
-            presentReader(
-                detail: detail,
-                location: location,
-                progression: progression,
-                companionAudiobookBookID: detail.id,
-                companionAudiobookTrackID: target.audioTrackID,
-                companionAudiobookStartSeconds: target.audioStartSeconds
-            )
-        case .entityChapter(let chapterID):
-            Task {
-                guard let chapter = try? await dependencies.detailLoader.loadEntity(id: chapterID) else {
+        func beginCombinedPlayback(for presentation: EntityReaderPresentation) {
+            pendingCombinedPlaybackTask?.cancel()
+            pendingCombinedPlaybackTask = Task { @MainActor in
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
                     return
                 }
-                readerPresentation = .init(
-                    detail: chapter,
-                    command: .read,
-                    companionAudiobookBookID: detail.id,
-                    companionAudiobookTrackID: target.audioTrackID,
-                    companionAudiobookStartSeconds: target.audioStartSeconds
+                guard !Task.isCancelled,
+                    readerPresentation == presentation,
+                    let bookID = presentation.companionAudiobookBookID,
+                    let trackID = presentation.companionAudiobookTrackID,
+                    let projection = audiobookProjection,
+                    projection.bookID == bookID,
+                    projection.tracks.contains(where: { $0.id == trackID })
+                else { return }
+
+                play(
+                    projection,
+                    startingAt: trackID,
+                    startSeconds: presentation.companionAudiobookStartSeconds
                 )
+                refreshBookChapterRows(for: presentation.detail)
+                pendingCombinedPlaybackTask = nil
             }
         }
     }
-
-    func presentEntityChapterReader(
-        chapterID: UUID,
-        command: BookReaderCommand
-    ) async {
-        guard let chapter = try? await dependencies.detailLoader.loadEntity(id: chapterID) else {
-            return
-        }
-        presentReader(detail: chapter, command: command)
-    }
-
-    func beginCombinedPlayback(for presentation: EntityReaderPresentation) {
-        pendingCombinedPlaybackTask?.cancel()
-        pendingCombinedPlaybackTask = Task { @MainActor in
-            do {
-                try await Task.sleep(for: .seconds(1))
-            } catch {
-                return
-            }
-            guard !Task.isCancelled,
-                readerPresentation == presentation,
-                let bookID = presentation.companionAudiobookBookID,
-                let trackID = presentation.companionAudiobookTrackID,
-                let projection = audiobookProjection,
-                projection.bookID == bookID,
-                projection.tracks.contains(where: { $0.id == trackID })
-            else { return }
-
-            play(
-                projection,
-                startingAt: trackID,
-                startSeconds: presentation.companionAudiobookStartSeconds
-            )
-            refreshBookChapterMappings(for: presentation.detail)
-            pendingCombinedPlaybackTask = nil
-        }
-    }
-}
 #endif

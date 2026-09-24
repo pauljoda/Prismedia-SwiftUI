@@ -12,32 +12,16 @@ extension EntityDetailView {
             dependencies.readerService != nil
         else { return }
         #if os(iOS) || os(macOS)
-            let unifiedTarget =
-                command == .resume
-                ? unifiedBookReadingTarget(for: detail)
-                : nil
-        #else
-            let unifiedTarget: LegacyBookCombinedReadingTarget? = nil
+            if command == .resume, let opening = readingResumeOpening(for: detail) {
+                presentBookReader(detail: detail, destination: opening.destination, command: opening.command)
+                return
+            }
         #endif
         let progress: EntityProgressCapability? = detail.capability(EntityProgressCapability.self)?.readingPosition
-        let initialEPUBLocation: String?
-        let initialEPUBProgression: Double?
-        switch unifiedTarget {
-        case .savedLocation(let location):
-            initialEPUBLocation = location ?? progress?.location
-            initialEPUBProgression = nil
-        case .chapter(let location, let progression):
-            initialEPUBLocation = location
-            initialEPUBProgression = progression
-        case .entityChapter, nil:
-            initialEPUBLocation = command == .resume ? progress?.location : nil
-            initialEPUBProgression = nil
-        }
         readerPresentation = .init(
             detail: detail,
             command: command,
-            initialEPUBLocation: initialEPUBLocation,
-            initialEPUBProgression: initialEPUBProgression,
+            initialEPUBLocation: command == .resume ? progress?.location : nil,
             initialEPUBUpdatedAt: command == .resume ? progress?.updatedAt : nil
         )
     }
@@ -199,21 +183,21 @@ extension EntityDetailView {
         #if os(iOS) || os(macOS)
             guard let baseProjection = AudiobookPlaybackProjection(detail: detail) else {
                 audiobookProjection = nil
-                refreshBookChapterMappings(for: detail)
+                refreshBookChapterRows(for: detail)
                 isAudiobookLoading = false
                 audiobookErrorMessage = nil
                 return
             }
 
             audiobookProjection = baseProjection
-            refreshBookChapterMappings(for: detail)
+            refreshBookChapterRows(for: detail)
             isAudiobookLoading = true
             let hydrated = await AudiobookQueueLoader(detailLoader: dependencies.detailLoader).load(detail: detail)
             guard case .content(let currentDetail) = state.phase,
                 currentDetail.id == detail.id
             else { return }
             audiobookProjection = hydrated ?? baseProjection
-            refreshBookChapterMappings(for: currentDetail)
+            refreshBookChapterRows(for: currentDetail)
             isAudiobookLoading = false
         #else
             audiobookProjection = nil
@@ -230,7 +214,7 @@ extension EntityDetailView {
                 epubReadingProgressRanges = []
                 areBookChaptersLoading = false
                 bookChaptersErrorMessage = nil
-                refreshBookChapterMappings(for: detail)
+                refreshBookChapterRows(for: detail)
                 return
             }
 
@@ -245,7 +229,7 @@ extension EntityDetailView {
                 else { return }
                 readableBookChapters = contents.chapters
                 epubReadingProgressRanges = contents.progressRanges
-                refreshBookChapterMappings(for: currentDetail)
+                refreshBookChapterRows(for: currentDetail)
                 await promoteStoredEPUBProgressIfNeeded(
                     for: currentDetail,
                     storedLocation: storedLocation
@@ -256,7 +240,7 @@ extension EntityDetailView {
                 readableBookChapters = []
                 epubReadingProgressRanges = []
                 bookChaptersErrorMessage = error.localizedDescription
-                refreshBookChapterMappings(for: detail)
+                refreshBookChapterRows(for: detail)
             }
         #else
             readableBookChapters = []
@@ -282,7 +266,7 @@ extension EntityDetailView {
                         ?? detail.capability(EntityProgressCapability.self)?.readingPosition.mode
                         ?? .paged,
                     progress: detail.capability(EntityProgressCapability.self)?.readingPosition,
-                    format: BookReadingReportFormat(kind: detail.kind, alignment: nil)
+                    format: BookReadingReportFormat(kind: detail.kind, alignment: bookAlignmentState.alignment)
                 )
             else { return }
 
@@ -300,7 +284,11 @@ extension EntityDetailView {
                 refreshedDetail.id == detail.id
             else { return }
             await loadReadingState(for: refreshedDetail)
-            refreshBookChapterMappings(for: refreshedDetail)
+            if bookAlignmentState.usesServerAlignment {
+                await loadBookAlignment(for: refreshedDetail)
+            } else {
+                refreshBookChapterRows(for: refreshedDetail)
+            }
             dependencies.onEntityMutated()
         }
     #endif

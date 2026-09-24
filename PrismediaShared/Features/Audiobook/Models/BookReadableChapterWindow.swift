@@ -17,6 +17,15 @@ public struct BookReadableChapterWindow: Equatable, Hashable, Sendable {
     public let endFraction: Double?
     public let pageCount: Int?
 
+    /// Where the reader opens this chapter: its chapter Entity for paged Books, otherwise its
+    /// EPUB resource.
+    var readTarget: BookChapterReadTarget {
+        if let chapterEntityID {
+            return .entityChapter(id: chapterEntityID)
+        }
+        return .epub(location: location ?? chapterKey)
+    }
+
     // MARK: - Initializers
 
     public init(

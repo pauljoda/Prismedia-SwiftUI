@@ -13,7 +13,8 @@ public struct EntityDetailDependencies: Sendable {
     public let entityGridLoader: (any EntityGridLoading)?
     public let readerService: (any BookReaderServicing)?
     public let bookContentsLoader: (any BookContentsLoading)?
-    public let chapterMappingService: (any BookChapterMappingServicing)?
+    /// Loads the Book alignment (3.8+) or an older server's chapter map, and saves chapter mappings.
+    public let alignmentService: (any BookAlignmentServicing)?
     public let readerBookmarkStore: any EPUBBookmarkStoring
     public let readerLocatorStore: EPUBLocatorStore
     public let videoPlaybackService: (any VideoPlaybackServicing)?
@@ -52,7 +53,7 @@ public struct EntityDetailDependencies: Sendable {
         readerLocatorStore: EPUBLocatorStore = .disabled,
         identify: EntityIdentifyDependencies? = nil,
         bookContentsLoader: (any BookContentsLoading)? = nil,
-        chapterMappingService: (any BookChapterMappingServicing)? = nil
+        alignmentService: (any BookAlignmentServicing)? = nil
     ) {
         self.detailLoader = detailLoader
         self.mutator = mutator
@@ -62,7 +63,7 @@ public struct EntityDetailDependencies: Sendable {
         self.entityGridLoader = entityGridLoader
         self.readerService = readerService
         self.bookContentsLoader = bookContentsLoader
-        self.chapterMappingService = chapterMappingService
+        self.alignmentService = alignmentService
         self.readerBookmarkStore = readerBookmarkStore
         self.readerLocatorStore = readerLocatorStore
         self.videoPlaybackService = videoPlaybackService

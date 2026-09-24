@@ -62,3 +62,19 @@ struct BookChapterMappingEditorPresentation: Equatable, Sendable {
         return readableChapters.first(where: { $0.id == key })?.title
     }
 }
+
+extension BookChapterMappingEditorPresentation {
+    /// The editor for a server alignment: its readable chapters in display order, its audio
+    /// windows, and its paired rows with their provenance.
+    init(alignment: BookAlignmentResponse, audioTracks: [MusicTrack], loadErrorMessage: String?) {
+        self.init(
+            readableChapters: alignment.readableWindows.enumerated().map { order, window in
+                ReadableBookChapter(window: window, order: order)
+            },
+            audioTracks: audioTracks,
+            audioChapters: alignment.rows.compactMap { $0.audio?.audioChapter },
+            mappings: alignment.chapterMappings,
+            loadErrorMessage: loadErrorMessage
+        )
+    }
+}

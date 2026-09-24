@@ -1,6 +1,9 @@
 import Foundation
 
 struct BookCombinedProgressPresentation: Equatable, Sendable {
+    // MARK: - Variables
+
+    let actions: BookCombinedProgressActions
     let percent: Int
     let positionLabel: String?
     let chapterLabel: String?
@@ -8,8 +11,8 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
     let activitySeconds: Double?
     let isLoading: Bool
     let isBusy: Bool
-    let combinedActionLabel: String?
-    let combinedExplanation: String?
+
+    // MARK: - Initializers
 
     init(
         progress: EntityProgressCapability?,
@@ -18,8 +21,7 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         activitySeconds: Double?,
         isLoading: Bool,
         isBusy: Bool,
-        combinedActionLabel: String? = nil,
-        combinedExplanation: String? = nil
+        actions: BookCombinedProgressActions = .continueEach
     ) {
         let completed = progress?.completedAt != nil
         let rawPercent: Int
@@ -53,7 +55,6 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         }
         self.isLoading = isLoading
         self.isBusy = isBusy
-        self.combinedActionLabel = combinedActionLabel
-        self.combinedExplanation = combinedExplanation
+        self.actions = actions
     }
 }
