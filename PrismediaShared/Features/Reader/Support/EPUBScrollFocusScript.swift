@@ -1,6 +1,18 @@
 import Foundation
 
+/// JavaScript installed in every EPUB chapter for the scroll reading focus and exact paragraph
+/// positions. The script measures paragraph geometry; restore and capture share its rules:
+/// paged chapters anchor the first paragraph that starts on the visible page, and scrolled
+/// chapters anchor the paragraph whose start sits nearest above the focus line.
 enum EPUBScrollFocusScript {
+    // MARK: - Static Variables
+
+    /// Measures the paragraph at the reading position as `EPUBParagraphViewport` JSON.
+    static let currentParagraphViewport =
+        "JSON.stringify(window.prismediaReadingFocus?.currentPosition?.() ?? null);"
+
+    // MARK: - Actions - Scripts
+
     static func install(preferences: EPUBReaderPreferences) -> String {
         """
         (() => {
@@ -11,6 +23,9 @@ enum EPUBScrollFocusScript {
           }
 
           const blockSelector = "p, li:not(:has(p)), blockquote:not(:has(p)), pre, h1, h2, h3, h4, h5, h6";
+          const maximumAnchorTextLength = 512;
+          const pageEdgeTolerance = 1;
+          const focusLineTolerance = 4;
           const originalOpacity = new WeakMap();
           let blocks = [];
           let endSpacer = null;
@@ -38,6 +53,17 @@ enum EPUBScrollFocusScript {
 
           const refreshBlocks = () => {
             blocks = Array.from(document.querySelectorAll(blockSelector));
+          };
+
+          const scrollingElement = () => document.scrollingElement ?? document.documentElement;
+
+          const normalizedText = (value) => {
+            return typeof value === "string" ? value.replace(/\\s+/g, " ").trim() : "";
+          };
+
+          const isPaginated = () => {
+            const view = document.documentElement.style.getPropertyValue("--USER__view");
+            return view.trim() !== "readium-scroll-on";
           };
 
           const updateEndSpacer = () => {
@@ -69,18 +95,112 @@ enum EPUBScrollFocusScript {
             (document.body ?? document.documentElement).appendChild(endSpacer);
           };
 
-          const focusTargetY = (viewportCenter) => {
+          const firstBlockDocumentCenter = () => {
             const firstBlock = blocks[0];
-            if (!firstBlock) return viewportCenter;
-
-            const scrollElement = document.scrollingElement ?? document.documentElement;
-            const scrollTop = Math.max(0, scrollElement.scrollTop);
+            if (!firstBlock) return null;
+            const scrollTop = Math.max(0, scrollingElement().scrollTop);
             const firstRect = firstBlock.getBoundingClientRect();
-            const firstBlockDocumentCenter = (firstRect.top + firstRect.bottom) / 2 + scrollTop;
+            return (firstRect.top + firstRect.bottom) / 2 + scrollTop;
+          };
+
+          // The shared focus line, in viewport coordinates. It starts on the first block and
+          // moves down to the viewport centre as the reader scrolls into the chapter.
+          const focusTargetY = (viewportCenter) => {
+            const firstBlockCenter = firstBlockDocumentCenter();
+            if (firstBlockCenter === null) return viewportCenter;
+            const scrollTop = Math.max(0, scrollingElement().scrollTop);
             return Math.min(
               viewportCenter,
-              Math.max(0, firstBlockDocumentCenter + scrollTop)
+              Math.max(0, firstBlockCenter + scrollTop)
             );
+          };
+
+          // Inverts focusTargetY: the scroll offset that places a paragraph start on the focus line.
+          const scrollTopPlacingOnFocusLine = (documentTop) => {
+            const viewportCenter = window.innerHeight / 2;
+            const firstBlockCenter = firstBlockDocumentCenter();
+            if (firstBlockCenter === null || documentTop >= 2 * viewportCenter - firstBlockCenter) {
+              return Math.max(0, documentTop - viewportCenter);
+            }
+            return Math.max(0, (documentTop - firstBlockCenter) / 2);
+          };
+
+          // The first laid-out fragment of a block is where its paragraph starts.
+          const startRect = (element) => {
+            for (const rect of element.getClientRects()) {
+              if (rect.width > 0 || rect.height > 0) return rect;
+            }
+            return null;
+          };
+
+          const hasReadableText = (element) => normalizedText(element.textContent).length > 0;
+
+          // Paged: the first paragraph whose start lies on the visible page.
+          const pagedAnchorElement = () => {
+            const pageWidth = window.innerWidth;
+            return blocks.find((element) => {
+              const rect = startRect(element);
+              return rect !== null
+                && rect.left >= -pageEdgeTolerance
+                && rect.left < pageWidth - pageEdgeTolerance
+                && rect.bottom > 0
+                && rect.top < window.innerHeight
+                && hasReadableText(element);
+            }) ?? null;
+          };
+
+          // Scrolled: the paragraph whose start is nearest above, or at, the focus line.
+          const scrolledAnchorElement = () => {
+            const focusLine = focusTargetY(window.innerHeight / 2) + focusLineTolerance;
+            let focused = null;
+            let focusedTop = -Infinity;
+            blocks.forEach((element) => {
+              const rect = startRect(element);
+              if (rect === null || rect.top > focusLine || rect.top < focusedTop) return;
+              if (!hasReadableText(element)) return;
+              focused = element;
+              focusedTop = rect.top;
+            });
+            return focused;
+          };
+
+          // Anchors keep a trimmed prefix of the paragraph text.
+          const anchorText = (element) => {
+            return normalizedText(normalizedText(element?.textContent).slice(0, maximumAnchorTextLength));
+          };
+
+          const anchorFor = (element) => {
+            const text = anchorText(element);
+            return {
+              index: blocks.indexOf(element),
+              text: text.length > 0 ? text : null
+            };
+          };
+
+          const position = (element) => {
+            return {
+              anchor: element ? anchorFor(element) : null,
+              scrollX: window.scrollX,
+              scrollY: window.scrollY
+            };
+          };
+
+          // Captured anchors hold a truncated prefix; other readers may store the full text.
+          const matchesAnchorText = (element, requestedText) => {
+            return anchorText(element) === requestedText
+              || normalizedText(element?.textContent) === requestedText;
+          };
+
+          const anchorElement = (anchor) => {
+            const requestedText = normalizedText(anchor?.text);
+            const requestedIndex = Number(anchor?.index);
+            const indexed = Number.isInteger(requestedIndex) && requestedIndex >= 0
+              ? blocks[requestedIndex] ?? null
+              : null;
+            if (requestedText.length === 0 || (indexed && matchesAnchorText(indexed, requestedText))) {
+              return indexed;
+            }
+            return blocks.find((block) => matchesAnchorText(block, requestedText)) ?? null;
           };
 
           const measureBlock = (element, focusTarget) => {
@@ -192,39 +312,31 @@ enum EPUBScrollFocusScript {
             settleGuide();
           };
 
-          const currentAnchor = () => {
+          const currentPosition = () => {
             refreshBlocks();
-            const focusTarget = focusTargetY(window.innerHeight / 2);
-            const visible = blocks
-              .map((element) => measureBlock(element, focusTarget))
-              .filter(({ isVisible }) => isVisible);
-            const active = activeMeasurement(visible)?.element;
-            if (!active) return null;
-            const text = (active.textContent ?? "").replace(/\\s+/g, " ").trim();
-            return {
-              index: blocks.indexOf(active),
-              text: text.length > 0 ? text.slice(0, 512) : null
-            };
+            return position(isPaginated() ? pagedAnchorElement() : scrolledAnchorElement());
           };
 
+          // Paged: turn to the page holding the paragraph start. Scrolled: put the start on the
+          // focus line. Either way, measuring again at the landing reports the same paragraph.
           const restoreAnchor = (anchor) => {
             refreshBlocks();
-            const normalizedText = (value) => {
-              return typeof value === "string" ? value.replace(/\\s+/g, " ").trim() : "";
-            };
-            const requestedText = normalizedText(anchor?.text);
-            const requestedIndex = Number(anchor?.index);
-            let target = Number.isInteger(requestedIndex) && requestedIndex >= 0
-              ? blocks[requestedIndex]
-              : null;
-            if (requestedText.length > 0 && normalizedText(target?.textContent) !== requestedText) {
-              target = blocks.find((block) => normalizedText(block.textContent) === requestedText) ?? null;
+            const target = anchorElement(anchor);
+            const rect = target ? startRect(target) : null;
+            if (!rect) return null;
+            if (isPaginated()) {
+              const pageWidth = window.innerWidth;
+              if (pageWidth <= 0) return null;
+              const documentLeft = rect.left + window.scrollX;
+              const pageLeft = Math.floor((documentLeft + pageEdgeTolerance) / pageWidth) * pageWidth;
+              scrollingElement().scrollTo({ left: pageLeft, behavior: "instant" });
+            } else {
+              const top = scrollTopPlacingOnFocusLine(rect.top + window.scrollY);
+              scrollingElement().scrollTo({ top, behavior: "instant" });
             }
-            if (!target) return false;
-            target.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
             scheduleFocus();
             settleGuide();
-            return true;
+            return position(target);
           };
 
           window.prismediaReadingFocus = {
@@ -235,7 +347,7 @@ enum EPUBScrollFocusScript {
               scheduleFocus();
               settleGuide();
             },
-            currentAnchor,
+            currentPosition,
             restoreAnchor
           };
 
@@ -251,14 +363,13 @@ enum EPUBScrollFocusScript {
         "window.prismediaReadingFocus?.update(\(configuration(preferences)));"
     }
 
-    static let currentParagraphAnchor =
-        "JSON.stringify(window.prismediaReadingFocus?.currentAnchor?.() ?? null);"
-
+    /// Places `anchor` at the reading position and returns where it landed as
+    /// `EPUBParagraphViewport` JSON, or `null` when the paragraph is not in this chapter.
     static func restoreParagraphAnchor(_ anchor: EPUBParagraphAnchor) -> String {
         guard let data = try? JSONEncoder().encode(anchor),
             let json = String(data: data, encoding: .utf8)
-        else { return "false;" }
-        return "window.prismediaReadingFocus?.restoreAnchor?.(\(json)) ?? false;"
+        else { return "null;" }
+        return "JSON.stringify(window.prismediaReadingFocus?.restoreAnchor?.(\(json)) ?? null);"
     }
 
     private static func configuration(_ preferences: EPUBReaderPreferences) -> String {
