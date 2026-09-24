@@ -224,6 +224,9 @@ public struct EntityThumbnailCardView: View {
         }
         if item.isOrganized { components.append("Organized") }
         if let rating = item.rating { components.append("\(rating) star rating") }
+        if let progress = EntityThumbnailProgressMeters(item: item).accessibilityDescription {
+            components.append(progress)
+        }
         return components.joined(separator: ", ")
     }
 }

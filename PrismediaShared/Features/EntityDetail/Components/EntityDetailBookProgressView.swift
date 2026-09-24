@@ -84,7 +84,7 @@ struct EntityDetailBookProgressView: Equatable, View {
                 horizontalPadding: horizontalPadding,
                 onRead: onReadChapter,
                 onListen: onListenToChapter,
-                onCombined: onCombineChapter,
+                onCombined: combinedProgress?.isLinked == false ? nil : onCombineChapter,
                 onRetry: onRetryChapters
             )
         }

@@ -50,8 +50,10 @@
                     || bookProgressLoadingState.isLoading,
                 actions: BookCombinedProgressActions(
                     resume: alignment.resume,
-                    isCompleted: progress?.completedAt != nil
-                )
+                    isCompleted: progress?.completedAt != nil,
+                    isLinked: alignment.isLinked
+                ),
+                separate: alignment.separateProgress
             )
         }
 
@@ -68,18 +70,19 @@
         // MARK: - Actions - Resume Targets
 
         /// Where "Continue Reading" opens: the server's exact reading position (resumed against the
-        /// device's own checkpoint), else the reading position it aligned from listening (opened as
-        /// given). Nil resumes the reader from its own position.
+        /// device's own checkpoint), else, for a Linked Book, the reading position it aligned from
+        /// listening (opened as given). Nil resumes the reader from its own position.
         func readingResumeOpening(
             for detail: EntityDetail
         ) -> (destination: BookReadingDestination, command: BookReaderCommand)? {
             guard bookAlignmentState.usesServerAlignment else {
                 return legacyReadingResumeDestination(for: detail).map { ($0, .resume) }
             }
-            guard let resume = bookAlignmentState.alignment?.resume else { return nil }
+            guard let alignment = bookAlignmentState.alignment, let resume = alignment.resume else { return nil }
             if let exact = resume.exactReading {
                 return exact.destination(inWork: detail.id).map { ($0, .resume) }
             }
+            guard alignment.isLinked else { return nil }
             return resume.switchToReading.aligned?.reading?.destination(inWork: detail.id).map { ($0, .read) }
         }
 
@@ -92,7 +95,9 @@
             guard bookAlignmentState.usesServerAlignment else {
                 return legacyCurrentAudiobookReadingTarget()
             }
-            guard musicPlayer.context?.playbackOwnerEntityID == detail.id else { return nil }
+            guard musicPlayer.context?.playbackOwnerEntityID == detail.id,
+                bookAlignmentState.alignment?.isLinked != false
+            else { return nil }
             musicPlayer.persistProgressHeartbeat()
             await musicPlayer.flushPendingPlaybackReports()
             await loadBookAlignment(for: detail)
@@ -131,9 +136,11 @@
             }
         }
 
-        /// Starts both sides of a chosen chapter: the server's combined position when it sits in
-        /// that chapter, otherwise the start of the chapter on both sides.
+        /// Starts both sides of a chosen chapter of a Linked Book: the server's combined position
+        /// when it sits in that chapter, otherwise the start of the chapter on both sides. A Separate
+        /// Book never starts both together.
         private func openCombinedChapter(_ chapter: BookChapterMapping, detail: EntityDetail) {
+            guard bookAlignmentState.alignment?.isLinked != false else { return }
             if let combined = bookAlignmentState.alignment?.resume?.combined.aligned,
                 combined.rowID == chapter.id,
                 combined.reading != nil,
@@ -172,7 +179,8 @@
             }
 
             await loadBookAlignment(for: refreshedDetail)
-            guard let combined = bookAlignmentState.alignment?.resume?.combined.aligned,
+            guard bookAlignmentState.alignment?.isLinked != false,
+                let combined = bookAlignmentState.alignment?.resume?.combined.aligned,
                 let reading = combined.reading,
                 let listening = combined.listening
             else { return }

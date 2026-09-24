@@ -17,10 +17,24 @@ public struct BookAlignmentResponse: Equatable, Hashable, Sendable {
     public let coverage: BookAlignmentCoverage
     /// The current user's resume destinations, when the Book has content to resume.
     public let resume: BookResumeProjection?
+    /// Whether reading and listening are Linked or Separate, and each format's own progress. Nil on
+    /// servers that predate the decision, which keep the linked behavior.
+    public let link: BookLinkProjection?
 
     /// Whether the Book can be read and listened to together.
     var supportsReadingAndListening: Bool {
         modalities.contains(.reading) && modalities.contains(.listening)
+    }
+
+    /// Reading and listening progress of a Book that has both formats but keeps them Separate; nil
+    /// when the Book is Linked (one progress and switching), has one format, or predates the decision.
+    var separateProgress: EntitySeparateProgress? {
+        supportsReadingAndListening ? link?.separateProgress : nil
+    }
+
+    /// Whether switching between formats and reading-while-listening follow the paired chapters.
+    var isLinked: Bool {
+        separateProgress == nil
     }
 
     /// Readable chapter windows in display order.
@@ -40,19 +54,21 @@ public struct BookAlignmentResponse: Equatable, Hashable, Sendable {
         readablePositionTotal: Int,
         rows: [BookAlignmentRow],
         coverage: BookAlignmentCoverage = BookAlignmentCoverage(),
-        resume: BookResumeProjection? = nil
+        resume: BookResumeProjection? = nil,
+        link: BookLinkProjection? = nil
     ) {
         self.modalities = modalities
         self.readablePositionTotal = readablePositionTotal
         self.rows = rows
         self.coverage = coverage
         self.resume = resume
+        self.link = link
     }
 }
 
 extension BookAlignmentResponse: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case modalities, readablePositionTotal, rows, coverage, resume
+        case modalities, readablePositionTotal, rows, coverage, resume, link
     }
 
     public init(from decoder: Decoder) throws {
@@ -64,5 +80,6 @@ extension BookAlignmentResponse: Decodable {
             try container.decodeIfPresent(BookAlignmentCoverage.self, forKey: .coverage)
             ?? BookAlignmentCoverage()
         resume = try container.decodeIfPresent(BookResumeProjection.self, forKey: .resume)
+        link = try container.decodeIfPresent(BookLinkProjection.self, forKey: .link)
     }
 }

@@ -20,14 +20,15 @@ extension EntityDetailView {
             play(projection, startingAt: track.id, startSeconds: chapter.audioStartSeconds ?? 0)
         }
 
-        /// Where "Continue Listening" starts: the server's exact listening position, else the
-        /// position it aligned from reading.
+        /// Where "Continue Listening" starts: the server's exact listening position, else, for a
+        /// Linked Book, the position it aligned from reading.
         func unifiedAudiobookResume(for detail: EntityDetail) -> AudiobookResumePoint? {
             guard bookAlignmentState.usesServerAlignment else {
                 return legacyAudiobookResume(for: detail)
             }
-            guard let resume = bookAlignmentState.alignment?.resume else { return nil }
-            return (resume.exactListening ?? resume.switchToListening.aligned?.listening)?.resumePoint
+            guard let alignment = bookAlignmentState.alignment, let resume = alignment.resume else { return nil }
+            if let exact = resume.exactListening { return exact.resumePoint }
+            return alignment.isLinked ? resume.switchToListening.aligned?.listening?.resumePoint : nil
         }
 
         func audiobookPresentation(for detail: EntityDetail) -> AudiobookPlaybackPresentation? {

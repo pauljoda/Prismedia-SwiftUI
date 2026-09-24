@@ -119,6 +119,10 @@ public enum PrismediaContractCodes {
         public static let `readableChapterUnpaired` = "readable_chapter_unpaired"
         public static let `audioChapterUnpaired` = "audio_chapter_unpaired"
         public static let `positionOutsideChapters` = "position_outside_chapters"
+        public static let `audioUnavailable` = "audio_unavailable"
+        public static let `audioUnstructured` = "audio_unstructured"
+        public static let `audioInParts` = "audio_in_parts"
+        public static let `noExactPairs` = "no_exact_pairs"
     }
 
     public enum AlignmentMatchState {
@@ -152,6 +156,13 @@ public enum PrismediaContractCodes {
         public static let `losslessHiRes` = "lossless-hires"
     }
 
+    public enum AudiobookStructure {
+        public static let `chaptered` = "chaptered"
+        public static let `filePerChapter` = "file_per_chapter"
+        public static let `parts` = "parts"
+        public static let `unstructured` = "unstructured"
+    }
+
     public enum AutoIdentifySelectorKind {
         public static let `video` = "video"
         public static let `gallery` = "gallery"
@@ -172,6 +183,7 @@ public enum PrismediaContractCodes {
 
     public enum BookChapterMappingOrigin {
         public static let `manual` = "manual"
+        public static let `ordered` = "ordered"
         public static let `auto` = "auto"
     }
 
@@ -186,6 +198,11 @@ public enum PrismediaContractCodes {
         public static let `fixed` = "fixed"
         public static let `reflowable` = "reflowable"
         public static let `archive` = "archive"
+    }
+
+    public enum BookLinkState {
+        public static let `linked` = "linked"
+        public static let `separate` = "separate"
     }
 
     public enum BookRendition {
@@ -1359,12 +1376,23 @@ public extension BookAlignmentGapReason {
     static let `readableChapterUnpaired` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`readableChapterUnpaired`)
     static let `audioChapterUnpaired` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`audioChapterUnpaired`)
     static let `positionOutsideChapters` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`positionOutsideChapters`)
+    static let `audioUnavailable` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`audioUnavailable`)
+    static let `audioUnstructured` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`audioUnstructured`)
+    static let `audioInParts` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`audioInParts`)
+    static let `noExactPairs` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`noExactPairs`)
 }
 
 public extension BookAlignmentMatchState {
     static let `paired` = Self(rawValue: PrismediaContractCodes.AlignmentMatchState.`paired`)
     static let `readableOnly` = Self(rawValue: PrismediaContractCodes.AlignmentMatchState.`readableOnly`)
     static let `audioOnly` = Self(rawValue: PrismediaContractCodes.AlignmentMatchState.`audioOnly`)
+}
+
+public extension AudiobookStructure {
+    static let `chaptered` = Self(rawValue: PrismediaContractCodes.AudiobookStructure.`chaptered`)
+    static let `filePerChapter` = Self(rawValue: PrismediaContractCodes.AudiobookStructure.`filePerChapter`)
+    static let `parts` = Self(rawValue: PrismediaContractCodes.AudiobookStructure.`parts`)
+    static let `unstructured` = Self(rawValue: PrismediaContractCodes.AudiobookStructure.`unstructured`)
 }
 
 public extension AutoIdentifySelectorKind {
@@ -1378,6 +1406,7 @@ public extension AutoIdentifySelectorKind {
 
 public extension BookChapterMappingOrigin {
     static let `manual` = Self(rawValue: PrismediaContractCodes.BookChapterMappingOrigin.`manual`)
+    static let `ordered` = Self(rawValue: PrismediaContractCodes.BookChapterMappingOrigin.`ordered`)
     static let `auto` = Self(rawValue: PrismediaContractCodes.BookChapterMappingOrigin.`auto`)
 }
 
@@ -1385,6 +1414,11 @@ public extension BookFormat {
     static let `epub` = Self(rawValue: PrismediaContractCodes.BookFormat.`epub`)
     static let `pdf` = Self(rawValue: PrismediaContractCodes.BookFormat.`pdf`)
     static let `audio` = Self(rawValue: PrismediaContractCodes.BookFormat.`audio`)
+}
+
+public extension BookLinkState {
+    static let `linked` = Self(rawValue: PrismediaContractCodes.BookLinkState.`linked`)
+    static let `separate` = Self(rawValue: PrismediaContractCodes.BookLinkState.`separate`)
 }
 
 public extension RequestActivityBookRendition {

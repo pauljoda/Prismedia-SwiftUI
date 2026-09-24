@@ -50,6 +50,12 @@
         }
       }
     },
+    "%@ has no matching audiobook chapter." : {
+
+    },
+    "%@ has no matching ebook chapter." : {
+
+    },
     "%@ of %@" : {
       "localizations" : {
         "en" : {
@@ -158,6 +164,16 @@
     "%lld active" : {
 
     },
+    "%lld automatic · %lld explicit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld automatic · %2$lld explicit"
+          }
+        }
+      }
+    },
     "%lld barren" : {
 
     },
@@ -172,9 +188,6 @@
       }
     },
     "%lld events" : {
-
-    },
-    "%lld explicit mappings" : {
 
     },
     "%lld fields" : {
@@ -204,6 +217,16 @@
     },
     "%lld more files selected" : {
 
+    },
+    "%lld of %lld audio chapters aligned, %lld automatic, %lld explicit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld audio chapters aligned, %3$lld automatic, %4$lld explicit"
+          }
+        }
+      }
     },
     "%lld of %lld files processed" : {
       "localizations" : {
@@ -527,10 +550,16 @@
     "Audio" : {
 
     },
+    "Audiobook" : {
+
+    },
     "Audiobook alignment" : {
 
     },
-    "Audiobook file chapter overrides" : {
+    "Audiobook chapter overrides" : {
+
+    },
+    "Audiobook destination and profile" : {
 
     },
     "Audiobook Now Playing" : {
@@ -759,7 +788,7 @@
     "Choose when automatic searching begins for each acquisition profile." : {
 
     },
-    "Choose where the first audiobook file begins, then Prismedia fills the remaining files in order. You can override any file below before saving." : {
+    "Choose where the first audio chapter begins, then Prismedia fills the remaining chapters in order. You can override any chapter below before saving." : {
 
     },
     "Classification" : {
@@ -855,6 +884,9 @@
     "Confirmation" : {
 
     },
+    "Connected book manager" : {
+
+    },
     "Consumption Rhythm" : {
 
     },
@@ -873,10 +905,34 @@
     "Continue" : {
 
     },
+    "Continue Both" : {
+
+    },
+    "Continue Both ≈" : {
+
+    },
+    "Continue Combined" : {
+
+    },
+    "Continue Listening" : {
+
+    },
+    "Continue Listening ≈" : {
+
+    },
+    "Continue Reading" : {
+
+    },
+    "Continue Reading ≈" : {
+
+    },
     "Copy" : {
 
     },
     "Copy %@" : {
+
+    },
+    "Could not open administration" : {
 
     },
     "Couldn’t Add to Collection" : {
@@ -1177,6 +1233,12 @@
     "Downloaded Files" : {
 
     },
+    "Ebook" : {
+
+    },
+    "Ebook destination and profile" : {
+
+    },
     "Edit" : {
 
     },
@@ -1370,7 +1432,7 @@
     "Finishing related metadata…" : {
 
     },
-    "First audiobook file" : {
+    "First audio chapter" : {
 
     },
     "First Page Is Cover" : {
@@ -1386,6 +1448,9 @@
 
     },
     "For regional variants or codes supplied by your media provider. Existing codes are kept unchanged." : {
+
+    },
+    "Formats" : {
 
     },
     "Forward 30 Seconds" : {
@@ -1640,6 +1705,12 @@
     "Linked Items" : {
 
     },
+    "Listen Again" : {
+
+    },
+    "Listening estimated from where you stopped reading." : {
+
+    },
     "Live transfer data may be out of date. Prismedia is still retrying." : {
 
     },
@@ -1814,10 +1885,7 @@
     "Manual backup" : {
 
     },
-    "Map files to readable chapters" : {
-
-    },
-    "mapped" : {
+    "Map audio chapters to readable chapters" : {
 
     },
     "Mappings are up to date" : {
@@ -2195,6 +2263,9 @@
     "NSFW Library" : {
 
     },
+    "of %lld aligned" : {
+
+    },
     "Off" : {
 
     },
@@ -2227,6 +2298,9 @@
 
     },
     "Open page %lld" : {
+
+    },
+    "Opening administration" : {
 
     },
     "Opening EPUB…" : {
@@ -2585,6 +2659,9 @@
     "Read & Listen" : {
 
     },
+    "Read Again" : {
+
+    },
     "Read more" : {
 
     },
@@ -2601,6 +2678,9 @@
 
     },
     "Reading" : {
+
+    },
+    "Reading estimated from where you stopped listening." : {
 
     },
     "Reading Focus" : {
@@ -3303,10 +3383,19 @@
     "Speed" : {
 
     },
+    "Start Both" : {
+
+    },
+    "Start Listening" : {
+
+    },
     "Start over" : {
 
     },
     "Start Over" : {
+
+    },
+    "Start Reading" : {
 
     },
     "Start this acquisition over?" : {
@@ -3435,6 +3524,9 @@
     "This changes library scan configuration only. It does not move or delete the server file." : {
 
     },
+    "This chapter" : {
+
+    },
     "This collection is empty." : {
 
     },
@@ -3442,6 +3534,9 @@
 
     },
     "This device" : {
+
+    },
+    "This ebook has no chapter list to line up with the audiobook." : {
 
     },
     "This item is already in this folder." : {
@@ -3788,6 +3883,9 @@
 
     },
     "Your library,\nmade cinematic." : {
+
+    },
+    "Your position is outside the chapters that line up." : {
 
     },
     "Your progress" : {

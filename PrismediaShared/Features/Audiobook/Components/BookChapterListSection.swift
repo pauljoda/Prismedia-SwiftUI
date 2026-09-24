@@ -11,7 +11,8 @@ struct BookChapterListSection: View {
     let horizontalPadding: CGFloat
     let onRead: (BookChapterMapping) -> Void
     let onListen: (BookChapterMapping) -> Void
-    let onCombined: (BookChapterMapping) -> Void
+    /// Opens both formats of a paired chapter together; nil when the Book keeps them Separate.
+    let onCombined: ((BookChapterMapping) -> Void)?
     let onRetry: () -> Void
 
     @ViewBuilder
@@ -99,7 +100,7 @@ struct BookChapterListSection: View {
                         progressLabel: progressLabel,
                         onRead: { onRead(chapter) },
                         onListen: { onListen(chapter) },
-                        onCombined: { onCombined(chapter) }
+                        onCombined: onCombined.map { open in { open(chapter) } }
                     )
 
                     if chapter.id != chapters.last?.id {

@@ -131,6 +131,171 @@ final class BookAlignmentContractTests: XCTestCase {
         XCTAssertEqual(legacy.readingPosition, legacy)
     }
 
+    // MARK: - Linked and Separate
+
+    func testDecodesTheLinkDecisionAndEachFormatsOwnProgress() throws {
+        let separate = try Self.alignment(
+            link: """
+                {"state": "separate", "reason": "audio_in_parts", "audioStructure": "parts",
+                 "readingPercent": "0.424", "listeningPercent": 0.1}
+                """
+        )
+        let link = try XCTUnwrap(separate.link)
+        XCTAssertEqual(link.state, .separate)
+        XCTAssertEqual(link.reason, .audioInParts)
+        XCTAssertEqual(link.audioStructure, .parts)
+        XCTAssertFalse(separate.isLinked)
+        let progress = try XCTUnwrap(separate.separateProgress)
+        XCTAssertEqual(progress.readingPercent, 42)
+        XCTAssertEqual(progress.listeningPercent, 10)
+        XCTAssertEqual(
+            progress.explanation,
+            "This audiobook is split into parts rather than chapters, so reading and listening are tracked separately."
+        )
+
+        let linked = try Self.alignment(
+            link: """
+                {"state": "linked", "reason": null, "audioStructure": "chaptered",
+                 "readingPercent": 0.5, "listeningPercent": null}
+                """
+        )
+        XCTAssertEqual(linked.link?.audioStructure, .chaptered)
+        XCTAssertTrue(linked.isLinked)
+        XCTAssertNil(linked.separateProgress)
+
+        // Older servers send no decision and keep today's linked behavior.
+        let older = try Self.alignment(link: nil)
+        XCTAssertNil(older.link)
+        XCTAssertTrue(older.isLinked)
+
+        // A Book with one format is never presented as two progresses.
+        let readingOnly = try Self.alignment(
+            link: """
+                {"state": "separate", "reason": "audio_unavailable", "audioStructure": null,
+                 "readingPercent": 0.3, "listeningPercent": null}
+                """,
+            modalities: #"["reading"]"#
+        )
+        XCTAssertNil(readingOnly.separateProgress)
+        XCTAssertTrue(readingOnly.isLinked)
+
+        let capability = try PrismediaJSON.decoder().decode(
+            EntityProgressCapability.self,
+            from: Data(
+                """
+                {"currentEntityId": null, "unit": "cfi", "index": 0, "total": 10000, "mode": null,
+                 "completedAt": null, "updatedAt": null, "consumedPercent": 0.25,
+                 "separate": {"reason": "no_exact_pairs", "readingPercent": 0.25, "listeningPercent": "0.6"}}
+                """.utf8
+            )
+        )
+        XCTAssertEqual(
+            capability.separate,
+            EntitySeparateProgress(reason: .noExactPairs, readingFraction: 0.25, listeningFraction: 0.6)
+        )
+        XCTAssertEqual(capability.readingPosition.separate, capability.separate)
+    }
+
+    func testUnknownLinkValuesKeepTheirSpellingAndTodaysBehavior() throws {
+        let alignment = try Self.alignment(
+            link: """
+                {"state": "bridged", "reason": "future_reason", "audioStructure": "future_shape",
+                 "readingPercent": null, "listeningPercent": null}
+                """
+        )
+        let link = try XCTUnwrap(alignment.link)
+        XCTAssertEqual(link.state.rawValue, "bridged")
+        XCTAssertEqual(link.reason?.rawValue, "future_reason")
+        XCTAssertEqual(link.audioStructure?.rawValue, "future_shape")
+        XCTAssertTrue(alignment.isLinked)
+
+        let unknown = EntitySeparateProgress(
+            reason: BookAlignmentGapReason(rawValue: "future_reason"),
+            readingFraction: nil,
+            listeningFraction: nil
+        )
+        XCTAssertEqual(unknown.explanation, "Reading and listening are tracked separately.")
+        XCTAssertEqual(unknown.readingPercent, 0)
+        let knownReasons: [BookAlignmentGapReason] = [
+            .audioUnavailable, .audioUnstructured, .audioInParts, .noExactPairs, .readableChaptersUnavailable,
+        ]
+        for reason in knownReasons {
+            XCTAssertNotEqual(
+                EntitySeparateProgress(reason: reason, readingFraction: nil, listeningFraction: nil).explanation,
+                unknown.explanation,
+                "Every known Separate reason explains itself: \(reason.rawValue)"
+            )
+        }
+        XCTAssertEqual(
+            try PrismediaJSON.decoder().decode(BookChapterMappingOrigin.self, from: Data(#""ordered""#.utf8)),
+            .ordered
+        )
+    }
+
+    func testSeparateBooksShowTwoMetersAndResumeEachFormatOnlyExactly() {
+        let reading = BookReadingTarget(positionEntityID: Self.bookID, unit: .cfi, index: 10, total: 100)
+        let listening = BookListeningTarget(trackEntityID: Self.trackID, offsetSeconds: 90)
+        let resume = BookResumeProjection(
+            exactListening: listening,
+            switchToReading: BookAlignedTarget(rowID: "r0", reading: reading, approximate: true, basis: .interpolated),
+            switchToListening: BookAlignedTarget(rowID: "r0", gap: .audioUnstructured),
+            combined: BookAlignedTarget(rowID: "r0", reading: reading, listening: listening)
+        )
+        let separate = EntitySeparateProgress(reason: .audioUnstructured, readingFraction: 0.2, listeningFraction: 0.45)
+
+        let presentation = BookCombinedProgressPresentation(
+            progress: nil,
+            reading: nil,
+            activitySeconds: nil,
+            isLoading: false,
+            isBusy: false,
+            actions: BookCombinedProgressActions(resume: resume, isCompleted: false, isLinked: false),
+            separate: separate
+        )
+        XCTAssertFalse(presentation.isLinked)
+        XCTAssertEqual(presentation.separateMeters, separate)
+        XCTAssertEqual(
+            presentation.separateExplanation,
+            "This audiobook has no chapter markers, so reading and listening are tracked separately."
+        )
+        XCTAssertEqual(presentation.status, .inProgress)
+        XCTAssertFalse(presentation.actions.isCombinedAvailable)
+        XCTAssertNil(presentation.actions.combinedExplanation)
+        XCTAssertEqual(presentation.actions.readingTitle, "Start Reading")
+        XCTAssertNil(presentation.actions.readingHint)
+        XCTAssertEqual(presentation.actions.listeningTitle, "Continue Listening")
+
+        // A finished Separate Book stays unlinked but shows its single completed progress.
+        let completed = BookCombinedProgressPresentation(
+            progress: EntityProgressCapability(
+                currentEntityID: nil, unit: .cfi, index: 0, total: 100, mode: nil, completedAt: Date(),
+                updatedAt: nil, workIndex: nil, workTotal: nil, location: nil
+            ),
+            reading: nil,
+            activitySeconds: nil,
+            isLoading: false,
+            isBusy: false,
+            separate: separate
+        )
+        XCTAssertFalse(completed.isLinked)
+        XCTAssertNil(completed.separateMeters)
+        XCTAssertEqual(completed.percent, 100)
+
+        // A Linked Book keeps one progress and the combined action.
+        let linked = BookCombinedProgressPresentation(
+            progress: nil,
+            reading: nil,
+            activitySeconds: nil,
+            isLoading: false,
+            isBusy: false,
+            actions: BookCombinedProgressActions(resume: resume, isCompleted: false)
+        )
+        XCTAssertTrue(linked.isLinked)
+        XCTAssertNil(linked.separateMeters)
+        XCTAssertTrue(linked.actions.isCombinedAvailable)
+        XCTAssertEqual(linked.actions.readingTitle, "Continue Reading ≈")
+    }
+
     // MARK: - Version gate
 
     func testServerVersionsGateTheAlignmentProjection() {
@@ -282,6 +447,15 @@ final class BookAlignmentContractTests: XCTestCase {
     private static let readiumLocator = #"{"href":"Text/one.xhtml","locations":{"progression":0.4}}"#
     private static let alignmentPath = "/api/books/\(bookID.uuidString.lowercased())/alignment"
     private static let mappingsPath = "/api/books/\(bookID.uuidString.lowercased())/chapter-mappings"
+
+    private static func alignment(
+        link: String?,
+        modalities: String = #"["reading","listening"]"#
+    ) throws -> BookAlignmentResponse {
+        let linkMember = link.map { #","link":\#($0)"# } ?? ""
+        let json = #"{"modalities":\#(modalities),"readablePositionTotal":10000,"rows":[]\#(linkMember)}"#
+        return try PrismediaJSON.decoder().decode(BookAlignmentResponse.self, from: Data(json.utf8))
+    }
 
     private static func encodedBody(_ request: EntityProgressUpdateRequest) throws -> [String: Any] {
         let data = try PrismediaJSON.encoder().encode(request)

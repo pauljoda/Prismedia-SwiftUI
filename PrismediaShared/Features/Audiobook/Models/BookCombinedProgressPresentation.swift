@@ -1,5 +1,8 @@
 import Foundation
 
+/// What the Read & Listen card shows. A Linked Book (and every Book on servers without the link
+/// decision) keeps one overall progress and the combined action; a Separate Book shows reading and
+/// listening as two meters with the reason, and offers only each format's own resume.
 struct BookCombinedProgressPresentation: Equatable, Sendable {
     // MARK: - Variables
 
@@ -11,6 +14,15 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
     let activitySeconds: Double?
     let isLoading: Bool
     let isBusy: Bool
+    /// Why reading and listening are tracked separately; nil for a Linked Book.
+    let separateExplanation: String?
+    /// Reading and listening meters of an unfinished Separate Book; nil draws the overall meter.
+    let separateMeters: EntitySeparateProgress?
+
+    /// Whether switching and reading-while-listening follow the Book's paired chapters.
+    var isLinked: Bool {
+        separateExplanation == nil
+    }
 
     // MARK: - Initializers
 
@@ -21,12 +33,16 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         activitySeconds: Double?,
         isLoading: Bool,
         isBusy: Bool,
-        actions: BookCombinedProgressActions = .continueEach
+        actions: BookCombinedProgressActions = .continueEach,
+        separate: EntitySeparateProgress? = nil
     ) {
         let completed = progress?.completedAt != nil
+        let meters = completed ? nil : separate
         let rawPercent: Int
         if completed {
             rawPercent = 100
+        } else if let meters {
+            rawPercent = meters.readingPercent
         } else if let progress {
             rawPercent = Int((progress.consumedPercent * 100).rounded())
         } else if let reading {
@@ -36,11 +52,14 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         }
 
         percent = min(max(0, rawPercent), 100)
-        status = completed ? .completed : (percent > 0 ? .inProgress : .notStarted)
+        let started = percent > 0 || (meters?.listeningPercent ?? 0) > 0
+        status = completed ? .completed : (started ? .inProgress : .notStarted)
         if completed {
             positionLabel = nil
         } else if let readingLabel = reading?.positionLabel {
             positionLabel = readingLabel
+        } else if meters != nil {
+            positionLabel = nil
         } else if let progress, progress.unit == .second, progress.total > 0 {
             positionLabel =
                 "Current · \(DurationPresentation.progress(Double(progress.index))) of \(DurationPresentation.progress(Double(progress.total)))"
@@ -56,5 +75,7 @@ struct BookCombinedProgressPresentation: Equatable, Sendable {
         self.isLoading = isLoading
         self.isBusy = isBusy
         self.actions = actions
+        separateExplanation = separate?.explanation
+        separateMeters = meters
     }
 }

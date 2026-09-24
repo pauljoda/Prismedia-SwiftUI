@@ -62,8 +62,11 @@ struct EntityThumbnailArtworkView: View {
     }
 
     private var hasVisibleProgress: Bool {
-        guard showsProgress, let progress = item.progress else { return false }
-        return progress > 0
+        showsProgress && progressMeters.isVisible
+    }
+
+    private var progressMeters: EntityThumbnailProgressMeters {
+        EntityThumbnailProgressMeters(item: item)
     }
 
     private var progressTint: Color {
@@ -77,8 +80,8 @@ struct EntityThumbnailArtworkView: View {
     private var decorations: some View {
         Color.clear
             .overlay(alignment: .bottomLeading) {
-                if showsProgress, let progress = item.progress, progress > 0 {
-                    progressMeter(progress)
+                if showsProgress {
+                    progressMeter(progressMeters)
                 }
             }
             .overlay(alignment: .topTrailing) {
@@ -108,18 +111,36 @@ struct EntityThumbnailArtworkView: View {
             : 0
     }
 
-    private func progressMeter(_ value: Double) -> some View {
-        VStack {
-            Spacer()
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(PrismediaColor.background.opacity(0.5))
-                Rectangle()
-                    .fill(progressTint)
-                    .scaleEffect(x: CGFloat(min(1, max(0, value))), y: 1, anchor: .leading)
+    @ViewBuilder
+    private func progressMeter(_ meters: EntityThumbnailProgressMeters) -> some View {
+        switch meters {
+        case .none:
+            EmptyView()
+        case .single(let value):
+            VStack {
+                Spacer()
+                meterTrack(value, fill: progressTint, height: 3)
             }
-            .frame(height: 3)
+        case .separate(let reading, let listening):
+            // A Separate Book draws reading over listening so the two never read as one number;
+            // listening keeps the same paint at a quieter weight.
+            VStack(spacing: 1) {
+                Spacer()
+                meterTrack(reading, fill: progressTint, height: 2)
+                meterTrack(listening, fill: progressTint.opacity(PrismediaOpacity.secondaryMeter), height: 2)
+            }
         }
+    }
+
+    private func meterTrack(_ value: Double, fill: Color, height: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            Rectangle()
+                .fill(PrismediaColor.background.opacity(0.5))
+            Rectangle()
+                .fill(fill)
+                .scaleEffect(x: CGFloat(min(1, max(0, value))), y: 1, anchor: .leading)
+        }
+        .frame(height: height)
     }
 }
 
@@ -136,6 +157,26 @@ extension EntityThumbnailLayout {
                 item: PrismediaPreviewData.videos[0],
                 layout: .grid,
                 preferredWidth: 300,
+                onPreviewHoldChanged: { _ in }
+            )
+            .padding()
+            .background(PrismediaBackdrop())
+        }
+    }
+
+    #Preview("Thumbnail Artwork · Separate Book Progress") {
+        PreviewShell {
+            EntityThumbnailArtworkView(
+                item: EntityThumbnail(
+                    id: UUID(),
+                    kind: .book,
+                    title: "The Quiet Frequency",
+                    progress: 0.42,
+                    progressSeparate: true,
+                    listeningProgress: 0.18
+                ),
+                layout: .grid,
+                preferredWidth: 220,
                 onPreviewHoldChanged: { _ in }
             )
             .padding()

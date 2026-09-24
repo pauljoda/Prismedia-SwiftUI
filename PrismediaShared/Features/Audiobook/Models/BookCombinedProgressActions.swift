@@ -46,11 +46,12 @@ struct BookCombinedProgressActions: Equatable, Sendable {
 
     /// Actions for the server's resume projection: exact positions continue as recorded, aligned
     /// positions are marked "≈" when estimated, and a gap is explained instead of substituting
-    /// another chapter.
-    init(resume: BookResumeProjection?, isCompleted: Bool) {
-        let alignedReading = resume?.switchToReading.aligned?.reading
-        let alignedListening = resume?.switchToListening.aligned?.listening
-        let combined = resume?.combined
+    /// another chapter. A Book that keeps its formats Separate (`isLinked` false) resumes each only
+    /// at its own exact position and never starts both together.
+    init(resume: BookResumeProjection?, isCompleted: Bool, isLinked: Bool = true) {
+        let alignedReading = isLinked ? resume?.switchToReading.aligned?.reading : nil
+        let alignedListening = isLinked ? resume?.switchToListening.aligned?.listening : nil
+        let combined = isLinked ? resume?.combined : nil
 
         if resume?.exactReading != nil {
             readingTitle = String(localized: "Continue Reading")

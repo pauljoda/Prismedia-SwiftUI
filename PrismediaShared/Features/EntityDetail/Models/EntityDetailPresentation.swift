@@ -313,7 +313,15 @@ struct EntityDetailPresentation {
                     .init(label: Self.titleCase($0.code), value: $0.label ?? String($0.value), systemImage: "number")
                 }
             case .progress(let progress):
-                if progress.total > 0 {
+                // A Separate Book's consumed share is reading alone, so it shows both formats.
+                if let separate = progress.separate {
+                    items.append(
+                        .init(label: "Read", value: "\(separate.readingPercent)%", systemImage: "book.fill")
+                    )
+                    items.append(
+                        .init(label: "Listened", value: "\(separate.listeningPercent)%", systemImage: "headphones")
+                    )
+                } else if progress.total > 0 {
                     let percent = Int((progress.consumedPercent * 100).rounded())
                     items.append(.init(label: "Consumed", value: "\(percent)%", systemImage: "chart.bar.fill"))
                 }

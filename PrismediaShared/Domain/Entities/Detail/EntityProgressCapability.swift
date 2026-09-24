@@ -2,7 +2,7 @@ import Foundation
 
 /// A work's non-time progress: the single last-used main cursor, completion and coverage, plus,
 /// for kinds that declare consumption modalities (Books on 3.8+ servers), each modality's exact
-/// checkpoint.
+/// checkpoint and, for an unfinished Book that keeps reading and listening Separate, both progresses.
 public struct EntityProgressCapability: Hashable, Sendable {
     // MARK: - Variables
 
@@ -23,6 +23,9 @@ public struct EntityProgressCapability: Hashable, Sendable {
     public let consumedPercent: Double
     /// Modality of the newest checkpoint.
     public let lastModality: ConsumptionModality?
+    /// Reading and listening progress of an unfinished Book that keeps them Separate. Present only
+    /// then; for such a Book ``consumedPercent`` measures reading alone.
+    public let separate: EntitySeparateProgress?
 
     /// The exact reading checkpoint presented as a cursor while keeping the work's completion and
     /// coverage. Servers that keep modality checkpoints may place the main cursor from listening,
@@ -45,7 +48,8 @@ public struct EntityProgressCapability: Hashable, Sendable {
             consumedTotal: consumedTotal,
             consumedPercent: consumedPercent,
             lastModality: lastModality,
-            checkpoints: checkpoints
+            checkpoints: checkpoints,
+            separate: separate
         )
     }
 
@@ -66,7 +70,8 @@ public struct EntityProgressCapability: Hashable, Sendable {
         consumedTotal: Int? = nil,
         consumedPercent: Double = 0,
         lastModality: ConsumptionModality? = nil,
-        checkpoints: [EntityProgressCheckpoint] = []
+        checkpoints: [EntityProgressCheckpoint] = [],
+        separate: EntitySeparateProgress? = nil
     ) {
         self.currentEntityID = currentEntityID
         self.unit = unit
@@ -83,6 +88,7 @@ public struct EntityProgressCapability: Hashable, Sendable {
         self.consumedPercent = consumedPercent
         self.lastModality = lastModality
         self.checkpoints = checkpoints
+        self.separate = separate
     }
 
     // MARK: - Actions - Checkpoints
@@ -97,7 +103,7 @@ extension EntityProgressCapability: Decodable {
     private enum CodingKeys: String, CodingKey {
         case currentEntityID = "currentEntityId"
         case unit, index, total, mode, completedAt, updatedAt, workIndex, workTotal, location
-        case consumedCount, consumedTotal, consumedPercent, lastModality, checkpoints
+        case consumedCount, consumedTotal, consumedPercent, lastModality, checkpoints, separate
     }
 
     public init(from decoder: Decoder) throws {
@@ -117,5 +123,6 @@ extension EntityProgressCapability: Decodable {
         consumedPercent = try container.decodeFlexibleDoubleIfPresent(forKey: .consumedPercent) ?? 0
         lastModality = try container.decodeIfPresent(ConsumptionModality.self, forKey: .lastModality)
         checkpoints = try container.decodeIfPresent([EntityProgressCheckpoint].self, forKey: .checkpoints) ?? []
+        separate = try container.decodeIfPresent(EntitySeparateProgress.self, forKey: .separate)
     }
 }

@@ -26,7 +26,13 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
     public let acquisitionStatuses: [AcquisitionStatus]
     public let wantedStatus: AcquisitionStatus?
     public let createdAt: Date?
+    /// Fraction (0...1) watched or read. For a Book with ``progressSeparate`` it is reading alone.
     public let progress: Double?
+    /// Whether an unfinished Book keeps reading and listening Separate, so its thumbnail draws
+    /// ``progress`` for reading and ``listeningProgress`` for listening instead of one meter.
+    public let progressSeparate: Bool
+    /// Fraction (0...1) of the audio listened, for a Book with ``progressSeparate``.
+    public let listeningProgress: Double?
     public let resumeSeconds: Double?
     public let accessCount: Int?
     public let genres: [String]
@@ -83,6 +89,8 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         case wantedStatus
         case createdAt
         case progress
+        case progressSeparate
+        case listeningProgress
         case resumeSeconds
         case accessCount
         case genres
@@ -117,6 +125,8 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         wantedStatus: AcquisitionStatus? = nil,
         createdAt: Date? = nil,
         progress: Double? = nil,
+        progressSeparate: Bool = false,
+        listeningProgress: Double? = nil,
         resumeSeconds: Double? = nil,
         accessCount: Int? = nil,
         genres: [String] = [],
@@ -149,6 +159,8 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         self.wantedStatus = wantedStatus
         self.createdAt = createdAt
         self.progress = progress
+        self.progressSeparate = progressSeparate
+        self.listeningProgress = listeningProgress
         self.resumeSeconds = resumeSeconds
         self.accessCount = accessCount
         self.genres = genres
@@ -192,6 +204,8 @@ public struct EntityThumbnail: Identifiable, Decodable, Hashable, Sendable {
         wantedStatus = try container.decodeIfPresent(AcquisitionStatus.self, forKey: .wantedStatus)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
         progress = try container.decodeFlexibleDoubleIfPresent(forKey: .progress)
+        progressSeparate = try container.decodeIfPresent(Bool.self, forKey: .progressSeparate) ?? false
+        listeningProgress = try container.decodeFlexibleDoubleIfPresent(forKey: .listeningProgress)
         resumeSeconds = try container.decodeFlexibleDoubleIfPresent(forKey: .resumeSeconds)
         accessCount = try container.decodeFlexibleIntIfPresent(forKey: .accessCount)
         genres = try container.decodeIfPresent([String].self, forKey: .genres) ?? []
