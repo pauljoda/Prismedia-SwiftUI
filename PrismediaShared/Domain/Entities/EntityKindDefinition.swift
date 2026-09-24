@@ -28,6 +28,9 @@ public struct EntityKindDefinition: Hashable, Sendable {
     public let supportsAtomicMediaUpgrade: Bool
     /// Completion and filtering vocabulary declared by the backend kind definition.
     public let engagementMode: EntityEngagementMode
+    /// Consumption modalities that keep independent exact checkpoints for this kind, such as a
+    /// Book's reading and listening positions. Empty for kinds with one shared cursor.
+    public let modalities: [ConsumptionModality]
     /// Acquisition profile owned by this kind, when applicable.
     public let acquisitionProfile: EntityAcquisitionProfileDefinition?
     public let enumeratesIdentifyChildren: Bool
@@ -51,6 +54,7 @@ public struct EntityKindDefinition: Hashable, Sendable {
         mediaQualityFamily: EntityMediaQualityFamily,
         supportsAtomicMediaUpgrade: Bool,
         engagementMode: EntityEngagementMode,
+        modalities: [ConsumptionModality],
         acquisitionProfile: EntityAcquisitionProfileDefinition?,
         enumeratesIdentifyChildren: Bool
     ) {
@@ -72,6 +76,7 @@ public struct EntityKindDefinition: Hashable, Sendable {
         self.mediaQualityFamily = mediaQualityFamily
         self.supportsAtomicMediaUpgrade = supportsAtomicMediaUpgrade
         self.engagementMode = engagementMode
+        self.modalities = modalities
         self.acquisitionProfile = acquisitionProfile
         self.enumeratesIdentifyChildren = enumeratesIdentifyChildren
     }

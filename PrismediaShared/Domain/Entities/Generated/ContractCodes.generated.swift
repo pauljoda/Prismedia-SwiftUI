@@ -106,6 +106,27 @@ public enum PrismediaContractCodes {
         public static let `reacquire` = "reacquire"
     }
 
+    public enum AlignmentBasis {
+        public static let `exact` = "exact"
+        public static let `chapterStart` = "chapter_start"
+        public static let `interpolated` = "interpolated"
+        public static let `freshStart` = "fresh_start"
+    }
+
+    public enum AlignmentGapReason {
+        public static let `noPosition` = "no_position"
+        public static let `readableChaptersUnavailable` = "readable_chapters_unavailable"
+        public static let `readableChapterUnpaired` = "readable_chapter_unpaired"
+        public static let `audioChapterUnpaired` = "audio_chapter_unpaired"
+        public static let `positionOutsideChapters` = "position_outside_chapters"
+    }
+
+    public enum AlignmentMatchState {
+        public static let `paired` = "paired"
+        public static let `readableOnly` = "readable_only"
+        public static let `audioOnly` = "audio_only"
+    }
+
     public enum AudioPlaybackDiagnosticEvent {
         public static let `playing` = "playing"
         public static let `pause` = "pause"
@@ -280,6 +301,11 @@ public enum PrismediaContractCodes {
         public static let `accessed` = "accessed"
         public static let `completed` = "completed"
         public static let `skipped` = "skipped"
+    }
+
+    public enum ConsumptionModality {
+        public static let `reading` = "reading"
+        public static let `listening` = "listening"
     }
 
     public enum CreditRole {
@@ -730,6 +756,7 @@ public enum PrismediaContractCodes {
         public static let `scanBooks` = "scanBooks"
         public static let `scanVideos` = "scanVideos"
         public static let `scanAudio` = "scanAudio"
+        public static let `scanImages` = "scanImages"
     }
 
     public enum ManagedCommandStatus {
@@ -1185,6 +1212,7 @@ public enum PrismediaContractCodes {
         public static let `invalidEntityMetadataPatch` = "invalid_entity_metadata_patch"
         public static let `invalidOpdsRequest` = "invalid_opds_request"
         public static let `invalidPath` = "invalid_path"
+        public static let `invalidProgress` = "invalid_progress"
         public static let `invalidUpload` = "invalid_upload"
         public static let `lastAdminRequired` = "last_admin_required"
         public static let `libraryRootPathConflict` = "library_root_path_conflict"
@@ -1318,6 +1346,27 @@ public extension AcquisitionStatus {
     static let `manualImportRequired` = Self(rawValue: PrismediaContractCodes.AcquisitionStatus.`manualImportRequired`)
 }
 
+public extension BookAlignmentBasis {
+    static let `exact` = Self(rawValue: PrismediaContractCodes.AlignmentBasis.`exact`)
+    static let `chapterStart` = Self(rawValue: PrismediaContractCodes.AlignmentBasis.`chapterStart`)
+    static let `interpolated` = Self(rawValue: PrismediaContractCodes.AlignmentBasis.`interpolated`)
+    static let `freshStart` = Self(rawValue: PrismediaContractCodes.AlignmentBasis.`freshStart`)
+}
+
+public extension BookAlignmentGapReason {
+    static let `noPosition` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`noPosition`)
+    static let `readableChaptersUnavailable` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`readableChaptersUnavailable`)
+    static let `readableChapterUnpaired` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`readableChapterUnpaired`)
+    static let `audioChapterUnpaired` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`audioChapterUnpaired`)
+    static let `positionOutsideChapters` = Self(rawValue: PrismediaContractCodes.AlignmentGapReason.`positionOutsideChapters`)
+}
+
+public extension BookAlignmentMatchState {
+    static let `paired` = Self(rawValue: PrismediaContractCodes.AlignmentMatchState.`paired`)
+    static let `readableOnly` = Self(rawValue: PrismediaContractCodes.AlignmentMatchState.`readableOnly`)
+    static let `audioOnly` = Self(rawValue: PrismediaContractCodes.AlignmentMatchState.`audioOnly`)
+}
+
 public extension AutoIdentifySelectorKind {
     static let `video` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`video`)
     static let `gallery` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`gallery`)
@@ -1325,6 +1374,11 @@ public extension AutoIdentifySelectorKind {
     static let `audio` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`audio`)
     static let `book` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`book`)
     static let `comic` = Self(rawValue: PrismediaContractCodes.AutoIdentifySelectorKind.`comic`)
+}
+
+public extension BookChapterMappingOrigin {
+    static let `manual` = Self(rawValue: PrismediaContractCodes.BookChapterMappingOrigin.`manual`)
+    static let `auto` = Self(rawValue: PrismediaContractCodes.BookChapterMappingOrigin.`auto`)
 }
 
 public extension BookFormat {
@@ -1364,6 +1418,11 @@ public extension ConsumptionEventKind {
     static let `accessed` = Self(rawValue: PrismediaContractCodes.ConsumptionEventKind.`accessed`)
     static let `completed` = Self(rawValue: PrismediaContractCodes.ConsumptionEventKind.`completed`)
     static let `skipped` = Self(rawValue: PrismediaContractCodes.ConsumptionEventKind.`skipped`)
+}
+
+public extension ConsumptionModality {
+    static let `reading` = Self(rawValue: PrismediaContractCodes.ConsumptionModality.`reading`)
+    static let `listening` = Self(rawValue: PrismediaContractCodes.ConsumptionModality.`listening`)
 }
 
 public extension RequestActivityDownloadProtocol {

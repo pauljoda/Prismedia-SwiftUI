@@ -51,32 +51,16 @@ struct BookCombinedResumeResolver: Sendable {
         return target(chapter: chapter, mapping: mapping, progress: nil)
     }
 
-    /// Resumes the most recently used rendition, including activity after work completion.
+    /// Resumes the shared cursor, including reading after work completion.
     func resolveLatestContinuation(
         chapters: [BookChapterMapping],
         mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> BookCombinedResumeTarget? {
-        guard let progress else {
-            return resolveContinuation(chapters: chapters, mappings: mappings, progress: nil)
-        }
-
-        if let listening = progress.listening,
-            listening.updatedAt > (progress.reading?.updatedAt ?? .distantPast),
-            listening.updatedAt > (progress.completedAt ?? .distantPast)
-        {
-            return listeningTarget(
-                chapters: chapters,
-                mappings: mappings,
-                trackID: listening.trackEntityID,
-                offset: listening.offsetSeconds
-            )
-        }
-
-        return resolveContinuation(
+        resolveContinuation(
             chapters: chapters,
             mappings: mappings,
-            progress: progress.readablePosition
+            progress: progress?.readingPosition
         )
     }
 
@@ -103,71 +87,10 @@ struct BookCombinedResumeResolver: Sendable {
         mappings: [PlaybackProgressMapping],
         progress: EntityProgressCapability?
     ) -> AudiobookResumePoint? {
-        if let exact = exactAudioResume(chapters: chapters, progress: progress) {
-            return exact
-        }
-        return BookProgressMappingResolver().audioResume(
+        BookProgressMappingResolver().audioResume(
             tracks: chapters.compactMap(\.audioTrack),
             mappings: mappings,
             progress: progress
-        )
-    }
-
-    func exactAudioResume(
-        chapters: [BookChapterMapping],
-        progress: EntityProgressCapability?
-    ) -> AudiobookResumePoint? {
-        guard let listening = progress?.listening,
-            listening.updatedAt > (progress?.completedAt ?? .distantPast),
-            listening.offsetSeconds.isFinite,
-            listening.offsetSeconds >= 0,
-            chapters.contains(where: { $0.audioTrack?.id == listening.trackEntityID })
-        else { return nil }
-        return AudiobookResumePoint(
-            trackID: listening.trackEntityID,
-            trackOffsetSeconds: listening.offsetSeconds
-        )
-    }
-
-    private func listeningTarget(
-        chapters: [BookChapterMapping],
-        mappings: [PlaybackProgressMapping],
-        trackID: UUID,
-        offset: Double
-    ) -> BookCombinedResumeTarget? {
-        guard offset.isFinite, offset >= 0,
-            let chapter = chapters.last(where: { chapter in
-                guard chapter.audioTrack?.id == trackID,
-                    let duration = chapter.audioTrack?.duration
-                else { return false }
-                return offset >= (chapter.audioStartSeconds ?? 0)
-                    && (offset < (chapter.audioEndSeconds ?? duration)
-                        || (offset >= duration && (chapter.audioEndSeconds ?? duration) >= duration))
-            }),
-            let readTarget = chapter.readTarget,
-            mappings.contains(where: {
-                $0.itemID == trackID
-                    && $0.sourceStartSeconds == chapter.audioStartSeconds
-                    && $0.sourceEndSeconds == chapter.audioEndSeconds
-            }),
-            let duration = chapter.audioEndSeconds ?? chapter.audioTrack?.duration,
-            duration.isFinite,
-            duration > (chapter.audioStartSeconds ?? 0)
-        else { return nil }
-
-        let start = chapter.audioStartSeconds ?? 0
-        let fraction = bounded((offset - start) / (duration - start))
-        let readingTarget: BookCombinedReadingTarget
-        switch readTarget {
-        case .epub(let location):
-            readingTarget = .chapter(location: location, progression: fraction)
-        case .entityChapter(let chapterID):
-            readingTarget = .entityChapter(id: chapterID)
-        }
-        return BookCombinedResumeTarget(
-            readingTarget: readingTarget,
-            audioTrackID: trackID,
-            audioStartSeconds: max(start, offset - audioRunwaySeconds)
         )
     }
 

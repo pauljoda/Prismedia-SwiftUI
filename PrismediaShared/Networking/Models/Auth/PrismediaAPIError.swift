@@ -14,6 +14,14 @@ public enum PrismediaAPIError: Error, LocalizedError {
         return false
     }
 
+    /// Whether the server has no such route: a 404 without the problem body a real route returns
+    /// for a missing or hidden Entity. Version-gated features use it to fall back on servers that
+    /// report a qualifying version but predate the route.
+    public var isMissingRoute: Bool {
+        guard case .httpStatus(404, let problem) = self else { return false }
+        return problem?.code != PrismediaContractCodes.ProblemCode.entityNotFound
+    }
+
     public var errorDescription: String? {
         switch self {
         case .invalidURL(let path):
@@ -35,6 +43,8 @@ public enum PrismediaAPIError: Error, LocalizedError {
                 return "This server has already been set up. Sign in instead."
             case "password_invalid":
                 return "Passwords must be at least 8 characters."
+            case PrismediaContractCodes.ProblemCode.invalidProgress:
+                return "Prismedia rejected this progress update."
             default:
                 if let message = problem?.message, !message.isEmpty {
                     return "Prismedia returned HTTP \(status): \(message)"

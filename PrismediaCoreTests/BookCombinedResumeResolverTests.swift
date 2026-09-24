@@ -246,42 +246,6 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         XCTAssertEqual(target.audioStartSeconds, 100.263, accuracy: 0.001)
     }
 
-    func testPostCompletionListeningResumesThePairedChapterInsteadOfOldReading() throws {
-        let track = track(number: 1, duration: 90)
-        let chapters = [
-            BookChapterMapping(id: "one", title: "One", order: 0, depth: 0,
-                readTarget: .epub(location: "Text/one.xhtml"),
-                readStartFraction: 0, readEndFraction: 0.33, audioTrack: track,
-                audioStartSeconds: 0, audioEndSeconds: 30),
-            BookChapterMapping(id: "two", title: "Two", order: 1, depth: 0,
-                readTarget: .epub(location: "Text/two.xhtml"),
-                readStartFraction: 0.33, readEndFraction: 0.66, audioTrack: track,
-                audioStartSeconds: 30, audioEndSeconds: 60),
-        ]
-        let mappings = BookProgressMappingBuilder().build(
-            bookID: bookID, chapters: chapters, readerMode: .paged,
-            hasReadableRendition: true
-        )
-        let progress = try decodedProgress(
-            trackID: track.id,
-            completedAt: "2026-09-24T01:32:57.000Z",
-            readingAt: "2026-09-24T01:30:00.000Z",
-            listeningAt: "2026-09-24T01:42:27.000Z",
-            listeningOffset: 45
-        )
-
-        let target = try XCTUnwrap(BookCombinedResumeResolver().resolveLatestContinuation(
-            chapters: chapters, mappings: mappings, progress: progress
-        ))
-        XCTAssertEqual(target.readingTarget,
-            .chapter(location: "Text/two.xhtml", progression: 0.5))
-        XCTAssertEqual(target.audioTrackID, track.id)
-        XCTAssertEqual(target.audioStartSeconds, 40, accuracy: 0.001)
-        XCTAssertEqual(BookCombinedResumeResolver().exactAudioResume(
-            chapters: chapters, progress: progress
-        )?.trackOffsetSeconds, 45)
-    }
-
     func testReadingAfterCompletionWinsWhenItIsTheLatestActivity() throws {
         let track = track(number: 1, duration: 90)
         let chapter = BookChapterMapping(id: "one", title: "One", order: 0, depth: 0,
@@ -293,11 +257,8 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             hasReadableRendition: true
         )
         let progress = try decodedProgress(
-            trackID: track.id,
             completedAt: "2026-09-24T01:32:57.000Z",
-            readingAt: "2026-09-24T01:45:00.000Z",
-            listeningAt: "2026-09-24T01:42:27.000Z",
-            listeningOffset: 45
+            updatedAt: "2026-09-24T01:45:00.000Z"
         )
 
         let target = try XCTUnwrap(BookCombinedResumeResolver().resolveLatestContinuation(
@@ -319,11 +280,8 @@ final class BookCombinedResumeResolverTests: XCTestCase {
             hasReadableRendition: true
         )
         let progress = try decodedProgress(
-            trackID: track.id,
             completedAt: "2026-09-24T01:32:57.000Z",
-            readingAt: "2026-09-24T01:30:00.000Z",
-            listeningAt: "2026-09-24T01:31:00.000Z",
-            listeningOffset: 45
+            updatedAt: "2026-09-24T01:30:00.000Z"
         )
 
         let target = try XCTUnwrap(BookCombinedResumeResolver().resolveLatestContinuation(
@@ -332,34 +290,15 @@ final class BookCombinedResumeResolverTests: XCTestCase {
         XCTAssertEqual(target.readingTarget,
             .chapter(location: "Text/one.xhtml", progression: 0))
         XCTAssertEqual(target.audioStartSeconds, 0, accuracy: 0.001)
-        XCTAssertNil(BookCombinedResumeResolver().exactAudioResume(
-            chapters: [chapter], progress: progress
-        ))
     }
 
     private let bookID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
-    private func decodedProgress(
-        trackID: UUID,
-        completedAt: String,
-        readingAt: String,
-        listeningAt: String,
-        listeningOffset: Double
-    ) throws -> EntityProgressCapability {
+    private func decodedProgress(completedAt: String, updatedAt: String) throws -> EntityProgressCapability {
         let json = """
         {
-          "currentEntityId": "\(bookID)", "unit": "cfi", "index": 5000, "total": 10000,
-          "mode": "paged", "completedAt": "\(completedAt)",
-          "updatedAt": "\(readingAt)",
-          "reading": {
-            "currentEntityId": "\(bookID)", "unit": "cfi", "index": 2000,
-            "total": 10000, "mode": "paged", "updatedAt": "\(readingAt)"
-          },
-          "listening": {
-            "trackEntityId": "\(trackID)", "offsetSeconds": \(listeningOffset),
-            "currentEntityId": "\(bookID)", "unit": "cfi", "index": 5000,
-            "total": 10000, "updatedAt": "\(listeningAt)"
-          }
+          "currentEntityId": "\(bookID)", "unit": "cfi", "index": 2000, "total": 10000,
+          "mode": "paged", "completedAt": "\(completedAt)", "updatedAt": "\(updatedAt)"
         }
         """
         return try PrismediaJSON.decoder().decode(EntityProgressCapability.self, from: Data(json.utf8))

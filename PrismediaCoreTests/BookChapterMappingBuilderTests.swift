@@ -20,12 +20,12 @@ final class BookChapterMappingBuilderTests: XCTestCase {
                 BookChapterAudioMapping(
                     readableChapterKey: "prologue",
                     audioTrackID: tracks[0].id,
-                    origin: BookChapterAudioMapping.Origin.manual
+                    origin: .manual
                 ),
                 BookChapterAudioMapping(
                     readableChapterKey: "one",
                     audioTrackID: tracks[1].id,
-                    origin: BookChapterAudioMapping.Origin.auto
+                    origin: .auto
                 ),
             ]
         )
@@ -180,12 +180,12 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         let manual = BookChapterAudioMapping(
             readableChapterKey: "one",
             audioTrackID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
-            origin: BookChapterAudioMapping.Origin.manual
+            origin: .manual
         )
         let auto = BookChapterAudioMapping(
             readableChapterKey: "two",
             audioTrackID: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
-            origin: BookChapterAudioMapping.Origin.auto
+            origin: .auto
         )
         let legacy = BookChapterAudioMapping(
             readableChapterKey: "three",

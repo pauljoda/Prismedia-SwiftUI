@@ -13,12 +13,6 @@ extension EntityDetailView {
 
         func unifiedAudiobookResume(for detail: EntityDetail) -> AudiobookResumePoint? {
             let progress: EntityProgressCapability? = detail.capability()
-            if let exact = BookCombinedResumeResolver().exactAudioResume(
-                chapters: mappedBookChapters,
-                progress: progress
-            ) {
-                return exact
-            }
             if detail.bookFormat != .audio,
                 let target = combinedResumeTarget(for: detail)
             {
@@ -192,14 +186,7 @@ extension EntityDetailView {
                         mode: progress.mode,
                         completed: marksCompleted,
                         location: progress.location,
-                        activityKind: .listening,
-                        listening: progress.listening.map {
-                            BookListeningPositionRequest(
-                                trackEntityID: $0.trackEntityID,
-                                markerID: $0.markerID,
-                                offsetSeconds: $0.offsetSeconds
-                            )
-                        }
+                        activityKind: .listening
                     )
                 )
                 await refreshAudiobookDetail()

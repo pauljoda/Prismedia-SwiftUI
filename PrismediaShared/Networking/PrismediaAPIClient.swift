@@ -16,6 +16,8 @@ public struct PrismediaAPIClient: Sendable {
     private let loader: HTTPDataLoading
     private let uploadLoader: HTTPUploadLoading
     private let nsfwPolicy: NsfwContentPolicy
+    /// Server build version shared by every copy of this client session.
+    let serverVersionCache: PrismediaServerVersionCache
 
     public init(
         serverURL: URL,
@@ -29,6 +31,7 @@ public struct PrismediaAPIClient: Sendable {
         nsfwPolicy = NsfwContentPolicy(isAllowed: allowsNsfwContent)
         self.loader = loader
         self.uploadLoader = uploadLoader
+        serverVersionCache = PrismediaServerVersionCache()
     }
 
     private init(
@@ -36,13 +39,15 @@ public struct PrismediaAPIClient: Sendable {
         accessToken: String?,
         nsfwPolicy: NsfwContentPolicy,
         loader: HTTPDataLoading,
-        uploadLoader: HTTPUploadLoading
+        uploadLoader: HTTPUploadLoading,
+        serverVersionCache: PrismediaServerVersionCache
     ) {
         self.serverURL = serverURL
         self.accessToken = accessToken
         self.nsfwPolicy = nsfwPolicy
         self.loader = loader
         self.uploadLoader = uploadLoader
+        self.serverVersionCache = serverVersionCache
     }
 
     public func authenticated(with accessToken: String) -> PrismediaAPIClient {
@@ -51,7 +56,8 @@ public struct PrismediaAPIClient: Sendable {
             accessToken: accessToken,
             nsfwPolicy: nsfwPolicy,
             loader: loader,
-            uploadLoader: uploadLoader
+            uploadLoader: uploadLoader,
+            serverVersionCache: serverVersionCache
         )
     }
 
@@ -59,9 +65,10 @@ public struct PrismediaAPIClient: Sendable {
         PrismediaAPIClient(
             serverURL: serverURL,
             accessToken: accessToken,
-            allowsNsfwContent: allowsNsfwContent,
+            nsfwPolicy: NsfwContentPolicy(isAllowed: allowsNsfwContent),
             loader: loader,
-            uploadLoader: uploadLoader
+            uploadLoader: uploadLoader,
+            serverVersionCache: serverVersionCache
         )
     }
 

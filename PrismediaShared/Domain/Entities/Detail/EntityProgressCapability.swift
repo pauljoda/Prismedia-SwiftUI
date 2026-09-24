@@ -1,6 +1,13 @@
 import Foundation
 
-public struct EntityProgressCapability: Decodable, Hashable, Sendable {
+/// A work's non-time progress: the single last-used main cursor, completion and coverage, plus,
+/// for kinds that declare consumption modalities (Books on 3.8+ servers), each modality's exact
+/// checkpoint.
+public struct EntityProgressCapability: Hashable, Sendable {
+    // MARK: - Variables
+
+    /// Exact per-modality positions, one per recorded modality.
+    public let checkpoints: [EntityProgressCheckpoint]
     public let currentEntityID: UUID?
     public let unit: ProgressUnit
     public let index: Int
@@ -14,24 +21,83 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
     public let consumedCount: Int
     public let consumedTotal: Int?
     public let consumedPercent: Double
-    public let reading: BookReadingProgress?
-    public let listening: BookListeningProgress?
+    /// Modality of the newest checkpoint.
+    public let lastModality: ConsumptionModality?
 
+    /// The exact reading checkpoint presented as a cursor while keeping the work's completion and
+    /// coverage. Servers that keep modality checkpoints may place the main cursor from listening,
+    /// so reading surfaces resume and echo this position instead. Without a reading checkpoint
+    /// (older servers and kinds without modalities) the main cursor is the reading position.
+    public var readingPosition: Self {
+        guard let reading = checkpoint(for: .reading) else { return self }
+        return Self(
+            currentEntityID: reading.positionEntityID,
+            unit: reading.unit,
+            index: reading.index,
+            total: reading.total,
+            mode: reading.mode,
+            completedAt: completedAt,
+            updatedAt: reading.updatedAt,
+            workIndex: reading.workIndex,
+            workTotal: reading.workTotal,
+            location: reading.location,
+            consumedCount: consumedCount,
+            consumedTotal: consumedTotal,
+            consumedPercent: consumedPercent,
+            lastModality: lastModality,
+            checkpoints: checkpoints
+        )
+    }
+
+    // MARK: - Initializers
+
+    public init(
+        currentEntityID: UUID?,
+        unit: ProgressUnit,
+        index: Int,
+        total: Int,
+        mode: ReaderMode?,
+        completedAt: Date?,
+        updatedAt: Date?,
+        workIndex: Int?,
+        workTotal: Int?,
+        location: String?,
+        consumedCount: Int = 0,
+        consumedTotal: Int? = nil,
+        consumedPercent: Double = 0,
+        lastModality: ConsumptionModality? = nil,
+        checkpoints: [EntityProgressCheckpoint] = []
+    ) {
+        self.currentEntityID = currentEntityID
+        self.unit = unit
+        self.index = index
+        self.total = total
+        self.mode = mode
+        self.completedAt = completedAt
+        self.updatedAt = updatedAt
+        self.workIndex = workIndex
+        self.workTotal = workTotal
+        self.location = location
+        self.consumedCount = consumedCount
+        self.consumedTotal = consumedTotal
+        self.consumedPercent = consumedPercent
+        self.lastModality = lastModality
+        self.checkpoints = checkpoints
+    }
+
+    // MARK: - Actions - Checkpoints
+
+    /// The exact checkpoint recorded for `modality`, when the server keeps one.
+    public func checkpoint(for modality: ConsumptionModality) -> EntityProgressCheckpoint? {
+        checkpoints.first { $0.modality == modality }
+    }
+}
+
+extension EntityProgressCapability: Decodable {
     private enum CodingKeys: String, CodingKey {
         case currentEntityID = "currentEntityId"
-        case unit
-        case index
-        case total
-        case mode
-        case completedAt
-        case updatedAt
-        case workIndex
-        case workTotal
-        case location
-        case consumedCount
-        case consumedTotal
-        case consumedPercent
-        case reading, listening
+        case unit, index, total, mode, completedAt, updatedAt, workIndex, workTotal, location
+        case consumedCount, consumedTotal, consumedPercent, lastModality, checkpoints
     }
 
     public init(from decoder: Decoder) throws {
@@ -49,63 +115,7 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         consumedCount = try container.decodeFlexibleIntIfPresent(forKey: .consumedCount) ?? 0
         consumedTotal = try container.decodeFlexibleIntIfPresent(forKey: .consumedTotal)
         consumedPercent = try container.decodeFlexibleDoubleIfPresent(forKey: .consumedPercent) ?? 0
-        reading = try container.decodeIfPresent(BookReadingProgress.self, forKey: .reading)
-        listening = try container.decodeIfPresent(BookListeningProgress.self, forKey: .listening)
-    }
-
-    public init(
-        currentEntityID: UUID?,
-        unit: ProgressUnit,
-        index: Int,
-        total: Int,
-        mode: ReaderMode?,
-        completedAt: Date?,
-        updatedAt: Date?,
-        workIndex: Int?,
-        workTotal: Int?,
-        location: String?,
-        consumedCount: Int = 0,
-        consumedTotal: Int? = nil,
-        consumedPercent: Double = 0,
-        reading: BookReadingProgress? = nil,
-        listening: BookListeningProgress? = nil
-    ) {
-        self.currentEntityID = currentEntityID
-        self.unit = unit
-        self.index = index
-        self.total = total
-        self.mode = mode
-        self.completedAt = completedAt
-        self.updatedAt = updatedAt
-        self.workIndex = workIndex
-        self.workTotal = workTotal
-        self.location = location
-        self.consumedCount = consumedCount
-        self.consumedTotal = consumedTotal
-        self.consumedPercent = consumedPercent
-        self.reading = reading
-        self.listening = listening
-    }
-
-    /// Presents the saved readable cursor while preserving work-level completion and coverage.
-    public var readablePosition: Self {
-        guard let reading else { return self }
-        return Self(
-            currentEntityID: reading.currentEntityID,
-            unit: reading.unit,
-            index: reading.index,
-            total: reading.total,
-            mode: reading.mode,
-            completedAt: completedAt,
-            updatedAt: reading.updatedAt,
-            workIndex: nil,
-            workTotal: nil,
-            location: reading.location,
-            consumedCount: consumedCount,
-            consumedTotal: consumedTotal,
-            consumedPercent: consumedPercent,
-            reading: reading,
-            listening: listening
-        )
+        lastModality = try container.decodeIfPresent(ConsumptionModality.self, forKey: .lastModality)
+        checkpoints = try container.decodeIfPresent([EntityProgressCheckpoint].self, forKey: .checkpoints) ?? []
     }
 }
