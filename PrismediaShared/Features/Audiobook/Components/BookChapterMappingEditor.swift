@@ -21,10 +21,7 @@ struct BookChapterMappingEditor: View {
         // Drafts hold only the user's manual rows: echoing the server-derived automatic layer
         // back through a save would promote it to manual and freeze it against future rescans.
         let manual = presentation.manualMappings
-        let draft = Dictionary(
-            uniqueKeysWithValues: manual.map { (Self.identity(for: $0), $0.readableChapterKey) }
-        )
-        _draftByChapterID = State(initialValue: draft)
+        _draftByChapterID = State(initialValue: Self.draft(manual))
         _sourceSignature = State(initialValue: Self.signature(manual))
         _firstChapterKey = State(initialValue: Self.initialFirstChapterKey(presentation: presentation))
     }
@@ -238,9 +235,7 @@ struct BookChapterMappingEditor: View {
             audioChapters: presentation.audioChapters,
             firstReadableChapterKey: firstChapterKey
         )
-        draftByChapterID = Dictionary(
-            uniqueKeysWithValues: mappings.map { (Self.identity(for: $0), $0.readableChapterKey) }
-        )
+        draftByChapterID = Self.draft(mappings)
         didSave = false
         actionErrorMessage = nil
     }
@@ -256,9 +251,7 @@ struct BookChapterMappingEditor: View {
                 // The response is the merged map (manual plus refreshed automatic rows); only
                 // the manual subset belongs back in the draft.
                 let persistedManual = try await onSave(explicitMappings).filter { !$0.isAutomatic }
-                draftByChapterID = Dictionary(
-                    uniqueKeysWithValues: persistedManual.map { (Self.identity(for: $0), $0.readableChapterKey) }
-                )
+                draftByChapterID = Self.draft(persistedManual)
                 sourceSignature = Self.signature(persistedManual)
                 didSave = true
             } catch is CancellationError {
@@ -293,6 +286,15 @@ struct BookChapterMappingEditor: View {
             }
             .map { "\(Self.identity(for: $0)):\($0.readableChapterKey)" }
             .joined(separator: "|")
+    }
+
+    /// One draft row per audio chapter. A server or builder list can name the same audio chapter
+    /// twice, so the first row wins instead of trapping the way `uniqueKeysWithValues` would.
+    private static func draft(_ mappings: [BookChapterAudioMapping]) -> [String: String] {
+        Dictionary(
+            mappings.map { (identity(for: $0), $0.readableChapterKey) },
+            uniquingKeysWith: { first, _ in first }
+        )
     }
 
     private static func identity(for mapping: BookChapterAudioMapping) -> String {
