@@ -2,8 +2,10 @@ import SwiftUI
 
 struct BookChapterMappingEditor: View {
     @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
-    @State private var draftByChapterID: [String: String]
+    @State private var draft: BookChapterMappingDraft
     @State private var sourceSignature: String
+    /// An in-order fill waiting for review; nothing enters the draft until every pair has been seen.
+    @State private var proposedFill: [BookChapterAudioMapping]?
     @State private var firstChapterKey: String?
     @State private var isSaving = false
     @State private var actionErrorMessage: String?
@@ -18,11 +20,12 @@ struct BookChapterMappingEditor: View {
     ) {
         self.presentation = presentation
         self.onSave = onSave
-        // Drafts hold only the user's manual rows: echoing the server-derived automatic layer
-        // back through a save would promote it to manual and freeze it against future rescans.
-        let manual = presentation.manualMappings
-        _draftByChapterID = State(initialValue: Self.draft(manual))
-        _sourceSignature = State(initialValue: Self.signature(manual))
+        // Drafts hold only the person-confirmed rows (manual or ordered): the server-derived
+        // automatic layer is server-owned and a save must never echo it back.
+        let draft = BookChapterMappingDraft(persisted: presentation.manualMappings)
+        _draft = State(initialValue: draft)
+        let confirmed = draft.mappings(orderedBy: presentation.orderedAudioChapters)
+        _sourceSignature = State(initialValue: BookChapterMappingDraft.signature(confirmed))
         _firstChapterKey = State(initialValue: Self.initialFirstChapterKey(presentation: presentation))
     }
 
@@ -30,6 +33,15 @@ struct BookChapterMappingEditor: View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.extraLarge) {
             header
             firstChapterControl
+            if let proposedFill {
+                BookChapterMappingFillReview(
+                    proposal: proposedFill,
+                    audioChapters: presentation.orderedAudioChapters,
+                    readableChapters: presentation.readableChapters,
+                    onDiscard: { self.proposedFill = nil },
+                    onAccept: acceptFillInOrder
+                )
+            }
             mappingList
             footer
         }
@@ -48,10 +60,15 @@ struct BookChapterMappingEditor: View {
                     .foregroundStyle(PrismediaColor.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 Text(
-                    "Choose where the first audio chapter begins, then Prismedia fills the remaining chapters in order. You can override any chapter below before saving."
+                    "Prismedia pairs chapters automatically only when their titles match exactly. Pick pairs yourself, or fill in order from a chapter and review every pair before saving."
                 )
                 .font(.subheadline)
                 .foregroundStyle(PrismediaColor.textSecondary)
+                if let separateExplanation = presentation.separateExplanation {
+                    Label(separateExplanation, systemImage: "info.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                }
             }
 
             Spacer(minLength: PrismediaSpacing.medium)
@@ -62,13 +79,13 @@ struct BookChapterMappingEditor: View {
                 Text("of \(presentation.orderedAudioChapters.count) aligned")
                     .font(.caption)
                     .foregroundStyle(PrismediaColor.textMuted)
-                Text("\(presentation.automaticCount) automatic · \(draftByChapterID.count) explicit")
+                Text("\(presentation.automaticCount) exact title · \(draft.count) confirmed")
                     .font(.caption2)
                     .foregroundStyle(PrismediaColor.textMuted)
             }
             .padding(PrismediaSpacing.medium)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(presentation.alignedCount) of \(presentation.orderedAudioChapters.count) audio chapters aligned, \(presentation.automaticCount) automatic, \(draftByChapterID.count) explicit")
+            .accessibilityLabel("\(presentation.alignedCount) of \(presentation.orderedAudioChapters.count) audio chapters aligned, \(presentation.automaticCount) by exact title, \(draft.count) confirmed")
         }
     }
 
@@ -99,13 +116,13 @@ struct BookChapterMappingEditor: View {
             .pickerStyle(.menu)
 
             PrismediaButton(
-                "Mark first chapter",
+                "Fill in order from here",
                 systemImage: "arrow.down.to.line",
                 variant: .prominent,
                 form: .fill,
                 primaryTint: artworkPrimaryAccent
             ) {
-                markFirstChapter()
+                proposeFillInOrder()
             }
             .disabled(isSaving || firstChapterKey == nil || presentation.orderedAudioChapters.isEmpty)
         }
@@ -121,8 +138,9 @@ struct BookChapterMappingEditor: View {
                     audioChapter: chapter,
                     chapters: presentation.orderedReadableChapters,
                     automaticChapterTitle: presentation.automaticChapterTitle(for: chapter),
+                    origin: draft.origin(for: chapter),
                     isDisabled: isSaving,
-                    selection: selectionBinding(for: chapter.identity)
+                    selection: selectionBinding(for: chapter)
                 )
 
                 if chapter.identity != presentation.orderedAudioChapters.last?.identity {
@@ -171,11 +189,12 @@ struct BookChapterMappingEditor: View {
             systemImage: "link.badge.minus",
             form: .fill
         ) {
-            draftByChapterID = [:]
+            draft.clear()
+            proposedFill = nil
             didSave = false
             actionErrorMessage = nil
         }
-        .disabled(isSaving || draftByChapterID.isEmpty)
+        .disabled(isSaving || draft.isEmpty)
 
         PrismediaButton(
             "Save mapping",
@@ -191,53 +210,45 @@ struct BookChapterMappingEditor: View {
         .disabled(isSaving || !isDirty)
     }
 
-    private var explicitMappings: [BookChapterAudioMapping] {
-        presentation.orderedAudioChapters.compactMap { chapter in
-            draftByChapterID[chapter.identity].map {
-                BookChapterAudioMapping(
-                    readableChapterKey: $0,
-                    audioTrackID: chapter.audioTrackID,
-                    audioMarkerID: chapter.audioMarkerID
-                )
-            }
-        }
+    /// The save request: each confirmed pair `manual` or `ordered`, never automatic.
+    private var confirmedMappings: [BookChapterAudioMapping] {
+        draft.mappings(orderedBy: presentation.orderedAudioChapters)
     }
 
     private var isDirty: Bool {
-        Self.signature(explicitMappings) != sourceSignature
+        BookChapterMappingDraft.signature(confirmedMappings) != sourceSignature
     }
 
-    private func selectionBinding(for chapterID: String) -> Binding<String?> {
+    /// A hand pick; it replaces any in-order provenance the row had.
+    private func selectionBinding(for chapter: BookAudioChapter) -> Binding<String?> {
         Binding(
-            get: { draftByChapterID[chapterID] },
+            get: { draft.readableChapterKey(for: chapter) },
             set: { chapterKey in
                 didSave = false
                 actionErrorMessage = nil
-                guard let chapterKey else {
-                    draftByChapterID.removeValue(forKey: chapterID)
-                    return
-                }
-                if let duplicateChapterID = draftByChapterID.first(where: {
-                    $0.key != chapterID && $0.value == chapterKey
-                })?.key {
-                    draftByChapterID.removeValue(forKey: duplicateChapterID)
-                }
-                draftByChapterID[chapterID] = chapterKey
+                draft.pick(chapterKey, for: chapter)
             }
         )
     }
 
-    private func markFirstChapter() {
+    /// Proposes pairs in playback order from the chosen chapter; they are reviewed before use.
+    private func proposeFillInOrder() {
         guard let firstChapterKey else { return }
-        let mappings = BookChapterMappingBuilder().sequentialMappings(
+        proposedFill = BookChapterMappingBuilder().sequentialMappings(
             readableChapters: presentation.readableChapters,
             audioTracks: presentation.audioTracks,
             audioChapters: presentation.audioChapters,
             firstReadableChapterKey: firstChapterKey
         )
-        draftByChapterID = Self.draft(mappings)
         didSave = false
         actionErrorMessage = nil
+    }
+
+    /// Uses the reviewed in-order pairs as the draft; each keeps its "filled in order" origin.
+    private func acceptFillInOrder() {
+        guard let proposedFill else { return }
+        draft.accept(filledInOrder: proposedFill)
+        self.proposedFill = nil
     }
 
     private func save() {
@@ -248,11 +259,13 @@ struct BookChapterMappingEditor: View {
         Task { @MainActor in
             defer { isSaving = false }
             do {
-                // The response is the merged map (manual plus refreshed automatic rows); only
-                // the manual subset belongs back in the draft.
-                let persistedManual = try await onSave(explicitMappings).filter { !$0.isAutomatic }
-                draftByChapterID = Self.draft(persistedManual)
-                sourceSignature = Self.signature(persistedManual)
+                // The response is the merged map (confirmed plus refreshed automatic rows); only
+                // the confirmed subset belongs back in the draft.
+                let persisted = BookChapterMappingDraft(persisted: try await onSave(confirmedMappings))
+                draft = persisted
+                sourceSignature = BookChapterMappingDraft.signature(
+                    persisted.mappings(orderedBy: presentation.orderedAudioChapters)
+                )
                 didSave = true
             } catch is CancellationError {
                 return
@@ -276,28 +289,5 @@ struct BookChapterMappingEditor: View {
             return mappedKey
         }
         return presentation.orderedReadableChapters.first?.id
-    }
-
-    private static func signature(_ mappings: [BookChapterAudioMapping]) -> String {
-        mappings
-            .sorted {
-                ($0.audioTrackID.uuidString, $0.audioMarkerID?.uuidString ?? "", $0.readableChapterKey)
-                    < ($1.audioTrackID.uuidString, $1.audioMarkerID?.uuidString ?? "", $1.readableChapterKey)
-            }
-            .map { "\(Self.identity(for: $0)):\($0.readableChapterKey)" }
-            .joined(separator: "|")
-    }
-
-    /// One draft row per audio chapter. A server or builder list can name the same audio chapter
-    /// twice, so the first row wins instead of trapping the way `uniqueKeysWithValues` would.
-    private static func draft(_ mappings: [BookChapterAudioMapping]) -> [String: String] {
-        Dictionary(
-            mappings.map { (identity(for: $0), $0.readableChapterKey) },
-            uniquingKeysWith: { first, _ in first }
-        )
-    }
-
-    private static func identity(for mapping: BookChapterAudioMapping) -> String {
-        "\(mapping.audioTrackID.uuidString):\(mapping.audioMarkerID?.uuidString ?? "whole")"
     }
 }

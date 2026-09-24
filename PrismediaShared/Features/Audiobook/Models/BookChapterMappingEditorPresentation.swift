@@ -6,9 +6,12 @@ struct BookChapterMappingEditorPresentation: Equatable, Sendable {
     let audioChapters: [BookAudioChapter]
     let mappings: [BookChapterAudioMapping]
     let loadErrorMessage: String?
+    /// Why the Book keeps reading and listening separate, when the server says so.
+    let separateExplanation: String?
 
-    /// Only the user's explicit rows are editable; the server-derived automatic layer is
-    /// annotation-only and refills after every save, so it must never seed a draft or a request.
+    /// Only person-confirmed rows (picked by hand or filled in order) are editable; the
+    /// server-derived automatic layer is annotation-only and refills after every save, so it must
+    /// never seed a draft or a request.
     var manualMappings: [BookChapterAudioMapping] {
         mappings.filter { !$0.isAutomatic }
     }
@@ -38,16 +41,10 @@ struct BookChapterMappingEditorPresentation: Equatable, Sendable {
         BookAudioChapter.catalog(audioTracks: audioTracks, audioChapters: audioChapters)
     }
 
-    /// Editor reset key. Tracks only the manual rows so a background refresh of the server's
-    /// automatic layer never discards an in-progress draft.
+    /// Editor reset key. Tracks only the confirmed rows and their origins so a background refresh
+    /// of the server's automatic layer never discards an in-progress draft.
     var revision: String {
-        manualMappings
-            .sorted {
-                ($0.audioTrackID.uuidString, $0.audioMarkerID?.uuidString ?? "", $0.readableChapterKey)
-                    < ($1.audioTrackID.uuidString, $1.audioMarkerID?.uuidString ?? "", $1.readableChapterKey)
-            }
-            .map { "\($0.audioTrackID.uuidString):\($0.audioMarkerID?.uuidString ?? "whole"):\($0.readableChapterKey)" }
-            .joined(separator: "|")
+        BookChapterMappingDraft.signature(manualMappings)
     }
 
     /// Title of the chapter the server's automatic matcher chose for this track, shown as the
@@ -74,7 +71,8 @@ extension BookChapterMappingEditorPresentation {
             audioTracks: audioTracks,
             audioChapters: alignment.rows.compactMap { $0.audio?.audioChapter },
             mappings: alignment.chapterMappings,
-            loadErrorMessage: loadErrorMessage
+            loadErrorMessage: loadErrorMessage,
+            separateExplanation: alignment.separateProgress?.explanation
         )
     }
 }

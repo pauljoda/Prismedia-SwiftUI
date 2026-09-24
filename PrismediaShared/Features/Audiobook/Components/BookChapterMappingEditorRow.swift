@@ -5,6 +5,8 @@ struct BookChapterMappingEditorRow: View {
     let audioChapter: BookAudioChapter
     let chapters: [ReadableBookChapter]
     let automaticChapterTitle: String?
+    /// How the draft pair was confirmed, when the audio chapter is paired in the draft.
+    let origin: BookChapterMappingOrigin?
     let isDisabled: Bool
     @Binding var selection: String?
 
@@ -20,7 +22,7 @@ struct BookChapterMappingEditorRow: View {
                     Text(audioChapter.title)
                         .font(.headline)
                         .foregroundStyle(PrismediaColor.textPrimary)
-                    Text(selection == nil ? "Automatic title matching" : "Explicit mapping")
+                    Text(status)
                         .font(.caption)
                         .foregroundStyle(PrismediaColor.textMuted)
                 }
@@ -45,6 +47,15 @@ struct BookChapterMappingEditorRow: View {
     }
 
     private var automaticSelectionTitle: String {
-        automaticChapterTitle.map { "Automatic: \($0)" } ?? "No explicit mapping"
+        automaticChapterTitle.map { String(localized: "Exact title: \($0)") } ?? String(localized: "Not paired")
+    }
+
+    /// Where the pair comes from: a person's pick, a reviewed in-order fill, or an exact title match.
+    private var status: String {
+        guard selection != nil else {
+            return automaticChapterTitle == nil
+                ? String(localized: "Unmatched") : String(localized: "Matched by exact title")
+        }
+        return origin == .ordered ? String(localized: "Filled in order") : String(localized: "Picked by hand")
     }
 }

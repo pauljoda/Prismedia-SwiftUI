@@ -5,7 +5,10 @@ import Foundation
 struct BookChapterMappingBuilder: Sendable {
     // MARK: - Actions - Mapping
 
-    /// Creates the explicit one-to-one map produced by the “Mark first chapter” workflow.
+    /// Proposes the one-to-one map of the editor's “Fill in order from here” step: audio chapters in
+    /// playback order pair with readable chapters in display order, starting at the chosen chapter.
+    /// The proposal is reviewed pair by pair before it is used, and every pair is remembered as
+    /// filled in order (never as picked by hand).
     func sequentialMappings(
         readableChapters: [ReadableBookChapter],
         audioTracks: [MusicTrack],
@@ -22,6 +25,7 @@ struct BookChapterMappingBuilder: Sendable {
             BookChapterAudioMapping(
                 readableChapterKey: readable[firstIndex + offset].id,
                 audioTrackID: candidate.audioTrackID,
+                origin: .ordered,
                 audioMarkerID: candidate.audioMarkerID
             )
         }

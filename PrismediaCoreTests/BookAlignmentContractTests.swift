@@ -296,6 +296,61 @@ final class BookAlignmentContractTests: XCTestCase {
         XCTAssertEqual(linked.actions.readingTitle, "Continue Reading ≈")
     }
 
+    func testChapterMappingSavesSendOnlyManualOrOrderedPairs() async throws {
+        let first = BookAudioChapter(
+            audioTrackID: Self.trackID, audioMarkerID: Self.markerID, title: "One", startSeconds: 0, endSeconds: 10
+        )
+        let second = BookAudioChapter(
+            audioTrackID: Self.trackID, audioMarkerID: nil, title: "Two", startSeconds: 10, endSeconds: 20
+        )
+        let third = BookAudioChapter(
+            audioTrackID: Self.bookID, audioMarkerID: nil, title: "Three", startSeconds: 0, endSeconds: 10
+        )
+        var draft = BookChapterMappingDraft(persisted: [
+            BookChapterAudioMapping(
+                readableChapterKey: "one", audioTrackID: Self.trackID, origin: .ordered, audioMarkerID: Self.markerID
+            ),
+            BookChapterAudioMapping(readableChapterKey: "two", audioTrackID: Self.trackID, origin: .auto),
+            BookChapterAudioMapping(readableChapterKey: "three", audioTrackID: Self.bookID),
+        ])
+        XCTAssertEqual(draft.origin(for: first), .ordered)
+        XCTAssertNil(draft.readableChapterKey(for: second), "Automatic pairs never seed a draft.")
+        XCTAssertEqual(draft.origin(for: third), .manual, "A pair without an origin was picked by hand.")
+
+        // A hand edit becomes manual and releases the readable chapter from its old audio chapter.
+        draft.pick("three", for: second)
+        XCTAssertEqual(draft.origin(for: second), .manual)
+        XCTAssertNil(draft.readableChapterKey(for: third))
+
+        let fill = BookChapterMappingBuilder().sequentialMappings(
+            readableChapters: [
+                ReadableBookChapter(id: "one", title: "One", order: 0, depth: 0, target: .epub(location: "one")),
+                ReadableBookChapter(id: "two", title: "Two", order: 1, depth: 0, target: .epub(location: "two")),
+            ],
+            audioTracks: [MusicTrack(id: Self.trackID, title: "Track", sortOrder: 0)],
+            audioChapters: [first, second],
+            firstReadableChapterKey: "one"
+        )
+        XCTAssertEqual(fill.map(\.origin), [.ordered, .ordered])
+        var filled = draft
+        filled.accept(filledInOrder: fill)
+        XCTAssertEqual(filled.mappings(orderedBy: [first, second, third]).map(\.origin), [.ordered, .ordered])
+
+        let loader = MockHTTPDataLoader(responses: [.json(Self.alignmentJSON)])
+        let automatic = BookChapterAudioMapping(readableChapterKey: "x", audioTrackID: Self.bookID, origin: .auto)
+        _ = try await BookAlignmentLoader(service: Self.client(loader: loader)).save(
+            bookID: Self.bookID,
+            mappings: draft.mappings(orderedBy: [first, second, third]) + [automatic],
+            contract: .serverAlignment
+        )
+
+        let body = try XCTUnwrap(loader.requests.first?.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let sent = try XCTUnwrap(json["mappings"] as? [[String: Any]])
+        XCTAssertEqual(sent.compactMap { $0["origin"] as? String }, ["ordered", "manual"])
+        XCTAssertEqual(sent.map { $0["readableChapterKey"] as? String }, ["one", "three"])
+    }
+
     // MARK: - Version gate
 
     func testServerVersionsGateTheAlignmentProjection() {

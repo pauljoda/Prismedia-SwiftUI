@@ -50,7 +50,8 @@ final class BookChapterMappingBuilderTests: XCTestCase {
             audioTracks: [],
             audioChapters: [],
             mappings: [manual, auto, legacy],
-            loadErrorMessage: nil
+            loadErrorMessage: nil,
+            separateExplanation: nil
         )
 
         // Automatic rows must never reach a save request; origin-less rows are legacy manual.

@@ -53,7 +53,8 @@
                 audioTracks: audioTracks,
                 audioChapters: bookAlignmentState.legacyAudioChapters,
                 mappings: bookAlignmentState.legacyMappings,
-                loadErrorMessage: bookAlignmentState.errorMessage
+                loadErrorMessage: bookAlignmentState.errorMessage,
+                separateExplanation: nil
             )
         }
 
