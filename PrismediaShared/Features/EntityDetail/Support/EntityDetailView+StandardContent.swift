@@ -110,7 +110,7 @@ extension EntityDetailView {
                                                 },
                                                 onResumeReading: { openReader(command: .resume) },
                                                 onContinueListening: { beginListening(to: detail) },
-                                                onContinueCombined: { openCombinedReader(for: detail) },
+                                                onContinueCombined: { Task { await openCombinedReader(for: detail) } },
                                                 onStartReadingOver: { Task { await startReadingOver() } },
                                                 onStartListeningOver: { Task { await startListeningOver(detail) } },
                                                 onToggleReadingCompletion: {

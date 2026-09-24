@@ -194,7 +194,7 @@ final class EntityDetailReadingTests: XCTestCase {
             total: 10_000,
             mode: .paged,
             location: location,
-            completedAt: "2026-07-12T12:00:00Z"
+            completedAt: Date(timeIntervalSince1970: 1_752_319_200)
         )
         let book = makeSingleFileBook(format: .epub, progress: progress)
         let reader = ReadingServiceStub(details: [bookID: book])
@@ -303,7 +303,7 @@ final class EntityDetailReadingTests: XCTestCase {
     private func makeManifest(
         bookID: UUID,
         title: String,
-        completedAt: String? = nil
+        completedAt: Date? = nil
     ) -> BookReaderManifest {
         let chapterDetail = EntityDetail(
             id: chapterID,
@@ -369,7 +369,7 @@ final class EntityDetailReadingTests: XCTestCase {
         total: Int,
         mode: ReaderMode,
         location: String?,
-        completedAt: String? = nil
+        completedAt: Date? = nil
     ) -> EntityProgressCapability {
         EntityProgressCapability(
             currentEntityID: bookID,

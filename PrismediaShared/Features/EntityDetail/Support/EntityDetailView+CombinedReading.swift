@@ -82,17 +82,21 @@ extension EntityDetailView {
     func combinedResumeTarget(
         for detail: EntityDetail
     ) -> BookCombinedResumeTarget? {
-        return BookCombinedResumeResolver().resolveContinuation(
+        return BookCombinedResumeResolver().resolveLatestContinuation(
             chapters: mappedBookChapters,
             mappings: bookProgressMappings(for: detail),
-            progress: detail.capability(EntityProgressCapability.self)?.readablePosition
+            progress: detail.capability(EntityProgressCapability.self)
         )
     }
 
     func unifiedBookReadingTarget(
         for detail: EntityDetail
     ) -> BookCombinedReadingTarget? {
-        combinedResumeTarget(for: detail)?.readingTarget
+        BookCombinedResumeResolver().resolveContinuation(
+            chapters: mappedBookChapters,
+            mappings: bookProgressMappings(for: detail),
+            progress: detail.capability(EntityProgressCapability.self)?.readablePosition
+        )?.readingTarget
     }
 
     func promoteLegacyAudiobookProgressIfNeeded(for detail: EntityDetail) async {
@@ -181,19 +185,27 @@ extension EntityDetailView {
         }
     }
 
-    func openCombinedReader(for detail: EntityDetail) {
-        let target = combinedResumeTarget(for: detail)
-            ?? BookCombinedResumeResolver().resolveContinuation(
-                chapters: mappedBookChapters,
-                mappings: bookProgressMappings(for: detail),
-                progress: nil
-            )
-        guard let target else { return }
+    func openCombinedReader(for detail: EntityDetail) async {
         let isCurrentBook =
             musicPlayer.context?.playbackOwnerEntityID == detail.id
             && musicPlayer.context?.playbackOwnerEntityKind == .book
-        if isCurrentBook, musicPlayer.isPlaying { musicPlayer.pause() }
-        presentCombinedReader(detail: detail, target: target)
+        if isCurrentBook {
+            if musicPlayer.isPlaying { musicPlayer.pause() }
+            await musicPlayer.flushPendingPlaybackReports()
+        }
+        await loadDetail()
+        guard case .content(let refreshedDetail) = state.phase,
+            refreshedDetail.id == detail.id
+        else { return }
+        refreshBookChapterMappings(for: refreshedDetail)
+        let target = combinedResumeTarget(for: refreshedDetail)
+            ?? BookCombinedResumeResolver().resolveContinuation(
+                chapters: mappedBookChapters,
+                mappings: bookProgressMappings(for: refreshedDetail),
+                progress: nil
+            )
+        guard let target else { return }
+        presentCombinedReader(detail: refreshedDetail, target: target)
     }
 
     func presentCombinedReader(

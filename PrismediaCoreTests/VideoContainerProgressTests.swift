@@ -63,7 +63,7 @@ final class VideoContainerProgressPresentationTests: XCTestCase {
             currentEntityID: episodeID,
             index: 9,
             total: 10,
-            completedAt: "2026-07-16T12:00:00Z",
+            completedAt: Date(timeIntervalSince1970: 1_752_664_800),
             consumedPercent: 1
         )
         let episode = VideoProgressEpisode(
@@ -104,7 +104,7 @@ final class VideoContainerProgressPresentationTests: XCTestCase {
         currentEntityID: UUID,
         index: Int,
         total: Int,
-        completedAt: String? = nil,
+        completedAt: Date? = nil,
         consumedPercent: Double = 0
     ) -> EntityProgressCapability {
         EntityProgressCapability(
