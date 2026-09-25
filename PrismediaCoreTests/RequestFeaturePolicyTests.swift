@@ -121,7 +121,7 @@ final class RequestFeaturePolicyTests: XCTestCase {
                     AdministrativeRequestCommitItem(
                         externalID: "tmdb:603",
                         title: "The Matrix",
-                        outcome: "requested",
+                        outcome: PrismediaContractCodes.RequestCommitOutcome.requested,
                         entityID: entityID,
                         acquisitionID: UUID()
                     )
@@ -136,7 +136,7 @@ final class RequestFeaturePolicyTests: XCTestCase {
                     AdministrativeRequestCommitItem(
                         externalID: "tmdb:603",
                         title: "The Matrix",
-                        outcome: "already-owned",
+                        outcome: PrismediaContractCodes.RequestCommitOutcome.alreadyOwned,
                         entityID: entityID,
                         acquisitionID: nil
                     )
@@ -160,11 +160,13 @@ final class RequestFeaturePolicyTests: XCTestCase {
         let result = RequestCommitOutcomePolicy.resolve(
             response: AdministrativeRequestCommitResponse(
                 containerEntityID: nil, items: [item], bookRenditions: [
+                    AdministrativeBookRenditionCommitResult(rendition: .ebook, item: item),
                     AdministrativeBookRenditionCommitResult(
-                        rendition: PrismediaContractCodes.BookRendition.ebook, item: item),
+                        rendition: .audiobook, item: nil,
+                        error: "This format could not be requested."),
                     AdministrativeBookRenditionCommitResult(
-                        rendition: PrismediaContractCodes.BookRendition.audiobook, item: nil,
-                        error: "This format could not be requested.")
+                        rendition: EntityBookRendition(rawValue: "braille"), item: nil,
+                        error: "Not offered."),
                 ]
             ),
             review: review(
@@ -177,6 +179,8 @@ final class RequestFeaturePolicyTests: XCTestCase {
         XCTAssertEqual(result.title, "Some Formats Need Attention")
         XCTAssertEqual(result.navigationIntent?.entityID, bookID)
         XCTAssertTrue(result.message.contains("Audiobook"))
+        XCTAssertTrue(result.message.contains("braille: Not offered."), "An unknown format keeps its own code.")
+        XCTAssertFalse(result.message.contains("Ebook"), "Neither the succeeded nor the unknown format reads as Ebook.")
     }
 
     private func proposal(

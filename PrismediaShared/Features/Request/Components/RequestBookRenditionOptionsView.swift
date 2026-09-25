@@ -7,7 +7,7 @@ import SwiftUI
         let profiles: [AdministrativeAcquisitionProfile]
         let isLoading: Bool
         let errorMessage: String?
-        @Binding var selectedRenditions: Set<String>
+        @Binding var selectedRenditions: Set<EntityBookRendition>
         @Binding var ebookProfileID: UUID?
         @Binding var ebookRootID: UUID?
         @Binding var audiobookProfileID: UUID?
@@ -18,10 +18,10 @@ import SwiftUI
                 Text("Formats")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PrismediaColor.textSecondary)
-                Toggle("Ebook", isOn: selection(for: PrismediaContractCodes.BookRendition.ebook))
-                Toggle("Audiobook", isOn: selection(for: PrismediaContractCodes.BookRendition.audiobook))
+                Toggle("Ebook", isOn: selection(for: .ebook))
+                Toggle("Audiobook", isOn: selection(for: .audiobook))
 
-                if selectedRenditions.contains(PrismediaContractCodes.BookRendition.ebook) {
+                if selectedRenditions.contains(.ebook) {
                     VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                         Text("Ebook destination and profile")
                             .font(.caption)
@@ -38,7 +38,7 @@ import SwiftUI
                         )
                     }
                 }
-                if selectedRenditions.contains(PrismediaContractCodes.BookRendition.audiobook) {
+                if selectedRenditions.contains(.audiobook) {
                     VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
                         Text("Audiobook destination and profile")
                             .font(.caption)
@@ -58,7 +58,7 @@ import SwiftUI
             }
         }
 
-        private func selection(for rendition: String) -> Binding<Bool> {
+        private func selection(for rendition: EntityBookRendition) -> Binding<Bool> {
             Binding(
                 get: { selectedRenditions.contains(rendition) },
                 set: { enabled in

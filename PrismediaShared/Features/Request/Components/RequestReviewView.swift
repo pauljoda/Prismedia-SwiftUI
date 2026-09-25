@@ -22,7 +22,7 @@ import SwiftUI
         @State private var bookProfiles: [AdministrativeAcquisitionProfile] = []
         @State private var selectedProfileID: UUID?
         @State private var selectedRootID: UUID?
-        @State private var selectedBookRenditions: Set<String> = []
+        @State private var selectedBookRenditions: Set<EntityBookRendition> = []
         @State private var ebookProfileID: UUID?
         @State private var ebookRootID: UUID?
         @State private var audiobookProfileID: UUID?
@@ -287,8 +287,7 @@ import SwiftUI
                 guard loadRevision.isCurrent(revision) else { return }
                 review = nextReview
                 let selection = RequestSelectionPolicy.derive(from: nextReview)
-                selectedBookRenditions = [route.kind == .audiobook
-                    ? PrismediaContractCodes.BookRendition.audiobook : PrismediaContractCodes.BookRendition.ebook]
+                selectedBookRenditions = [route.kind == .audiobook ? .audiobook : .ebook]
                 reviewSelection = MetadataReviewPolicy.seededSelection(for: nextReview.proposal)
                 proposalPath = [nextReview.proposal.proposalID]
                 chosenPreset = .all
@@ -399,7 +398,7 @@ import SwiftUI
         private func requestButtonTitle(_ selection: RequestReviewSelection) -> String {
             if canChooseBookRenditions(selection) {
                 return selectedBookRenditions.count == 2 ? "Request Ebook and Audiobook"
-                    : selectedBookRenditions.contains(PrismediaContractCodes.BookRendition.audiobook)
+                    : selectedBookRenditions.contains(.audiobook)
                         ? "Request Audiobook" : "Request Ebook"
             }
             guard selection.mode == .directChildren else { return "Request \(route.kind.label)" }
@@ -451,15 +450,13 @@ import SwiftUI
                     selection: reviewSelection
                 ),
                 bookRenditions: canChooseBookRenditions(selection) ? [
-                    PrismediaContractCodes.BookRendition.ebook,
-                    PrismediaContractCodes.BookRendition.audiobook
+                    EntityBookRendition.ebook,
+                    EntityBookRendition.audiobook,
                 ].filter { selectedBookRenditions.contains($0) }.map { rendition in
                     AdministrativeBookRenditionRequestChoice(
                         rendition: rendition,
-                        targetLibraryRootID: rendition == PrismediaContractCodes.BookRendition.ebook
-                            ? ebookRootID : audiobookRootID,
-                        profileID: rendition == PrismediaContractCodes.BookRendition.ebook
-                            ? ebookProfileID : audiobookProfileID
+                        targetLibraryRootID: rendition == .ebook ? ebookRootID : audiobookRootID,
+                        profileID: rendition == .ebook ? ebookProfileID : audiobookProfileID
                     )
                 } : nil
             )
