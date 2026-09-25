@@ -26,7 +26,7 @@ import SwiftUI
                     acquisitionID: acquisitionID,
                     service: service,
                     style: .list,
-                    onEnterReleaseDate: onEnterReleaseDate
+                    onEnterReleaseDate: enterReleaseDateBehindSheet
                 )
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -36,6 +36,25 @@ import SwiftUI
                         .accessibilityLabel("Close")
                     }
                 }
+            }
+        }
+    }
+
+    extension RequestActivityAcquisitionDetailView {
+        // MARK: - Actions - Release date
+
+        /// Opens the release-date editor's entity underneath while this sheet is still up, then closes
+        /// the sheet, so it slides away over that entity instead of leaving the editor unable to present
+        /// above it. The hidden push skips its animation and the sheet closes on the next turn, so the
+        /// entity is already in place and no part of the activity list shows as the sheet slides away.
+        fileprivate var enterReleaseDateBehindSheet: (@MainActor @Sendable () -> Void)? {
+            guard let onEnterReleaseDate else { return nil }
+            let dismiss = dismiss
+            return { @MainActor @Sendable in
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { onEnterReleaseDate() }
+                Task { @MainActor in dismiss() }
             }
         }
     }
