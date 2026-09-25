@@ -20,8 +20,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @State private var mutationFailures: [EntityGridMutationFailure] = []
     @State private var mutationFailureAlertPresented = false
     #if os(iOS) || os(macOS)
+        @Environment(PrismediaAppRouter.self) private var router
         @State private var collectionSheetPresented = false
         @State private var collectionSheetReferences: [CollectionEntityReference] = []
+        @State private var newCollectionSheetPresented = false
     #endif
     #if os(tvOS)
         @Environment(TVTabFocusCoordinator.self) private var tabFocusCoordinator
@@ -161,6 +163,11 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                         receiveMutationResult(result)
                     }
                 }
+                .sheet(isPresented: $newCollectionSheetPresented) {
+                    if let client = environment.client {
+                        NewCollectionSheet(creator: client, onCreated: openCreatedCollection)
+                    }
+                }
             #endif
             .task(id: searchText) {
                 guard configuration.supportsSearch else { return }
@@ -295,6 +302,15 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                         selectionToggleButton
                     }
                 } else {
+                    if actionPolicy.offersCollectionCreation {
+                        ToolbarItem(placement: leadingToolbarPlacement) {
+                            Button("New Collection", systemImage: "plus") {
+                                newCollectionSheetPresented = true
+                            }
+                            .accessibilityIdentifier("entity.grid.new-collection")
+                        }
+                    }
+
                     if actionPolicy.selectionEnabled {
                         ToolbarItem(placement: trailingToolbarPlacement) {
                             selectionToggleButton
@@ -571,6 +587,14 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 selection.enter()
             }
         }
+    }
+
+    private var leadingToolbarPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+            .topBarLeading
+        #else
+            .navigation
+        #endif
     }
 
     private var trailingToolbarPlacement: ToolbarItemPlacement {
@@ -1057,6 +1081,13 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             guard !references.isEmpty else { return }
             collectionSheetReferences = references
             collectionSheetPresented = true
+        }
+
+        /// Refreshes Collection lists and opens the new Collection while its creation sheet is still up,
+        /// so the sheet slides away to reveal the Collection rather than this grid.
+        private func openCreatedCollection(_ collection: EntityThumbnail) {
+            environment.entityDidMutate()
+            router.open(entity: collection)
         }
     #endif
 

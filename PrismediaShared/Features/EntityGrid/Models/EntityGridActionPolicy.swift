@@ -4,22 +4,28 @@ public struct EntityGridActionPolicy: Sendable {
     public let selectionEnabled: Bool
     public let builtInActions: Set<EntityGridBuiltInAction>
     public let customActions: [EntityGridCustomAction]
+    /// Whether the grid offers a New Collection action. Only a screen that lists every Collection
+    /// should, so a new, still-empty Collection appears where it was created.
+    public let offersCollectionCreation: Bool
 
     public init(
         selectionEnabled: Bool,
         builtInActions: Set<EntityGridBuiltInAction> = [],
-        customActions: [EntityGridCustomAction] = []
+        customActions: [EntityGridCustomAction] = [],
+        offersCollectionCreation: Bool = false
     ) {
         self.selectionEnabled = selectionEnabled
         self.builtInActions = builtInActions
         self.customActions = customActions
+        self.offersCollectionCreation = offersCollectionCreation
     }
 
     public static let disabled = EntityGridActionPolicy(selectionEnabled: false)
 
     public static func library(
         user: UserAccount,
-        customActions: [EntityGridCustomAction] = []
+        customActions: [EntityGridCustomAction] = [],
+        offersCollectionCreation: Bool = false
     ) -> EntityGridActionPolicy {
         var actions: Set<EntityGridBuiltInAction> = [.addToCollection, .removeWanted]
         if user.allowNsfw {
@@ -28,7 +34,8 @@ public struct EntityGridActionPolicy: Sendable {
         return EntityGridActionPolicy(
             selectionEnabled: true,
             builtInActions: actions,
-            customActions: customActions
+            customActions: customActions,
+            offersCollectionCreation: offersCollectionCreation
         )
     }
 

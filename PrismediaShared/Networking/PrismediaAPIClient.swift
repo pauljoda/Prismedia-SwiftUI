@@ -431,6 +431,36 @@ public struct PrismediaAPIClient: Sendable {
         URLQueryItem(name: "hideNsfw", value: allowsNsfwContent ? "false" : "true")
     }
 
+    /// Creates a Collection owned by the signed-in user.
+    ///
+    /// - Parameters:
+    ///   - title: Required display title; the server rejects a blank title with HTTP 400.
+    ///   - description: Optional description, or `nil` for none.
+    ///   - mode: How the Collection gathers members. Only a manual Collection needs no rule tree.
+    ///   - isNsfw: Whether the Collection is hidden from viewers who hide NSFW content.
+    ///   - isShared: Whether every signed-in user can see the Collection, rather than only its owner.
+    /// - Returns: The created Collection's detail document.
+    public func createCollection(
+        title: String,
+        description: String?,
+        mode: CollectionMode = .manual,
+        isNsfw: Bool,
+        isShared: Bool
+    ) async throws -> EntityDetail {
+        try await send(
+            EntityDetail.self,
+            path: "/api/collections",
+            method: "POST",
+            body: CollectionWriteRequest(
+                title: title,
+                description: description,
+                mode: mode,
+                isNsfw: isNsfw,
+                isShared: isShared
+            )
+        )
+    }
+
     @discardableResult
     public func addToCollection(
         collectionID: UUID,

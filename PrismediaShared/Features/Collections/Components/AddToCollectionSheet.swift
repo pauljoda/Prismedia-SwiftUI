@@ -1,7 +1,8 @@
 #if os(iOS) || os(macOS)
     import SwiftUI
 
-    /// Collection picker for entity grids, detail pages, and compact actions.
+    /// Collection picker for entity grids, detail pages, and compact actions. Signed-in users can also
+    /// create a manual Collection here, which receives the items as if it had been picked.
     struct AddToCollectionSheet: View {
         @Environment(\.dismiss) private var dismiss
         @Environment(PrismediaAppEnvironment.self) private var environment
@@ -45,7 +46,7 @@
                 Group {
                     if loading {
                         PrismediaLoadingView("Loading collections…")
-                    } else if collections.isEmpty {
+                    } else if collections.isEmpty, environment.client == nil {
                         ContentUnavailableView(
                             "No Collections",
                             systemImage: "rectangle.stack",
@@ -84,40 +85,66 @@
         }
 
         private var collectionList: some View {
-            List(filteredCollections) { collection in
-                Button {
-                    Task { await add(to: collection) }
-                } label: {
-                    HStack(spacing: PrismediaSpacing.medium) {
-                        EntityThumbnailCardView(
-                            item: collection,
-                            layout: .compact,
-                            preferredWidth: PrismediaLayout.minimumHitTarget
-                        )
-
-                        Text(collection.title)
-                            .foregroundStyle(.primary)
-
-                        Spacer()
-
-                        if pendingCollectionID == collection.id {
-                            ProgressView()
-                        } else if addedCollectionIDs.contains(collection.id) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(PrismediaColor.accent)
+            List {
+                if let client = environment.client {
+                    Section {
+                        NavigationLink {
+                            NewCollectionForm(initialTitle: trimmedSearchText) { draft in
+                                try await createCollection(from: draft, using: client)
+                            }
+                        } label: {
+                            Label("New Collection", systemImage: "plus")
                         }
+                        .disabled(pendingCollectionID != nil)
+                        .accessibilityIdentifier("add-to-collection.new")
                     }
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .disabled(pendingCollectionID != nil || addedCollectionIDs.contains(collection.id))
-                .accessibilityIdentifier("add-to-collection.option.\(collection.id.uuidString)")
+
+                Section {
+                    ForEach(filteredCollections) { collection in
+                        collectionOption(collection)
+                    }
+                }
             }
             .listStyle(.plain)
         }
 
+        private func collectionOption(_ collection: EntityThumbnail) -> some View {
+            Button {
+                Task { await add(to: collection) }
+            } label: {
+                HStack(spacing: PrismediaSpacing.medium) {
+                    EntityThumbnailCardView(
+                        item: collection,
+                        layout: .compact,
+                        preferredWidth: PrismediaLayout.minimumHitTarget
+                    )
+
+                    Text(collection.title)
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    if pendingCollectionID == collection.id {
+                        ProgressView()
+                    } else if addedCollectionIDs.contains(collection.id) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(PrismediaColor.accent)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(pendingCollectionID != nil || addedCollectionIDs.contains(collection.id))
+            .accessibilityIdentifier("add-to-collection.option.\(collection.id.uuidString)")
+        }
+
+        private var trimmedSearchText: String {
+            searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
         private var filteredCollections: [EntityThumbnail] {
-            let term = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let term = trimmedSearchText
             guard !term.isEmpty else { return collections }
             return collections.filter { $0.title.localizedCaseInsensitiveContains(term) }
         }
@@ -135,13 +162,30 @@
                 return
             }
             do {
-                collections = try await client.loadCollectionOptions().sorted {
-                    $0.title.localizedStandardCompare($1.title) == .orderedAscending
-                }
+                collections = Self.sortedByTitle(try await client.loadCollectionOptions())
             } catch {
                 errorMessage = error.localizedDescription
             }
             loading = false
+        }
+
+        /// Creates a manual Collection, lists it, and adds the items to it exactly as picking it would, so
+        /// the new row shows the same progress and checkmark. Creation errors stay on the form.
+        private func createCollection(
+            from draft: CollectionDraft,
+            using creator: any CollectionCreating
+        ) async throws {
+            let collection = try await creator.createCollection(from: draft)
+            environment.entityDidMutate()
+            searchText = ""
+            collections = Self.sortedByTitle(collections + [collection])
+            Task { await add(to: collection) }
+        }
+
+        private static func sortedByTitle(_ collections: [EntityThumbnail]) -> [EntityThumbnail] {
+            collections.sorted {
+                $0.title.localizedStandardCompare($1.title) == .orderedAscending
+            }
         }
 
         private func add(to collection: EntityThumbnail) async {
@@ -212,7 +256,7 @@
                 ),
             ]
 
-            PreviewShell {
+            PreviewShell(signedIn: true) {
                 AddToCollectionSheet(
                     items: [item],
                     previewCollections: collections
@@ -221,7 +265,7 @@
         }
 
         #Preview("Add to Collection · Empty") {
-            PreviewShell {
+            PreviewShell(signedIn: true) {
                 AddToCollectionSheet(
                     items: [],
                     previewCollections: []

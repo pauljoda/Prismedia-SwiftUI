@@ -26,6 +26,7 @@ NATIVE_ENUM_TYPES = {
     "BookFormat": "BookFormat",
     "BookLinkState": "BookLinkState",
     "BookRendition": "RequestActivityBookRendition",
+    "CollectionMode": "CollectionMode",
     "ComicInstallmentKind": "ComicInstallmentKind",
     "BlocklistReason": "RequestActivityBlocklistReason",
     "ConsumptionActivityKind": "ConsumptionActivityKind",

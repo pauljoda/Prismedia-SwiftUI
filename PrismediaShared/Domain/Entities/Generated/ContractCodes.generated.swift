@@ -1426,6 +1426,12 @@ public extension RequestActivityBookRendition {
     static let `audiobook` = Self(rawValue: PrismediaContractCodes.BookRendition.`audiobook`)
 }
 
+public extension CollectionMode {
+    static let `manual` = Self(rawValue: PrismediaContractCodes.CollectionMode.`manual`)
+    static let `dynamic` = Self(rawValue: PrismediaContractCodes.CollectionMode.`dynamic`)
+    static let `hybrid` = Self(rawValue: PrismediaContractCodes.CollectionMode.`hybrid`)
+}
+
 public extension ComicInstallmentKind {
     static let `chapter` = Self(rawValue: PrismediaContractCodes.ComicInstallmentKind.`chapter`)
     static let `issue` = Self(rawValue: PrismediaContractCodes.ComicInstallmentKind.`issue`)
