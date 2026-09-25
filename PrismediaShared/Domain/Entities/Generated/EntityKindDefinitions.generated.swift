@@ -825,7 +825,7 @@ let generatedEntityKindDefinitions: [EntityKind: EntityKindDefinition] = [
         presentation: EntityKindPresentation(
             icon: .studio,
             referenceIcon: .studio,
-            thumbnailWidth: 21,
+            thumbnailWidth: 16,
             thumbnailHeight: 9,
             primaryAccent: .orange,
             secondaryAccent: .magenta,

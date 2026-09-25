@@ -15,7 +15,7 @@ final class EntityDomainModelsTests: XCTestCase {
             (.person, 4.0 / 5.0),
             (.collection, 1),
             (.video, 16.0 / 9.0),
-            (.studio, 21.0 / 9.0),
+            (.studio, 16.0 / 9.0),
         ]
 
         for (kind, expectedAspectRatio) in cases {
