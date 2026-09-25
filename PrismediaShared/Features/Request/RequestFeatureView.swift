@@ -24,7 +24,6 @@ import SwiftUI
         @State private var searchLimit = RequestFeatureView.searchPageSize
         @State private var submittedFields: [String: String] = [:]
         @State private var flowPhase = RequestIdentifyFlowPhase.initialDependencyLoading
-        @State private var pendingNavigationIntent: RequestEntityNavigationIntent?
 
         private static let searchPageSize = PluginSearchPagingPolicy.pageSize
         private static let searchMaxLimit = PluginSearchPagingPolicy.maximumLimit
@@ -90,10 +89,7 @@ import SwiftUI
                         route: route,
                         hidesNsfw: hidesNsfw,
                         flowPhase: $flowPhase,
-                        onNavigateToEntity: { intent in
-                            pendingNavigationIntent = intent
-                            reviewRoute = nil
-                        }
+                        onNavigateToEntity: openEntityBehindReview
                     )
                 }
             }
@@ -361,14 +357,18 @@ import SwiftUI
             }
         }
 
+        /// Pushes the requested entity onto the underlying navigation stack while the review sheet is
+        /// still up, then dismisses the sheet in the same update, so it slides away to reveal the entity
+        /// instead of the search results. The search stays in the back stack, so Back returns to the
+        /// preserved results.
+        private func openEntityBehindReview(_ intent: RequestEntityNavigationIntent) {
+            onNavigateToEntity(intent)
+            reviewRoute = nil
+        }
+
         private func finishReviewDismissal() {
-            let intent = pendingNavigationIntent
-            pendingNavigationIntent = nil
             activeCandidateID = nil
             reconcileSearchPhase()
-            if let intent {
-                onNavigateToEntity(intent)
-            }
         }
 
         private func reconcileSearchPhase() {
