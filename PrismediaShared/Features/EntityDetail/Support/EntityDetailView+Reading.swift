@@ -284,10 +284,10 @@ extension EntityDetailView {
                 refreshedDetail.id == detail.id
             else { return }
             await loadReadingState(for: refreshedDetail)
-            if bookAlignmentState.usesServerAlignment {
-                await loadBookAlignment(for: refreshedDetail)
-            } else {
+            if bookAlignmentState.usesLegacyAlignment {
                 refreshBookChapterRows(for: refreshedDetail)
+            } else {
+                await loadBookAlignment(for: refreshedDetail)
             }
             dependencies.onEntityMutated()
         }

@@ -150,8 +150,9 @@
         }
 
         /// Promotes an older server's absolute audiobook resume seconds into the Book cursor once.
+        /// Only a decided legacy contract qualifies; an unreadable server version never does.
         func promoteLegacyAudiobookProgressIfNeeded(for detail: EntityDetail) async {
-            guard !bookAlignmentState.usesServerAlignment,
+            guard bookAlignmentState.usesLegacyAlignment,
                 detail.kind == .book,
                 let projection = audiobookProjection,
                 projection.bookID == detail.id,

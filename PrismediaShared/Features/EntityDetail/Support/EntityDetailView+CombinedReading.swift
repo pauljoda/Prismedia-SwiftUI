@@ -4,11 +4,19 @@
     extension EntityDetailView {
         // MARK: - Actions - Chapter Rows
 
-        /// Rebuilds the chapter rows: the server's alignment rows when it serves them, otherwise the
-        /// rows built from an older server's chapter map.
+        /// Rebuilds the chapter rows: the server's alignment rows when it serves them, the rows
+        /// built from an older server's chapter map, and none while the progress contract is
+        /// undecided or the server alignment has not loaded.
         func refreshBookChapterRows(for detail: EntityDetail) {
-            guard let alignment = bookAlignmentState.alignment else {
+            switch bookAlignmentState.contract {
+            case .legacyCursor:
                 refreshLegacyBookChapterRows(for: detail)
+                return
+            case .serverAlignment, nil:
+                break
+            }
+            guard let alignment = bookAlignmentState.alignment else {
+                mappedBookChapters = []
                 return
             }
             let tracksByID = Dictionary(
@@ -37,7 +45,7 @@
         ) -> BookCombinedProgressPresentation? {
             guard hasCombinedProgressCard(for: detail) else { return nil }
             guard let alignment = bookAlignmentState.alignment else {
-                return legacyCombinedProgressPresentation(for: detail)
+                return bookAlignmentState.usesLegacyAlignment ? legacyCombinedProgressPresentation(for: detail) : nil
             }
             let progress: EntityProgressCapability? = detail.capability()
             return BookCombinedProgressPresentation(
@@ -58,24 +66,26 @@
         }
 
         /// Whether the Book offers reading and listening together. The server decides from the
-        /// modalities the Book has content for; older servers fall back to the local check.
+        /// modalities the Book has content for; older servers fall back to the local check. There
+        /// is no card while the progress contract is undecided.
         func hasCombinedProgressCard(for detail: EntityDetail) -> Bool {
             guard AudiobookPlaybackProjection(detail: detail) != nil else { return false }
             if let alignment = bookAlignmentState.alignment {
                 return alignment.supportsReadingAndListening
             }
-            return !bookAlignmentState.usesServerAlignment && legacyHasCombinedProgressCard(for: detail)
+            return bookAlignmentState.usesLegacyAlignment && legacyHasCombinedProgressCard(for: detail)
         }
 
         // MARK: - Actions - Resume Targets
 
         /// Where "Continue Reading" opens: the server's exact reading position (resumed against the
         /// device's own checkpoint), else, for a Linked Book, the reading position it aligned from
-        /// listening (opened as given). Nil resumes the reader from its own position.
+        /// listening (opened as given). Nil resumes the reader from its own position, including
+        /// while the progress contract is undecided.
         func readingResumeOpening(
             for detail: EntityDetail
         ) -> (destination: BookReadingDestination, command: BookReaderCommand)? {
-            guard bookAlignmentState.usesServerAlignment else {
+            if bookAlignmentState.usesLegacyAlignment {
                 return legacyReadingResumeDestination(for: detail).map { ($0, .resume) }
             }
             guard let alignment = bookAlignmentState.alignment, let resume = alignment.resume else { return nil }
@@ -92,7 +102,7 @@
             for detail: EntityDetail
         ) async -> BookReaderLocationTarget? {
             guard musicPlayer.currentTrack != nil else { return nil }
-            guard bookAlignmentState.usesServerAlignment else {
+            if bookAlignmentState.usesLegacyAlignment {
                 return legacyCurrentAudiobookReadingTarget()
             }
             guard musicPlayer.context?.playbackOwnerEntityID == detail.id,
@@ -115,10 +125,13 @@
             else { return }
 
             if combined {
-                if bookAlignmentState.usesServerAlignment {
+                switch bookAlignmentState.contract {
+                case .serverAlignment:
                     openCombinedChapter(chapter, detail: detail)
-                } else {
+                case .legacyCursor:
                     openLegacyCombinedChapter(chapter, detail: detail)
+                case nil:
+                    break
                 }
                 return
             }
@@ -173,13 +186,20 @@
             guard case .content(let refreshedDetail) = state.phase,
                 refreshedDetail.id == detail.id
             else { return }
-            guard bookAlignmentState.usesServerAlignment else {
+            if bookAlignmentState.usesLegacyAlignment {
                 openLegacyCombinedReader(for: refreshedDetail)
                 return
             }
 
+            // The server owns the combined position; an undecided contract is read here first.
             await loadBookAlignment(for: refreshedDetail)
-            guard bookAlignmentState.alignment?.isLinked != false,
+            guard currentDetail?.id == detail.id else { return }
+            if bookAlignmentState.usesLegacyAlignment {
+                openLegacyCombinedReader(for: refreshedDetail)
+                return
+            }
+            guard bookAlignmentState.usesServerAlignment,
+                bookAlignmentState.alignment?.isLinked != false,
                 let combined = bookAlignmentState.alignment?.resume?.combined.aligned,
                 let reading = combined.reading,
                 let listening = combined.listening

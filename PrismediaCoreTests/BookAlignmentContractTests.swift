@@ -431,6 +431,89 @@ final class BookAlignmentContractTests: XCTestCase {
         XCTAssertEqual(loader.requests.count, 2)
     }
 
+    func testUnreadableServerVersionLeavesTheContractUndecidedUntilHealthIsReadAgain() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"code":"unavailable","message":"Starting"}"#, statusCode: 503),
+            .json(#"{"status":"ok","version":"3.7.4"}"#),
+            .json(#"{"mappings":[]}"#),
+        ])
+        let client = Self.client(loader: loader)
+        var state = BookAlignmentState()
+
+        let generation = state.beginLoad(bookID: Self.bookID)
+        do {
+            _ = try await BookAlignmentLoader(service: client).load(bookID: Self.bookID)
+            XCTFail("An unreadable server version must not fall back to the legacy chapter map.")
+        } catch let error as BookAlignmentLoadError {
+            XCTAssertNil(error.contract)
+            state.finishLoad(.failure(error), bookID: Self.bookID, generation: generation)
+        }
+        XCTAssertNil(state.contract)
+        XCTAssertFalse(state.usesServerAlignment)
+        XCTAssertFalse(state.usesLegacyAlignment)
+        XCTAssertNotNil(state.errorMessage)
+        XCTAssertEqual(loader.requests.map { $0.url?.path }, ["/api/health"])
+
+        // The failed read is not remembered: the next load asks again, and the older server it
+        // finds decides the legacy contract.
+        let retry = state.beginLoad(bookID: Self.bookID)
+        let snapshot = try await BookAlignmentLoader(service: client).load(bookID: Self.bookID)
+        state.finishLoad(.success(snapshot), bookID: Self.bookID, generation: retry)
+
+        XCTAssertEqual(state.contract, .legacyCursor)
+        XCTAssertTrue(state.usesLegacyAlignment)
+        XCTAssertNil(state.errorMessage)
+        XCTAssertEqual(
+            loader.requests.map { $0.url?.path },
+            ["/api/health", "/api/health", Self.mappingsPath]
+        )
+    }
+
+    func testFailedReloadKeepsTheLastAlignmentAndItsContract() throws {
+        let alignment = try PrismediaJSON.decoder().decode(
+            BookAlignmentResponse.self,
+            from: Data(Self.alignmentJSON.utf8)
+        )
+        var state = BookAlignmentState()
+        let first = state.beginLoad(bookID: Self.bookID)
+        state.finishLoad(.success(.server(alignment)), bookID: Self.bookID, generation: first)
+        XCTAssertEqual(state.contract, .serverAlignment)
+
+        let reload = state.beginLoad(bookID: Self.bookID)
+        XCTAssertEqual(state.alignment, alignment, "A reload keeps the last alignment while it runs.")
+        state.finishLoad(
+            .failure(BookAlignmentLoadError(contract: nil, underlying: URLError(.timedOut))),
+            bookID: Self.bookID,
+            generation: reload
+        )
+        XCTAssertEqual(state.alignment, alignment)
+        XCTAssertEqual(state.contract, .serverAlignment)
+        XCTAssertNotNil(state.errorMessage)
+
+        // A failure that names a contract never replaces the one already known.
+        let again = state.beginLoad(bookID: Self.bookID)
+        state.finishLoad(
+            .failure(BookAlignmentLoadError(contract: .legacyCursor, underlying: URLError(.badServerResponse))),
+            bookID: Self.bookID,
+            generation: again
+        )
+        XCTAssertEqual(state.contract, .serverAlignment)
+        XCTAssertEqual(state.alignment, alignment)
+
+        // Another Book starts undecided and empty; its first failure may decide the contract.
+        let otherBookID = UUID()
+        let other = state.beginLoad(bookID: otherBookID)
+        XCTAssertNil(state.contract)
+        XCTAssertNil(state.alignment)
+        state.finishLoad(
+            .failure(BookAlignmentLoadError(contract: .serverAlignment, underlying: URLError(.badServerResponse))),
+            bookID: otherBookID,
+            generation: other
+        )
+        XCTAssertEqual(state.contract, .serverAlignment)
+        XCTAssertNil(state.alignment)
+    }
+
     func testSavingOnAQualifyingServerDecodesTheRefreshedAlignment() async throws {
         let loader = MockHTTPDataLoader(responses: [.json(Self.alignmentJSON)])
 

@@ -2,7 +2,9 @@ import Foundation
 
 /// Chooses between the server-owned alignment and the legacy chapter map for one Book. Servers
 /// from 3.8 serve the alignment projection; a qualifying server that lacks the route (a
-/// route-missing 404) and older servers use the legacy chapter map.
+/// route-missing 404) and older servers use the legacy chapter map. The legacy contract is chosen
+/// only from a successful version read: when `GET /api/health` itself fails, the load fails with
+/// an undecided contract rather than treating the server as old.
 struct BookAlignmentLoader: Sendable {
     // MARK: - Variables
 

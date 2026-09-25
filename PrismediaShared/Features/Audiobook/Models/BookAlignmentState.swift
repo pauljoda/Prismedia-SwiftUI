@@ -2,7 +2,8 @@ import Foundation
 
 /// View-owned Book alignment: the connected server's progress contract with its alignment
 /// projection (3.8+) or an older server's chapter map, guarded against responses from a previous
-/// Book.
+/// Book. The contract stays undecided while the server version cannot be read, and a failed
+/// reload keeps the last good content beside its error.
 struct BookAlignmentState: Equatable, Sendable {
     // MARK: - Variables
 
@@ -12,7 +13,7 @@ struct BookAlignmentState: Equatable, Sendable {
     private(set) var legacyMappings: [BookChapterAudioMapping] = []
     /// An older server's audio chapter catalog (before 3.8).
     private(set) var legacyAudioChapters: [BookAudioChapter] = []
-    /// How the connected server keeps Book progress, once known.
+    /// How the connected server keeps Book progress; nil until its version has been read.
     private(set) var contract: BookProgressContract?
     private(set) var errorMessage: String?
 
@@ -22,6 +23,12 @@ struct BookAlignmentState: Equatable, Sendable {
     /// Whether the server owns this Book's alignment, resume targets, and modality checkpoints.
     var usesServerAlignment: Bool {
         contract == .serverAlignment
+    }
+
+    /// Whether an older server (before 3.8) keeps this Book's chapter map and one shared cursor.
+    /// False while the contract is undecided, so an unreadable server version never reads as old.
+    var usesLegacyAlignment: Bool {
+        contract == .legacyCursor
     }
 
     // MARK: - Actions - Loading
@@ -37,6 +44,8 @@ struct BookAlignmentState: Equatable, Sendable {
         return generation
     }
 
+    /// Applies a load result. A failure keeps the content and contract of the last successful
+    /// load; it decides the contract only when none was known and the failure names one.
     mutating func finishLoad(
         _ result: Result<BookAlignmentSnapshot, any Error>,
         bookID: UUID,
@@ -47,9 +56,8 @@ struct BookAlignmentState: Equatable, Sendable {
         case .success(let snapshot):
             apply(snapshot)
         case .failure(let error):
-            clearContent()
-            if let failure = error as? BookAlignmentLoadError, let decided = failure.contract {
-                contract = decided
+            if contract == nil, let failure = error as? BookAlignmentLoadError {
+                contract = failure.contract
             }
             errorMessage = error.localizedDescription
         }
@@ -62,6 +70,10 @@ struct BookAlignmentState: Equatable, Sendable {
         generation += 1
         apply(snapshot)
         return true
+    }
+
+    mutating func dismissError() {
+        errorMessage = nil
     }
 
     mutating func reset() {

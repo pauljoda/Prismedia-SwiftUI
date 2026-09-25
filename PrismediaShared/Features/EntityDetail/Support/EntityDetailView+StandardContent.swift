@@ -98,7 +98,8 @@ extension EntityDetailView {
                                                 listeningErrorMessage: audiobookErrorMessage,
                                                 chapters: mappedBookChapters,
                                                 chaptersAreLoading: areBookChaptersLoading,
-                                                chaptersErrorMessage: bookChaptersErrorMessage,
+                                                chaptersErrorMessage: bookChaptersErrorMessage
+                                                    ?? bookAlignmentState.errorMessage,
                                                 chapterProgressLabel: bookChapterProgressLabel(for: detail),
                                                 horizontalPadding: detailHorizontalPadding,
                                                 onContinueReading: {
@@ -127,7 +128,8 @@ extension EntityDetailView {
                                                 onReadChapter: { openBookChapter($0, combined: false) },
                                                 onListenToChapter: playBookChapter,
                                                 onCombineChapter: { openBookChapter($0, combined: true) },
-                                                onRetryChapters: { Task { await loadBookChapters(for: detail) } }
+                                                onRetryChapters: { Task { await retryBookChapterRows(for: detail) } },
+                                                onDismissChaptersError: { bookAlignmentState.dismissError() }
                                             )
                                             .equatable()
 

@@ -71,8 +71,9 @@ extension EntityDetailView {
         else { return }
         await loadReadingState(for: refreshedDetail)
         await loadBookChapters(for: refreshedDetail)
-        if bookAlignmentState.usesServerAlignment {
-            // Resume targets are server-owned; the reader's reports moved them.
+        if !bookAlignmentState.usesLegacyAlignment {
+            // Resume targets are server-owned; the reader's reports moved them. An undecided
+            // contract gets another version read.
             await loadBookAlignment(for: refreshedDetail)
         }
     }
