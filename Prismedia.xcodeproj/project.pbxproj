@@ -116,8 +116,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AA0000000000000000000020 /* PrismediaShared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFolders = (
-			);
 			path = PrismediaShared;
 			sourceTree = "<group>";
 		};
