@@ -99,6 +99,47 @@ final class StaticEntityGridLoaderTests: XCTestCase {
         XCTAssertEqual(response.items.map(\.sortOrder), [1, 10])
     }
 
+    func testSeparateBooksCountAsInProgressFromEitherFormatUntilFinished() async throws {
+        let listenedOnly = EntityThumbnail(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            kind: .book, title: "Listened", progressSeparate: true, listeningProgress: 0.2
+        )
+        let readToTheEnd = EntityThumbnail(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
+            kind: .book, title: "Read", progress: 1, progressSeparate: true
+        )
+        let finished = EntityThumbnail(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!,
+            kind: .book, title: "Finished", progress: 1
+        )
+        let unstarted = EntityThumbnail(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000004")!,
+            kind: .book, title: "Unstarted", progressSeparate: true
+        )
+        let loader = StaticEntityGridLoader(items: [listenedOnly, readToTheEnd, finished, unstarted])
+
+        func titles(status: String? = nil, engaged: Bool? = nil) async throws -> [String] {
+            try await loader.load(
+                query: EntityListQuery(kind: .book, status: status, engaged: engaged),
+                limit: 48,
+                search: nil,
+                cursor: nil
+            ).items.map(\.title)
+        }
+
+        let inProgress = try await titles(status: "in-progress")
+        let watched = try await titles(status: "watched")
+        let unwatched = try await titles(status: "unwatched")
+        let engaged = try await titles(engaged: true)
+        XCTAssertEqual(inProgress, ["Listened", "Read"])
+        XCTAssertEqual(watched, ["Finished"])
+        XCTAssertEqual(unwatched, ["Unstarted"])
+        XCTAssertEqual(engaged, ["Listened", "Read", "Finished"])
+
+        XCTAssertEqual(DashboardHeroPresentation(item: listenedOnly).primaryActionTitle, "Resume")
+        XCTAssertEqual(DashboardHeroPresentation(item: unstarted).primaryActionTitle, "Play")
+    }
+
     private func thumbnail(
         id: Int,
         kind: EntityKind = .image,

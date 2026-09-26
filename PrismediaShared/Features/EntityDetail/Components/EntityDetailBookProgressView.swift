@@ -25,6 +25,7 @@ struct EntityDetailBookProgressView: Equatable, View {
     let onListenToChapter: (BookChapterMapping) -> Void
     let onCombineChapter: (BookChapterMapping) -> Void
     let onRetryChapters: () -> Void
+    let onDismissChaptersError: () -> Void
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.combinedProgress == rhs.combinedProgress
@@ -84,8 +85,9 @@ struct EntityDetailBookProgressView: Equatable, View {
                 horizontalPadding: horizontalPadding,
                 onRead: onReadChapter,
                 onListen: onListenToChapter,
-                onCombined: onCombineChapter,
-                onRetry: onRetryChapters
+                onCombined: combinedProgress?.isLinked == false ? nil : onCombineChapter,
+                onRetry: onRetryChapters,
+                onDismissError: onDismissChaptersError
             )
         }
     }
@@ -138,7 +140,8 @@ struct EntityDetailBookProgressView: Equatable, View {
                 onReadChapter: { _ in },
                 onListenToChapter: { _ in },
                 onCombineChapter: { _ in },
-                onRetryChapters: {}
+                onRetryChapters: {},
+                onDismissChaptersError: {}
             )
             .padding(.vertical, PrismediaSpacing.extraLarge)
         }

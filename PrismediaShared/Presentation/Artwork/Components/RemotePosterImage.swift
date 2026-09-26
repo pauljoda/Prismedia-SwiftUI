@@ -200,7 +200,7 @@ public struct RemotePosterImage: View {
                         fallbackSeed: "Compact Studio",
                         systemImage: "building.2"
                     )
-                    .aspectRatio(21.0 / 9.0, contentMode: .fit)
+                    .aspectRatio(EntityKind.studio.thumbnailAspectRatio, contentMode: .fit)
                     .frame(width: 52)
                 }
 

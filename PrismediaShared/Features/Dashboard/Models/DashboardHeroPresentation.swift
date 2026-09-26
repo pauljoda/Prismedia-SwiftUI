@@ -8,7 +8,7 @@ struct DashboardHeroPresentation: Identifiable, Sendable {
     var id: UUID { item.id }
 
     var primaryActionTitle: String {
-        (item.resumeSeconds ?? 0) > 0 || (item.progress ?? 0) > 0
+        (item.resumeSeconds ?? 0) > 0 || item.hasStartedProgress
             ? "Resume"
             : "Play"
     }

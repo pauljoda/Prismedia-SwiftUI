@@ -11,8 +11,11 @@ struct BookChapterListSection: View {
     let horizontalPadding: CGFloat
     let onRead: (BookChapterMapping) -> Void
     let onListen: (BookChapterMapping) -> Void
-    let onCombined: (BookChapterMapping) -> Void
+    /// Opens both formats of a paired chapter together; nil when the Book keeps them Separate.
+    let onCombined: ((BookChapterMapping) -> Void)?
     let onRetry: () -> Void
+    /// Clears the error shown beside rows that a failed refresh left in place.
+    let onDismissError: () -> Void
 
     @ViewBuilder
     var body: some View {
@@ -91,25 +94,36 @@ struct BookChapterListSection: View {
             .frame(maxWidth: .infinity, minHeight: 180)
             .prismediaPanel()
         } else {
-            LazyVStack(spacing: 0) {
-                ForEach(chapters) { chapter in
-                    BookChapterRow(
-                        chapter: chapter,
-                        number: chapter.order + 1,
-                        progressLabel: progressLabel,
-                        onRead: { onRead(chapter) },
-                        onListen: { onListen(chapter) },
-                        onCombined: { onCombined(chapter) }
+            VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                if let errorMessage {
+                    MediaProgressErrorBanner(
+                        message: errorMessage,
+                        textColor: PrismediaColor.textSecondary,
+                        accessibilityIdentifier: "entity-detail.book-chapters.error",
+                        onDismiss: onDismissError
                     )
+                }
 
-                    if chapter.id != chapters.last?.id {
-                        Divider()
-                            .overlay(PrismediaColor.borderSubtle)
-                            .padding(.leading, PrismediaSpacing.large)
+                LazyVStack(spacing: 0) {
+                    ForEach(chapters) { chapter in
+                        BookChapterRow(
+                            chapter: chapter,
+                            number: chapter.order + 1,
+                            progressLabel: progressLabel,
+                            onRead: { onRead(chapter) },
+                            onListen: { onListen(chapter) },
+                            onCombined: onCombined.map { open in { open(chapter) } }
+                        )
+
+                        if chapter.id != chapters.last?.id {
+                            Divider()
+                                .overlay(PrismediaColor.borderSubtle)
+                                .padding(.leading, PrismediaSpacing.large)
+                        }
                     }
                 }
+                .prismediaPanel()
             }
-            .prismediaPanel()
         }
     }
 }
@@ -151,7 +165,8 @@ struct BookChapterListSection: View {
                 onRead: { _ in },
                 onListen: { _ in },
                 onCombined: { _ in },
-                onRetry: {}
+                onRetry: {},
+                onDismissError: {}
             )
             .padding(.vertical, PrismediaSpacing.extraLarge)
         }

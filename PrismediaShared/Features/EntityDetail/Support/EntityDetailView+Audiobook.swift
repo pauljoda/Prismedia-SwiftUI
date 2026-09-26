@@ -2,29 +2,38 @@ import Foundation
 
 extension EntityDetailView {
     #if os(iOS) || os(macOS)
+        /// Plays a chapter: the saved listening position when this chapter holds it, otherwise the
+        /// start of the chapter's audio window.
         func playBookChapter(_ chapter: BookChapterMapping) {
             guard case .content(let detail) = state.phase,
                 let projection = audiobookProjection,
                 projection.bookID == detail.id,
                 let track = chapter.audioTrack
             else { return }
-            play(projection, startingAt: track.id, startSeconds: 0)
+            if let resume = bookAlignmentState.alignment?.resume,
+                resume.listeningRowID == chapter.id,
+                let exact = resume.exactListening
+            {
+                play(projection, startingAt: exact.trackEntityID, startSeconds: exact.resumePoint.trackOffsetSeconds)
+                return
+            }
+            play(projection, startingAt: track.id, startSeconds: chapter.audioStartSeconds ?? 0)
         }
 
+        /// Where "Continue Listening" starts: the server's exact listening position, else, for a
+        /// Linked Book, the position it aligned from reading. Unknown while the server's progress
+        /// contract is undecided.
         func unifiedAudiobookResume(for detail: EntityDetail) -> AudiobookResumePoint? {
-            if detail.bookFormat != .audio,
-                let target = combinedResumeTarget(for: detail)
-            {
-                return AudiobookResumePoint(
-                    trackID: target.audioTrackID,
-                    trackOffsetSeconds: target.audioStartSeconds
-                )
+            switch bookAlignmentState.contract {
+            case .legacyCursor:
+                return legacyAudiobookResume(for: detail)
+            case .serverAlignment:
+                guard let alignment = bookAlignmentState.alignment, let resume = alignment.resume else { return nil }
+                if let exact = resume.exactListening { return exact.resumePoint }
+                return alignment.isLinked ? resume.switchToListening.aligned?.listening?.resumePoint : nil
+            case nil:
+                return nil
             }
-            return BookCombinedResumeResolver().resolveAudioResume(
-                chapters: mappedBookChapters,
-                mappings: bookProgressMappings(for: detail),
-                progress: detail.capability()
-            )
         }
 
         func audiobookPresentation(for detail: EntityDetail) -> AudiobookPlaybackPresentation? {
@@ -65,6 +74,10 @@ extension EntityDetailView {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id
             else { return }
+            guard bookAlignmentState.contract != nil else {
+                Task { await beginListeningOnceContractIsDecided(to: detail) }
+                return
+            }
             let progress: EntityProgressCapability? = detail.capability()
             let completed = progress?.completedAt != nil
             let isCurrent =
@@ -101,53 +114,75 @@ extension EntityDetailView {
             )
         }
 
+        /// Reads the server's progress contract, then listens with the resume it reveals.
+        private func beginListeningOnceContractIsDecided(to detail: EntityDetail) async {
+            guard !isListeningMutating else { return }
+            isListeningMutating = true
+            let decided = await decideBookAlignmentContractIfNeeded(for: detail)
+            isListeningMutating = false
+            guard decided else { return }
+            beginListening(to: detail)
+        }
+
+        /// Starts the player reporting under the known progress contract: exact listening
+        /// checkpoints on 3.8+ servers, client-built cursor mappings on older ones. The player is
+        /// never started while the contract is undecided, so no report reaches the track entities.
         func play(
             _ projection: AudiobookPlaybackProjection,
             startingAt trackID: UUID,
             startSeconds: Double
         ) {
+            guard let contract = bookAlignmentState.contract else { return }
+            let context: MusicPlaybackContext
+            switch contract {
+            case .serverAlignment:
+                context = MusicPlaybackContext(
+                    playbackOwnerEntityID: projection.bookID,
+                    playbackOwnerTitle: projection.title,
+                    playbackOwnerEntityKind: .book,
+                    progressModality: .listening,
+                    preservesQueueOrder: projection.preservesQueueOrder,
+                    supportsPlaybackRate: projection.supportsPlaybackRate
+                )
+            case .legacyCursor:
+                context = MusicPlaybackContext(
+                    playbackOwnerEntityID: projection.bookID,
+                    playbackOwnerTitle: projection.title,
+                    playbackOwnerEntityKind: .book,
+                    progressMappings: currentDetail.map { legacyBookProgressMappings(for: $0) },
+                    preservesQueueOrder: projection.preservesQueueOrder,
+                    supportsPlaybackRate: projection.supportsPlaybackRate
+                )
+            }
             musicPlayer.play(
                 tracks: projection.tracks,
                 startingAt: trackID,
                 queueMode: .ordered,
-                context: MusicPlaybackContext(
-                    playbackOwnerEntityID: projection.bookID,
-                    playbackOwnerTitle: projection.title,
-                    playbackOwnerEntityKind: .book,
-                    progressMappings: currentDetail.map { bookProgressMappings(for: $0) },
-                    preservesQueueOrder: projection.preservesQueueOrder,
-                    supportsPlaybackRate: projection.supportsPlaybackRate
-                ),
+                context: context,
                 startSeconds: startSeconds
             )
         }
 
+        /// Starts listening over from the first part; the reading position is untouched.
         func startListeningOver(_ detail: EntityDetail) async {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id,
                 let playbackService = dependencies.audioPlaybackService,
-                let mapping = bookProgressMappings(for: detail).first,
                 !isListeningMutating
             else { return }
             isListeningMutating = true
             audiobookErrorMessage = nil
+            guard await decideBookAlignmentContractIfNeeded(for: detail),
+                let restart = listeningRestartReport(for: detail, projection: projection)
+            else {
+                isListeningMutating = false
+                return
+            }
             do {
                 await musicPlayer.flushPendingPlaybackReports()
                 musicPlayer.setMappedProgressCompletionState(false)
-                try await playbackService.reportEntityProgress(
-                    id: detail.id,
-                    request: EntityProgressUpdateRequest(
-                        currentEntityID: mapping.currentEntityID,
-                        unit: mapping.unit,
-                        index: mapping.startIndex,
-                        total: mapping.total,
-                        mode: mapping.mode,
-                        completed: false,
-                        reset: true,
-                        location: nil
-                    )
-                )
-                play(projection, startingAt: mapping.itemID, startSeconds: 0)
+                try await playbackService.reportEntityProgress(id: detail.id, request: restart.request)
+                play(projection, startingAt: restart.trackID, startSeconds: 0)
                 await refreshAudiobookDetail()
             } catch {
                 audiobookErrorMessage = error.localizedDescription
@@ -162,6 +197,16 @@ extension EntityDetailView {
             else { return }
             isListeningMutating = true
             audiobookErrorMessage = nil
+            guard await decideBookAlignmentContractIfNeeded(for: detail),
+                let request = listeningCompletionReport(
+                    for: detail,
+                    progress: progress,
+                    completed: progress.completedAt == nil
+                )
+            else {
+                isListeningMutating = false
+                return
+            }
             let marksCompleted = progress.completedAt == nil
             let isCurrent =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id
@@ -169,18 +214,7 @@ extension EntityDetailView {
             do {
                 await musicPlayer.flushPendingPlaybackReports()
                 if isCurrent { musicPlayer.setMappedProgressCompletionState(marksCompleted) }
-                try await playbackService.reportEntityProgress(
-                    id: detail.id,
-                    request: EntityProgressUpdateRequest(
-                        currentEntityID: progress.currentEntityID ?? detail.id,
-                        unit: progress.unit,
-                        index: progress.index,
-                        total: progress.total,
-                        mode: progress.mode,
-                        completed: marksCompleted,
-                        location: progress.location
-                    )
-                )
+                try await playbackService.reportEntityProgress(id: detail.id, request: request)
                 await refreshAudiobookDetail()
             } catch {
                 if isCurrent { musicPlayer.setMappedProgressCompletionState(!marksCompleted) }
@@ -189,35 +223,74 @@ extension EntityDetailView {
             isListeningMutating = false
         }
 
-        func currentAudiobookResume(for detail: EntityDetail) -> Double {
-            guard let projection = audiobookProjection else { return 0 }
-            let isCurrent =
-                musicPlayer.context?.playbackOwnerEntityID == detail.id
-                && musicPlayer.context?.playbackOwnerEntityKind == .book
-            if isCurrent, let track = musicPlayer.currentTrack {
-                return projection.absoluteTime(
-                    trackID: track.id,
-                    trackOffsetSeconds: musicPlayer.elapsedTime
+        /// The report that restarts listening from the first part, and the part to play. Nil while
+        /// the server's progress contract is undecided.
+        private func listeningRestartReport(
+            for detail: EntityDetail,
+            projection: AudiobookPlaybackProjection
+        ) -> (trackID: UUID, request: EntityProgressUpdateRequest)? {
+            switch bookAlignmentState.contract {
+            case .legacyCursor:
+                return legacyStartListeningOverReport(for: detail)
+            case .serverAlignment:
+                guard let firstTrack = projection.tracks.first else { return nil }
+                return (
+                    firstTrack.id,
+                    .listening(
+                        BookListeningPositionRequest(trackEntityID: firstTrack.id, markerID: nil, offsetSeconds: 0),
+                        completed: false,
+                        reset: true
+                    )
                 )
+            case nil:
+                return nil
             }
-            let progress: EntityProgressCapability? = detail.capability()
-            let resume = BookCombinedResumeResolver().resolveAudioResume(
-                chapters: mappedBookChapters,
-                mappings: bookProgressMappings(for: detail),
-                progress: progress
-            )
-            return resume.map {
-                projection.absoluteTime(
-                    trackID: $0.trackID,
-                    trackOffsetSeconds: $0.trackOffsetSeconds
+        }
+
+        /// The report that marks the audiobook listened or not; the exact listening position rides
+        /// along unchanged. Nil while the server's progress contract is undecided.
+        private func listeningCompletionReport(
+            for detail: EntityDetail,
+            progress: EntityProgressCapability,
+            completed: Bool
+        ) -> EntityProgressUpdateRequest? {
+            switch bookAlignmentState.contract {
+            case .legacyCursor:
+                return legacyListeningCompletionReport(for: detail, progress: progress, completed: completed)
+            case nil:
+                return nil
+            case .serverAlignment:
+                break
+            }
+            let position: BookListeningPositionRequest
+            if let exact = bookAlignmentState.alignment?.resume?.exactListening {
+                position = BookListeningPositionRequest(
+                    trackEntityID: exact.trackEntityID,
+                    markerID: exact.markerID,
+                    offsetSeconds: max(0, exact.offsetSeconds)
                 )
-            } ?? 0
+            } else if let checkpoint = progress.checkpoint(for: .listening) {
+                position = BookListeningPositionRequest(
+                    trackEntityID: checkpoint.positionEntityID,
+                    markerID: checkpoint.markerID,
+                    offsetSeconds: max(0, checkpoint.offsetSeconds ?? Double(checkpoint.index))
+                )
+            } else if let firstTrack = audiobookProjection?.tracks.first {
+                position = BookListeningPositionRequest(trackEntityID: firstTrack.id, markerID: nil, offsetSeconds: 0)
+            } else {
+                return nil
+            }
+            return .listening(position, completed: completed)
         }
 
         func refreshAudiobookDetail() async {
             await loadDetail()
             if case .content(let refreshed) = state.phase {
                 await loadAudiobook(for: refreshed)
+                if !bookAlignmentState.usesLegacyAlignment {
+                    // Resume targets are server-owned, and an undecided contract gets another read.
+                    await loadBookAlignment(for: refreshed)
+                }
             }
             dependencies.onEntityMutated()
         }

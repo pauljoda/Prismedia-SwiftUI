@@ -55,6 +55,8 @@ private struct PreviewHTTPDataLoader: HTTPDataLoading {
         ]
         if let coverURL = item.coverURL { object["coverUrl"] = coverURL }
         if let progress = item.progress { object["progress"] = progress }
+        if item.progressSeparate { object["progressSeparate"] = true }
+        if let listeningProgress = item.listeningProgress { object["listeningProgress"] = listeningProgress }
         if let resumeSeconds = item.resumeSeconds { object["resumeSeconds"] = resumeSeconds }
         if let accessCount = item.accessCount { object["accessCount"] = accessCount }
         if let rating = item.rating { object["rating"] = rating }

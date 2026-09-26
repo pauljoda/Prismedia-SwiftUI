@@ -26,11 +26,13 @@ struct EntityDetailReadingState: Hashable, Sendable {
         switch phase {
         case .content(let manifest):
             return ReadingProgressPresentation(
-                progress: manifest.progress,
+                progress: manifest.progress?.readingPosition,
                 chapters: manifest.chapters.map(\.summary)
             )
         case .singleFile(let detail):
-            return ReadingProgressPresentation(singleFileProgress: detail.capability())
+            return ReadingProgressPresentation(
+                singleFileProgress: detail.capability(EntityProgressCapability.self)?.readingPosition
+            )
         case .idle, .loading, .failure:
             return nil
         }
@@ -182,7 +184,7 @@ struct EntityDetailReadingState: Hashable, Sendable {
 
     private func singleFileManifest(_ detail: EntityDetail) -> BookReaderManifest {
         let defaultMode: ReaderMode = detail.bookFormat == .pdf ? .scrolled : .paged
-        let progress: EntityProgressCapability? = detail.capability()
+        let progress: EntityProgressCapability? = detail.capability(EntityProgressCapability.self)?.readingPosition
         return BookReaderManifest(
             bookID: detail.id,
             title: detail.title,

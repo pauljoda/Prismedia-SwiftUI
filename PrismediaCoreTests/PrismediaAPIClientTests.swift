@@ -578,6 +578,37 @@ final class PrismediaAPIClientTests: XCTestCase {
         XCTAssertEqual(items?.first?["entityId"] as? String, albumID.uuidString)
     }
 
+    func testCreatesManualCollectionAndDecodesTheCreatedCard() async throws {
+        let collectionID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
+        let loader = MockHTTPDataLoader(responses: [
+            .json(
+                #"{"id":"\#(collectionID)","kind":"collection","title":"Road Trip","capabilities":[]}"#,
+                statusCode: 201
+            )
+        ])
+        let client = PrismediaAPIClient(serverURL: serverURL, accessToken: "token", loader: loader)
+
+        let collection = try await client.createCollection(
+            title: "Road Trip",
+            description: nil,
+            isNsfw: false,
+            isShared: true
+        )
+
+        XCTAssertEqual(collection.id, collectionID)
+        XCTAssertEqual(collection.kind, .collection)
+        let request = try XCTUnwrap(loader.requests.first)
+        XCTAssertEqual(request.url?.path, "/api/collections")
+        XCTAssertEqual(request.httpMethod, "POST")
+        let body = try JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any]
+        XCTAssertEqual(body?["title"] as? String, "Road Trip")
+        XCTAssertEqual(body?["mode"] as? String, "manual")
+        XCTAssertEqual(body?["isNsfw"] as? Bool, false)
+        XCTAssertEqual(body?["isShared"] as? Bool, true)
+        XCTAssertNil(body?["description"])
+        XCTAssertNil(body?["ruleTreeJson"])
+    }
+
     func testLoadsOnlyServerApprovedAddableCollectionOptions() async throws {
         let sharedCollectionID = UUID(uuidString: "cccccccc-cccc-cccc-cccc-cccccccccccc")!
         let loader = MockHTTPDataLoader(responses: [

@@ -27,7 +27,7 @@
         private let bookID: UUID
         private let bookmarkStore: any EPUBBookmarkStoring
         private let companionPlayer: MusicPlayerController?
-        private let findCurrentAudiobookReadingTarget: () -> BookReaderLocationTarget?
+        private let findCurrentAudiobookReadingTarget: @MainActor () async -> BookReaderLocationTarget?
         private let onReady: () -> Void
 
         init(
@@ -41,8 +41,9 @@
             initialProgression: Double? = nil,
             initialUpdatedAt: Date? = nil,
             progressRanges: [EPUBReadingProgressRange] = [],
+            readingReportFormat: BookReadingReportFormat = .legacyCursor,
             companionPlayer: MusicPlayerController? = nil,
-            findCurrentAudiobookReadingTarget: @escaping () -> BookReaderLocationTarget? = { nil },
+            findCurrentAudiobookReadingTarget: @escaping @MainActor () async -> BookReaderLocationTarget? = { nil },
             onReady: @escaping () -> Void = {}
         ) {
             let session = ReadiumEPUBReaderSession(
@@ -54,7 +55,8 @@
                 initialLocation: initialLocation,
                 initialProgression: initialProgression,
                 initialUpdatedAt: initialUpdatedAt,
-                progressRanges: progressRanges
+                progressRanges: progressRanges,
+                readingReportFormat: readingReportFormat
             )
             _session = State(initialValue: session)
             _preferences = State(initialValue: session.preferences)
@@ -377,7 +379,7 @@
         }
 
         private func moveToCurrentAudiobookPosition() async -> Bool {
-            guard let target = findCurrentAudiobookReadingTarget() else { return false }
+            guard let target = await findCurrentAudiobookReadingTarget() else { return false }
             return await session.openReadingTarget(target)
         }
 

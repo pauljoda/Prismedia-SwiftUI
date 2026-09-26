@@ -98,7 +98,8 @@ extension EntityDetailView {
                                                 listeningErrorMessage: audiobookErrorMessage,
                                                 chapters: mappedBookChapters,
                                                 chaptersAreLoading: areBookChaptersLoading,
-                                                chaptersErrorMessage: bookChaptersErrorMessage,
+                                                chaptersErrorMessage: bookChaptersErrorMessage
+                                                    ?? bookAlignmentState.errorMessage,
                                                 chapterProgressLabel: bookChapterProgressLabel(for: detail),
                                                 horizontalPadding: detailHorizontalPadding,
                                                 onContinueReading: {
@@ -110,7 +111,7 @@ extension EntityDetailView {
                                                 },
                                                 onResumeReading: { openReader(command: .resume) },
                                                 onContinueListening: { beginListening(to: detail) },
-                                                onContinueCombined: { openCombinedReader(for: detail) },
+                                                onContinueCombined: { Task { await openCombinedReader(for: detail) } },
                                                 onStartReadingOver: { Task { await startReadingOver() } },
                                                 onStartListeningOver: { Task { await startListeningOver(detail) } },
                                                 onToggleReadingCompletion: {
@@ -127,7 +128,8 @@ extension EntityDetailView {
                                                 onReadChapter: { openBookChapter($0, combined: false) },
                                                 onListenToChapter: playBookChapter,
                                                 onCombineChapter: { openBookChapter($0, combined: true) },
-                                                onRetryChapters: { Task { await loadBookChapters(for: detail) } }
+                                                onRetryChapters: { Task { await retryBookChapterRows(for: detail) } },
+                                                onDismissChaptersError: { bookAlignmentState.dismissError() }
                                             )
                                             .equatable()
 
@@ -223,7 +225,7 @@ extension EntityDetailView {
                     await loadCollectionMembers(for: detail)
                     await loadAudiobook(for: detail)
                     await loadBookChapters(for: detail)
-                    await loadBookChapterMappings(for: detail)
+                    await loadBookAlignment(for: detail)
                     #if os(iOS) || os(macOS)
                         if let currentDetail, currentDetail.id == detail.id {
                             await promoteLegacyAudiobookProgressIfNeeded(for: currentDetail)

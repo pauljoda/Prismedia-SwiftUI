@@ -13,6 +13,11 @@ struct BookCombinedProgressCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.large) {
             header
+            if let explanation = presentation.separateExplanation ?? presentation.actions.combinedExplanation {
+                Text(explanation)
+                    .font(.subheadline)
+                    .foregroundStyle(PrismediaColor.textSecondary)
+            }
             progress
             actions
         }
@@ -50,28 +55,44 @@ struct BookCombinedProgressCard: View {
 
     private var progress: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            HStack {
-                Label("Overall", systemImage: "book.pages")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PrismediaColor.textPrimary)
-                Spacer(minLength: PrismediaSpacing.large)
-                Text(presentation.isLoading ? "100%" : "\(presentation.percent)%")
-                    .font(.headline.monospacedDigit())
-                    .foregroundStyle(PrismediaColor.textPrimary)
-                    .redacted(reason: presentation.isLoading ? .placeholder : [])
-                    .frame(minWidth: 48, alignment: .trailing)
-            }
-            ProgressView(value: Double(presentation.percent), total: 100)
-                .tint(artworkPrimaryAccent)
-                .opacity(presentation.isLoading ? 0 : 1)
-                .overlay {
-                    if presentation.isLoading {
-                        Capsule()
-                            .fill(PrismediaColor.controlFill)
-                            .redacted(reason: .placeholder)
-                    }
+            if let meters = presentation.separateMeters {
+                // A Separate Book keeps each format's own progress; nothing merges them.
+                BookFormatProgressMeter(
+                    title: "Reading",
+                    systemImage: "book.fill",
+                    percent: meters.readingPercent,
+                    tint: artworkPrimaryAccent
+                )
+                BookFormatProgressMeter(
+                    title: "Listening",
+                    systemImage: "headphones",
+                    percent: meters.listeningPercent,
+                    tint: artworkPrimaryAccent.opacity(PrismediaOpacity.secondaryMeter)
+                )
+            } else {
+                HStack {
+                    Label("Overall", systemImage: "book.pages")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PrismediaColor.textPrimary)
+                    Spacer(minLength: PrismediaSpacing.large)
+                    Text(presentation.isLoading ? "100%" : "\(presentation.percent)%")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(PrismediaColor.textPrimary)
+                        .redacted(reason: presentation.isLoading ? .placeholder : [])
+                        .frame(minWidth: 48, alignment: .trailing)
                 }
-                .frame(height: 4)
+                ProgressView(value: Double(presentation.percent), total: 100)
+                    .tint(artworkPrimaryAccent)
+                    .opacity(presentation.isLoading ? 0 : 1)
+                    .overlay {
+                        if presentation.isLoading {
+                            Capsule()
+                                .fill(PrismediaColor.controlFill)
+                                .redacted(reason: .placeholder)
+                        }
+                    }
+                    .frame(height: 4)
+            }
             Text(presentation.positionLabel ?? "Book position")
                 .font(.caption)
                 .foregroundStyle(PrismediaColor.textSecondary)
@@ -110,47 +131,57 @@ struct BookCombinedProgressCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Book progress")
-        .accessibilityValue(
-            presentation.isLoading
-                ? "Loading book progress"
-                : presentation.chapterLabel.map {
-                    "\(presentation.percent) percent, current chapter \($0)"
-                } ?? "\(presentation.percent) percent"
-        )
+        .accessibilityValue(progressAccessibilityValue)
+    }
+
+    private var progressAccessibilityValue: String {
+        if presentation.isLoading { return String(localized: "Loading book progress") }
+        let amount =
+            presentation.separateMeters.map {
+                String(localized: "Reading \($0.readingPercent) percent, listening \($0.listeningPercent) percent")
+            } ?? String(localized: "\(presentation.percent) percent")
+        return presentation.chapterLabel.map { String(localized: "\(amount), current chapter \($0)") } ?? amount
     }
 
     private var actions: some View {
         PrismediaGlassButtonStack(spacing: PrismediaSpacing.medium) {
             HStack(spacing: PrismediaSpacing.medium) {
                 PrismediaButton(
-                    "Continue Reading",
+                    presentation.actions.readingTitle,
                     systemImage: "book.fill",
                     form: .fillIcon,
                     action: onContinueReading
                 )
+                .accessibilityHint(presentation.actions.readingHint ?? "")
                 .accessibilityIdentifier("combined-book-progress.continue-reading")
 
                 PrismediaButton(
-                    "Continue Listening",
+                    presentation.actions.listeningTitle,
                     systemImage: "headphones",
                     form: .fillIcon,
                     action: onContinueListening
                 )
+                .accessibilityHint(presentation.actions.listeningHint ?? "")
                 .accessibilityIdentifier("combined-book-progress.continue-listening")
             }
 
-            PrismediaButton(
-                "Continue Combined",
-                systemImage: "book.pages",
-                variant: .prominent,
-                form: .fill,
-                primaryTint: artworkPrimaryAccent,
-                action: onContinueCombined
-            )
-            .accessibilityHint(
-                "Opens the reader and starts the audiobook near the saved Book position"
-            )
-            .accessibilityIdentifier("combined-book-progress.continue-combined")
+            // A Separate Book resumes each format on its own; only a Linked Book starts both.
+            if presentation.isLinked {
+                PrismediaButton(
+                    presentation.actions.combinedTitle,
+                    systemImage: "book.pages",
+                    variant: .prominent,
+                    form: .fill,
+                    primaryTint: artworkPrimaryAccent,
+                    action: onContinueCombined
+                )
+                .disabled(!presentation.actions.isCombinedAvailable)
+                .accessibilityHint(
+                    presentation.actions.combinedExplanation
+                        ?? "Opens the reader and starts the audiobook near the saved Book position"
+                )
+                .accessibilityIdentifier("combined-book-progress.continue-combined")
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -194,6 +225,89 @@ struct BookCombinedProgressCard: View {
                 onStartOver: {}, onToggleCompletion: {}
             )
             .padding(PrismediaSpacing.extraLarge)
+        }
+    }
+
+    #Preview("Combined Book Progress · Estimated and Unpaired") {
+        PreviewShell {
+            BookCombinedProgressCard(
+                presentation: BookCombinedProgressPresentation(
+                    progress: nil,
+                    reading: nil,
+                    chapterLabel: "Bonus Interview",
+                    activitySeconds: 1_200,
+                    isLoading: false,
+                    isBusy: false,
+                    actions: BookCombinedProgressActions(
+                        readingTitle: "Continue Reading ≈",
+                        readingHint: "Reading estimated from where you stopped listening.",
+                        listeningTitle: "Continue Listening",
+                        combinedTitle: "Read & Listen",
+                        combinedExplanation: "“Bonus Interview” has no matching ebook chapter.",
+                        isCombinedAvailable: false
+                    )
+                ),
+                onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
+                onStartOver: {}, onToggleCompletion: {}
+            )
+            .padding(PrismediaSpacing.extraLarge)
+        }
+    }
+
+    #Preview("Combined Book Progress · Separate") {
+        PreviewShell {
+            BookCombinedProgressCard(
+                presentation: BookCombinedProgressPresentation(
+                    progress: nil,
+                    reading: nil,
+                    activitySeconds: 3_600,
+                    isLoading: false,
+                    isBusy: false,
+                    actions: BookCombinedProgressActions(
+                        readingTitle: "Continue Reading",
+                        listeningTitle: "Continue Listening",
+                        combinedTitle: "Read & Listen",
+                        isCombinedAvailable: false
+                    ),
+                    separate: EntitySeparateProgress(
+                        reason: .audioUnstructured,
+                        readingFraction: 0.42,
+                        listeningFraction: 0.12
+                    )
+                ),
+                onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
+                onStartOver: {}, onToggleCompletion: {}
+            )
+            .padding(PrismediaSpacing.extraLarge)
+        }
+    }
+
+    #Preview("Combined Book Progress · Separate · Accessibility Type") {
+        PreviewShell {
+            BookCombinedProgressCard(
+                presentation: BookCombinedProgressPresentation(
+                    progress: nil,
+                    reading: nil,
+                    activitySeconds: nil,
+                    isLoading: false,
+                    isBusy: false,
+                    actions: BookCombinedProgressActions(
+                        readingTitle: "Start Reading",
+                        listeningTitle: "Continue Listening",
+                        combinedTitle: "Read & Listen",
+                        isCombinedAvailable: false
+                    ),
+                    separate: EntitySeparateProgress(
+                        reason: .noExactPairs,
+                        readingFraction: nil,
+                        listeningFraction: 0.3
+                    )
+                ),
+                onContinueReading: {}, onContinueListening: {}, onContinueCombined: {},
+                onStartOver: {}, onToggleCompletion: {}
+            )
+            .padding(PrismediaSpacing.extraLarge)
+            .dynamicTypeSize(.accessibility2)
         }
     }
 

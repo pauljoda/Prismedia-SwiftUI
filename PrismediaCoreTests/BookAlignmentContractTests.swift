@@ -1,0 +1,687 @@
+import XCTest
+
+@testable import PrismediaCore
+
+/// Durable wire and version-gate coverage for the server-owned Book alignment (servers 3.8+).
+final class BookAlignmentContractTests: XCTestCase {
+    // MARK: - Decoding
+
+    func testDecodesTheAlignmentProjectionAndItsResumeTargets() throws {
+        let alignment = try PrismediaJSON.decoder().decode(
+            BookAlignmentResponse.self,
+            from: Data(Self.alignmentJSON.utf8)
+        )
+
+        XCTAssertEqual(alignment.modalities, [.reading, .listening])
+        XCTAssertTrue(alignment.supportsReadingAndListening)
+        XCTAssertEqual(alignment.readablePositionTotal, 10_000)
+        XCTAssertEqual(alignment.rows.map(\.id), ["r0", "r1", "a0"])
+        XCTAssertEqual(alignment.rows.map(\.matchState), [.paired, .readableOnly, .audioOnly])
+        XCTAssertEqual(alignment.rows[0].provenance, .manual)
+        XCTAssertEqual(alignment.rows[0].readable?.startFraction, 0)
+        XCTAssertEqual(alignment.rows[0].audio?.markerID, Self.markerID)
+        XCTAssertEqual(alignment.rows[2].audio?.endInferred, true)
+        XCTAssertEqual(
+            alignment.chapterMappings,
+            [
+                BookChapterAudioMapping(
+                    readableChapterKey: "Text/one.xhtml",
+                    audioTrackID: Self.trackID,
+                    origin: .manual,
+                    audioMarkerID: Self.markerID
+                )
+            ]
+        )
+        XCTAssertEqual(alignment.coverage.pairedCount, 1)
+        XCTAssertEqual(alignment.coverage.totalAudioSeconds, 600)
+
+        let resume = try XCTUnwrap(alignment.resume)
+        XCTAssertEqual(resume.lastModality, .listening)
+        XCTAssertEqual(resume.continueTarget?.basis, .exact)
+        XCTAssertEqual(resume.continueTarget?.rowID, "a0")
+        XCTAssertEqual(resume.exactListening?.offsetSeconds, 412.5)
+        XCTAssertEqual(resume.listeningRowID, "a0")
+        XCTAssertEqual(resume.readingRowID, "r0")
+        XCTAssertNil(resume.switchToReading.aligned)
+        XCTAssertEqual(resume.switchToReading.gap, .audioChapterUnpaired)
+        XCTAssertEqual(
+            resume.switchToReading.gapExplanation,
+            "“Bonus Interview” has no matching ebook chapter."
+        )
+        XCTAssertEqual(resume.switchToListening.approximate, true)
+        XCTAssertEqual(resume.switchToListening.basis, .interpolated)
+        XCTAssertEqual(resume.switchToListening.aligned?.listening?.offsetSeconds, 115)
+        XCTAssertEqual(resume.combined.basis, .exact)
+    }
+
+    func testReadingTargetsOpenTheirLocatorChapterOrPage() throws {
+        let alignment = try PrismediaJSON.decoder().decode(
+            BookAlignmentResponse.self,
+            from: Data(Self.alignmentJSON.utf8)
+        )
+        let exact = try XCTUnwrap(alignment.resume?.exactReading)
+        XCTAssertEqual(exact.destination(inWork: Self.bookID), .epubLocator(Self.readiumLocator))
+
+        let webCFI = BookReadingTarget(
+            positionEntityID: Self.bookID,
+            unit: .cfi,
+            index: 2_500,
+            total: 10_000,
+            location: "epubcfi(/6/4!/4/2)",
+            chapterLocation: "Text/one.xhtml",
+            chapterFraction: 0.5
+        )
+        XCTAssertEqual(
+            webCFI.destination(inWork: Self.bookID),
+            .epubChapter(BookReaderLocationTarget(location: "Text/one.xhtml", progression: 0.5))
+        )
+
+        let chapterID = UUID()
+        let paged = BookReadingTarget(
+            positionEntityID: chapterID,
+            unit: .page,
+            index: 3,
+            total: 12,
+            pageIndex: 3
+        )
+        XCTAssertEqual(paged.destination(inWork: Self.bookID), .chapterPage(chapterID: chapterID, pageIndex: 3))
+
+        let pdf = BookReadingTarget(positionEntityID: Self.bookID, unit: .page, index: 4, total: 90)
+        XCTAssertNil(pdf.destination(inWork: Self.bookID))
+    }
+
+    func testProgressCapabilityCarriesModalityCheckpoints() throws {
+        let json = """
+            {
+              "currentEntityId": "\(Self.bookID)", "unit": "cfi", "index": "6000", "total": 10000,
+              "mode": "paged", "completedAt": null, "updatedAt": "2026-09-24T11:00:00Z",
+              "location": null, "consumedPercent": 0.6, "lastModality": "listening",
+              "checkpoints": [
+                {
+                  "modality": "reading", "positionEntityId": "\(Self.bookID)", "unit": "cfi",
+                  "index": 2300, "total": 10000, "offsetSeconds": null, "markerId": null,
+                  "mode": "scrolled", "location": "epubcfi(/6/12!/4/2)",
+                  "updatedAt": "2026-09-24T10:00:00.123Z", "workIndex": 2300, "workTotal": 10000
+                },
+                {
+                  "modality": "listening", "positionEntityId": "\(Self.trackID)", "unit": "second",
+                  "index": 412, "total": 600, "offsetSeconds": "412.5", "markerId": "\(Self.markerID)",
+                  "mode": null, "location": null, "updatedAt": "2026-09-24T11:00:00Z"
+                }
+              ]
+            }
+            """
+        let progress = try PrismediaJSON.decoder().decode(EntityProgressCapability.self, from: Data(json.utf8))
+
+        XCTAssertEqual(progress.lastModality, .listening)
+        XCTAssertEqual(progress.index, 6_000)
+        XCTAssertEqual(progress.checkpoint(for: .listening)?.offsetSeconds, 412.5)
+        XCTAssertEqual(progress.checkpoint(for: .listening)?.markerID, Self.markerID)
+        let reading = progress.readingPosition
+        XCTAssertEqual(reading.currentEntityID, Self.bookID)
+        XCTAssertEqual(reading.index, 2_300)
+        XCTAssertEqual(reading.mode, .scrolled)
+        XCTAssertEqual(reading.location, "epubcfi(/6/12!/4/2)")
+        XCTAssertEqual(reading.consumedPercent, 0.6)
+
+        let legacy = EntityProgressCapability(
+            currentEntityID: Self.bookID, unit: .cfi, index: 10, total: 10_000, mode: .paged,
+            completedAt: nil, updatedAt: nil, workIndex: nil, workTotal: nil, location: nil
+        )
+        XCTAssertEqual(legacy.readingPosition, legacy)
+    }
+
+    // MARK: - Linked and Separate
+
+    func testDecodesTheLinkDecisionAndEachFormatsOwnProgress() throws {
+        let separate = try Self.alignment(
+            link: """
+                {"state": "separate", "reason": "audio_in_parts", "audioStructure": "parts",
+                 "readingPercent": "0.424", "listeningPercent": 0.1}
+                """
+        )
+        let link = try XCTUnwrap(separate.link)
+        XCTAssertEqual(link.state, .separate)
+        XCTAssertEqual(link.reason, .audioInParts)
+        XCTAssertEqual(link.audioStructure, .parts)
+        XCTAssertFalse(separate.isLinked)
+        let progress = try XCTUnwrap(separate.separateProgress)
+        XCTAssertEqual(progress.readingPercent, 42)
+        XCTAssertEqual(progress.listeningPercent, 10)
+        XCTAssertEqual(
+            progress.explanation,
+            "This audiobook is split into parts rather than chapters, so reading and listening are tracked separately."
+        )
+
+        let linked = try Self.alignment(
+            link: """
+                {"state": "linked", "reason": null, "audioStructure": "chaptered",
+                 "readingPercent": 0.5, "listeningPercent": null}
+                """
+        )
+        XCTAssertEqual(linked.link?.audioStructure, .chaptered)
+        XCTAssertTrue(linked.isLinked)
+        XCTAssertNil(linked.separateProgress)
+
+        // Older servers send no decision and keep today's linked behavior.
+        let older = try Self.alignment(link: nil)
+        XCTAssertNil(older.link)
+        XCTAssertTrue(older.isLinked)
+
+        // A Book with one format is never presented as two progresses.
+        let readingOnly = try Self.alignment(
+            link: """
+                {"state": "separate", "reason": "audio_unavailable", "audioStructure": null,
+                 "readingPercent": 0.3, "listeningPercent": null}
+                """,
+            modalities: #"["reading"]"#
+        )
+        XCTAssertNil(readingOnly.separateProgress)
+        XCTAssertTrue(readingOnly.isLinked)
+
+        let capability = try PrismediaJSON.decoder().decode(
+            EntityProgressCapability.self,
+            from: Data(
+                """
+                {"currentEntityId": null, "unit": "cfi", "index": 0, "total": 10000, "mode": null,
+                 "completedAt": null, "updatedAt": null, "consumedPercent": 0.25,
+                 "separate": {"reason": "no_exact_pairs", "readingPercent": 0.25, "listeningPercent": "0.6"}}
+                """.utf8
+            )
+        )
+        XCTAssertEqual(
+            capability.separate,
+            EntitySeparateProgress(reason: .noExactPairs, readingFraction: 0.25, listeningFraction: 0.6)
+        )
+        XCTAssertEqual(capability.readingPosition.separate, capability.separate)
+    }
+
+    func testUnknownLinkValuesKeepTheirSpellingAndTodaysBehavior() throws {
+        let alignment = try Self.alignment(
+            link: """
+                {"state": "bridged", "reason": "future_reason", "audioStructure": "future_shape",
+                 "readingPercent": null, "listeningPercent": null}
+                """
+        )
+        let link = try XCTUnwrap(alignment.link)
+        XCTAssertEqual(link.state.rawValue, "bridged")
+        XCTAssertEqual(link.reason?.rawValue, "future_reason")
+        XCTAssertEqual(link.audioStructure?.rawValue, "future_shape")
+        XCTAssertTrue(alignment.isLinked)
+
+        let unknown = EntitySeparateProgress(
+            reason: BookAlignmentGapReason(rawValue: "future_reason"),
+            readingFraction: nil,
+            listeningFraction: nil
+        )
+        XCTAssertEqual(unknown.explanation, "Reading and listening are tracked separately.")
+        XCTAssertEqual(unknown.readingPercent, 0)
+        let knownReasons: [BookAlignmentGapReason] = [
+            .audioUnavailable, .audioUnstructured, .audioInParts, .noExactPairs, .readableChaptersUnavailable,
+        ]
+        for reason in knownReasons {
+            XCTAssertNotEqual(
+                EntitySeparateProgress(reason: reason, readingFraction: nil, listeningFraction: nil).explanation,
+                unknown.explanation,
+                "Every known Separate reason explains itself: \(reason.rawValue)"
+            )
+        }
+        XCTAssertEqual(
+            try PrismediaJSON.decoder().decode(BookChapterMappingOrigin.self, from: Data(#""ordered""#.utf8)),
+            .ordered
+        )
+    }
+
+    func testSeparateBooksShowTwoMetersAndResumeEachFormatOnlyExactly() {
+        let reading = BookReadingTarget(positionEntityID: Self.bookID, unit: .cfi, index: 10, total: 100)
+        let listening = BookListeningTarget(trackEntityID: Self.trackID, offsetSeconds: 90)
+        let resume = BookResumeProjection(
+            exactListening: listening,
+            switchToReading: BookAlignedTarget(rowID: "r0", reading: reading, approximate: true, basis: .interpolated),
+            switchToListening: BookAlignedTarget(rowID: "r0", gap: .audioUnstructured),
+            combined: BookAlignedTarget(rowID: "r0", reading: reading, listening: listening)
+        )
+        let separate = EntitySeparateProgress(reason: .audioUnstructured, readingFraction: 0.2, listeningFraction: 0.45)
+
+        let presentation = BookCombinedProgressPresentation(
+            progress: nil,
+            reading: nil,
+            activitySeconds: nil,
+            isLoading: false,
+            isBusy: false,
+            actions: BookCombinedProgressActions(resume: resume, isCompleted: false, isLinked: false),
+            separate: separate
+        )
+        XCTAssertFalse(presentation.isLinked)
+        XCTAssertEqual(presentation.separateMeters, separate)
+        XCTAssertEqual(
+            presentation.separateExplanation,
+            "This audiobook has no chapter markers, so reading and listening are tracked separately."
+        )
+        XCTAssertEqual(presentation.status, .inProgress)
+        XCTAssertFalse(presentation.actions.isCombinedAvailable)
+        XCTAssertNil(presentation.actions.combinedExplanation)
+        XCTAssertEqual(presentation.actions.readingTitle, "Start Reading")
+        XCTAssertNil(presentation.actions.readingHint)
+        XCTAssertEqual(presentation.actions.listeningTitle, "Continue Listening")
+
+        // A finished Separate Book stays unlinked but shows its single completed progress.
+        let completed = BookCombinedProgressPresentation(
+            progress: EntityProgressCapability(
+                currentEntityID: nil, unit: .cfi, index: 0, total: 100, mode: nil, completedAt: Date(),
+                updatedAt: nil, workIndex: nil, workTotal: nil, location: nil
+            ),
+            reading: nil,
+            activitySeconds: nil,
+            isLoading: false,
+            isBusy: false,
+            separate: separate
+        )
+        XCTAssertFalse(completed.isLinked)
+        XCTAssertNil(completed.separateMeters)
+        XCTAssertEqual(completed.percent, 100)
+
+        // A Linked Book keeps one progress and the combined action.
+        let linked = BookCombinedProgressPresentation(
+            progress: nil,
+            reading: nil,
+            activitySeconds: nil,
+            isLoading: false,
+            isBusy: false,
+            actions: BookCombinedProgressActions(resume: resume, isCompleted: false)
+        )
+        XCTAssertTrue(linked.isLinked)
+        XCTAssertNil(linked.separateMeters)
+        XCTAssertTrue(linked.actions.isCombinedAvailable)
+        XCTAssertEqual(linked.actions.readingTitle, "Continue Reading ≈")
+    }
+
+    func testChapterMappingSavesSendOnlyManualOrOrderedPairs() async throws {
+        let first = BookAudioChapter(
+            audioTrackID: Self.trackID, audioMarkerID: Self.markerID, title: "One", startSeconds: 0, endSeconds: 10
+        )
+        let second = BookAudioChapter(
+            audioTrackID: Self.trackID, audioMarkerID: nil, title: "Two", startSeconds: 10, endSeconds: 20
+        )
+        let third = BookAudioChapter(
+            audioTrackID: Self.bookID, audioMarkerID: nil, title: "Three", startSeconds: 0, endSeconds: 10
+        )
+        var draft = BookChapterMappingDraft(persisted: [
+            BookChapterAudioMapping(
+                readableChapterKey: "one", audioTrackID: Self.trackID, origin: .ordered, audioMarkerID: Self.markerID
+            ),
+            BookChapterAudioMapping(readableChapterKey: "two", audioTrackID: Self.trackID, origin: .auto),
+            BookChapterAudioMapping(readableChapterKey: "three", audioTrackID: Self.bookID),
+        ])
+        XCTAssertEqual(draft.origin(for: first), .ordered)
+        XCTAssertNil(draft.readableChapterKey(for: second), "Automatic pairs never seed a draft.")
+        XCTAssertEqual(draft.origin(for: third), .manual, "A pair without an origin was picked by hand.")
+
+        // A hand edit becomes manual and releases the readable chapter from its old audio chapter.
+        draft.pick("three", for: second)
+        XCTAssertEqual(draft.origin(for: second), .manual)
+        XCTAssertNil(draft.readableChapterKey(for: third))
+
+        let fill = BookChapterMappingBuilder().sequentialMappings(
+            readableChapters: [
+                ReadableBookChapter(id: "one", title: "One", order: 0, depth: 0, target: .epub(location: "one")),
+                ReadableBookChapter(id: "two", title: "Two", order: 1, depth: 0, target: .epub(location: "two")),
+            ],
+            audioTracks: [MusicTrack(id: Self.trackID, title: "Track", sortOrder: 0)],
+            audioChapters: [first, second],
+            firstReadableChapterKey: "one"
+        )
+        XCTAssertEqual(fill.map(\.origin), [.ordered, .ordered])
+        var filled = draft
+        filled.accept(filledInOrder: fill)
+        XCTAssertEqual(filled.mappings(orderedBy: [first, second, third]).map(\.origin), [.ordered, .ordered])
+
+        let loader = MockHTTPDataLoader(responses: [.json(Self.alignmentJSON)])
+        let automatic = BookChapterAudioMapping(readableChapterKey: "x", audioTrackID: Self.bookID, origin: .auto)
+        _ = try await BookAlignmentLoader(service: Self.client(loader: loader)).save(
+            bookID: Self.bookID,
+            mappings: draft.mappings(orderedBy: [first, second, third]) + [automatic],
+            contract: .serverAlignment
+        )
+
+        let body = try XCTUnwrap(loader.requests.first?.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let sent = try XCTUnwrap(json["mappings"] as? [[String: Any]])
+        XCTAssertEqual(sent.compactMap { $0["origin"] as? String }, ["ordered", "manual"])
+        XCTAssertEqual(sent.map { $0["readableChapterKey"] as? String }, ["one", "three"])
+    }
+
+    // MARK: - Version gate
+
+    func testServerVersionsGateTheAlignmentProjection() {
+        XCTAssertEqual(PrismediaServerVersion("3.8.0"), PrismediaServerVersion.bookAlignment)
+        XCTAssertEqual(PrismediaServerVersion("3.8.0-beta.2"), PrismediaServerVersion.bookAlignment)
+        XCTAssertEqual(PrismediaServerVersion("3.9"), PrismediaServerVersion(major: 3, minor: 9))
+        XCTAssertNil(PrismediaServerVersion(nil))
+        XCTAssertNil(PrismediaServerVersion("dev"))
+        XCTAssertTrue(PrismediaServerVersion("3.10.1")?.servesBookAlignment == true)
+        XCTAssertTrue(PrismediaServerVersion("4.0.0")?.servesBookAlignment == true)
+        XCTAssertFalse(PrismediaServerVersion("3.7.12")?.servesBookAlignment == true)
+    }
+
+    func testQualifyingServerLoadsTheProjectionAndReadsHealthOnce() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"status":"ok","runtime":"dotnet","version":"3.8.0"}"#),
+            .json(Self.alignmentJSON),
+            .json(Self.alignmentJSON),
+        ])
+        let client = Self.client(loader: loader)
+
+        let first = try await BookAlignmentLoader(service: client).load(bookID: Self.bookID)
+        let second = try await BookAlignmentLoader(service: client.authenticated(with: "next")).load(
+            bookID: Self.bookID
+        )
+
+        XCTAssertEqual(first.contract, .serverAlignment)
+        XCTAssertEqual(second.contract, .serverAlignment)
+        XCTAssertEqual(
+            loader.requests.map { $0.url?.path },
+            ["/api/health", Self.alignmentPath, Self.alignmentPath]
+        )
+    }
+
+    func testOlderServersUseTheLegacyChapterMap() async throws {
+        for health in [#"{"status":"ok","runtime":"dotnet"}"#, #"{"status":"ok","version":"3.7.4"}"#] {
+            let loader = MockHTTPDataLoader(responses: [.json(health), .json(#"{"mappings":[]}"#)])
+
+            let snapshot = try await BookAlignmentLoader(service: Self.client(loader: loader)).load(
+                bookID: Self.bookID
+            )
+
+            XCTAssertEqual(snapshot, .legacy(BookChapterMappingsResponse(mappings: [])))
+            XCTAssertEqual(loader.requests.map { $0.url?.path }, ["/api/health", Self.mappingsPath])
+        }
+    }
+
+    func testQualifyingServerWithoutTheRouteFallsBackToTheLegacyChapterMap() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"status":"ok","version":"3.8.0"}"#),
+            .json("", statusCode: 404),
+            .json(#"{"mappings":[]}"#),
+        ])
+
+        let snapshot = try await BookAlignmentLoader(service: Self.client(loader: loader)).load(bookID: Self.bookID)
+
+        XCTAssertEqual(snapshot.contract, .legacyCursor)
+        XCTAssertEqual(
+            loader.requests.map { $0.url?.path },
+            ["/api/health", Self.alignmentPath, Self.mappingsPath]
+        )
+    }
+
+    func testMissingBookOnAQualifyingServerKeepsTheServerContract() async {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"status":"ok","version":"3.8.0"}"#),
+            .json(#"{"code":"entity_not_found","message":"Not found"}"#, statusCode: 404),
+        ])
+
+        do {
+            _ = try await BookAlignmentLoader(service: Self.client(loader: loader)).load(bookID: Self.bookID)
+            XCTFail("A hidden Book must not fall back to the legacy chapter map.")
+        } catch let error as BookAlignmentLoadError {
+            XCTAssertEqual(error.contract, .serverAlignment)
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+        XCTAssertEqual(loader.requests.count, 2)
+    }
+
+    func testUnreadableServerVersionLeavesTheContractUndecidedUntilHealthIsReadAgain() async throws {
+        let loader = MockHTTPDataLoader(responses: [
+            .json(#"{"code":"unavailable","message":"Starting"}"#, statusCode: 503),
+            .json(#"{"status":"ok","version":"3.7.4"}"#),
+            .json(#"{"mappings":[]}"#),
+        ])
+        let client = Self.client(loader: loader)
+        var state = BookAlignmentState()
+
+        let generation = state.beginLoad(bookID: Self.bookID)
+        do {
+            _ = try await BookAlignmentLoader(service: client).load(bookID: Self.bookID)
+            XCTFail("An unreadable server version must not fall back to the legacy chapter map.")
+        } catch let error as BookAlignmentLoadError {
+            XCTAssertNil(error.contract)
+            state.finishLoad(.failure(error), bookID: Self.bookID, generation: generation)
+        }
+        XCTAssertNil(state.contract)
+        XCTAssertFalse(state.usesServerAlignment)
+        XCTAssertFalse(state.usesLegacyAlignment)
+        XCTAssertNotNil(state.errorMessage)
+        XCTAssertEqual(loader.requests.map { $0.url?.path }, ["/api/health"])
+
+        // The failed read is not remembered: the next load asks again, and the older server it
+        // finds decides the legacy contract.
+        let retry = state.beginLoad(bookID: Self.bookID)
+        let snapshot = try await BookAlignmentLoader(service: client).load(bookID: Self.bookID)
+        state.finishLoad(.success(snapshot), bookID: Self.bookID, generation: retry)
+
+        XCTAssertEqual(state.contract, .legacyCursor)
+        XCTAssertTrue(state.usesLegacyAlignment)
+        XCTAssertNil(state.errorMessage)
+        XCTAssertEqual(
+            loader.requests.map { $0.url?.path },
+            ["/api/health", "/api/health", Self.mappingsPath]
+        )
+    }
+
+    func testFailedReloadKeepsTheLastAlignmentAndItsContract() throws {
+        let alignment = try PrismediaJSON.decoder().decode(
+            BookAlignmentResponse.self,
+            from: Data(Self.alignmentJSON.utf8)
+        )
+        var state = BookAlignmentState()
+        let first = state.beginLoad(bookID: Self.bookID)
+        state.finishLoad(.success(.server(alignment)), bookID: Self.bookID, generation: first)
+        XCTAssertEqual(state.contract, .serverAlignment)
+
+        let reload = state.beginLoad(bookID: Self.bookID)
+        XCTAssertEqual(state.alignment, alignment, "A reload keeps the last alignment while it runs.")
+        state.finishLoad(
+            .failure(BookAlignmentLoadError(contract: nil, underlying: URLError(.timedOut))),
+            bookID: Self.bookID,
+            generation: reload
+        )
+        XCTAssertEqual(state.alignment, alignment)
+        XCTAssertEqual(state.contract, .serverAlignment)
+        XCTAssertNotNil(state.errorMessage)
+
+        // A failure that names a contract never replaces the one already known.
+        let again = state.beginLoad(bookID: Self.bookID)
+        state.finishLoad(
+            .failure(BookAlignmentLoadError(contract: .legacyCursor, underlying: URLError(.badServerResponse))),
+            bookID: Self.bookID,
+            generation: again
+        )
+        XCTAssertEqual(state.contract, .serverAlignment)
+        XCTAssertEqual(state.alignment, alignment)
+
+        // Another Book starts undecided and empty; its first failure may decide the contract.
+        let otherBookID = UUID()
+        let other = state.beginLoad(bookID: otherBookID)
+        XCTAssertNil(state.contract)
+        XCTAssertNil(state.alignment)
+        state.finishLoad(
+            .failure(BookAlignmentLoadError(contract: .serverAlignment, underlying: URLError(.badServerResponse))),
+            bookID: otherBookID,
+            generation: other
+        )
+        XCTAssertEqual(state.contract, .serverAlignment)
+        XCTAssertNil(state.alignment)
+    }
+
+    func testSavingOnAQualifyingServerDecodesTheRefreshedAlignment() async throws {
+        let loader = MockHTTPDataLoader(responses: [.json(Self.alignmentJSON)])
+
+        let snapshot = try await BookAlignmentLoader(service: Self.client(loader: loader)).save(
+            bookID: Self.bookID,
+            mappings: [BookChapterAudioMapping(readableChapterKey: "Text/one.xhtml", audioTrackID: Self.trackID)],
+            contract: .serverAlignment
+        )
+
+        guard case .server(let alignment) = snapshot else {
+            return XCTFail("Expected the server alignment.")
+        }
+        XCTAssertEqual(alignment.rows.count, 3)
+        XCTAssertEqual(loader.requests.first?.url?.path, Self.mappingsPath)
+        XCTAssertEqual(loader.requests.first?.httpMethod, "PUT")
+    }
+
+    // MARK: - Progress reports
+
+    func testReadingReportsNameTheirModalityInTheServerPositionTotal() throws {
+        let request = DocumentReaderProgressMapper.epubRequest(
+            bookID: Self.bookID,
+            progression: 0.25,
+            mode: .paged,
+            location: Self.readiumLocator,
+            closing: false,
+            format: BookReadingReportFormat(positionTotal: 20_000, modality: .reading)
+        )
+
+        let body = try Self.encodedBody(request)
+        XCTAssertEqual(body["modality"] as? String, "reading")
+        XCTAssertEqual(body["currentEntityId"] as? String, Self.bookID.uuidString)
+        XCTAssertEqual(body["unit"] as? String, "cfi")
+        XCTAssertEqual(body["index"] as? Int, 5_000)
+        XCTAssertEqual(body["total"] as? Int, 20_000)
+        XCTAssertEqual(body["mode"] as? String, "paged")
+        XCTAssertEqual(body["location"] as? String, Self.readiumLocator)
+        XCTAssertNil(body["listening"])
+        XCTAssertEqual(BookReadingReportFormat(kind: .book, alignment: nil).modality, .reading)
+        XCTAssertNil(BookReadingReportFormat(kind: .comicInstallment, alignment: nil).modality)
+    }
+
+    func testListeningReportsCarryOnlyTheExactTrackPosition() throws {
+        let request = EntityProgressUpdateRequest.listening(
+            BookListeningPositionRequest(trackEntityID: Self.trackID, markerID: nil, offsetSeconds: 412.5),
+            completed: nil,
+            activitySeconds: 10
+        )
+
+        let body = try Self.encodedBody(request)
+        XCTAssertEqual(body["modality"] as? String, "listening")
+        let listening = try XCTUnwrap(body["listening"] as? [String: Any])
+        XCTAssertEqual(listening["trackEntityId"] as? String, Self.trackID.uuidString)
+        XCTAssertTrue(listening["markerId"] is NSNull)
+        XCTAssertEqual(listening["offsetSeconds"] as? Double, 412.5)
+        XCTAssertTrue(body["completed"] is NSNull)
+        XCTAssertEqual(body["reset"] as? Bool, false)
+        XCTAssertEqual(body["activitySeconds"] as? Double, 10)
+        for cursorKey in ["currentEntityId", "unit", "index", "total", "mode", "location", "activityKind"] {
+            XCTAssertNil(body[cursorKey], "A listening report must not name a cursor field: \(cursorKey)")
+        }
+    }
+
+    // MARK: - Fixtures
+
+    private static let bookID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    private static let trackID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+    private static let markerID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+    private static let readiumLocator = #"{"href":"Text/one.xhtml","locations":{"progression":0.4}}"#
+    private static let alignmentPath = "/api/books/\(bookID.uuidString.lowercased())/alignment"
+    private static let mappingsPath = "/api/books/\(bookID.uuidString.lowercased())/chapter-mappings"
+
+    private static func alignment(
+        link: String?,
+        modalities: String = #"["reading","listening"]"#
+    ) throws -> BookAlignmentResponse {
+        let linkMember = link.map { #","link":\#($0)"# } ?? ""
+        let json = #"{"modalities":\#(modalities),"readablePositionTotal":10000,"rows":[]\#(linkMember)}"#
+        return try PrismediaJSON.decoder().decode(BookAlignmentResponse.self, from: Data(json.utf8))
+    }
+
+    private static func encodedBody(_ request: EntityProgressUpdateRequest) throws -> [String: Any] {
+        let data = try PrismediaJSON.encoder().encode(request)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    private static func client(loader: MockHTTPDataLoader) -> PrismediaAPIClient {
+        PrismediaAPIClient(
+            serverURL: URL(string: "https://media.example.test")!,
+            accessToken: "token",
+            loader: loader
+        )
+    }
+
+    private static let alignmentJSON: String = {
+        let locator = #""{\"href\":\"Text/one.xhtml\",\"locations\":{\"progression\":0.4}}""#
+        return """
+            {
+              "modalities": ["reading", "listening"],
+              "readablePositionTotal": 10000,
+              "rows": [
+                {
+                  "rowId": "r0", "order": 0, "matchState": "paired", "provenance": "manual",
+                  "readable": {
+                    "chapterKey": "Text/one.xhtml", "title": "One", "depth": 0,
+                    "location": "Text/one.xhtml", "chapterEntityId": null,
+                    "startFraction": 0, "endFraction": 0.5, "pageCount": null
+                  },
+                  "audio": {
+                    "trackEntityId": "\(trackID)", "markerId": "\(markerID)", "title": "Chapter One",
+                    "startSeconds": 0, "endSeconds": 300, "endInferred": false
+                  }
+                },
+                {
+                  "rowId": "r1", "order": 1, "matchState": "readable_only", "provenance": null,
+                  "readable": {
+                    "chapterKey": "Text/two.xhtml", "title": "Two", "depth": 0,
+                    "location": "Text/two.xhtml", "chapterEntityId": null,
+                    "startFraction": "0.5", "endFraction": "1", "pageCount": null
+                  },
+                  "audio": null
+                },
+                {
+                  "rowId": "a0", "order": 2, "matchState": "audio_only", "provenance": null,
+                  "readable": null,
+                  "audio": {
+                    "trackEntityId": "\(trackID)", "markerId": null, "title": "Bonus Interview",
+                    "startSeconds": 300, "endSeconds": 600, "endInferred": true
+                  }
+                }
+              ],
+              "coverage": {
+                "readableCount": 2, "audioWindowCount": 2, "pairedCount": 1, "manualCount": 1,
+                "automaticCount": 0, "readableOnlyCount": 1, "audioOnlyCount": 1,
+                "pairedReadableFraction": 0.5, "pairedAudioSeconds": 300, "totalAudioSeconds": 600
+              },
+              "resume": {
+                "lastModality": "listening",
+                "completedAt": null,
+                "continue": {
+                  "rowId": "a0", "reading": null,
+                  "listening": { "trackEntityId": "\(trackID)", "markerId": null, "offsetSeconds": 412.5 },
+                  "approximate": false, "basis": "exact", "gap": null, "gapChapterTitle": null
+                },
+                "exactReading": {
+                  "positionEntityId": "\(bookID)", "unit": "cfi", "index": 2000, "total": 10000,
+                  "location": \(locator), "chapterKey": "Text/one.xhtml",
+                  "chapterLocation": "Text/one.xhtml", "chapterFraction": 0.4, "pageIndex": null,
+                  "mode": "paged"
+                },
+                "exactListening": { "trackEntityId": "\(trackID)", "markerId": null, "offsetSeconds": 412.5 },
+                "switchToReading": {
+                  "rowId": "a0", "reading": null, "listening": null, "approximate": false,
+                  "basis": "exact", "gap": "audio_chapter_unpaired", "gapChapterTitle": "Bonus Interview"
+                },
+                "switchToListening": {
+                  "rowId": "r0", "reading": null,
+                  "listening": { "trackEntityId": "\(trackID)", "markerId": "\(markerID)", "offsetSeconds": 115 },
+                  "approximate": true, "basis": "interpolated", "gap": null, "gapChapterTitle": null
+                },
+                "combined": {
+                  "rowId": "a0", "reading": null,
+                  "listening": { "trackEntityId": "\(trackID)", "markerId": null, "offsetSeconds": 412.5 },
+                  "approximate": false, "basis": "exact", "gap": "audio_chapter_unpaired",
+                  "gapChapterTitle": "Bonus Interview"
+                }
+              }
+            }
+            """
+    }()
+}

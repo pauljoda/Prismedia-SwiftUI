@@ -6,6 +6,7 @@ import Foundation
 /// Discriminated capability envelope. Unknown kinds remain available as raw
 /// JSON so a newer server does not make the entire detail document unreadable.
 public enum EntityCapability: Decodable, Hashable, Sendable {
+    case acquisitionAttribution(EntityAcquisitionAttributionCapability)
     case bookMetadata(EntityBookMetadataCapability)
     case classification(EntityClassificationCapability)
     case collectionConfiguration(EntityCollectionConfigurationCapability)
@@ -16,6 +17,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
     case dates(EntityItemsCapability<EntityDate>)
     case description(EntityDescriptionCapability)
     case embeddedAudioMetadata(EntityEmbeddedAudioMetadataCapability)
+    case externalLibraryProvenance(EntityExternalLibraryProvenanceCapability)
     case fileManagement(EntityFileManagementCapability)
     case files(EntityItemsCapability<EntityFile>)
     case fingerprints(EntityItemsCapability<EntityFingerprint>)
@@ -50,6 +52,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         let kind = try KindEnvelope(from: decoder).kind
 
         switch kind {
+        case .acquisitionAttribution: self = .acquisitionAttribution(try EntityAcquisitionAttributionCapability(from: decoder))
         case .bookMetadata: self = .bookMetadata(try EntityBookMetadataCapability(from: decoder))
         case .classification: self = .classification(try EntityClassificationCapability(from: decoder))
         case .collectionConfiguration: self = .collectionConfiguration(try EntityCollectionConfigurationCapability(from: decoder))
@@ -60,6 +63,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .dates: self = .dates(try EntityItemsCapability<EntityDate>(from: decoder))
         case .description: self = .description(try EntityDescriptionCapability(from: decoder))
         case .embeddedAudioMetadata: self = .embeddedAudioMetadata(try EntityEmbeddedAudioMetadataCapability(from: decoder))
+        case .externalLibraryProvenance: self = .externalLibraryProvenance(try EntityExternalLibraryProvenanceCapability(from: decoder))
         case .fileManagement: self = .fileManagement(try EntityFileManagementCapability(from: decoder))
         case .files: self = .files(try EntityItemsCapability<EntityFile>(from: decoder))
         case .fingerprints: self = .fingerprints(try EntityItemsCapability<EntityFingerprint>(from: decoder))
@@ -91,6 +95,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
     /// Manifest-backed discriminator for matching and mutation ownership.
     public var kind: EntityCapabilityKind {
         switch self {
+        case .acquisitionAttribution: .acquisitionAttribution
         case .bookMetadata: .bookMetadata
         case .classification: .classification
         case .collectionConfiguration: .collectionConfiguration
@@ -101,6 +106,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .dates: .dates
         case .description: .description
         case .embeddedAudioMetadata: .embeddedAudioMetadata
+        case .externalLibraryProvenance: .externalLibraryProvenance
         case .fileManagement: .fileManagement
         case .files: .files
         case .fingerprints: .fingerprints
@@ -132,6 +138,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
     /// Concrete payload used by EntityDetail's generic typed accessor.
     public var payload: Any {
         switch self {
+        case .acquisitionAttribution(let value): value
         case .bookMetadata(let value): value
         case .classification(let value): value
         case .collectionConfiguration(let value): value
@@ -142,6 +149,7 @@ public enum EntityCapability: Decodable, Hashable, Sendable {
         case .dates(let value): value
         case .description(let value): value
         case .embeddedAudioMetadata(let value): value
+        case .externalLibraryProvenance(let value): value
         case .fileManagement(let value): value
         case .files(let value): value
         case .fingerprints(let value): value

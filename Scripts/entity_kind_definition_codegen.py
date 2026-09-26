@@ -192,6 +192,11 @@ def render_manifest(manifest: dict) -> str:
                 "        ),",
             ]
 
+        modality_members = ", ".join(
+            f".{swift_member(next(entry['name'] for entry in enums['ConsumptionModality'] if entry['code'] == code))}"
+            for code in kind.get("modalities", [])
+        )
+
         sections.extend([
             f"    .{kind_member}: EntityKindDefinition(",
             f"        kind: .{kind_member},",
@@ -233,6 +238,7 @@ def render_manifest(manifest: dict) -> str:
             f"{swift_bool(kind.get('supportsAtomicMediaUpgrade', False))},",
             "        engagementMode: EntityEngagementMode(rawValue: "
             f"{swift_literal(kind['engagementMode'])}),",
+            f"        modalities: [{modality_members}],",
             *acquisition_profile_lines,
             f"        enumeratesIdentifyChildren: {swift_bool(kind['enumeratesIdentifyChildren'])}",
             "    ),",

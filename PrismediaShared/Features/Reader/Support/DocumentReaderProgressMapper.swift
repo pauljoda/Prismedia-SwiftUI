@@ -48,24 +48,28 @@ public struct DocumentReaderProgressMapper: Sendable {
             + localProgression * (range.endFraction - range.startFraction)
     }
 
+    /// A whole-book EPUB reading report: the book fraction expressed in the server's position
+    /// total, the reader layout, and the exact locator.
     public static func epubRequest(
         bookID: UUID,
         progression: Double,
         mode: ReaderMode,
         location: String?,
-        closing: Bool
+        closing: Bool,
+        format: BookReadingReportFormat
     ) -> EntityProgressUpdateRequest {
         let boundedProgression = min(max(progression, 0), 1)
-        let index = Int((boundedProgression * 10_000).rounded())
+        let index = Int((boundedProgression * Double(format.positionTotal)).rounded())
         return EntityProgressUpdateRequest(
             currentEntityID: bookID,
             unit: .cfi,
             index: index,
-            total: 10_000,
+            total: format.positionTotal,
             mode: mode == .scrolled ? .scrolled : .paged,
             completed: closing && boundedProgression >= 0.995 ? true : nil,
             reset: false,
-            location: location
+            location: location,
+            modality: format.modality
         )
     }
 
@@ -118,7 +122,8 @@ public struct DocumentReaderProgressMapper: Sendable {
         mode: ReaderMode,
         location: String?,
         completesAtEnd: Bool = true,
-        reset: Bool = false
+        reset: Bool = false,
+        modality: ConsumptionModality? = nil
     ) -> EntityProgressUpdateRequest {
         let boundedTotal = max(1, total)
         let boundedIndex = max(0, min(index, boundedTotal - 1))
@@ -130,7 +135,8 @@ public struct DocumentReaderProgressMapper: Sendable {
             mode: mode,
             completed: completesAtEnd && boundedIndex == boundedTotal - 1 ? true : nil,
             reset: reset,
-            location: location
+            location: location,
+            modality: modality
         )
     }
 }

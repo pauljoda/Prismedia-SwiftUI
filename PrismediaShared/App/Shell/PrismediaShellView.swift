@@ -255,7 +255,7 @@ public struct PrismediaShellView: View {
                     videoPlaybackSession: videoPlaybackSession
                 ),
                 reloadRevision: environment.contentRevision,
-                actionPolicy: libraryActionPolicy,
+                actionPolicy: libraryActionPolicy(),
                 mutationService: client
             )
 
@@ -276,7 +276,8 @@ public struct PrismediaShellView: View {
                 client: client,
                 user: user,
                 hidesNsfw: !environment.allowsNsfwContent,
-                onRestoreScheduled: { await environment.beginDatabaseRestore() }
+                onRestoreScheduled: { await environment.beginDatabaseRestore() },
+                session: environment.session
             )
 
         case .entityList(let entityList):
@@ -324,7 +325,8 @@ public struct PrismediaShellView: View {
                         for: destination.id,
                         videoPlaybackSession: videoPlaybackSession
                     ),
-                    showsAdministrativeTools: user.isAdmin
+                    showsAdministrativeTools: user.isAdmin,
+                    session: environment.session
                 )
         #endif
         }
@@ -351,7 +353,7 @@ public struct PrismediaShellView: View {
                         catalogLoader: PrismediaEntityGridLoader(client: client),
                         collectionItemsLoader: PrismediaEntityDetailLoader(client: client)
                     ),
-                    actionPolicy: libraryActionPolicy,
+                    actionPolicy: libraryActionPolicy(),
                     mutationService: client
                 )
             } else if destination.id == "tracks" {
@@ -408,7 +410,9 @@ public struct PrismediaShellView: View {
                     within: item.kind == .image ? mediaSequence : nil
                 )
             },
-            actionPolicy: libraryActionPolicy,
+            actionPolicy: libraryActionPolicy(
+                offersCollectionCreation: entityList.query.kind == .collection
+            ),
             mutationService: client,
             topContent: { context in
                 #if os(iOS) || os(macOS)
@@ -424,9 +428,11 @@ public struct PrismediaShellView: View {
         .id(destination.id)
     }
 
-    private var libraryActionPolicy: EntityGridActionPolicy {
+    /// The signed-in user's library grid actions. The server lets every signed-in user create
+    /// Collections, so creation depends only on the screen listing every Collection.
+    private func libraryActionPolicy(offersCollectionCreation: Bool = false) -> EntityGridActionPolicy {
         guard let user = environment.session?.user else { return .disabled }
-        return .library(user: user)
+        return .library(user: user, offersCollectionCreation: offersCollectionCreation)
     }
 
     #if os(iOS)

@@ -57,7 +57,8 @@ struct EntityDetailReadingService {
                         mode: progress.mode ?? readerMode,
                         completed: nil,
                         reset: true,
-                        location: nil
+                        location: nil,
+                        modality: readingModality(of: detail)
                     )
                 )
                 return await refreshedContent(detailID: detail.id, reader: reader)
@@ -114,7 +115,8 @@ struct EntityDetailReadingService {
                     mode: progress.mode,
                     completed: status != .completed,
                     reset: false,
-                    location: progress.location
+                    location: progress.location,
+                    modality: readingModality(of: detail)
                 )
             )
             return await refreshedContent(detailID: detail.id, reader: reader)
@@ -175,7 +177,12 @@ struct EntityDetailReadingService {
         }
     }
 
+    /// The reading modality for kinds that keep a reading checkpoint, such as Books.
+    private func readingModality(of detail: EntityDetail) -> ConsumptionModality? {
+        BookReadingReportFormat(kind: detail.kind, alignment: nil).modality
+    }
+
     private func progress(in detail: EntityDetail) -> EntityProgressCapability? {
-        detail.capability()
+        detail.capability(EntityProgressCapability.self)?.readingPosition
     }
 }

@@ -5,7 +5,38 @@ public enum RequestCommitOutcomePolicy {
         response: AdministrativeRequestCommitResponse,
         review: AdministrativeRequestReviewResponse
     ) -> RequestCommitResult {
-        let requested = response.items.filter { $0.outcome == "requested" }
+        if let renditions = response.bookRenditions {
+            let failed = renditions.filter { $0.error != nil }
+            let bookID = renditions.compactMap { $0.item?.entityID }.first
+            let started = renditions.filter { $0.item?.outcome == PrismediaContractCodes.RequestCommitOutcome.requested }
+            let title = failed.isEmpty ? "Book Request Updated" : "Some Formats Need Attention"
+            let message = failed.isEmpty
+                ? started.isEmpty
+                    ? "The selected formats are already owned or requested."
+                    : "Started \(started.count) Book format request\(started.count == 1 ? "" : "s")."
+                : failed.map { outcome in
+                    let label: String
+                    switch outcome.rendition {
+                    case .audiobook:
+                        label = "Audiobook"
+                    case .ebook:
+                        label = "Ebook"
+                    default:
+                        // A format this app does not know keeps its own code rather than
+                        // reading as one it does.
+                        label = outcome.rendition.rawValue
+                    }
+                    return "\(label): \(outcome.error ?? "Could not request this format.")"
+                }.joined(separator: " ")
+            return RequestCommitResult(
+                title: title,
+                message: message,
+                navigationIntent: bookID.map {
+                    RequestEntityNavigationIntent(entityID: $0, entityKind: .book)
+                }
+            )
+        }
+        let requested = response.items.filter { $0.outcome == PrismediaContractCodes.RequestCommitOutcome.requested }
         if requested.count == 1, let item = requested.first, let entityID = item.entityID {
             let target = review.targets.first { target in
                 "\(target.externalIdentity.namespace):\(target.externalIdentity.value)" == item.externalID
@@ -35,7 +66,9 @@ public enum RequestCommitOutcomePolicy {
                 navigationIntent: RequestEntityNavigationIntent(entityID: containerID, entityKind: review.entityKind)
             )
         }
-        let allOwned = !response.items.isEmpty && response.items.allSatisfy { $0.outcome == "already-owned" }
+        let allOwned =
+            !response.items.isEmpty
+            && response.items.allSatisfy { $0.outcome == PrismediaContractCodes.RequestCommitOutcome.alreadyOwned }
         return RequestCommitResult(
             title: allOwned ? "Already in Library" : "Already Requested",
             message: allOwned

@@ -40,6 +40,47 @@ final class EntityThumbnailPresentationTests: XCTestCase {
         )
     }
 
+    func testSeparateBooksDrawReadingAndListeningMetersAndEverythingElseOne() throws {
+        let separate = try PrismediaJSON.decoder().decode(
+            EntityThumbnail.self,
+            from: Data(
+                #"{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","kind":"book","title":"Book","progress":"0.4","progressSeparate":true,"listeningProgress":0.25}"#
+                    .utf8
+            )
+        )
+        XCTAssertTrue(separate.progressSeparate)
+        XCTAssertEqual(separate.listeningProgress, 0.25)
+        XCTAssertEqual(EntityThumbnailProgressMeters(item: separate), .separate(reading: 0.4, listening: 0.25))
+        XCTAssertEqual(
+            EntityThumbnailProgressMeters(item: separate).accessibilityDescription,
+            "Read 40 percent, listened 25 percent"
+        )
+
+        let listeningOnly = EntityThumbnail(
+            id: UUID(), kind: .book, title: "Book", progress: nil, progressSeparate: true, listeningProgress: 0.1
+        )
+        XCTAssertEqual(EntityThumbnailProgressMeters(item: listeningOnly), .separate(reading: 0, listening: 0.1))
+
+        let unstarted = EntityThumbnail(id: UUID(), kind: .book, title: "Book", progressSeparate: true)
+        XCTAssertEqual(EntityThumbnailProgressMeters(item: unstarted), .none)
+
+        // Older servers omit the fields: one meter, exactly as before.
+        let older = try PrismediaJSON.decoder().decode(
+            EntityThumbnail.self,
+            from: Data(
+                #"{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","kind":"book","title":"Book","progress":0.6}"#.utf8
+            )
+        )
+        XCTAssertFalse(older.progressSeparate)
+        XCTAssertNil(older.listeningProgress)
+        XCTAssertEqual(EntityThumbnailProgressMeters(item: older), .single(0.6))
+        XCTAssertNil(EntityThumbnailProgressMeters(item: older).accessibilityDescription)
+        XCTAssertEqual(
+            EntityThumbnailProgressMeters(item: EntityThumbnail(id: UUID(), kind: .video, title: "Video", progress: 0)),
+            .none
+        )
+    }
+
     func testOverlayPolicyPlacesPositionStatusSafetyAndRatingInCanonicalCorners() {
         let item = EntityThumbnail(
             id: UUID(),

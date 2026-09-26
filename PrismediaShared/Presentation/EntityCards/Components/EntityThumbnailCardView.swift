@@ -88,7 +88,11 @@ public struct EntityThumbnailCardView: View {
             artworkCard
         case .list:
             if showsThumbnailText {
-                listCard
+                if item.thumbnailArtworkPresentation.isWide {
+                    captionedCard
+                } else {
+                    listCard
+                }
             } else {
                 artworkCard
             }
@@ -138,20 +142,8 @@ public struct EntityThumbnailCardView: View {
     private var listCard: some View {
         ViewThatFits(in: .horizontal) {
             horizontalListCard
-            verticalListCard
+            captionedCard
         }
-    }
-
-    private var verticalListCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            artwork
-            EntityThumbnailCaptionView(
-                item: item,
-                subtitle: subtitle,
-                subtitleLineLimit: subtitleLineLimit
-            )
-        }
-        .prismediaCard(cornerRadius: PrismediaRadius.badge)
     }
 
     private var horizontalListCard: some View {
@@ -232,6 +224,9 @@ public struct EntityThumbnailCardView: View {
         }
         if item.isOrganized { components.append("Organized") }
         if let rating = item.rating { components.append("\(rating) star rating") }
+        if let progress = EntityThumbnailProgressMeters(item: item).accessibilityDescription {
+            components.append(progress)
+        }
         return components.joined(separator: ", ")
     }
 }

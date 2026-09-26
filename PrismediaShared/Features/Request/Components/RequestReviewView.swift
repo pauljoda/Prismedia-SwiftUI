@@ -17,8 +17,16 @@ import SwiftUI
         @State private var proposalPath: [String] = []
         @State private var roots: [RequestLibraryRoot] = []
         @State private var profiles: [AdministrativeAcquisitionProfile] = []
+        @State private var ebookRoots: [RequestLibraryRoot] = []
+        @State private var audiobookRoots: [RequestLibraryRoot] = []
+        @State private var bookProfiles: [AdministrativeAcquisitionProfile] = []
         @State private var selectedProfileID: UUID?
         @State private var selectedRootID: UUID?
+        @State private var selectedBookRenditions: Set<EntityBookRendition> = []
+        @State private var ebookProfileID: UUID?
+        @State private var ebookRootID: UUID?
+        @State private var audiobookProfileID: UUID?
+        @State private var audiobookRootID: UUID?
         @State private var isLoading = true
         @State private var isLoadingTargets = true
         @State private var isSubmitting = false
@@ -137,16 +145,31 @@ import SwiftUI
                     presetControls(selection)
                 }
 
-                RequestTargetOptionsView(
-                    kind: route.kind,
-                    roots: roots,
-                    profiles: profiles,
-                    isLoading: isLoadingTargets,
-                    errorMessage: targetErrorMessage,
-                    selectedProfileID: $selectedProfileID,
-                    selectedRootID: $selectedRootID,
-                    embedsInParentPanel: true
-                )
+                if canChooseBookRenditions(selection) {
+                    RequestBookRenditionOptionsView(
+                        ebookRoots: ebookRoots,
+                        audiobookRoots: audiobookRoots,
+                        profiles: bookProfiles,
+                        isLoading: isLoadingTargets,
+                        errorMessage: targetErrorMessage,
+                        selectedRenditions: $selectedBookRenditions,
+                        ebookProfileID: $ebookProfileID,
+                        ebookRootID: $ebookRootID,
+                        audiobookProfileID: $audiobookProfileID,
+                        audiobookRootID: $audiobookRootID
+                    )
+                } else {
+                    RequestTargetOptionsView(
+                        kind: route.kind,
+                        roots: roots,
+                        profiles: profiles,
+                        isLoading: isLoadingTargets,
+                        errorMessage: targetErrorMessage,
+                        selectedProfileID: $selectedProfileID,
+                        selectedRootID: $selectedRootID,
+                        embedsInParentPanel: true
+                    )
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(PrismediaSpacing.large)
@@ -264,6 +287,7 @@ import SwiftUI
                 guard loadRevision.isCurrent(revision) else { return }
                 review = nextReview
                 let selection = RequestSelectionPolicy.derive(from: nextReview)
+                selectedBookRenditions = [route.kind == .audiobook ? .audiobook : .ebook]
                 reviewSelection = MetadataReviewPolicy.seededSelection(for: nextReview.proposal)
                 proposalPath = [nextReview.proposal.proposalID]
                 chosenPreset = .all
@@ -287,9 +311,20 @@ import SwiftUI
                 guard loadRevision.isCurrent(revision) else { return }
                 roots = RequestTargetPolicy.roots(for: route.kind, from: allRoots, hidesNsfw: hidesNsfw)
                 profiles = RequestTargetPolicy.profiles(for: route.kind, from: allProfiles)
+                ebookRoots = RequestTargetPolicy.roots(for: .book, from: allRoots, hidesNsfw: hidesNsfw)
+                audiobookRoots = RequestTargetPolicy.roots(for: .audiobook, from: allRoots, hidesNsfw: hidesNsfw)
+                bookProfiles = allProfiles
                 let defaultProfile = RequestTargetPolicy.defaultProfile(for: route.kind, from: profiles)
                 selectedProfileID = defaultProfile?.id
                 selectedRootID = RequestTargetPolicy.defaultRootID(for: defaultProfile, compatibleRoots: roots)
+                let ebookProfile = RequestTargetPolicy.defaultProfile(
+                    for: .book, from: RequestTargetPolicy.profiles(for: .book, from: allProfiles))
+                let audiobookProfile = RequestTargetPolicy.defaultProfile(
+                    for: .audiobook, from: RequestTargetPolicy.profiles(for: .audiobook, from: allProfiles))
+                ebookProfileID = ebookProfile?.id
+                audiobookProfileID = audiobookProfile?.id
+                ebookRootID = RequestTargetPolicy.defaultRootID(for: ebookProfile, compatibleRoots: ebookRoots)
+                audiobookRootID = RequestTargetPolicy.defaultRootID(for: audiobookProfile, compatibleRoots: audiobookRoots)
             } catch {
                 guard loadRevision.isCurrent(revision) else { return }
                 targetErrorMessage = "Request options could not be loaded: \(error.localizedDescription)"
@@ -355,7 +390,17 @@ import SwiftUI
             return !selectedIDs.isEmpty || !isCustomSelection
         }
 
+        private func canChooseBookRenditions(_ selection: RequestReviewSelection) -> Bool {
+            review?.entityKind == .book && selection.mode == .root
+                && (route.kind == .book || route.kind == .audiobook)
+        }
+
         private func requestButtonTitle(_ selection: RequestReviewSelection) -> String {
+            if canChooseBookRenditions(selection) {
+                return selectedBookRenditions.count == 2 ? "Request Ebook and Audiobook"
+                    : selectedBookRenditions.contains(.audiobook)
+                        ? "Request Audiobook" : "Request Ebook"
+            }
             guard selection.mode == .directChildren else { return "Request \(route.kind.label)" }
             if selectedIDs.isEmpty {
                 if isCustomSelection { return "Select items to request" }
@@ -403,15 +448,33 @@ import SwiftUI
                 selectedImages: MetadataReviewPolicy.selectedRootImages(
                     for: review.proposal,
                     selection: reviewSelection
-                )
+                ),
+                bookRenditions: canChooseBookRenditions(selection) ? [
+                    EntityBookRendition.ebook,
+                    EntityBookRendition.audiobook,
+                ].filter { selectedBookRenditions.contains($0) }.map { rendition in
+                    AdministrativeBookRenditionRequestChoice(
+                        rendition: rendition,
+                        targetLibraryRootID: rendition == .ebook ? ebookRootID : audiobookRootID,
+                        profileID: rendition == .ebook ? ebookProfileID : audiobookProfileID
+                    )
+                } : nil
             )
             Task {
                 do {
                     let response = try await service.commit(request)
+                    if canChooseBookRenditions(selection), response.bookRenditions == nil {
+                        errorMessage = "The server did not confirm both format outcomes. One format may have started; review the Book before retrying."
+                        isSubmitting = false
+                        flowPhase = .commitFailure
+                        return
+                    }
                     let result = RequestCommitOutcomePolicy.resolve(response: response, review: review)
                     isSubmitting = false
                     flowPhase = .success
-                    if let intent = result.navigationIntent {
+                    if response.bookRenditions?.contains(where: { $0.error != nil }) == true {
+                        outcome = result
+                    } else if let intent = result.navigationIntent {
                         onNavigateToEntity(intent)
                     } else {
                         outcome = result

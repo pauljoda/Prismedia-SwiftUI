@@ -121,7 +121,7 @@ final class RequestFeaturePolicyTests: XCTestCase {
                     AdministrativeRequestCommitItem(
                         externalID: "tmdb:603",
                         title: "The Matrix",
-                        outcome: "requested",
+                        outcome: PrismediaContractCodes.RequestCommitOutcome.requested,
                         entityID: entityID,
                         acquisitionID: UUID()
                     )
@@ -136,7 +136,7 @@ final class RequestFeaturePolicyTests: XCTestCase {
                     AdministrativeRequestCommitItem(
                         externalID: "tmdb:603",
                         title: "The Matrix",
-                        outcome: "already-owned",
+                        outcome: PrismediaContractCodes.RequestCommitOutcome.alreadyOwned,
                         entityID: entityID,
                         acquisitionID: nil
                     )
@@ -148,6 +148,39 @@ final class RequestFeaturePolicyTests: XCTestCase {
         XCTAssertEqual(requested.navigationIntent?.entityID, entityID)
         XCTAssertEqual(requested.navigationIntent?.entityKind, .movie)
         XCTAssertEqual(owned.title, "Already in Library")
+    }
+
+    func testBookFormatOutcomesKeepSuccessfulWorkLinkWhenAudioFails() {
+        let bookID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
+        let item = AdministrativeRequestCommitItem(
+            externalID: "books:example", title: "Example Book",
+            outcome: PrismediaContractCodes.RequestCommitOutcome.requested,
+            entityID: bookID, acquisitionID: UUID()
+        )
+        let result = RequestCommitOutcomePolicy.resolve(
+            response: AdministrativeRequestCommitResponse(
+                containerEntityID: nil, items: [item], bookRenditions: [
+                    AdministrativeBookRenditionCommitResult(rendition: .ebook, item: item),
+                    AdministrativeBookRenditionCommitResult(
+                        rendition: .audiobook, item: nil,
+                        error: "This format could not be requested."),
+                    AdministrativeBookRenditionCommitResult(
+                        rendition: EntityBookRendition(rawValue: "braille"), item: nil,
+                        error: "Not offered."),
+                ]
+            ),
+            review: review(
+                kind: RequestKindDefinition.book.rawValue,
+                proposal: proposal(id: "root", kind: EntityKind.book.rawValue),
+                targets: [target(id: "root", requestable: true)]
+            )
+        )
+
+        XCTAssertEqual(result.title, "Some Formats Need Attention")
+        XCTAssertEqual(result.navigationIntent?.entityID, bookID)
+        XCTAssertTrue(result.message.contains("Audiobook"))
+        XCTAssertTrue(result.message.contains("braille: Not offered."), "An unknown format keeps its own code.")
+        XCTAssertFalse(result.message.contains("Ebook"), "Neither the succeeded nor the unknown format reads as Ebook.")
     }
 
     private func proposal(

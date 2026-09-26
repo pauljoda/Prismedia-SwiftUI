@@ -31,7 +31,7 @@ public struct EntityDetailView: View {
     @State var areBookChaptersLoading = false
     @State var bookChaptersErrorMessage: String?
     @State var mappedBookChapters: [BookChapterMapping] = []
-    @State var bookChapterMappingState = BookChapterMappingState()
+    @State var bookAlignmentState = BookAlignmentState()
     @State var bookProgressLoadingState = BookProgressLoadingState()
     @State var videoProgressEpisode: EntityDetail?
     @State var liveVideoResumeSeconds: Double?
@@ -232,10 +232,14 @@ public struct EntityDetailView: View {
                     initialEPUBProgression: presentation.initialEPUBProgression,
                     initialEPUBUpdatedAt: presentation.initialEPUBUpdatedAt,
                     epubProgressRanges: epubReadingProgressRanges,
+                    readingReportFormat: BookReadingReportFormat(
+                        kind: presentation.detail.kind,
+                        alignment: bookAlignmentState.alignment
+                    ),
                     companionPlayer: companionPlayer(for: presentation),
                     findCurrentAudiobookReadingTarget: {
                         #if os(iOS) || os(macOS)
-                            currentAudiobookReadingTarget(for: presentation.detail)
+                            await currentAudiobookReadingTarget(for: presentation.detail)
                         #else
                             nil
                         #endif

@@ -6,7 +6,8 @@ struct EPUBStoredProgressPromotionResolver: Sendable {
         storedLocation: String?,
         ranges: [EPUBReadingProgressRange],
         mode: ReaderMode,
-        progress: EntityProgressCapability?
+        progress: EntityProgressCapability?,
+        format: BookReadingReportFormat
     ) -> EntityProgressUpdateRequest? {
         guard progress?.completedAt == nil,
             let storedLocation,
@@ -23,7 +24,8 @@ struct EPUBStoredProgressPromotionResolver: Sendable {
             progression: candidateProgression,
             mode: mode,
             location: storedLocation,
-            closing: false
+            closing: false,
+            format: format
         )
         guard let progress else { return candidate }
 
@@ -46,7 +48,7 @@ struct EPUBStoredProgressPromotionResolver: Sendable {
                 ? candidate
                 : nil
         }
-        return candidate.index > progress.index ? candidate : nil
+        return (candidate.index ?? 0) > progress.index ? candidate : nil
     }
 
     private func rangeIndex(

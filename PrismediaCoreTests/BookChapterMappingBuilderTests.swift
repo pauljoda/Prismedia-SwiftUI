@@ -3,101 +3,6 @@ import XCTest
 @testable import PrismediaCore
 
 final class BookChapterMappingBuilderTests: XCTestCase {
-    func testAppliesThePersistedChapterMapRegardlessOfOrigin() {
-        let chapters = [
-            chapter(id: "prologue", title: "Prologue", order: 0),
-            chapter(id: "one", title: "Chapter 1: Winter", order: 1),
-        ]
-        let tracks = [
-            track(id: 1, title: "Chapter 1: Winter", order: 0),
-            track(id: 2, title: "Prologue", order: 1),
-        ]
-
-        let rows = BookChapterMappingBuilder().build(
-            readableChapters: chapters,
-            audioTracks: tracks,
-            explicitMappings: [
-                BookChapterAudioMapping(
-                    readableChapterKey: "prologue",
-                    audioTrackID: tracks[0].id,
-                    origin: BookChapterAudioMapping.Origin.manual
-                ),
-                BookChapterAudioMapping(
-                    readableChapterKey: "one",
-                    audioTrackID: tracks[1].id,
-                    origin: BookChapterAudioMapping.Origin.auto
-                ),
-            ]
-        )
-
-        XCTAssertEqual(rows.map(\.audioTrack?.id), tracks.map(\.id))
-        XCTAssertTrue(rows.allSatisfy { !$0.isCurrentProgress })
-    }
-
-    func testNeverMatchesByTitleOnTheClient() {
-        // Matching is computed and persisted server-side; identical titles alone must not attach.
-        let chapters = [chapter(id: "prologue", title: "Prologue", order: 0)]
-        let tracks = [track(id: 1, title: "Prologue", order: 0)]
-
-        let rows = BookChapterMappingBuilder().build(
-            readableChapters: chapters,
-            audioTracks: tracks
-        )
-
-        XCTAssertNil(rows.first?.audioTrack)
-        XCTAssertEqual(rows.last?.audioTrack?.id, tracks.first?.id)
-    }
-
-    func testIgnoresMappingsWhoseChapterOrTrackIsMissing() {
-        let chapters = [chapter(id: "one", title: "Bran", order: 0)]
-        let tracks = [track(id: 1, title: "Bran", order: 0)]
-
-        let rows = BookChapterMappingBuilder().build(
-            readableChapters: chapters,
-            audioTracks: tracks,
-            explicitMappings: [
-                BookChapterAudioMapping(readableChapterKey: "vanished", audioTrackID: tracks[0].id),
-                BookChapterAudioMapping(
-                    readableChapterKey: "one",
-                    audioTrackID: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!
-                ),
-            ]
-        )
-
-        XCTAssertNil(rows.first?.audioTrack)
-    }
-
-    func testKeepsUnmappedAudioVisibleAsAppendedRows() {
-        let chapters = [chapter(id: "a", title: "Prologue", order: 0)]
-        let tracks = [
-            track(id: 1, title: "Opening A", order: 0),
-            track(id: 2, title: "Opening B", order: 1),
-        ]
-
-        let rows = BookChapterMappingBuilder().build(
-            readableChapters: chapters,
-            audioTracks: tracks
-        )
-
-        XCTAssertNil(rows[0].audioTrack)
-        XCTAssertEqual(rows.dropFirst().compactMap(\.audioTrack?.id), tracks.map(\.id))
-        XCTAssertTrue(rows.allSatisfy { !$0.isCurrentProgress })
-    }
-
-    func testLeavesTextOnlyChaptersUnmarkedUntilCanonicalProgressIsApplied() {
-        let chapters = [
-            chapter(id: "one", title: "Chapter 1", order: 0),
-            chapter(id: "two", title: "Chapter 2", order: 1),
-        ]
-
-        let rows = BookChapterMappingBuilder().build(
-            readableChapters: chapters,
-            audioTracks: []
-        )
-
-        XCTAssertTrue(rows.allSatisfy { !$0.isCurrentProgress })
-    }
-
     func testSequentialMappingsStartAtTheChapterMarkedByTheUser() {
         let chapters = [
             chapter(id: "cover", title: "Cover", order: 0),
@@ -125,12 +30,12 @@ final class BookChapterMappingBuilderTests: XCTestCase {
         let manual = BookChapterAudioMapping(
             readableChapterKey: "one",
             audioTrackID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
-            origin: BookChapterAudioMapping.Origin.manual
+            origin: .manual
         )
         let auto = BookChapterAudioMapping(
             readableChapterKey: "two",
             audioTrackID: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
-            origin: BookChapterAudioMapping.Origin.auto
+            origin: .auto
         )
         let legacy = BookChapterAudioMapping(
             readableChapterKey: "three",
@@ -143,15 +48,53 @@ final class BookChapterMappingBuilderTests: XCTestCase {
                 chapter(id: "three", title: "Three", order: 2),
             ],
             audioTracks: [],
+            audioChapters: [],
             mappings: [manual, auto, legacy],
-            loadErrorMessage: nil
+            loadErrorMessage: nil,
+            separateExplanation: nil
         )
 
         // Automatic rows must never reach a save request; origin-less rows are legacy manual.
         XCTAssertEqual(presentation.manualMappings, [manual, legacy])
         XCTAssertFalse(presentation.revision.contains(auto.readableChapterKey))
-        XCTAssertEqual(presentation.automaticChapterTitle(for: auto.audioTrackID), "Two")
-        XCTAssertNil(presentation.automaticChapterTitle(for: manual.audioTrackID))
+        XCTAssertEqual(presentation.automaticChapterTitle(for: BookAudioChapter(
+            audioTrackID: auto.audioTrackID, audioMarkerID: nil, title: "Two", startSeconds: 0, endSeconds: nil
+        )), "Two")
+        XCTAssertNil(presentation.automaticChapterTitle(for: BookAudioChapter(
+            audioTrackID: manual.audioTrackID, audioMarkerID: nil, title: "One", startSeconds: 0, endSeconds: nil
+        )))
+    }
+
+    func testEditorFromTheServerAlignmentListsEachAudioWindowOnce() {
+        let track = track(id: 1, title: "Complete audiobook", order: 0)
+        let marker = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
+        let window = BookAudioChapterWindow(
+            trackEntityID: track.id, markerID: marker, title: "One", startSeconds: 0, endSeconds: 100
+        )
+        let alignment = BookAlignmentResponse(
+            modalities: [.reading, .listening],
+            readablePositionTotal: 10_000,
+            rows: [
+                BookAlignmentRow(
+                    id: "r0", order: 0, matchState: .paired, provenance: .auto,
+                    readable: BookReadableChapterWindow(chapterKey: "one", title: "One", location: "Text/one.xhtml"),
+                    audio: window
+                ),
+                BookAlignmentRow(id: "a0", order: 1, matchState: .audioOnly, audio: window),
+            ]
+        )
+
+        let presentation = BookChapterMappingEditorPresentation(
+            alignment: alignment,
+            audioTracks: [track],
+            loadErrorMessage: nil
+        )
+
+        // A server list that names the same audio window twice must not trap the editor.
+        XCTAssertEqual(presentation.orderedAudioChapters.map(\.audioMarkerID), [marker])
+        XCTAssertEqual(presentation.orderedReadableChapters.map(\.target), [.epub(location: "Text/one.xhtml")])
+        XCTAssertTrue(presentation.manualMappings.isEmpty)
+        XCTAssertEqual(presentation.automaticChapterTitle(for: window.audioChapter), "One")
     }
 
     private func chapter(id: String, title: String, order: Int) -> ReadableBookChapter {

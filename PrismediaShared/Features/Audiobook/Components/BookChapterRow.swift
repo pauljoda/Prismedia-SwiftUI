@@ -9,7 +9,8 @@ struct BookChapterRow: View {
     let progressLabel: String?
     let onRead: () -> Void
     let onListen: () -> Void
-    let onCombined: () -> Void
+    /// Opens this chapter in both formats; nil when the Book keeps reading and listening Separate.
+    let onCombined: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
@@ -78,7 +79,7 @@ struct BookChapterRow: View {
                     action: onListen
                 )
             }
-            if case .some(.epub) = chapter.readTarget, chapter.audioTrack != nil {
+            if let onCombined, case .some(.epub) = chapter.readTarget, chapter.audioTrack != nil {
                 actionButton(
                     title: "Combined",
                     systemImage: "square.2.layers.3d",

@@ -8,6 +8,7 @@ struct AdministrativeDestinationView: View {
     let user: UserAccount
     let hidesNsfw: Bool
     let onRestoreScheduled: () async -> Void
+    let session: AuthSession?
 
     init(
         destination: AdministrativeDestination,
@@ -16,6 +17,7 @@ struct AdministrativeDestinationView: View {
         user: UserAccount,
         hidesNsfw: Bool,
         onRestoreScheduled: @escaping () async -> Void,
+        session: AuthSession? = nil,
         pluginService: (any PluginAdministrationServicing)? = nil
     ) {
         self.destination = destination
@@ -24,6 +26,7 @@ struct AdministrativeDestinationView: View {
         self.user = user
         self.hidesNsfw = hidesNsfw
         self.onRestoreScheduled = onRestoreScheduled
+        self.session = session
         if let pluginService {
             self.pluginService = pluginService
         } else {
@@ -39,6 +42,35 @@ struct AdministrativeDestinationView: View {
     }
 
     var body: some View {
+        #if os(iOS)
+            if let session, !usesNativePreviewFixtures {
+                EmbeddedAdminContentView(session: session, path: embeddedPath)
+            } else {
+                nativeContent
+            }
+        #else
+            nativeContent
+        #endif
+    }
+
+    private var embeddedPath: String {
+        switch destination {
+        case .plugins: "/plugins?nativeContent"
+        case .jobs: "/jobs?nativeContent"
+        case .settings: "/settings?nativeContent"
+        }
+    }
+
+    private var usesNativePreviewFixtures: Bool {
+        #if DEBUG
+            PrismediaUITestBootstrap.usesStep4AdministrationFixtures()
+        #else
+            false
+        #endif
+    }
+
+    @ViewBuilder
+    private var nativeContent: some View {
         switch destination {
         case .plugins: AdministrativePluginsView(service: pluginService, hidesNsfw: hidesNsfw)
         case .jobs: AdministrativeJobsView(service: service)

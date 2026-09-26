@@ -1,12 +1,19 @@
 import Foundation
 
-public struct EntityProgressCapability: Decodable, Hashable, Sendable {
+/// A work's non-time progress: the single last-used main cursor, completion and coverage, plus,
+/// for kinds that declare consumption modalities (Books on 3.8+ servers), each modality's exact
+/// checkpoint and, for an unfinished Book that keeps reading and listening Separate, both progresses.
+public struct EntityProgressCapability: Hashable, Sendable {
+    // MARK: - Variables
+
+    /// Exact per-modality positions, one per recorded modality.
+    public let checkpoints: [EntityProgressCheckpoint]
     public let currentEntityID: UUID?
     public let unit: ProgressUnit
     public let index: Int
     public let total: Int
     public let mode: ReaderMode?
-    public let completedAt: String?
+    public let completedAt: Date?
     public let updatedAt: Date?
     public let workIndex: Int?
     public let workTotal: Int?
@@ -14,39 +21,39 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
     public let consumedCount: Int
     public let consumedTotal: Int?
     public let consumedPercent: Double
+    /// Modality of the newest checkpoint.
+    public let lastModality: ConsumptionModality?
+    /// Reading and listening progress of an unfinished Book that keeps them Separate. Present only
+    /// then; for such a Book ``consumedPercent`` measures reading alone.
+    public let separate: EntitySeparateProgress?
 
-    private enum CodingKeys: String, CodingKey {
-        case currentEntityID = "currentEntityId"
-        case unit
-        case index
-        case total
-        case mode
-        case completedAt
-        case updatedAt
-        case workIndex
-        case workTotal
-        case location
-        case consumedCount
-        case consumedTotal
-        case consumedPercent
+    /// The exact reading checkpoint presented as a cursor while keeping the work's completion and
+    /// coverage. Servers that keep modality checkpoints may place the main cursor from listening,
+    /// so reading surfaces resume and echo this position instead. Without a reading checkpoint
+    /// (older servers and kinds without modalities) the main cursor is the reading position.
+    public var readingPosition: Self {
+        guard let reading = checkpoint(for: .reading) else { return self }
+        return Self(
+            currentEntityID: reading.positionEntityID,
+            unit: reading.unit,
+            index: reading.index,
+            total: reading.total,
+            mode: reading.mode,
+            completedAt: completedAt,
+            updatedAt: reading.updatedAt,
+            workIndex: reading.workIndex,
+            workTotal: reading.workTotal,
+            location: reading.location,
+            consumedCount: consumedCount,
+            consumedTotal: consumedTotal,
+            consumedPercent: consumedPercent,
+            lastModality: lastModality,
+            checkpoints: checkpoints,
+            separate: separate
+        )
     }
 
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        currentEntityID = try container.decodeIfPresent(UUID.self, forKey: .currentEntityID)
-        unit = try container.decode(ProgressUnit.self, forKey: .unit)
-        index = try container.decodeFlexibleInt(forKey: .index)
-        total = try container.decodeFlexibleInt(forKey: .total)
-        mode = try container.decodeIfPresent(ReaderMode.self, forKey: .mode)
-        completedAt = try container.decodeIfPresent(String.self, forKey: .completedAt)
-        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
-        workIndex = try container.decodeFlexibleIntIfPresent(forKey: .workIndex)
-        workTotal = try container.decodeFlexibleIntIfPresent(forKey: .workTotal)
-        location = try container.decodeIfPresent(String.self, forKey: .location)
-        consumedCount = try container.decodeFlexibleIntIfPresent(forKey: .consumedCount) ?? 0
-        consumedTotal = try container.decodeFlexibleIntIfPresent(forKey: .consumedTotal)
-        consumedPercent = try container.decodeFlexibleDoubleIfPresent(forKey: .consumedPercent) ?? 0
-    }
+    // MARK: - Initializers
 
     public init(
         currentEntityID: UUID?,
@@ -54,14 +61,17 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         index: Int,
         total: Int,
         mode: ReaderMode?,
-        completedAt: String?,
+        completedAt: Date?,
         updatedAt: Date?,
         workIndex: Int?,
         workTotal: Int?,
         location: String?,
         consumedCount: Int = 0,
         consumedTotal: Int? = nil,
-        consumedPercent: Double = 0
+        consumedPercent: Double = 0,
+        lastModality: ConsumptionModality? = nil,
+        checkpoints: [EntityProgressCheckpoint] = [],
+        separate: EntitySeparateProgress? = nil
     ) {
         self.currentEntityID = currentEntityID
         self.unit = unit
@@ -76,5 +86,43 @@ public struct EntityProgressCapability: Decodable, Hashable, Sendable {
         self.consumedCount = consumedCount
         self.consumedTotal = consumedTotal
         self.consumedPercent = consumedPercent
+        self.lastModality = lastModality
+        self.checkpoints = checkpoints
+        self.separate = separate
+    }
+
+    // MARK: - Actions - Checkpoints
+
+    /// The exact checkpoint recorded for `modality`, when the server keeps one.
+    public func checkpoint(for modality: ConsumptionModality) -> EntityProgressCheckpoint? {
+        checkpoints.first { $0.modality == modality }
+    }
+}
+
+extension EntityProgressCapability: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case currentEntityID = "currentEntityId"
+        case unit, index, total, mode, completedAt, updatedAt, workIndex, workTotal, location
+        case consumedCount, consumedTotal, consumedPercent, lastModality, checkpoints, separate
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        currentEntityID = try container.decodeIfPresent(UUID.self, forKey: .currentEntityID)
+        unit = try container.decode(ProgressUnit.self, forKey: .unit)
+        index = try container.decodeFlexibleInt(forKey: .index)
+        total = try container.decodeFlexibleInt(forKey: .total)
+        mode = try container.decodeIfPresent(ReaderMode.self, forKey: .mode)
+        completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+        workIndex = try container.decodeFlexibleIntIfPresent(forKey: .workIndex)
+        workTotal = try container.decodeFlexibleIntIfPresent(forKey: .workTotal)
+        location = try container.decodeIfPresent(String.self, forKey: .location)
+        consumedCount = try container.decodeFlexibleIntIfPresent(forKey: .consumedCount) ?? 0
+        consumedTotal = try container.decodeFlexibleIntIfPresent(forKey: .consumedTotal)
+        consumedPercent = try container.decodeFlexibleDoubleIfPresent(forKey: .consumedPercent) ?? 0
+        lastModality = try container.decodeIfPresent(ConsumptionModality.self, forKey: .lastModality)
+        checkpoints = try container.decodeIfPresent([EntityProgressCheckpoint].self, forKey: .checkpoints) ?? []
+        separate = try container.decodeIfPresent(EntitySeparateProgress.self, forKey: .separate)
     }
 }

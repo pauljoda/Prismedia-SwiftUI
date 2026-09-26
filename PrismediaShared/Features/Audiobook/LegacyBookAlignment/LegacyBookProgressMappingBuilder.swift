@@ -1,0 +1,98 @@
+import Foundation
+
+/// Builds the client-side progress mappings older servers need to place the Book cursor from
+/// the audiobook (before 3.8).
+struct LegacyBookProgressMappingBuilder: Sendable {
+    private let epubProgressTotal = BookReadingReportFormat.legacyCursor.positionTotal
+
+    func build(
+        bookID: UUID,
+        chapters: [BookChapterMapping],
+        readerMode: ReaderMode?,
+        hasReadableRendition: Bool
+    ) -> [PlaybackProgressMapping] {
+        guard hasReadableRendition else {
+            return audioOnlyMappings(bookID: bookID, chapters: chapters)
+        }
+
+        return chapters.compactMap { chapter in
+            guard let track = chapter.audioTrack, let readTarget = chapter.readTarget else {
+                return nil
+            }
+
+            switch readTarget {
+            case .epub(let location):
+                guard let start = chapter.readStartFraction,
+                    let end = chapter.readEndFraction,
+                    start.isFinite,
+                    end.isFinite,
+                    end > start
+                else { return nil }
+                return PlaybackProgressMapping(
+                    itemID: track.id,
+                    currentEntityID: bookID,
+                    unit: .cfi,
+                    startIndex: Int((bounded(start) * Double(epubProgressTotal)).rounded()),
+                    endIndex: Int((bounded(end) * Double(epubProgressTotal)).rounded()),
+                    total: epubProgressTotal,
+                    mode: readerMode,
+                    resourceLocation: location,
+                    sourceStartSeconds: chapter.audioStartSeconds,
+                    sourceEndSeconds: chapter.audioEndSeconds,
+                    audioMarkerID: chapter.audioMarkerID
+                )
+            case .entityChapter(let chapterID):
+                let pageCount = max(0, chapter.readPageCount ?? 0)
+                guard pageCount > 0 else { return nil }
+                return PlaybackProgressMapping(
+                    itemID: track.id,
+                    currentEntityID: chapterID,
+                    unit: .page,
+                    startIndex: 0,
+                    endIndex: pageCount - 1,
+                    total: pageCount,
+                    mode: readerMode,
+                    sourceStartSeconds: chapter.audioStartSeconds,
+                    sourceEndSeconds: chapter.audioEndSeconds,
+                    audioMarkerID: chapter.audioMarkerID
+                )
+            }
+        }
+    }
+
+    private func audioOnlyMappings(
+        bookID: UUID,
+        chapters: [BookChapterMapping]
+    ) -> [PlaybackProgressMapping] {
+        let durations = chapters.map { chapter in
+            guard let duration = chapter.audioEndSeconds ?? chapter.audioTrack?.duration,
+                duration.isFinite else { return 0 }
+            return max(0, Int((duration - (chapter.audioStartSeconds ?? 0)).rounded(.up)))
+        }
+        let total = durations.reduce(0, +)
+        guard total > 0 else { return [] }
+
+        var startIndex = 0
+        return chapters.enumerated().compactMap { index, chapter in
+            let duration = durations[index]
+            guard let track = chapter.audioTrack, duration > 0 else { return nil }
+            defer { startIndex += duration }
+            return PlaybackProgressMapping(
+                itemID: track.id,
+                currentEntityID: bookID,
+                unit: .second,
+                startIndex: startIndex,
+                endIndex: startIndex + duration,
+                total: total,
+                mode: nil,
+                sourceStartSeconds: chapter.audioStartSeconds,
+                sourceEndSeconds: chapter.audioEndSeconds,
+                audioMarkerID: chapter.audioMarkerID
+            )
+        }
+    }
+
+    private func bounded(_ value: Double) -> Double {
+        min(max(0, value), 1)
+    }
+}

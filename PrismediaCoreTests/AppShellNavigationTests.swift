@@ -239,6 +239,23 @@ final class AppShellNavigationTests: XCTestCase {
     }
 
     @MainActor
+    func testLinkedBookOpensInNativeBookDestinationFromRequest() throws {
+        let request = try XCTUnwrap(ModeCatalog.manage.destination(id: "request"))
+        let router = PrismediaAppRouter(
+            initialMode: ModeCatalog.manage,
+            initialDestinationID: request.id
+        )
+        let book = EntityLink(entityID: UUID(), kind: .book)
+
+        router.openLinkedEntity(book)
+        router.openLinkedEntity(book)
+
+        XCTAssertEqual(router.selectedTab, .destination("books"))
+        XCTAssertEqual(router.path(for: "books"), [book])
+        XCTAssertTrue(router.path(for: request.id).isEmpty)
+    }
+
+    @MainActor
     func testReselectingSidebarDestinationClearsOnlyItsStack() throws {
         let router = PrismediaAppRouter(
             initialMode: ModeCatalog.video,
@@ -417,8 +434,8 @@ final class AppShellNavigationTests: XCTestCase {
                 .map(\.kind)
         )
 
-        XCTAssertEqual(uploadableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video, .videoSeason])
-        XCTAssertEqual(replaceableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video])
+        XCTAssertEqual(uploadableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video, .videoEpisode, .videoSeason])
+        XCTAssertEqual(replaceableKinds, [.audioLibrary, .book, .comicInstallment, .movie, .video, .videoEpisode])
         XCTAssertTrue(replaceableKinds.isSubset(of: uploadableKinds))
     }
 

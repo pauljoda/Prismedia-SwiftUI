@@ -61,7 +61,8 @@ final class DocumentReaderProgressMapperTests: XCTestCase {
             progression: progression,
             mode: .paged,
             location: #"{"href":"Text/Catelyn.xhtml","locations":{"progression":0.25}}"#,
-            closing: false
+            closing: false,
+            format: .legacyCursor
         )
 
         XCTAssertEqual(progression, 0.97, accuracy: 0.000_001)
@@ -137,7 +138,8 @@ final class DocumentReaderProgressMapperTests: XCTestCase {
             progression: 0.425,
             mode: .scrolled,
             location: "epubcfi(/6/4!/4/2/2:14)",
-            closing: false
+            closing: false,
+            format: .legacyCursor
         )
 
         XCTAssertEqual(request.currentEntityID, bookID)
@@ -155,7 +157,8 @@ final class DocumentReaderProgressMapperTests: XCTestCase {
             progression: 0.995,
             mode: .paged,
             location: nil,
-            closing: true
+            closing: true,
+            format: .legacyCursor
         )
 
         XCTAssertEqual(request.completed, true)

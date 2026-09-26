@@ -20,8 +20,10 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
     @State private var mutationFailures: [EntityGridMutationFailure] = []
     @State private var mutationFailureAlertPresented = false
     #if os(iOS) || os(macOS)
+        @Environment(PrismediaAppRouter.self) private var router
         @State private var collectionSheetPresented = false
         @State private var collectionSheetReferences: [CollectionEntityReference] = []
+        @State private var newCollectionSheetPresented = false
     #endif
     #if os(tvOS)
         @Environment(TVTabFocusCoordinator.self) private var tabFocusCoordinator
@@ -159,6 +161,11 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 .sheet(isPresented: $collectionSheetPresented) {
                     AddToCollectionSheet(items: collectionSheetReferences) { result in
                         receiveMutationResult(result)
+                    }
+                }
+                .sheet(isPresented: $newCollectionSheetPresented) {
+                    if let client = environment.client {
+                        NewCollectionSheet(creator: client, onCreated: openCreatedCollection)
                     }
                 }
             #endif
@@ -400,6 +407,8 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 Label(configuration.emptyTitle, systemImage: "square.grid.2x2")
             } description: {
                 Text(emptyDescription)
+            } actions: {
+                newCollectionButton
             }
             .frame(maxWidth: .infinity, minHeight: 280)
             .padding(.horizontal, horizontalContentPadding)
@@ -430,11 +439,17 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             .padding(.horizontal, horizontalContentPadding)
 
             if presentation == .screen {
-                Text(itemCountLabel)
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(PrismediaColor.textMuted)
-                    .accessibilityIdentifier("entity.grid.count")
-                    .padding(.horizontal, horizontalContentPadding)
+                HStack(spacing: PrismediaSpacing.medium) {
+                    Text(itemCountLabel)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(PrismediaColor.textMuted)
+                        .accessibilityIdentifier("entity.grid.count")
+
+                    Spacer(minLength: 0)
+
+                    newCollectionButton
+                }
+                .padding(.horizontal, horizontalContentPadding)
             }
 
             laidOutGridItems
@@ -571,6 +586,21 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
                 selection.enter()
             }
         }
+    }
+
+    /// Content-layer New Collection action, beside the item count or in the empty state, so it does not
+    /// crowd the compact navigation title. Hidden while selecting and on tvOS.
+    @ViewBuilder
+    private var newCollectionButton: some View {
+        #if os(iOS) || os(macOS)
+            if actionPolicy.offersCollectionCreation, !selection.isActive {
+                PrismediaButton("New Collection", systemImage: "plus") {
+                    newCollectionSheetPresented = true
+                }
+                .controlSize(.small)
+                .accessibilityIdentifier("entity.grid.new-collection")
+            }
+        #endif
     }
 
     private var trailingToolbarPlacement: ToolbarItemPlacement {
@@ -1057,6 +1087,13 @@ public struct EntityGridView<TopContent: View, ItemContent: View>: View {
             guard !references.isEmpty else { return }
             collectionSheetReferences = references
             collectionSheetPresented = true
+        }
+
+        /// Refreshes Collection lists and opens the new Collection while its creation sheet is still up,
+        /// so the sheet slides away to reveal the Collection rather than this grid.
+        private func openCreatedCollection(_ collection: EntityThumbnail) {
+            environment.entityDidMutate()
+            router.open(entity: collection)
         }
     #endif
 
