@@ -105,6 +105,16 @@
         }
       }
     },
+    "%@, current chapter %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, current chapter %2$@"
+          }
+        }
+      }
+    },
     "%@, page %lld" : {
       "localizations" : {
         "en" : {
@@ -164,16 +174,6 @@
     "%lld active" : {
 
     },
-    "%lld automatic · %lld explicit" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld automatic · %2$lld explicit"
-          }
-        }
-      }
-    },
     "%lld barren" : {
 
     },
@@ -189,6 +189,16 @@
     },
     "%lld events" : {
 
+    },
+    "%lld exact title · %lld confirmed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld exact title · %2$lld confirmed"
+          }
+        }
+      }
     },
     "%lld fields" : {
 
@@ -218,12 +228,12 @@
     "%lld more files selected" : {
 
     },
-    "%lld of %lld audio chapters aligned, %lld automatic, %lld explicit" : {
+    "%lld of %lld audio chapters aligned, %lld by exact title, %lld confirmed" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$lld of %2$lld audio chapters aligned, %3$lld automatic, %4$lld explicit"
+            "value" : "%1$lld of %2$lld audio chapters aligned, %3$lld by exact title, %4$lld confirmed"
           }
         }
       }
@@ -273,16 +283,6 @@
     },
     "%lld percent complete" : {
 
-    },
-    "%lld percent, current chapter %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld percent, current chapter %2$@"
-          }
-        }
-      }
     },
     "%lld queued" : {
 
@@ -550,6 +550,19 @@
     "Audio" : {
 
     },
+    "Audio chapter" : {
+
+    },
+    "Audio chapter %@ pairs with %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Audio chapter %1$@ pairs with %2$@"
+          }
+        }
+      }
+    },
     "Audiobook" : {
 
     },
@@ -581,9 +594,6 @@
 
     },
     "Automatic retention" : {
-
-    },
-    "Automatic title matching" : {
 
     },
     "Automatic uses the first compatible enabled provider. Unavailable preferences are kept until you replace them." : {
@@ -786,9 +796,6 @@
 
     },
     "Choose when automatic searching begins for each acquisition profile." : {
-
-    },
-    "Choose where the first audio chapter begins, then Prismedia fills the remaining chapters in order. You can override any chapter below before saving." : {
 
     },
     "Classification" : {
@@ -1031,6 +1038,9 @@
     "Couldn’t Update Monitoring" : {
 
     },
+    "Create" : {
+
+    },
     "Create a backup or wait for the next scheduled backup." : {
 
     },
@@ -1233,6 +1243,9 @@
     "Downloaded Files" : {
 
     },
+    "Each audio chapter is paired with the next readable chapter. Check every pair: saved pairs link reading and listening exactly as listed." : {
+
+    },
     "Ebook" : {
 
     },
@@ -1311,6 +1324,9 @@
     "Events" : {
 
     },
+    "Exact title: %@" : {
+
+    },
     "Exclude" : {
 
     },
@@ -1339,9 +1355,6 @@
 
     },
     "Expanded" : {
-
-    },
-    "Explicit mapping" : {
 
     },
     "Export Summary" : {
@@ -1394,6 +1407,9 @@
 
     },
     "Files Deleted" : {
+
+    },
+    "Filled in order" : {
 
     },
     "Filter Capabilities" : {
@@ -1708,6 +1724,9 @@
     "Listen Again" : {
 
     },
+    "Listening" : {
+
+    },
     "Listening estimated from where you stopped reading." : {
 
     },
@@ -1915,6 +1934,9 @@
     "Match existing tag" : {
 
     },
+    "Matched by exact title" : {
+
+    },
     "Matching releases can be selected for download again." : {
 
     },
@@ -2038,6 +2060,9 @@
     "New" : {
 
     },
+    "New Collection" : {
+
+    },
     "New Folder" : {
 
     },
@@ -2105,6 +2130,9 @@
 
     },
     "No Candidates Found" : {
+
+    },
+    "No chapters are matched yet. Map them in Chapter Mapping to switch between reading and listening." : {
 
     },
     "No child acquisition activity right now." : {
@@ -2237,6 +2265,9 @@
 
     },
     "Not organized" : {
+
+    },
+    "Not paired" : {
 
     },
     "Not selected" : {
@@ -2418,6 +2449,9 @@
     "Pages" : {
 
     },
+    "Pairs filled in order" : {
+
+    },
     "Paragraph focus keeps the text nearest the center fully visible and progressively fades surrounding passages. The guide settles beneath the center line after scrolling stops." : {
 
     },
@@ -2473,6 +2507,9 @@
 
     },
     "Permissions" : {
+
+    },
+    "Picked by hand" : {
 
     },
     "Piece availability" : {
@@ -2583,6 +2620,9 @@
     "PRISMEDIA" : {
 
     },
+    "Prismedia pairs chapters automatically only when their titles match exactly. Pick pairs yourself, or fill in order from a chapter and review every pair before saving." : {
+
+    },
     "Prismedia removes this root and its indexed database entities. Media files and folders on disk are not deleted." : {
 
     },
@@ -2659,6 +2699,16 @@
     "Read & Listen" : {
 
     },
+    "Read %lld percent, listened %lld percent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Read %1$lld percent, listened %2$lld percent"
+          }
+        }
+      }
+    },
     "Read Again" : {
 
     },
@@ -2678,6 +2728,19 @@
 
     },
     "Reading" : {
+
+    },
+    "Reading %lld percent, listening %lld percent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reading %1$lld percent, listening %2$lld percent"
+          }
+        }
+      }
+    },
+    "Reading and listening are tracked separately." : {
 
     },
     "Reading estimated from where you stopped listening." : {
@@ -2963,6 +3026,9 @@
 
     },
     "Review" : {
+
+    },
+    "Review %lld pairs filled in order" : {
 
     },
     "Review All" : {
@@ -3253,6 +3319,9 @@
     "Share Original" : {
 
     },
+    "Shared" : {
+
+    },
     "Shares a local copy without exposing your Prismedia session" : {
 
     },
@@ -3515,10 +3584,19 @@
     "These releases can be selected for download again." : {
 
     },
+    "This audiobook has no chapter markers, so reading and listening are tracked separately." : {
+
+    },
+    "This audiobook is split into parts rather than chapters, so reading and listening are tracked separately." : {
+
+    },
     "This audiobook position could not be matched to a readable chapter." : {
 
     },
     "This book does not include a readable chapter list." : {
+
+    },
+    "This Book has no playable audiobook, so reading and listening are tracked separately." : {
 
     },
     "This changes library scan configuration only. It does not move or delete the server file." : {
@@ -3534,6 +3612,9 @@
 
     },
     "This device" : {
+
+    },
+    "This ebook has no chapter list to line up with the audiobook, so reading and listening are tracked separately." : {
 
     },
     "This ebook has no chapter list to line up with the audiobook." : {
@@ -3666,6 +3747,9 @@
 
     },
     "Unknown status" : {
+
+    },
+    "Unmatched" : {
 
     },
     "Unmonitor" : {
@@ -3826,6 +3910,12 @@
 
     },
     "Visibility" : {
+
+    },
+    "Visible only to you." : {
+
+    },
+    "Visible to every signed-in user." : {
 
     },
     "VLC Network Cache" : {
