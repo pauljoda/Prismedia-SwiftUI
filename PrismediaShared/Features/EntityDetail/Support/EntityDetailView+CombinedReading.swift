@@ -78,22 +78,22 @@
 
         // MARK: - Actions - Resume Targets
 
-        /// Where "Continue Reading" opens: the server's exact reading position (resumed against the
-        /// device's own checkpoint), else, for a Linked Book, the reading position it aligned from
-        /// listening (opened as given). Nil resumes the reader from its own position, including
-        /// while the progress contract is undecided.
+        /// Where "Continue Reading" opens: the server's continue target. An exact reading position resumes
+        /// against the device's own checkpoint; a position carried over from newer listening opens as
+        /// given, so an older reading position on this device cannot win. Nil resumes the reader from its
+        /// own position, including while the progress contract is undecided.
         func readingResumeOpening(
             for detail: EntityDetail
         ) -> (destination: BookReadingDestination, command: BookReaderCommand)? {
             if bookAlignmentState.usesLegacyAlignment {
                 return legacyReadingResumeDestination(for: detail).map { ($0, .resume) }
             }
-            guard let alignment = bookAlignmentState.alignment, let resume = alignment.resume else { return nil }
-            if let exact = resume.exactReading {
-                return exact.destination(inWork: detail.id).map { ($0, .resume) }
-            }
-            guard alignment.isLinked else { return nil }
-            return resume.switchToReading.aligned?.reading?.destination(inWork: detail.id).map { ($0, .read) }
+            guard let alignment = bookAlignmentState.alignment,
+                let target = alignment.resume?.readingResume(isLinked: alignment.isLinked),
+                let reading = target.reading
+            else { return nil }
+            let command: BookReaderCommand = target.basis == .exact ? .resume : .read
+            return reading.destination(inWork: detail.id).map { ($0, command) }
         }
 
         /// The reading position aligned from the audiobook that is playing, fetched from the server

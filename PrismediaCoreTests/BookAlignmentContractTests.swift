@@ -52,6 +52,10 @@ final class BookAlignmentContractTests: XCTestCase {
         XCTAssertEqual(resume.switchToListening.basis, .interpolated)
         XCTAssertEqual(resume.switchToListening.aligned?.listening?.offsetSeconds, 115)
         XCTAssertEqual(resume.combined.basis, .exact)
+        // Listening in a chapter with no match leaves reading at its own exact position.
+        XCTAssertEqual(resume.continueReading?.basis, .exact)
+        XCTAssertEqual(resume.readingResume(isLinked: true)?.reading, resume.exactReading)
+        XCTAssertEqual(resume.listeningResume(isLinked: true)?.listening?.offsetSeconds, 412.5)
     }
 
     func testReadingTargetsOpenTheirLocatorChapterOrPage() throws {
@@ -230,6 +234,56 @@ final class BookAlignmentContractTests: XCTestCase {
             try PrismediaJSON.decoder().decode(BookChapterMappingOrigin.self, from: Data(#""ordered""#.utf8)),
             .ordered
         )
+    }
+
+    func testLinkedBooksContinueEachFormatFromTheNewerPosition() throws {
+        let olderReading = BookReadingTarget(
+            positionEntityID: Self.bookID, unit: .cfi, index: 2_500, total: 10_000,
+            location: "older-locator", chapterKey: "Text/eleven.xhtml"
+        )
+        let carriedReading = BookReadingTarget(
+            positionEntityID: Self.bookID, unit: .cfi, index: 196, total: 10_000,
+            chapterKey: "Text/five.xhtml", chapterLocation: "Text/five.xhtml", chapterFraction: 0.3
+        )
+        let listening = BookListeningTarget(trackEntityID: Self.trackID, offsetSeconds: 615)
+        let carried = BookAlignedTarget(rowID: "r5", reading: carriedReading, approximate: true, basis: .interpolated)
+        let fromReading = BookAlignedTarget(
+            rowID: "r11",
+            listening: BookListeningTarget(trackEntityID: Self.trackID, offsetSeconds: 3_000),
+            approximate: true,
+            basis: .interpolated
+        )
+        let resume = BookResumeProjection(
+            lastModality: .listening,
+            exactReading: olderReading,
+            exactListening: listening,
+            switchToReading: carried,
+            switchToListening: fromReading,
+            combined: BookAlignedTarget(rowID: "r5", reading: carriedReading, listening: listening),
+            continueReading: carried,
+            continueListening: BookAlignedTarget(rowID: "r5", listening: listening)
+        )
+
+        // Listened past the older reading position: reading continues where listening stopped and opens
+        // as given, so the device's older reading position cannot win.
+        let reading = try XCTUnwrap(resume.readingResume(isLinked: true))
+        XCTAssertEqual(reading.reading, carriedReading)
+        XCTAssertEqual(reading.basis, .interpolated)
+        XCTAssertEqual(resume.readingRowID, "r5")
+        XCTAssertEqual(resume.listeningResume(isLinked: true)?.listening, listening)
+        XCTAssertEqual(resume.listeningRowID, "r5")
+
+        // A server without continue targets keeps resuming each format's exact position.
+        let older = BookResumeProjection(
+            lastModality: .listening,
+            exactReading: olderReading,
+            exactListening: listening,
+            switchToReading: carried,
+            switchToListening: fromReading,
+            combined: resume.combined
+        )
+        XCTAssertEqual(older.readingResume(isLinked: true)?.reading, olderReading)
+        XCTAssertEqual(older.readingResume(isLinked: true)?.basis, .exact)
     }
 
     func testSeparateBooksShowTwoMetersAndResumeEachFormatOnlyExactly() {
@@ -679,6 +733,21 @@ final class BookAlignmentContractTests: XCTestCase {
                   "listening": { "trackEntityId": "\(trackID)", "markerId": null, "offsetSeconds": 412.5 },
                   "approximate": false, "basis": "exact", "gap": "audio_chapter_unpaired",
                   "gapChapterTitle": "Bonus Interview"
+                },
+                "continueReading": {
+                  "rowId": "r0",
+                  "reading": {
+                    "positionEntityId": "\(bookID)", "unit": "cfi", "index": 2000, "total": 10000,
+                    "location": \(locator), "chapterKey": "Text/one.xhtml",
+                    "chapterLocation": "Text/one.xhtml", "chapterFraction": 0.4, "pageIndex": null,
+                    "mode": "paged"
+                  },
+                  "listening": null, "approximate": false, "basis": "exact", "gap": null, "gapChapterTitle": null
+                },
+                "continueListening": {
+                  "rowId": "a0", "reading": null,
+                  "listening": { "trackEntityId": "\(trackID)", "markerId": null, "offsetSeconds": 412.5 },
+                  "approximate": false, "basis": "exact", "gap": null, "gapChapterTitle": null
                 }
               }
             }

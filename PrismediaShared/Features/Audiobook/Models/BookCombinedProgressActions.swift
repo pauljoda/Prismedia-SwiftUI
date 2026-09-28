@@ -44,34 +44,34 @@ struct BookCombinedProgressActions: Equatable, Sendable {
         self.isCombinedAvailable = isCombinedAvailable
     }
 
-    /// Actions for the server's resume projection: exact positions continue as recorded, aligned
-    /// positions are marked "≈" when estimated, and a gap is explained instead of substituting
-    /// another chapter. A Book that keeps its formats Separate (`isLinked` false) resumes each only
-    /// at its own exact position and never starts both together.
+    /// Actions for the server's resume projection: each format continues where the server says,
+    /// which for a Linked Book follows the newer of reading and listening. Positions carried over from
+    /// the other format are marked "≈" when estimated, and a gap is explained instead of substituting
+    /// another chapter. A Book that keeps its formats Separate (`isLinked` false) resumes each only at
+    /// its own exact position and never starts both together.
     init(resume: BookResumeProjection?, isCompleted: Bool, isLinked: Bool = true) {
-        let alignedReading = isLinked ? resume?.switchToReading.aligned?.reading : nil
-        let alignedListening = isLinked ? resume?.switchToListening.aligned?.listening : nil
+        let reading = resume?.readingResume(isLinked: isLinked)
+        let listening = resume?.listeningResume(isLinked: isLinked)
         let combined = isLinked ? resume?.combined : nil
 
-        if resume?.exactReading != nil {
+        if let reading, reading.basis == .exact {
             readingTitle = String(localized: "Continue Reading")
             readingHint = nil
-        } else if alignedReading != nil {
+        } else if let reading {
             readingTitle =
-                resume?.switchToReading.approximate == true
-                ? String(localized: "Continue Reading ≈") : String(localized: "Continue Reading")
+                reading.approximate ? String(localized: "Continue Reading ≈") : String(localized: "Continue Reading")
             readingHint = String(localized: "Reading estimated from where you stopped listening.")
         } else {
             readingTitle = isCompleted ? String(localized: "Read Again") : String(localized: "Start Reading")
             readingHint = nil
         }
 
-        if resume?.exactListening != nil {
+        if let listening, listening.basis == .exact {
             listeningTitle = String(localized: "Continue Listening")
             listeningHint = nil
-        } else if alignedListening != nil {
+        } else if let listening {
             listeningTitle =
-                resume?.switchToListening.approximate == true
+                listening.approximate
                 ? String(localized: "Continue Listening ≈") : String(localized: "Continue Listening")
             listeningHint = String(localized: "Listening estimated from where you stopped reading.")
         } else {

@@ -10,27 +10,27 @@ extension EntityDetailView {
                 projection.bookID == detail.id,
                 let track = chapter.audioTrack
             else { return }
-            if let resume = bookAlignmentState.alignment?.resume,
+            if let alignment = bookAlignmentState.alignment,
+                let resume = alignment.resume,
                 resume.listeningRowID == chapter.id,
-                let exact = resume.exactListening
+                let saved = resume.listeningResume(isLinked: alignment.isLinked)?.listening
             {
-                play(projection, startingAt: exact.trackEntityID, startSeconds: exact.resumePoint.trackOffsetSeconds)
+                play(projection, startingAt: saved.trackEntityID, startSeconds: saved.resumePoint.trackOffsetSeconds)
                 return
             }
             play(projection, startingAt: track.id, startSeconds: chapter.audioStartSeconds ?? 0)
         }
 
-        /// Where "Continue Listening" starts: the server's exact listening position, else, for a
-        /// Linked Book, the position it aligned from reading. Unknown while the server's progress
-        /// contract is undecided.
+        /// Where "Continue Listening" starts: the server's continue target, which for a Linked Book
+        /// follows a newer reading position into its paired audio chapter. Unknown while the server's
+        /// progress contract is undecided.
         func unifiedAudiobookResume(for detail: EntityDetail) -> AudiobookResumePoint? {
             switch bookAlignmentState.contract {
             case .legacyCursor:
                 return legacyAudiobookResume(for: detail)
             case .serverAlignment:
                 guard let alignment = bookAlignmentState.alignment, let resume = alignment.resume else { return nil }
-                if let exact = resume.exactListening { return exact.resumePoint }
-                return alignment.isLinked ? resume.switchToListening.aligned?.listening?.resumePoint : nil
+                return resume.listeningResume(isLinked: alignment.isLinked)?.listening?.resumePoint
             case nil:
                 return nil
             }
