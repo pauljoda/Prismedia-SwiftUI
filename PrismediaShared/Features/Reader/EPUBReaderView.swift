@@ -43,6 +43,7 @@
             readingReportFormat: BookReadingReportFormat = .legacyCursor,
             companionPlayer: MusicPlayerController? = nil,
             findCurrentAudiobookReadingTarget: @escaping @MainActor () async -> BookReaderLocationTarget? = { nil },
+            writeBarrier: BookReaderWriteBarrier? = nil,
             onReady: @escaping () -> Void = {}
         ) {
             self.command = command
@@ -58,7 +59,7 @@
             self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
             self.onReady = onReady
             useCase = DocumentReaderUseCase(book: book, service: service)
-            _progressWriter = State(initialValue: BookReaderProgressWriter(service: service))
+            _progressWriter = State(initialValue: BookReaderProgressWriter(service: service, barrier: writeBarrier))
         }
 
         @ViewBuilder

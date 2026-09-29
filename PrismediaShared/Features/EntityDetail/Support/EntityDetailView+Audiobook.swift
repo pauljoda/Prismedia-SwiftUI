@@ -70,6 +70,41 @@ extension EntityDetailView {
             )
         }
 
+        /// "Continue Listening" from the Book page. The shared position may have moved since the page
+        /// loaded (a reader that just closed, or another device), so it is read again first.
+        func continueListening(to detail: EntityDetail) async {
+            guard !isListeningMutating else { return }
+            isListeningMutating = true
+            await refreshBookResumeTargets(for: detail)
+            isListeningMutating = false
+            guard currentDetail?.id == detail.id else { return }
+            beginListening(to: detail)
+        }
+
+        /// "Continue Reading" from the Book page, from the shared position as the server has it now.
+        func continueReading(for detail: EntityDetail) async {
+            let progressLoad = bookProgressLoadingState.begin()
+            await refreshBookResumeTargets(for: detail)
+            bookProgressLoadingState.finish(progressLoad)
+            guard currentDetail?.id == detail.id else { return }
+            openReader(command: .resume)
+        }
+
+        /// Brings the server's continue targets up to date before a resume action: this device's queued
+        /// reader writes and listening reports reach the server first, then the alignment is read again.
+        func refreshBookResumeTargets(for detail: EntityDetail) async {
+            await readerWriteBarrier.settle()
+            if musicPlayer.context?.playbackOwnerEntityID == detail.id {
+                musicPlayer.persistProgressHeartbeat()
+                await musicPlayer.flushPendingPlaybackReports()
+            }
+            guard detail.kind.definition?.modalities.isEmpty == false,
+                !bookAlignmentState.usesLegacyAlignment,
+                currentDetail?.id == detail.id
+            else { return }
+            await loadBookAlignment(for: detail)
+        }
+
         func beginListening(to detail: EntityDetail) {
             guard let projection = audiobookProjection,
                 projection.bookID == detail.id

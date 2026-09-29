@@ -7,14 +7,20 @@ import Observation
 @MainActor
 final class BookReaderProgressWriter {
     private let service: any BookReaderServicing
+    private let barrier: BookReaderWriteBarrier?
     private var queuedWrite: (bookID: UUID, request: EntityProgressUpdateRequest)?
     private var drainTask: Task<Void, Never>?
     private var accessTask: Task<Void, Never>?
     private var accessedBookID: UUID?
     private var activityClock = ConsumptionActivityClock()
 
-    init(service: any BookReaderServicing) {
+    /// - Parameters:
+    ///   - service: Sends the progress reports.
+    ///   - barrier: The opening page's barrier, which learns about every queued write so the page can
+    ///     wait for the closing position before it reads progress again.
+    init(service: any BookReaderServicing, barrier: BookReaderWriteBarrier? = nil) {
         self.service = service
+        self.barrier = barrier
     }
 
     func beginActivity(bookID: UUID) {
@@ -47,7 +53,9 @@ final class BookReaderProgressWriter {
             )
         )
         guard drainTask == nil else { return }
-        drainTask = Task { await drain() }
+        let write = Task { await drain() }
+        drainTask = write
+        barrier?.track(write)
     }
 
     func flush() async {

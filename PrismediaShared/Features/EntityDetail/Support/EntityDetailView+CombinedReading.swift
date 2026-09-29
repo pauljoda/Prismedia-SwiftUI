@@ -44,10 +44,27 @@
             for detail: EntityDetail
         ) -> BookCombinedProgressPresentation? {
             guard hasCombinedProgressCard(for: detail) else { return nil }
-            guard let alignment = bookAlignmentState.alignment else {
-                return bookAlignmentState.usesLegacyAlignment ? legacyCombinedProgressPresentation(for: detail) : nil
-            }
             let progress: EntityProgressCapability? = detail.capability()
+            guard let alignment = bookAlignmentState.alignment else {
+                if bookAlignmentState.usesLegacyAlignment {
+                    return legacyCombinedProgressPresentation(for: detail)
+                }
+                // While the alignment loads, the Book's own progress already says whether reading and
+                // listening are kept separate, so the card takes its final shape with its actions busy.
+                return BookCombinedProgressPresentation(
+                    progress: progress,
+                    reading: readingState.progressPresentation,
+                    activitySeconds: detail.capability(EntityConsumptionCapability.self)?.activeSeconds,
+                    isLoading: true,
+                    isBusy: true,
+                    actions: BookCombinedProgressActions(
+                        resume: nil,
+                        isCompleted: progress?.completedAt != nil,
+                        isLinked: progress?.separate == nil
+                    ),
+                    separate: progress?.separate
+                )
+            }
             return BookCombinedProgressPresentation(
                 progress: progress,
                 reading: readingState.progressPresentation,
@@ -66,14 +83,18 @@
         }
 
         /// Whether the Book offers reading and listening together. The server decides from the
-        /// modalities the Book has content for; older servers fall back to the local check. There
-        /// is no card while the progress contract is undecided.
+        /// modalities the Book has content for; older servers fall back to the local check. Until
+        /// the alignment loads, a Book with a readable rendition beside its audio keeps the card's
+        /// place instead of first drawing reading and listening as separate sections.
         func hasCombinedProgressCard(for detail: EntityDetail) -> Bool {
             guard AudiobookPlaybackProjection(detail: detail) != nil else { return false }
             if let alignment = bookAlignmentState.alignment {
                 return alignment.supportsReadingAndListening
             }
-            return bookAlignmentState.usesLegacyAlignment && legacyHasCombinedProgressCard(for: detail)
+            if bookAlignmentState.usesLegacyAlignment {
+                return legacyHasCombinedProgressCard(for: detail)
+            }
+            return detail.kind == .book && detail.bookFormat != .audio
         }
 
         // MARK: - Actions - Resume Targets

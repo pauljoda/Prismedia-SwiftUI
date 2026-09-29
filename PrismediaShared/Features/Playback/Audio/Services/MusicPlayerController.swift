@@ -114,7 +114,7 @@ public final class MusicPlayerController {
     ) -> UUID {
         let tracks = tracks.filter(\.isPlayable)
         guard !tracks.isEmpty else { return activeQueueID }
-        reportCurrentConsumption(stopsActivity: true)
+        reportOutgoingPosition(stopsActivity: true)
         if currentTrack != nil { engine.pause() }
         var previousQueue = queue
         if previousQueue.currentTrack != nil {
@@ -198,8 +198,8 @@ public final class MusicPlayerController {
     public func pause() {
         resumesWhenPlaybackBecomesAvailable = false
         engine.pause()
+        reportOutgoingPosition(stopsActivity: true)
         isPlaying = false
-        reportCurrentConsumption(stopsActivity: true)
         isPlaybackAdvancing = false
         publishNowPlayingState()
         persistProgress()
@@ -209,7 +209,7 @@ public final class MusicPlayerController {
     public func handlePlaybackFailed() {
         guard currentTrack != nil else { return }
         engine.pause()
-        reportCurrentConsumption(stopsActivity: true)
+        reportOutgoingPosition(stopsActivity: true)
         isPlaying = false
         isPlaybackAdvancing = false
         errorMessage = "This track could not be played."
@@ -218,7 +218,7 @@ public final class MusicPlayerController {
     }
 
     public func clearPlayback() {
-        reportCurrentConsumption(stopsActivity: true)
+        reportOutgoingPosition(stopsActivity: true)
         resetPlaybackState()
     }
 
@@ -270,7 +270,7 @@ public final class MusicPlayerController {
     }
 
     public func skipToNext() {
-        reportCurrentConsumption()
+        reportOutgoingPosition()
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
         guard queue.advance(reason: .user) != nil else { return }
@@ -282,7 +282,7 @@ public final class MusicPlayerController {
     }
 
     public func skipToPrevious() {
-        reportCurrentConsumption()
+        reportOutgoingPosition()
         guard queue.movePrevious() != nil else { return }
         syncRepeatPreferenceFromQueue()
         elapsedTime = 0
@@ -291,7 +291,7 @@ public final class MusicPlayerController {
     }
 
     public func skipToUpcomingTrack(id trackID: UUID) {
-        reportCurrentConsumption()
+        reportOutgoingPosition()
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
         guard queue.moveToUpcomingTrack(id: trackID) != nil else { return }
@@ -460,7 +460,10 @@ public final class MusicPlayerController {
             return
         }
         isPlaybackAdvancing = isActivelyAdvancing
-        guard abs(seconds - lastPersistedElapsedTime) >= 5 else { return }
+        // Only playback moves saved progress. An item loading while paused or restored reports zero
+        // and then settles on its saved spot; saving either would overwrite newer progress recorded
+        // elsewhere. Seeks and pauses save explicitly.
+        guard isActivelyAdvancing, abs(seconds - lastPersistedElapsedTime) >= 5 else { return }
         reportCurrentConsumption()
         persistProgress()
     }
@@ -673,6 +676,13 @@ public final class MusicPlayerController {
             : isPlaybackAdvancing
                 ? consumptionActivityClock.take(at: playbackClock.now)
                 : nil
+    }
+
+    /// Reports where the outgoing item stopped. A paused item reported its position when it paused and
+    /// a restored one has not moved, so only an item that is still playing reports it again.
+    private func reportOutgoingPosition(stopsActivity: Bool = false) {
+        guard isPlaying else { return }
+        reportCurrentConsumption(stopsActivity: stopsActivity)
     }
 
     private func reportCurrentConsumption(stopsActivity: Bool = false) {

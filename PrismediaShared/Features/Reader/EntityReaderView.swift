@@ -15,6 +15,7 @@ public struct EntityReaderView: View {
     let readingReportFormat: BookReadingReportFormat
     let companionPlayer: MusicPlayerController?
     let findCurrentAudiobookReadingTarget: @MainActor () async -> BookReaderLocationTarget?
+    let writeBarrier: BookReaderWriteBarrier?
     let onEPUBReady: () -> Void
 
     public init(
@@ -30,6 +31,7 @@ public struct EntityReaderView: View {
         readingReportFormat: BookReadingReportFormat = .legacyCursor,
         companionPlayer: MusicPlayerController? = nil,
         findCurrentAudiobookReadingTarget: @escaping @MainActor () async -> BookReaderLocationTarget? = { nil },
+        writeBarrier: BookReaderWriteBarrier? = nil,
         onEPUBReady: @escaping () -> Void = {}
     ) {
         self.selected = selected
@@ -44,6 +46,7 @@ public struct EntityReaderView: View {
         self.readingReportFormat = readingReportFormat
         self.companionPlayer = companionPlayer
         self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
+        self.writeBarrier = writeBarrier
         self.onEPUBReady = onEPUBReady
     }
 
@@ -66,7 +69,8 @@ public struct EntityReaderView: View {
                             book: selected,
                             command: command,
                             service: service,
-                            readingReportFormat: readingReportFormat
+                            readingReportFormat: readingReportFormat,
+                            writeBarrier: writeBarrier
                         )
                     case .epub:
                         EPUBReaderView(
@@ -82,6 +86,7 @@ public struct EntityReaderView: View {
                             readingReportFormat: readingReportFormat,
                             companionPlayer: companionPlayer,
                             findCurrentAudiobookReadingTarget: findCurrentAudiobookReadingTarget,
+                            writeBarrier: writeBarrier,
                             onReady: onEPUBReady
                         )
                     case .unsupported(let format):

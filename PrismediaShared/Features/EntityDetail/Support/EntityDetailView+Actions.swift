@@ -127,8 +127,12 @@ extension EntityDetailView {
                     startAt: videoResumeSeconds(for: currentDetail),
                     pendingActionID: .resume
                 )
-            } else {
-                openReader(command: .resume)
+            } else if let currentDetail {
+                #if os(iOS) || os(macOS)
+                    Task { await continueReading(for: currentDetail) }
+                #else
+                    openReader(command: .resume)
+                #endif
             }
         case .play:
             beginDetailVideoPlayback(startAt: 0, pendingActionID: .play)
@@ -139,7 +143,7 @@ extension EntityDetailView {
                 if presentation?.actionTitle == "Pause" {
                     musicPlayer.pause()
                 } else {
-                    beginListening(to: detail)
+                    Task { await continueListening(to: detail) }
                 }
             #endif
         case .audio:

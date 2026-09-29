@@ -20,6 +20,8 @@ public struct EntityDetailView: View {
     @State var isVideoFullscreenLaunchActive: Bool
     @State var pendingVideoPlaybackActionID: EntityDetailActionID?
     @State var readerPresentation: EntityReaderPresentation?
+    /// The open reader's queued progress writes, which Book progress waits for before reading again.
+    @State var readerWriteBarrier = BookReaderWriteBarrier()
     @State var readingState = EntityDetailReadingState()
     @State var collectionMembersState = CollectionMembersState()
     @State var audiobookProjection: AudiobookPlaybackProjection?
@@ -244,6 +246,7 @@ public struct EntityDetailView: View {
                             nil
                         #endif
                     },
+                    writeBarrier: readerWriteBarrier,
                     onEPUBReady: {
                         #if os(iOS) || os(macOS)
                             beginCombinedPlayback(for: presentation)
@@ -272,6 +275,8 @@ public struct EntityDetailView: View {
             let progressLoad = bookProgressLoadingState.begin()
             Task {
                 await finishCompanionAudiobookPlayback(for: previous)
+                // The reader queued its closing position as it dismissed; read progress after it lands.
+                await readerWriteBarrier.settle()
                 await refreshBookProgressAfterReader(progressLoad)
             }
         }

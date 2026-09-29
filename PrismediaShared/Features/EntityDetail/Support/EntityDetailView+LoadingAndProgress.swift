@@ -48,12 +48,12 @@ extension EntityDetailView {
             await refreshAcquisitionStatus()
         #endif
         guard case .content(let refreshedDetail) = state.phase else { return }
+        await loadBookAlignment(for: refreshedDetail)
         await loadVideoProgress(for: refreshedDetail)
         await loadReadingState(for: refreshedDetail)
         await loadCollectionMembers(for: refreshedDetail, force: true)
         await loadAudiobook(for: refreshedDetail)
         await loadBookChapters(for: refreshedDetail)
-        await loadBookAlignment(for: refreshedDetail)
         #if os(iOS) || os(macOS)
             if let currentDetail, currentDetail.id == refreshedDetail.id {
                 await promoteLegacyAudiobookProgressIfNeeded(for: currentDetail)
@@ -69,13 +69,13 @@ extension EntityDetailView {
         guard case .content(let refreshedDetail) = state.phase,
             refreshedDetail.id == detail.id
         else { return }
-        await loadReadingState(for: refreshedDetail)
-        await loadBookChapters(for: refreshedDetail)
         if !bookAlignmentState.usesLegacyAlignment {
             // Resume targets are server-owned; the reader's reports moved them. An undecided
             // contract gets another version read.
             await loadBookAlignment(for: refreshedDetail)
         }
+        await loadReadingState(for: refreshedDetail)
+        await loadBookChapters(for: refreshedDetail)
     }
 
     func loadVideoProgress(for detail: EntityDetail) async {

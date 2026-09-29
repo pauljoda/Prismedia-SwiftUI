@@ -106,11 +106,11 @@ extension EntityDetailView {
                                                     if readingState.requiresResetBeforeReading {
                                                         Task { await startReadingOver(openReaderWhenReady: true) }
                                                     } else {
-                                                        openReader(command: .resume)
+                                                        Task { await continueReading(for: detail) }
                                                     }
                                                 },
-                                                onResumeReading: { openReader(command: .resume) },
-                                                onContinueListening: { beginListening(to: detail) },
+                                                onResumeReading: { Task { await continueReading(for: detail) } },
+                                                onContinueListening: { Task { await continueListening(to: detail) } },
                                                 onContinueCombined: { Task { await openCombinedReader(for: detail) } },
                                                 onStartReadingOver: { Task { await startReadingOver() } },
                                                 onStartListeningOver: { Task { await startListeningOver(detail) } },
@@ -219,13 +219,14 @@ extension EntityDetailView {
                 .task(id: detail.id) {
                     let progressLoad = bookProgressLoadingState.begin()
                     defer { bookProgressLoadingState.finish(progressLoad) }
+                    // A Book's alignment decides its progress card and resume targets, so it loads first.
+                    await loadBookAlignment(for: detail)
                     await loadResolvedVideoTechnicalDetail(for: detail)
                     await loadVideoProgress(for: detail)
                     await loadReadingState(for: detail)
                     await loadCollectionMembers(for: detail)
                     await loadAudiobook(for: detail)
                     await loadBookChapters(for: detail)
-                    await loadBookAlignment(for: detail)
                     #if os(iOS) || os(macOS)
                         if let currentDetail, currentDetail.id == detail.id {
                             await promoteLegacyAudiobookProgressIfNeeded(for: currentDetail)

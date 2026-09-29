@@ -169,6 +169,74 @@ final class AudiobookPlayerControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentTrack?.id, tracks[1].id)
     }
 
+    func testRestoredPausedAudiobookReportsNoProgressWhileItsPlayerSettles() async {
+        let tracks = [makeTrack(idSuffix: 1, duration: 100), makeTrack(idSuffix: 2, duration: 200)]
+        let service = AudiobookPlaybackServiceSpy()
+        let controller = MusicPlayerController(
+            engine: AudiobookAudioEngineSpy(),
+            service: service,
+            stateStore: AudiobookPlaybackStateStore(
+                restoration: listeningRestoration(tracks: tracks, currentTrack: tracks[1], elapsedTime: 45)
+            )
+        )
+
+        controller.restoreIfNeeded()
+        // The loaded item learns its duration before its restore seek lands, then settles on the spot.
+        controller.updatePlaybackProgress(elapsedTime: 0, duration: 200, isAdvancing: false)
+        controller.updatePlaybackProgress(elapsedTime: 45, duration: 200, isAdvancing: false)
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(service.progressUpdates, [])
+    }
+
+    func testStartingANewPositionDoesNotResendThePausedOne() async {
+        let tracks = [makeTrack(idSuffix: 1, duration: 100), makeTrack(idSuffix: 2, duration: 200)]
+        let service = AudiobookPlaybackServiceSpy()
+        let restoration = listeningRestoration(tracks: tracks, currentTrack: tracks[1], elapsedTime: 45)
+        let controller = MusicPlayerController(
+            engine: AudiobookAudioEngineSpy(),
+            service: service,
+            stateStore: AudiobookPlaybackStateStore(restoration: restoration)
+        )
+        controller.restoreIfNeeded()
+
+        controller.play(
+            tracks: tracks,
+            startingAt: tracks[0].id,
+            queueMode: .ordered,
+            context: restoration.context,
+            startSeconds: 30
+        )
+        // The new item reports zero until its start seek lands.
+        controller.updatePlaybackProgress(elapsedTime: 0, duration: 100, isAdvancing: false)
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertEqual(service.progressUpdates, [])
+    }
+
+    private func listeningRestoration(
+        tracks: [MusicTrack],
+        currentTrack: MusicTrack,
+        elapsedTime: Double
+    ) -> MusicPlaybackRestoration {
+        MusicPlaybackRestoration(
+            tracks: tracks,
+            orderedTrackIDs: tracks.map(\.id),
+            currentTrackID: currentTrack.id,
+            repeatMode: .all,
+            isShuffled: false,
+            elapsedTime: elapsedTime,
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+                playbackOwnerTitle: "The Long Voyage",
+                playbackOwnerEntityKind: .book,
+                progressModality: .listening,
+                preservesQueueOrder: true,
+                supportsPlaybackRate: true
+            )
+        )
+    }
+
     private func makeTrack(idSuffix: Int, duration: Double) -> MusicTrack {
         MusicTrack(
             id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", idSuffix))!,

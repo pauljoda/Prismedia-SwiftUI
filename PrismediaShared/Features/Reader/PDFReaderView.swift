@@ -30,7 +30,8 @@
             book: EntityDetail,
             command: BookReaderCommand,
             service: any BookReaderServicing,
-            readingReportFormat: BookReadingReportFormat = .legacyCursor
+            readingReportFormat: BookReadingReportFormat = .legacyCursor,
+            writeBarrier: BookReaderWriteBarrier? = nil
         ) {
             self.command = command
             self.readingReportFormat = readingReportFormat
@@ -41,7 +42,7 @@
                     ? PDFReaderLayoutMode(readerMode: readerUseCase.progress?.mode)
                     : .continuous
             )
-            _progressWriter = State(initialValue: BookReaderProgressWriter(service: service))
+            _progressWriter = State(initialValue: BookReaderProgressWriter(service: service, barrier: writeBarrier))
         }
 
         public var body: some View {
