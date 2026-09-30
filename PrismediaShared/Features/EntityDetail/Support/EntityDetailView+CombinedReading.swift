@@ -131,7 +131,7 @@
             else { return nil }
             musicPlayer.persistProgressHeartbeat()
             await musicPlayer.flushPendingPlaybackReports()
-            await loadBookAlignment(for: detail)
+            guard await loadBookAlignment(for: detail) else { return nil }
             guard let reading = bookAlignmentState.alignment?.resume?.switchToReading.aligned?.reading,
                 let chapterLocation = reading.chapterLocation
             else { return nil }
@@ -197,14 +197,16 @@
         }
 
         func openCombinedReader(for detail: EntityDetail) async {
+            let progressLoad = bookProgressLoadingState.begin()
+            defer { bookProgressLoadingState.finish(progressLoad) }
             if musicPlayer.context?.playbackOwnerEntityID == detail.id,
                 musicPlayer.context?.playbackOwnerEntityKind == .book
             {
                 if musicPlayer.isPlaying { musicPlayer.pause() }
                 await musicPlayer.flushPendingPlaybackReports()
             }
-            await loadDetail()
-            guard case .content(let refreshedDetail) = state.phase,
+            guard await refreshBookResumeTargets(for: detail),
+                case .content(let refreshedDetail) = state.phase,
                 refreshedDetail.id == detail.id
             else { return }
             if bookAlignmentState.usesLegacyAlignment {
@@ -212,13 +214,6 @@
                 return
             }
 
-            // The server owns the combined position; an undecided contract is read here first.
-            await loadBookAlignment(for: refreshedDetail)
-            guard currentDetail?.id == detail.id else { return }
-            if bookAlignmentState.usesLegacyAlignment {
-                openLegacyCombinedReader(for: refreshedDetail)
-                return
-            }
             guard bookAlignmentState.usesServerAlignment,
                 bookAlignmentState.alignment?.isLinked != false,
                 let combined = bookAlignmentState.alignment?.resume?.combined.aligned,
@@ -301,7 +296,8 @@
             presentReader(detail: chapter, command: command)
         }
 
-        /// Pauses this Book's audiobook before the reader takes over the combined session.
+        /// Pauses this Book's audiobook before opening the reader so both formats cannot send
+        /// competing progress. Read & Listen restarts its companion at the chosen reading position.
         func pauseCompanionAudiobook(of detail: EntityDetail) {
             let isCurrentBook =
                 musicPlayer.context?.playbackOwnerEntityID == detail.id

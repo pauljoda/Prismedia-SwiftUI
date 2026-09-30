@@ -257,6 +257,8 @@ extension EntityDetailView {
             storedLocation: String?
         ) async {
             guard detail.bookFormat == .epub,
+                bookAlignmentState.usesLegacyAlignment
+                    || detail.capability(EntityProgressCapability.self)?.updatedAt == nil,
                 let reader = dependencies.readerService,
                 let request = EPUBStoredProgressPromotionResolver().request(
                     bookID: detail.id,

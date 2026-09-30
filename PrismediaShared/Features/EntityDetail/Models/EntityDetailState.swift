@@ -39,11 +39,12 @@ struct EntityDetailState: Sendable {
         return request
     }
 
+    @discardableResult
     mutating func finishLoad(
         _ outcome: EntityDetailLoadOutcome,
         request: EntityDetailRequest
-    ) {
-        guard isCurrent(request) else { return }
+    ) -> Bool {
+        guard isCurrent(request) else { return false }
         defer {
             phaseBeforeLoad = nil
             preservesContentDuringLoad = false
@@ -52,6 +53,7 @@ struct EntityDetailState: Sendable {
         switch outcome {
         case .content(let detail):
             phase = .content(detail)
+            return true
         case .failure(let message):
             if preservesContentDuringLoad, let phaseBeforeLoad {
                 phase = phaseBeforeLoad
@@ -59,10 +61,12 @@ struct EntityDetailState: Sendable {
             } else {
                 phase = .failure(message)
             }
+            return false
         case .cancelled:
             if let phaseBeforeLoad {
                 phase = phaseBeforeLoad
             }
+            return false
         }
     }
 

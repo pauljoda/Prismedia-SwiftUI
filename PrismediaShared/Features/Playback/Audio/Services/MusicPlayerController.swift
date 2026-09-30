@@ -473,14 +473,16 @@ public final class MusicPlayerController {
     }
 
     public func flushMappedProgress() async {
-        reportMappedProgress(completed: false, stopsActivity: true)
-        persistProgress()
+        if isPlaybackAdvancing {
+            reportMappedProgress(completed: false, stopsActivity: true)
+            persistProgress()
+        }
         await flushPendingPlaybackReports()
     }
 
     /// Persists the current generic audio progress even when the presentation surface is idle.
     public func persistProgressHeartbeat() {
-        guard isPlaying, currentTrack != nil else { return }
+        guard isPlaybackAdvancing, currentTrack != nil else { return }
         reportCurrentConsumption()
         persistProgress()
     }
@@ -681,7 +683,7 @@ public final class MusicPlayerController {
     /// Reports where the outgoing item stopped. A paused item reported its position when it paused and
     /// a restored one has not moved, so only an item that is still playing reports it again.
     private func reportOutgoingPosition(stopsActivity: Bool = false) {
-        guard isPlaying else { return }
+        guard isPlaybackAdvancing else { return }
         reportCurrentConsumption(stopsActivity: stopsActivity)
     }
 

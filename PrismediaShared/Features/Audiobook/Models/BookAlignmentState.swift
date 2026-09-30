@@ -46,20 +46,23 @@ struct BookAlignmentState: Equatable, Sendable {
 
     /// Applies a load result. A failure keeps the content and contract of the last successful
     /// load; it decides the contract only when none was known and the failure names one.
+    @discardableResult
     mutating func finishLoad(
         _ result: Result<BookAlignmentSnapshot, any Error>,
         bookID: UUID,
         generation requestGeneration: Int
-    ) {
-        guard self.bookID == bookID, generation == requestGeneration else { return }
+    ) -> Bool {
+        guard self.bookID == bookID, generation == requestGeneration else { return false }
         switch result {
         case .success(let snapshot):
             apply(snapshot)
+            return true
         case .failure(let error):
             if contract == nil, let failure = error as? BookAlignmentLoadError {
                 contract = failure.contract
             }
             errorMessage = error.localizedDescription
+            return false
         }
     }
 

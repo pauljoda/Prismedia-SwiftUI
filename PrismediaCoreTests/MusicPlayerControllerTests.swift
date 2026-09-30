@@ -719,6 +719,53 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertEqual(completion.request.listening?.offsetSeconds, 3_600)
     }
 
+    func testPausedAudiobookLifecycleFlushDoesNotOverwriteAnotherDevicesProgress() async throws {
+        let track = makeTrack(idSuffix: 1, duration: 3_600)
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(engine: AudioPlaybackEngineSpy(), service: service)
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(), playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book, progressModality: .listening
+            )
+        )
+        controller.updatePlaybackProgress(elapsedTime: 417, duration: 3_600, isAdvancing: true)
+        controller.pause()
+        await controller.flushPendingPlaybackReports()
+        let savedCount = service.entityProgressUpdates.count
+
+        // Reading or another device can now move the shared cursor. Backgrounding twice must
+        // only wait for existing reports, never republish this paused queue's position.
+        await controller.flushMappedProgress()
+        await controller.flushMappedProgress()
+
+        XCTAssertEqual(service.entityProgressUpdates.count, savedCount)
+        XCTAssertEqual(service.entityProgressUpdates.last?.request.listening?.offsetSeconds, 417)
+    }
+
+    func testLoadingAudiobookDoesNotReportZeroDuringHeartbeatOrLifecycleFlush() async {
+        let track = makeTrack(idSuffix: 1, duration: 3_600)
+        let service = MusicPlaybackServiceStub()
+        let controller = MusicPlayerController(engine: AudioPlaybackEngineSpy(), service: service)
+        controller.play(
+            tracks: [track],
+            context: MusicPlaybackContext(
+                playbackOwnerEntityID: UUID(), playbackOwnerTitle: "Book",
+                playbackOwnerEntityKind: .book, progressModality: .listening
+            ),
+            startSeconds: 417
+        )
+        controller.updatePlaybackProgress(elapsedTime: 0, duration: 3_600, isAdvancing: false)
+
+        controller.persistProgressHeartbeat()
+        await controller.flushMappedProgress()
+        controller.pause()
+        await controller.flushPendingPlaybackReports()
+
+        XCTAssertTrue(service.entityProgressUpdates.isEmpty)
+    }
+
     func testActiveAudiobookRestartsActivityAfterLifecycleFlush() async throws {
         let bookID = UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
         let track = makeTrack(idSuffix: 1, duration: 3_600)

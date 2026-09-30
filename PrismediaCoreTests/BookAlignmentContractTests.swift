@@ -530,16 +530,17 @@ final class BookAlignmentContractTests: XCTestCase {
         )
         var state = BookAlignmentState()
         let first = state.beginLoad(bookID: Self.bookID)
-        state.finishLoad(.success(.server(alignment)), bookID: Self.bookID, generation: first)
+        XCTAssertTrue(state.finishLoad(.success(.server(alignment)), bookID: Self.bookID, generation: first))
         XCTAssertEqual(state.contract, .serverAlignment)
 
         let reload = state.beginLoad(bookID: Self.bookID)
         XCTAssertEqual(state.alignment, alignment, "A reload keeps the last alignment while it runs.")
-        state.finishLoad(
-            .failure(BookAlignmentLoadError(contract: nil, underlying: URLError(.timedOut))),
-            bookID: Self.bookID,
-            generation: reload
-        )
+        XCTAssertFalse(
+            state.finishLoad(
+                .failure(BookAlignmentLoadError(contract: nil, underlying: URLError(.timedOut))),
+                bookID: Self.bookID,
+                generation: reload
+            ))
         XCTAssertEqual(state.alignment, alignment)
         XCTAssertEqual(state.contract, .serverAlignment)
         XCTAssertNotNil(state.errorMessage)

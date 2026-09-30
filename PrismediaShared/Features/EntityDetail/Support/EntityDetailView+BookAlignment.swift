@@ -44,14 +44,15 @@ extension EntityDetailView {
     /// Loads the Book's alignment in the connected server's shape: the server projection on 3.8+
     /// servers, the chapter map on older ones. A failed version read leaves the contract undecided
     /// and the page in its error state; a failed reload keeps the last loaded alignment.
-    func loadBookAlignment(for detail: EntityDetail) async {
+    @discardableResult
+    func loadBookAlignment(for detail: EntityDetail) async -> Bool {
         #if os(iOS) || os(macOS)
             guard detail.kind.definition?.modalities.isEmpty == false,
                 let alignmentService = dependencies.alignmentService
             else {
                 bookAlignmentState.reset()
                 refreshBookChapterRows(for: detail)
-                return
+                return false
             }
 
             let generation = bookAlignmentState.beginLoad(bookID: detail.id)
@@ -59,15 +60,17 @@ extension EntityDetailView {
             do {
                 result = .success(try await BookAlignmentLoader(service: alignmentService).load(bookID: detail.id))
             } catch is CancellationError {
-                return
+                return false
             } catch {
                 result = .failure(error)
             }
-            guard currentDetail?.id == detail.id else { return }
-            bookAlignmentState.finishLoad(result, bookID: detail.id, generation: generation)
+            guard currentDetail?.id == detail.id else { return false }
+            let refreshed = bookAlignmentState.finishLoad(result, bookID: detail.id, generation: generation)
             refreshBookChapterRows(for: detail)
+            return refreshed
         #else
             bookAlignmentState.reset()
+            return false
         #endif
     }
 

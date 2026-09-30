@@ -1,6 +1,8 @@
 import Foundation
 
 struct EPUBReaderResumeSourceResolver: Sendable {
+    /// A freshly fetched server destination is authoritative. Device save times describe a local
+    /// cache, including restores and heartbeats, and cannot prove it is newer than another device.
     func resolve(
         explicitLocation: String?,
         explicitProgression: Double?,
@@ -12,46 +14,18 @@ struct EPUBReaderResumeSourceResolver: Sendable {
             let parsed = EPUBProgressLocation(serialized: explicitLocation),
             parsed.isSerializedLocator
         {
-            if let newerDevice = newerDeviceLocation(
-                explicitUpdatedAt: explicitUpdatedAt,
-                deviceLocation: deviceLocation,
-                deviceUpdatedAt: deviceUpdatedAt
-            ) {
-                return .device(newerDevice)
-            }
             return .explicitLocator(explicitLocation)
         }
         if let target = locationTarget(
             location: explicitLocation,
             progression: explicitProgression
         ) {
-            if let newerDevice = newerDeviceLocation(
-                explicitUpdatedAt: explicitUpdatedAt,
-                deviceLocation: deviceLocation,
-                deviceUpdatedAt: deviceUpdatedAt
-            ) {
-                return .device(newerDevice)
-            }
             return .explicit(target)
         }
         guard let deviceLocation,
             !deviceLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return nil }
         return .device(deviceLocation)
-    }
-
-    private func newerDeviceLocation(
-        explicitUpdatedAt: Date?,
-        deviceLocation: String?,
-        deviceUpdatedAt: Date?
-    ) -> String? {
-        guard let explicitUpdatedAt,
-            let deviceUpdatedAt,
-            deviceUpdatedAt > explicitUpdatedAt,
-            let deviceLocation,
-            !deviceLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return nil }
-        return deviceLocation
     }
 
     func locationTarget(

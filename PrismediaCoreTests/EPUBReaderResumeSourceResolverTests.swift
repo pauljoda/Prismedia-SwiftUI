@@ -124,7 +124,7 @@ final class EPUBReaderResumeSourceResolverTests: XCTestCase {
         XCTAssertEqual(source, .explicitLocator(serverLocation))
     }
 
-    func testNewerDeviceLocatorWinsEvenWhenTheUserMovedBackward() {
+    func testFreshServerLocatorWinsEvenWhenTheDeviceCacheWasSavedLater() {
         let serverLocation = """
             {
               "href": "Text/catelyn.xhtml",
@@ -148,7 +148,7 @@ final class EPUBReaderResumeSourceResolverTests: XCTestCase {
             deviceUpdatedAt: deviceDate
         )
 
-        XCTAssertEqual(source, .device(deviceLocation))
+        XCTAssertEqual(source, .explicitLocator(serverLocation))
     }
 
     func testOpaqueServerCFIFallsBackToTheReadableDeviceLocator() {

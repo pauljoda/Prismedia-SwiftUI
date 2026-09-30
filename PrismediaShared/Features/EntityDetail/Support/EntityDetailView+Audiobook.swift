@@ -75,34 +75,36 @@ extension EntityDetailView {
         func continueListening(to detail: EntityDetail) async {
             guard !isListeningMutating else { return }
             isListeningMutating = true
-            await refreshBookResumeTargets(for: detail)
-            isListeningMutating = false
-            guard currentDetail?.id == detail.id else { return }
-            beginListening(to: detail)
+            defer { isListeningMutating = false }
+            guard await refreshBookResumeTargets(for: detail),
+                let refreshedDetail = currentDetail, refreshedDetail.id == detail.id
+            else { return }
+            beginListening(to: refreshedDetail)
         }
 
         /// "Continue Reading" from the Book page, from the shared position as the server has it now.
         func continueReading(for detail: EntityDetail) async {
             let progressLoad = bookProgressLoadingState.begin()
-            await refreshBookResumeTargets(for: detail)
-            bookProgressLoadingState.finish(progressLoad)
-            guard currentDetail?.id == detail.id else { return }
+            defer { bookProgressLoadingState.finish(progressLoad) }
+            pauseCompanionAudiobook(of: detail)
+            guard await refreshBookResumeTargets(for: detail) else { return }
             openReader(command: .resume)
         }
 
         /// Brings the server's continue targets up to date before a resume action: this device's queued
-        /// reader writes and listening reports reach the server first, then the alignment is read again.
-        func refreshBookResumeTargets(for detail: EntityDetail) async {
+        /// reader writes and active listening reports reach the server first, then both detail and
+        /// alignment are read again. A failed read retains the page but cannot open stale progress.
+        func refreshBookResumeTargets(for detail: EntityDetail) async -> Bool {
             await readerWriteBarrier.settle()
             if musicPlayer.context?.playbackOwnerEntityID == detail.id {
                 musicPlayer.persistProgressHeartbeat()
                 await musicPlayer.flushPendingPlaybackReports()
             }
-            guard detail.kind.definition?.modalities.isEmpty == false,
-                !bookAlignmentState.usesLegacyAlignment,
-                currentDetail?.id == detail.id
-            else { return }
-            await loadBookAlignment(for: detail)
+            guard currentDetail?.id == detail.id, await loadDetail(),
+                let refreshedDetail = currentDetail, refreshedDetail.id == detail.id
+            else { return false }
+            guard detail.kind.definition?.modalities.isEmpty == false else { return true }
+            return await loadBookAlignment(for: refreshedDetail)
         }
 
         func beginListening(to detail: EntityDetail) {
@@ -121,7 +123,7 @@ extension EntityDetailView {
             let decision = AudiobookContinuationPlanner().decision(
                 isCompleted: completed,
                 isCurrentAudiobook: isCurrent,
-                requiresCanonicalProgress: detail.bookFormat != .audio,
+                requiresCanonicalProgress: bookAlignmentState.usesServerAlignment || detail.bookFormat != .audio,
                 canonicalResume: unifiedAudiobookResume(for: detail)
             )
             switch decision {

@@ -28,16 +28,18 @@ extension EntityDetailView {
         await loadDetail(preservingContent: false)
     }
 
+    @discardableResult
     func loadDetail(
         preservingContent: Bool = true
-    ) async {
-        guard let request = state.beginLoad(preservingContent: preservingContent) else { return }
+    ) async -> Bool {
+        guard let request = state.beginLoad(preservingContent: preservingContent) else { return false }
         let outcome = await service.load(id: link.entityID)
-        state.finishLoad(outcome, request: request)
+        let refreshed = state.finishLoad(outcome, request: request)
         #if os(iOS) || os(macOS)
-            guard case .content(let detail) = state.phase else { return }
+            guard case .content(let detail) = state.phase else { return false }
             await refreshIdentifyAvailability(for: detail)
         #endif
+        return refreshed
     }
 
     func refreshDetailContent() async {
@@ -203,7 +205,8 @@ extension EntityDetailView {
             do {
                 let monitorState = try await acquisitionService.loadState(entityID: link.entityID)
                 guard !Task.isCancelled else { return }
-                acquisitionStatus = monitorState.latestAcquisition?.status
+                acquisitionStatus =
+                    monitorState.latestAcquisition?.status
                     ?? monitorState.monitor?.acquisitionStatus
             } catch is CancellationError {
                 return

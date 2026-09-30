@@ -16,8 +16,8 @@ final class EntityDetailServiceTests: XCTestCase {
         let staleDetail = try makeDetail(title: "Stale")
         let currentDetail = try makeDetail(title: "Current")
 
-        state.finishLoad(.content(currentDetail), request: newerRequest)
-        state.finishLoad(.content(staleDetail), request: olderRequest)
+        XCTAssertTrue(state.finishLoad(.content(currentDetail), request: newerRequest))
+        XCTAssertFalse(state.finishLoad(.content(staleDetail), request: olderRequest))
 
         guard case .content(let loaded) = state.phase else {
             return XCTFail("Expected the newest response to remain visible.")
@@ -69,7 +69,7 @@ final class EntityDetailServiceTests: XCTestCase {
         }
         XCTAssertEqual(visibleDetail.title, "Arrival")
 
-        state.finishLoad(.failure("Offline"), request: refreshRequest)
+        XCTAssertFalse(state.finishLoad(.failure("Offline"), request: refreshRequest))
 
         guard case .content(let retainedDetail) = state.phase else {
             return XCTFail("Expected a failed refresh to retain the loaded detail.")
