@@ -67,13 +67,13 @@
             }
             .tint(artworkPrimaryAccent)
             .task {
-                scrubPosition = controller.elapsedTime
+                scrubPosition = entry.position
             }
-            .onChange(of: controller.elapsedTime) { _, elapsedTime in
-                if !isScrubbing { scrubPosition = elapsedTime }
+            .onChange(of: controller.elapsedTime) {
+                if !isScrubbing { scrubPosition = entry.position }
             }
             .onChange(of: controller.currentTrack?.id) {
-                scrubPosition = controller.elapsedTime
+                scrubPosition = entry.position
             }
             .alert("Couldn’t Find a Matching Page", isPresented: $showsReadingPositionError) {
                 Button("OK", role: .cancel) {}
@@ -106,7 +106,7 @@
 
         private func metadata(_ track: MusicTrack) -> some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                Text(track.title)
+                Text(controller.entryTitle ?? track.title)
                     .font(.title3.bold())
                     .lineLimit(1)
 
@@ -125,7 +125,7 @@
         private var timeline: some View {
             MusicPlaybackTimeline(
                 position: $scrubPosition,
-                duration: controller.currentTrackDuration,
+                duration: max(entry.duration, 1),
                 onEditingChanged: scrubDidChange,
                 playbackRate: controller.playbackRate
             )
@@ -166,11 +166,11 @@
         private var readerControls: some View {
             PrismediaGlassButtonGroup(spacing: PrismediaSpacing.medium) {
                 Button(action: controller.skipToPrevious) {
-                    Label("Previous Part", systemImage: "backward.end.fill")
+                    Label(previousTitle, systemImage: "backward.end.fill")
                         .labelStyle(.iconOnly)
                         .frame(width: readerControlHeight, height: readerControlHeight)
                 }
-                .disabled(!controller.queue.canGoPrevious)
+                .disabled(!controller.canSkipToPrevious)
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
 
@@ -206,11 +206,11 @@
                 }
 
                 Button(action: controller.skipToNext) {
-                    Label("Next Part", systemImage: "forward.end.fill")
+                    Label(nextTitle, systemImage: "forward.end.fill")
                         .labelStyle(.iconOnly)
                         .frame(width: readerControlHeight, height: readerControlHeight)
                 }
-                .disabled(!controller.queue.canGoNext)
+                .disabled(!controller.canSkipToNext)
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
             }
@@ -218,6 +218,19 @@
 
         private var readerControlHeight: CGFloat {
             52
+        }
+
+        /// The entry playing: its chapter, else the whole file.
+        private var entry: MusicEntryPosition {
+            controller.entryPosition(atFileTime: controller.elapsedTime)
+        }
+
+        private var previousTitle: LocalizedStringKey {
+            controller.currentChapter == nil ? "Previous Part" : "Previous Chapter"
+        }
+
+        private var nextTitle: LocalizedStringKey {
+            controller.currentChapter == nil ? "Next Part" : "Next Chapter"
         }
 
         private var artworkAspectRatio: Double {
@@ -238,7 +251,7 @@
 
         private func scrubDidChange(_ editing: Bool) {
             isScrubbing = editing
-            if !editing { controller.seek(to: scrubPosition) }
+            if !editing { controller.seek(toEntryOffset: scrubPosition) }
         }
 
         private func seek(by seconds: Double) {

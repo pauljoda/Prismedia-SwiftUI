@@ -21,7 +21,7 @@
                             .frame(width: artworkSize, height: artworkSize)
 
                             VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-                                Text(track.title)
+                                Text(controller.entryTitle ?? track.title)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
@@ -38,7 +38,7 @@
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Now Playing, \(track.title)")
+                    .accessibilityLabel("Now Playing, \(controller.entryTitle ?? track.title)")
 
                     Button(action: togglePlayback) {
                         Image(systemName: controller.isPlaying ? "pause.fill" : "play.fill")
@@ -56,7 +56,7 @@
                                 .frame(width: 32, height: 32)
                         }
                         .buttonStyle(.plain)
-                        .disabled(!controller.queue.canGoNext)
+                        .disabled(!controller.canSkipToNext)
                         .accessibilityLabel("Next Track")
                     }
                 }

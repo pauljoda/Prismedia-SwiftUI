@@ -3,6 +3,8 @@
 
     struct MusicNowPlayingPlayerView: View {
         let track: MusicTrack
+        /// Title of the entry playing: its chapter, else the file.
+        let title: String
         let artworkNamespace: Namespace.ID
         let artworkIsSource: Bool
         let artworkAspectRatio: Double
@@ -15,6 +17,7 @@
 
         init(
             track: MusicTrack,
+            title: String? = nil,
             artworkNamespace: Namespace.ID,
             artworkIsSource: Bool = true,
             artworkAspectRatio: Double = 1,
@@ -26,6 +29,7 @@
             onAddToCollection: (() -> Void)?
         ) {
             self.track = track
+            self.title = title ?? track.title
             self.artworkNamespace = artworkNamespace
             self.artworkIsSource = artworkIsSource
             self.artworkAspectRatio = artworkAspectRatio
@@ -87,7 +91,7 @@
         private var metadata: some View {
             HStack(spacing: PrismediaSpacing.medium) {
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                    Text(track.title)
+                    Text(title)
                         .font(.title3.bold())
                         .lineLimit(1)
                     Text([track.album, track.artist].compactMap { $0 }.joined(separator: " — "))

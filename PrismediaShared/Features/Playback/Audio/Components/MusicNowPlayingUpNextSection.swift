@@ -2,9 +2,9 @@
     import SwiftUI
 
     struct MusicNowPlayingUpNextSection: View {
-        let tracks: [MusicTrack]
+        let entries: [MusicQueueEntry]
         let contextTitle: String?
-        let onSelect: (UUID) -> Void
+        let onSelect: (MusicQueueEntry) -> Void
 
         var body: some View {
             LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
@@ -19,32 +19,37 @@
                     }
                 }
 
-                if tracks.isEmpty {
+                if entries.isEmpty {
                     Text("No more tracks in the queue")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
                 } else {
-                    ForEach(tracks) { track in
+                    ForEach(entries) { entry in
                         Button {
-                            onSelect(track.id)
+                            onSelect(entry)
                         } label: {
-                            MusicNowPlayingQueueTrackRow(track: track)
+                            MusicNowPlayingQueueTrackRow(track: entry.track, title: entry.title)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier("music.queue.track.\(track.id.uuidString)")
+                        .accessibilityIdentifier(entryAccessibilityIdentifier(entry))
                     }
                 }
             }
+        }
+
+        private func entryAccessibilityIdentifier(_ entry: MusicQueueEntry) -> String {
+            guard let chapter = entry.chapter else { return "music.queue.track.\(entry.track.id.uuidString)" }
+            return "music.queue.chapter.\(chapter.markerID.uuidString)"
         }
     }
 
     #if DEBUG
         #Preview("Up Next") {
             MusicNowPlayingUpNextSection(
-                tracks: MusicPreviewData.tracks,
+                entries: MusicPreviewData.tracks.map { MusicQueueEntry(track: $0, chapter: nil) },
                 contextTitle: "1",
                 onSelect: { _ in }
             )

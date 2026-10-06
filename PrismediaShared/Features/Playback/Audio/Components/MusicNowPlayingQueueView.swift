@@ -59,6 +59,7 @@
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
                 MusicNowPlayingCurrentTrackView(
                     track: currentTrack,
+                    title: controller.entryTitle,
                     artworkNamespace: artworkNamespace,
                     artworkIsSource: artworkIsSource,
                     showsContent: isActive,
@@ -72,9 +73,9 @@
 
                 ScrollView {
                     MusicNowPlayingUpNextSection(
-                        tracks: controller.queue.upNextTracks,
+                        entries: controller.upNextEntries,
                         contextTitle: controller.context?.playbackOwnerTitle ?? currentTrack.album,
-                        onSelect: { controller.skipToUpcomingTrack(id: $0) }
+                        onSelect: controller.skipToUpcomingEntry
                     )
                     .opacity(isActive ? 1 : 0)
                     .padding(.bottom, PrismediaSpacing.large)

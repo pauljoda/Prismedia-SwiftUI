@@ -192,7 +192,7 @@ extension EntityDetailView {
                 )
             }
             musicPlayer.play(
-                tracks: projection.tracks,
+                tracks: projection.withChapters(from: bookAlignmentState.alignment).tracks,
                 startingAt: trackID,
                 queueMode: .ordered,
                 context: context,

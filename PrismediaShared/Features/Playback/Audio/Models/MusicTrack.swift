@@ -15,6 +15,8 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
     public let trackNumber: Int?
     public let sortOrder: Int
     public let isWanted: Bool
+    /// Chapters embedded in the file, in any order; empty when it declares none or none are known.
+    public let chapters: [MusicTrackChapter]
 
     public var isPlayable: Bool { !isWanted }
 
@@ -31,7 +33,8 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         discTitle: String? = nil,
         trackNumber: Int? = nil,
         sortOrder: Int = 0,
-        isWanted: Bool = false
+        isWanted: Bool = false,
+        chapters: [MusicTrackChapter] = []
     ) {
         self.id = id
         self.title = title
@@ -46,6 +49,27 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         self.trackNumber = trackNumber
         self.sortOrder = sortOrder
         self.isWanted = isWanted
+        self.chapters = chapters
+    }
+
+    /// This track carrying `chapters` as its embedded chapters.
+    public func withChapters(_ chapters: [MusicTrackChapter]) -> MusicTrack {
+        MusicTrack(
+            id: id,
+            title: title,
+            artist: artist,
+            artistID: artistID,
+            album: album,
+            albumID: albumID,
+            artworkPath: artworkPath,
+            duration: duration,
+            discNumber: discNumber,
+            discTitle: discTitle,
+            trackNumber: trackNumber,
+            sortOrder: sortOrder,
+            isWanted: isWanted,
+            chapters: chapters
+        )
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -62,6 +86,7 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         case trackNumber
         case sortOrder
         case isWanted
+        case chapters
     }
 
     public init(from decoder: Decoder) throws {
@@ -79,5 +104,6 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         trackNumber = try container.decodeIfPresent(Int.self, forKey: .trackNumber)
         sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
         isWanted = try container.decodeIfPresent(Bool.self, forKey: .isWanted) ?? false
+        chapters = try container.decodeIfPresent([MusicTrackChapter].self, forKey: .chapters) ?? []
     }
 }

@@ -18,7 +18,7 @@
             VStack(spacing: 0) {
                 MusicPlaybackTimeline(
                     position: $scrubPosition,
-                    duration: max(engine.duration, track.duration ?? 0, 1),
+                    duration: max(entryDuration, 1),
                     onEditingChanged: scrubDidChange,
                     playbackRate: controller.playbackRate
                 )
@@ -28,6 +28,14 @@
 
                 auxiliaryControl
             }
+        }
+
+        /// Length of the entry playing: its chapter, else the whole file.
+        private var entryDuration: Double {
+            controller.entryPosition(
+                atFileTime: engine.elapsedTime,
+                fileDuration: max(engine.duration, track.duration ?? 0)
+            ).duration
         }
 
         @ViewBuilder
@@ -50,7 +58,7 @@
             Button("Previous", systemImage: "backward.fill", action: controller.skipToPrevious)
                 .labelStyle(.iconOnly)
                 .foregroundStyle(selectedTint.opacity(0.78))
-                .disabled(!controller.queue.canGoPrevious)
+                .disabled(!controller.canSkipToPrevious)
         }
 
         private var playButton: some View {
@@ -71,7 +79,7 @@
             Button("Next", systemImage: "forward.fill", action: controller.skipToNext)
                 .labelStyle(.iconOnly)
                 .foregroundStyle(selectedTint.opacity(0.78))
-                .disabled(!controller.queue.canGoNext)
+                .disabled(!controller.canSkipToNext)
         }
 
         @ViewBuilder
@@ -112,7 +120,7 @@
 
         private func scrubDidChange(_ editing: Bool) {
             isScrubbing = editing
-            if !editing { controller.seek(to: scrubPosition) }
+            if !editing { controller.seek(toEntryOffset: scrubPosition) }
         }
 
         private func togglePlayback() {

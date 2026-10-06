@@ -33,8 +33,13 @@ public final class MusicPlayerController {
     private var currentTrackRequestedAt: TimeInterval?
     private var consumptionActivityClock = ConsumptionActivityClock()
     private var accessedConsumptionEntityID: UUID?
+    /// File position of the previous progress report while playback runs uninterrupted; nil after a
+    /// seek or a new item, so a seek never reads as playback running past a chapter end.
+    private var lastProgressFileTime: Double?
 
     private static let quickSkipThreshold: TimeInterval = 10
+    /// Largest gap between consecutive progress reports that still counts as continuous playback.
+    private static let continuousProgressWindow: TimeInterval = 2
 
     public convenience init(
         engine: any AudioPlaybackEngine,
@@ -84,6 +89,71 @@ public final class MusicPlayerController {
             ? resolvedTrackDuration
             : currentTrack?.duration ?? 0
         return max(duration, elapsedTime, 1)
+    }
+
+    /// Whether each file's embedded chapters play as their own entries. Only queues whose source order
+    /// carries meaning (audiobooks) split their files; music plays every file whole.
+    public var playsChapters: Bool {
+        context?.preservesQueueOrder == true
+    }
+
+    /// Embedded chapter spans of the current file, measured against its loaded duration.
+    public var currentChapters: [MusicChapterSpan] {
+        guard playsChapters else { return [] }
+        return MusicChapterSpan.spans(of: currentTrack, duration: resolvedTrackDuration)
+    }
+
+    /// The chapter playing now, or nil when the current file plays whole.
+    public var currentChapter: MusicChapterSpan? {
+        MusicChapterSpan.span(in: currentChapters, at: elapsedTime)
+    }
+
+    /// Title of the entry playing: its chapter, else its file.
+    public var entryTitle: String? {
+        currentChapter?.title ?? currentTrack?.title
+    }
+
+    /// The entry playing at `fileTime` of the current file: its chapter, else the whole file.
+    /// `fileDuration` defaults to the current file's known length.
+    public func entryPosition(atFileTime fileTime: Double, fileDuration: Double? = nil) -> MusicEntryPosition {
+        MusicEntryPosition(
+            spans: currentChapters,
+            fileTime: fileTime,
+            fileDuration: fileDuration ?? currentTrackDuration
+        )
+    }
+
+    /// Entries queued after the one playing, in play order: the current file's later chapters first.
+    public var upNextEntries: [MusicQueueEntry] {
+        var entries: [MusicQueueEntry] = []
+        if let currentTrack, let currentChapter {
+            entries += currentChapters.dropFirst(currentChapter.index + 1)
+                .map { MusicQueueEntry(track: currentTrack, chapter: $0) }
+        }
+        for track in queue.upNextTracks {
+            let chapters = playsChapters ? MusicChapterSpan.spans(of: track) : []
+            entries +=
+                chapters.isEmpty
+                ? [MusicQueueEntry(track: track, chapter: nil)]
+                : chapters.map { MusicQueueEntry(track: track, chapter: $0) }
+        }
+        return entries
+    }
+
+    /// Whether Next has somewhere to go: a later chapter of this file, or the queue's next item.
+    public var canSkipToNext: Bool {
+        nextChapter != nil || queue.canGoNext
+    }
+
+    /// Whether Previous has somewhere to go: a chapter of this file, or the queue's previous item.
+    public var canSkipToPrevious: Bool {
+        previousChapterStart(at: elapsedTime) != nil || queue.canGoPrevious
+    }
+
+    private var nextChapter: MusicChapterSpan? {
+        guard let currentChapter else { return nil }
+        let chapters = currentChapters
+        return currentChapter.index + 1 < chapters.count ? chapters[currentChapter.index + 1] : nil
     }
 
     public func play(
@@ -264,12 +334,22 @@ public final class MusicPlayerController {
     public func seek(to seconds: Double) {
         if context?.usesMappedProgress == true { mappedProgressCompleted = false }
         elapsedTime = max(0, seconds)
+        lastProgressFileTime = nil
         engine.seek(to: elapsedTime)
         reportCurrentConsumption()
         persistProgress()
     }
 
+    /// Seeks to `offset` inside the entry playing: its chapter, else its file.
+    public func seek(toEntryOffset offset: Double) {
+        seek(to: entryPosition(atFileTime: elapsedTime).start + max(0, offset))
+    }
+
     public func skipToNext() {
+        if let nextChapter {
+            skipWithinFile(to: nextChapter.startSeconds)
+            return
+        }
         reportOutgoingPosition()
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
@@ -282,24 +362,74 @@ public final class MusicPlayerController {
     }
 
     public func skipToPrevious() {
+        if let chapterStart = previousChapterStart(at: elapsedTime) {
+            skipWithinFile(to: chapterStart)
+            return
+        }
         reportOutgoingPosition()
         guard queue.movePrevious() != nil else { return }
         syncRepeatPreferenceFromQueue()
-        elapsedTime = 0
+        // Stepping back into a chaptered file starts its last chapter, like the previous track.
+        elapsedTime = playsChapters ? MusicChapterSpan.spans(of: currentTrack).last?.startSeconds ?? 0 : 0
         startCurrentTrack()
         persistState()
     }
 
-    public func skipToUpcomingTrack(id trackID: UUID) {
+    public func skipToUpcomingTrack(id trackID: UUID, startSeconds: Double = 0) {
         reportOutgoingPosition()
         let skippedTrack = currentTrack
         let skippedPosition = elapsedTime
         guard queue.moveToUpcomingTrack(id: trackID) != nil else { return }
         syncRepeatPreferenceFromQueue()
         reportQuickSkipIfNeeded(track: skippedTrack, positionSeconds: skippedPosition)
-        elapsedTime = 0
+        elapsedTime = max(0, startSeconds)
         startCurrentTrack()
         persistState()
+    }
+
+    /// Plays a queued entry: a chapter of the file playing seeks; anything else loads its file.
+    public func skipToUpcomingEntry(_ entry: MusicQueueEntry) {
+        if entry.track.id == currentTrack?.id, let chapter = entry.chapter {
+            skipWithinFile(to: chapter.startSeconds)
+            return
+        }
+        skipToUpcomingTrack(id: entry.track.id, startSeconds: entry.chapter?.startSeconds ?? 0)
+    }
+
+    /// Where Previous lands inside the current file from `fileTime`: the chapter playing restarts once
+    /// it has played past the restart threshold, otherwise the previous chapter starts. Nil when
+    /// Previous leaves the file, or the file plays whole.
+    func previousChapterStart(at fileTime: Double) -> Double? {
+        let chapters = currentChapters
+        guard let chapter = MusicChapterSpan.span(in: chapters, at: fileTime) else { return nil }
+        if fileTime - chapter.startSeconds > MusicChapterSpan.restartThresholdSeconds {
+            return chapter.startSeconds
+        }
+        return chapter.index > 0 ? chapters[chapter.index - 1].startSeconds : nil
+    }
+
+    /// A user skip between chapters of one file is a seek: the file keeps playing without reloading.
+    /// Like a skip between files, it ends repeat-one.
+    private func skipWithinFile(to seconds: Double) {
+        if queue.repeatMode == .one { setRepeatMode(.all) }
+        seek(to: seconds)
+        publishNowPlayingState()
+    }
+
+    /// Repeat-one replays the chapter playing: when playback runs from inside a chapter past its end,
+    /// the chapter's start; otherwise nil. Only consecutive progress reports close together count as
+    /// playback, so a seek across a chapter end never replays the chapter it left.
+    private func repeatedChapterStart(from previous: Double?, to current: Double) -> Double? {
+        guard queue.repeatMode == .one,
+            let previous,
+            current > previous,
+            current - previous <= Self.continuousProgressWindow,
+            let chapter = MusicChapterSpan.span(in: currentChapters, at: previous),
+            let end = chapter.endSeconds,
+            previous < end,
+            current >= end
+        else { return nil }
+        return chapter.startSeconds
     }
 
     public func moveUpcomingTrack(id trackID: UUID, before destinationID: UUID) {
@@ -376,7 +506,9 @@ public final class MusicPlayerController {
         }
 
         if queue.advance(reason: .playbackEnded) != nil {
-            elapsedTime = 0
+            // Repeat-one keeps the same file; a chaptered file replays its last chapter, not the file.
+            let repeatsFile = queue.repeatMode == .one
+            elapsedTime = repeatsFile ? currentChapters.last?.startSeconds ?? 0 : 0
             startCurrentTrack()
         } else {
             isPlaying = false
@@ -445,6 +577,12 @@ public final class MusicPlayerController {
         isAdvancing: Bool
     ) {
         guard seconds.isFinite, seconds >= 0 else { return }
+        let previousFileTime = lastProgressFileTime
+        lastProgressFileTime = isPlaying && isAdvancing ? seconds : nil
+        if isPlaying, isAdvancing, let replayStart = repeatedChapterStart(from: previousFileTime, to: seconds) {
+            seek(to: replayStart)
+            return
+        }
         elapsedTime = seconds
         if let duration, duration.isFinite, duration > 0 {
             resolvedTrackDuration = duration
@@ -527,6 +665,7 @@ public final class MusicPlayerController {
         }
         resolvedTrackDuration = 0
         isPlaybackAdvancing = false
+        lastProgressFileTime = nil
         consumptionActivityClock = ConsumptionActivityClock()
         loadedTrackID = nil
         currentTrackRequestedAt = nil

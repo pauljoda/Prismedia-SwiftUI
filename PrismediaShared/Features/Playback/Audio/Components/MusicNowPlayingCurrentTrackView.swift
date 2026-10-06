@@ -3,6 +3,8 @@
 
     struct MusicNowPlayingCurrentTrackView: View {
         let track: MusicTrack
+        /// Title of the entry playing: its chapter, else the file.
+        let title: String
         let artworkNamespace: Namespace.ID
         let artworkIsSource: Bool
         let showsContent: Bool
@@ -14,6 +16,7 @@
 
         init(
             track: MusicTrack,
+            title: String? = nil,
             artworkNamespace: Namespace.ID,
             artworkIsSource: Bool = true,
             showsContent: Bool,
@@ -24,6 +27,7 @@
             onAddToCollection: (() -> Void)?
         ) {
             self.track = track
+            self.title = title ?? track.title
             self.artworkNamespace = artworkNamespace
             self.artworkIsSource = artworkIsSource
             self.showsContent = showsContent
@@ -83,7 +87,7 @@
                     .accessibilityHint("Shows the full Now Playing view")
 
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraSmall) {
-                        Text(track.title)
+                        Text(title)
                             .font(.headline)
                             .lineLimit(2)
                         Text(MusicPresentation.artist(track.artist))

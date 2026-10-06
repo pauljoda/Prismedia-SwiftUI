@@ -65,6 +65,30 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
         Self.totalDuration(of: tracks)
     }
 
+    /// This projection with each part's embedded chapters from the server alignment, whose audio
+    /// windows are the chapters the shared player steps through. Parts without them play whole.
+    public func withChapters(from alignment: BookAlignmentResponse?) -> AudiobookPlaybackProjection {
+        var chaptersByTrack: [UUID: [MusicTrackChapter]] = [:]
+        for window in alignment?.rows.compactMap(\.audio) ?? [] {
+            guard let markerID = window.markerID else { continue }
+            chaptersByTrack[window.trackEntityID, default: []].append(
+                MusicTrackChapter(
+                    markerID: markerID,
+                    title: window.title,
+                    startSeconds: window.startSeconds,
+                    endSeconds: window.endSeconds
+                )
+            )
+        }
+        return AudiobookPlaybackProjection(
+            bookID: bookID,
+            title: title,
+            tracks: tracks.map { track in chaptersByTrack[track.id].map { track.withChapters($0) } ?? track },
+            preservesQueueOrder: preservesQueueOrder,
+            supportsPlaybackRate: supportsPlaybackRate
+        )
+    }
+
     public func resumePoint(at absoluteSeconds: Double) -> AudiobookResumePoint? {
         guard let first = tracks.first else { return nil }
         let duration = totalDuration

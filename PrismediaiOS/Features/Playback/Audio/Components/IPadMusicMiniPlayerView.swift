@@ -55,9 +55,9 @@
                 .padding(.top, PrismediaSpacing.small)
                 .padding(.bottom, PrismediaSpacing.medium)
                 .onAppear(perform: synchronizeTimeline)
-                .onChange(of: engine.elapsedTime) { _, elapsedTime in
+                .onChange(of: engine.elapsedTime) {
                     guard !isScrubbing else { return }
-                    scrubPosition = elapsedTime
+                    synchronizeTimeline()
                 }
                 .onChange(of: track.id) { _, _ in
                     actionsPresented = false
@@ -144,7 +144,7 @@
                     .frame(width: 44, height: 44)
 
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-                        Text(track.title)
+                        Text(controller.entryTitle ?? track.title)
                             .font(.callout.weight(.semibold))
                             .foregroundStyle(PrismediaColor.textPrimary)
                             .lineLimit(1)
@@ -161,7 +161,7 @@
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
-            .accessibilityLabel("Show Now Playing for \(track.title)")
+            .accessibilityLabel("Show Now Playing for \(controller.entryTitle ?? track.title)")
             .accessibilityIdentifier("music.mini-player.track")
         }
 
@@ -169,7 +169,7 @@
             transportButton(
                 "Previous Track",
                 systemImage: "backward.fill",
-                isDisabled: !controller.queue.canGoPrevious,
+                isDisabled: !controller.canSkipToPrevious,
                 action: controller.skipToPrevious
             )
         }
@@ -178,7 +178,7 @@
             transportButton(
                 "Next Track",
                 systemImage: "forward.fill",
-                isDisabled: !controller.queue.canGoNext,
+                isDisabled: !controller.canSkipToNext,
                 action: controller.skipToNext
             )
         }
@@ -278,17 +278,26 @@
             }
         }
 
+        /// Length of the entry playing: its chapter, else the whole file.
         private func duration(for track: MusicTrack) -> Double {
-            max(engine.duration, track.duration ?? 0, 1)
+            max(entryPosition(for: track).duration, 1)
+        }
+
+        private func entryPosition(for track: MusicTrack) -> MusicEntryPosition {
+            controller.entryPosition(
+                atFileTime: engine.elapsedTime,
+                fileDuration: max(engine.duration, track.duration ?? 0)
+            )
         }
 
         private func synchronizeTimeline() {
-            scrubPosition = engine.elapsedTime
+            guard let track = controller.currentTrack else { return }
+            scrubPosition = entryPosition(for: track).position
         }
 
         private func scrubDidChange(_ editing: Bool) {
             isScrubbing = editing
-            if !editing { controller.seek(to: scrubPosition) }
+            if !editing { controller.seek(toEntryOffset: scrubPosition) }
         }
 
         private func togglePlayback() {

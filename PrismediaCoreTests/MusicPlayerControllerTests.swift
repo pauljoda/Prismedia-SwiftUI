@@ -1022,6 +1022,107 @@ final class MusicPlayerControllerTests: XCTestCase {
         XCTAssertTrue(controller.queue.isShuffled)
     }
 
+    func testChapteredAudiobookStepsThroughEmbeddedChaptersLikeTracks() {
+        let first = makeChapteredTrack(idSuffix: 1)
+        let second = makeChapteredTrack(idSuffix: 2)
+        let engine = AudioPlaybackEngineSpy()
+        let controller = MusicPlayerController(engine: engine, service: MusicPlaybackServiceStub())
+        controller.play(
+            tracks: [first, second],
+            startingAt: first.id,
+            queueMode: .ordered,
+            context: orderedAudiobookContext(),
+            startSeconds: 197
+        )
+
+        // The gap after a declared end belongs to the chapter before it; the first chapter starts the file.
+        XCTAssertEqual(controller.entryTitle, "One")
+        XCTAssertEqual(
+            controller.entryPosition(atFileTime: 197),
+            MusicEntryPosition(start: 0, duration: 200, position: 197)
+        )
+        XCTAssertEqual(
+            controller.upNextEntries.map { "\($0.track.title):\($0.title)" },
+            ["Book 1:Two", "Book 1:Three", "Book 2:One", "Book 2:Two", "Book 2:Three"]
+        )
+
+        controller.skipToNext()
+        XCTAssertEqual(controller.entryTitle, "Two")
+        XCTAssertEqual(engine.seekPositions.last, 200)
+        XCTAssertEqual(engine.loadedURLs.count, 1)
+
+        controller.skipToPrevious()
+        XCTAssertEqual(controller.entryTitle, "One")
+        XCTAssertEqual(controller.elapsedTime, 0)
+        XCTAssertFalse(controller.canSkipToPrevious)
+
+        controller.skipToUpcomingEntry(controller.upNextEntries[3])
+        XCTAssertEqual(controller.currentTrack?.id, second.id)
+        XCTAssertEqual(controller.entryTitle, "Two")
+        XCTAssertEqual(engine.loadedURLs.count, 2)
+
+        controller.updatePlaybackProgress(elapsedTime: 201, duration: 600, isAdvancing: true)
+        controller.skipToPrevious()
+        XCTAssertEqual(controller.entryTitle, "One")
+        controller.skipToPrevious()
+        XCTAssertEqual(controller.currentTrack?.id, first.id)
+        XCTAssertEqual(controller.entryTitle, "Three")
+        XCTAssertEqual(controller.elapsedTime, 450)
+    }
+
+    func testRepeatOneReplaysTheChapterOnlyWhenPlaybackRunsPastItsEnd() {
+        let track = makeChapteredTrack(idSuffix: 1)
+        let engine = AudioPlaybackEngineSpy()
+        let controller = MusicPlayerController(engine: engine, service: MusicPlaybackServiceStub())
+        controller.play(tracks: [track], context: orderedAudiobookContext(), startSeconds: 440)
+        controller.setRepeatMode(.one)
+
+        controller.updatePlaybackProgress(elapsedTime: 449, duration: 600, isAdvancing: true)
+        controller.updatePlaybackProgress(elapsedTime: 450.4, duration: 600, isAdvancing: true)
+        XCTAssertEqual(engine.seekPositions.last, 200)
+        XCTAssertEqual(controller.entryTitle, "Two")
+
+        controller.seek(to: 449)
+        controller.updatePlaybackProgress(elapsedTime: 451, duration: 600, isAdvancing: true)
+        XCTAssertEqual(engine.seekPositions.last, 449)
+        XCTAssertEqual(controller.entryTitle, "Three")
+    }
+
+    func testMusicQueuesPlayChapteredFilesWhole() {
+        let track = makeChapteredTrack(idSuffix: 1)
+        let controller = MusicPlayerController(engine: AudioPlaybackEngineSpy(), service: MusicPlaybackServiceStub())
+        controller.play(tracks: [track], startSeconds: 300)
+
+        XCTAssertNil(controller.currentChapter)
+        XCTAssertEqual(controller.entryTitle, "Book 1")
+        XCTAssertEqual(controller.upNextEntries, [])
+    }
+
+    /// One 600-second file with chapters at 0, 200 and 450 seconds (declared ends leave small gaps).
+    private func makeChapteredTrack(idSuffix: Int) -> MusicTrack {
+        MusicTrack(
+            id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", idSuffix))!,
+            title: "Book \(idSuffix)",
+            duration: 600,
+            sortOrder: idSuffix - 1,
+            chapters: [
+                MusicTrackChapter(markerID: UUID(), title: "Three", startSeconds: 450),
+                MusicTrackChapter(markerID: UUID(), title: "One", startSeconds: 2, endSeconds: 195),
+                MusicTrackChapter(markerID: UUID(), title: "Two", startSeconds: 200, endSeconds: 440),
+            ]
+        )
+    }
+
+    private func orderedAudiobookContext() -> MusicPlaybackContext {
+        MusicPlaybackContext(
+            playbackOwnerEntityID: UUID(),
+            playbackOwnerTitle: "Book",
+            playbackOwnerEntityKind: .book,
+            preservesQueueOrder: true,
+            supportsPlaybackRate: true
+        )
+    }
+
     private func makeTrack(
         idSuffix: Int,
         duration: Double? = nil,

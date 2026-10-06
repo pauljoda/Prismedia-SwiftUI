@@ -3,6 +3,8 @@
 
     struct MusicNowPlayingQueueTrackRow: View {
         let track: MusicTrack
+        /// Title shown for the row: a chapter's, else the file's.
+        var title: String?
 
         var body: some View {
             HStack(spacing: PrismediaSpacing.medium) {
@@ -13,7 +15,7 @@
                 .frame(width: 44, height: 44)
 
                 VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-                    Text(track.title)
+                    Text(title ?? track.title)
                         .font(.body)
                         .lineLimit(1)
                     Text(MusicPresentation.artist(track.artist))

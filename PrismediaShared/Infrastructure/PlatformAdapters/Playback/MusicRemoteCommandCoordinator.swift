@@ -90,7 +90,8 @@
                 guard let event = event as? MPChangePlaybackPositionCommandEvent else {
                     return .commandFailed
                 }
-                Task { @MainActor in controller?.seek(to: event.positionTime) }
+                // The lock-screen scrubber shows the entry playing, so its position is an offset into it.
+                Task { @MainActor in controller?.seek(toEntryOffset: event.positionTime) }
                 return .success
             }
         }
@@ -145,10 +146,12 @@
                 requiresArtwork
                 ? nil
                 : nowPlayingInfoCenter.nowPlayingInfo?[MPMediaItemPropertyArtwork]
+            let fileDuration = engine.duration > 0 ? engine.duration : track.duration
+            let entry = controller.entryPosition(atFileTime: engine.elapsedTime, fileDuration: fileDuration)
             var information: [String: Any] = [
-                MPMediaItemPropertyTitle: track.title,
+                MPMediaItemPropertyTitle: controller.entryTitle ?? track.title,
                 MPMediaItemPropertyArtist: MusicPresentation.artist(track.artist),
-                MPNowPlayingInfoPropertyElapsedPlaybackTime: engine.elapsedTime,
+                MPNowPlayingInfoPropertyElapsedPlaybackTime: entry.position,
                 MPNowPlayingInfoPropertyPlaybackRate: controller.isPlaybackAdvancing
                     ? controller.playbackRate
                     : 0,
@@ -156,8 +159,7 @@
             ]
             if let existingArtwork { information[MPMediaItemPropertyArtwork] = existingArtwork }
             if let album = track.album { information[MPMediaItemPropertyAlbumTitle] = album }
-            let duration = engine.duration > 0 ? engine.duration : track.duration
-            if let duration { information[MPMediaItemPropertyPlaybackDuration] = duration }
+            if entry.duration > 0 { information[MPMediaItemPropertyPlaybackDuration] = entry.duration }
             nowPlayingInfoCenter.nowPlayingInfo = information
             #if os(iOS)
                 nowPlayingSession.becomeActiveIfPossible(completion: nil)
@@ -218,8 +220,8 @@
 
         private func updateCommandAvailability() {
             let commands = remoteCommandCenter
-            commands.nextTrackCommand.isEnabled = controller.queue.canGoNext
-            commands.previousTrackCommand.isEnabled = controller.queue.canGoPrevious
+            commands.nextTrackCommand.isEnabled = controller.canSkipToNext
+            commands.previousTrackCommand.isEnabled = controller.canSkipToPrevious
             commands.changePlaybackPositionCommand.isEnabled = controller.currentTrack != nil
         }
     }

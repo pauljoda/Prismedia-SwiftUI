@@ -48,6 +48,7 @@
                 }
                 .presentationBackground(.clear)
                 .musicNowPlayingPresentationBehavior(
+                    controller: controller,
                     engine: engine,
                     isScrubbing: isScrubbing,
                     scrubPosition: $scrubPosition,
@@ -61,6 +62,7 @@
                         inspectorCloseButton
                     }
                 .musicNowPlayingPresentationBehavior(
+                    controller: controller,
                     engine: engine,
                     isScrubbing: isScrubbing,
                     scrubPosition: $scrubPosition,
@@ -107,6 +109,7 @@
 
                     MusicNowPlayingPlayerView(
                         track: track,
+                        title: controller.entryTitle ?? track.title,
                         artworkNamespace: artworkNamespace,
                         artworkIsSource: artworkIsSource,
                         artworkAspectRatio: artworkAspectRatio,
@@ -242,6 +245,7 @@
 
     private extension View {
         func musicNowPlayingPresentationBehavior(
+            controller: MusicPlayerController,
             engine: AVPlayerAudioPlaybackEngine,
             isScrubbing: Bool,
             scrubPosition: Binding<Double>,
@@ -250,7 +254,11 @@
         ) -> some View {
             self
                 .onChange(of: engine.elapsedTime) { _, value in
-                    if !isScrubbing { scrubPosition.wrappedValue = value }
+                    // The timeline shows the entry playing, so its position is an offset into it.
+                    guard !isScrubbing else { return }
+                    let fileDuration = max(engine.duration, controller.currentTrack?.duration ?? 0)
+                    let entry = controller.entryPosition(atFileTime: value, fileDuration: fileDuration)
+                    scrubPosition.wrappedValue = entry.position
                 }
                 .sheet(item: trackForCollection) { track in
                     AddToCollectionSheet(
