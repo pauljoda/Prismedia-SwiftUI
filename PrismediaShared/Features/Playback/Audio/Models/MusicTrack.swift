@@ -52,11 +52,11 @@ public struct MusicTrack: Codable, Identifiable, Hashable, Sendable {
         self.chapters = chapters
     }
 
-    /// This track carrying `chapters` as its embedded chapters.
-    public func withChapters(_ chapters: [MusicTrackChapter]) -> MusicTrack {
+    /// This track carrying `chapters` as its embedded chapters, and `title` when given.
+    public func withChapters(_ chapters: [MusicTrackChapter], title: String? = nil) -> MusicTrack {
         MusicTrack(
             id: id,
-            title: title,
+            title: title ?? self.title,
             artist: artist,
             artistID: artistID,
             album: album,

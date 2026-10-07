@@ -21,6 +21,42 @@ final class AudiobookPlaybackProjectionTests: XCTestCase {
         )
     }
 
+    func testAlignmentTitlesChaptersAndSingleWindowPartsWithListeningTitles() {
+        let chaptered = MusicTrack(id: UUID(), title: "Part One", duration: 120)
+        let whole = MusicTrack(id: UUID(), title: "006", duration: 90)
+        let untouched = MusicTrack(id: UUID(), title: "Part Three", duration: 30)
+        let olderServer = MusicTrack(id: UUID(), title: "007", duration: 60)
+        let jon = UUID()
+        let alignment = BookAlignmentResponse(
+            modalities: [.listening],
+            readablePositionTotal: 10_000,
+            rows: [
+                audioRow(chaptered.id, markerID: jon, title: "004", start: 0, listeningTitle: "Jon"),
+                audioRow(chaptered.id, markerID: UUID(), title: "005", start: 60, listeningTitle: nil),
+                audioRow(whole.id, markerID: nil, title: "006", start: 0, listeningTitle: "Moira"),
+                // A server that predates listening titles still sends the mapped ebook chapter.
+                audioRow(
+                    olderServer.id,
+                    markerID: nil,
+                    title: "007",
+                    start: 0,
+                    listeningTitle: nil,
+                    readableTitle: "Bran"
+                ),
+            ]
+        )
+        let projection = AudiobookPlaybackProjection(
+            bookID: UUID(),
+            title: "Book",
+            tracks: [chaptered, whole, untouched, olderServer]
+        ).withChapters(from: alignment)
+
+        XCTAssertEqual(projection.tracks.map(\.title), ["Part One", "Moira", "Part Three", "Bran"])
+        XCTAssertEqual(projection.tracks[0].chapters.map(\.title), ["Jon", "005"])
+        XCTAssertEqual(projection.tracks[0].chapters.first?.markerID, jon)
+        XCTAssertEqual(projection.tracks[1].chapters, [])
+    }
+
     func testUnknownDurationAudiobookResumesSafelyAtTheFirstPart() throws {
         let first = makePart(idSuffix: 1, title: "Part One", duration: nil, sortOrder: 0)
         let second = makePart(idSuffix: 2, title: "Part Two", duration: nil, sortOrder: 1)
@@ -116,6 +152,29 @@ final class AudiobookPlaybackProjectionTests: XCTestCase {
             sortOrder: sortOrder,
             meta: duration.map { [EntityThumbnailMeta(icon: "duration", label: $0)] } ?? [],
             hasSourceMedia: hasSourceMedia
+        )
+    }
+
+    private func audioRow(
+        _ trackID: UUID,
+        markerID: UUID?,
+        title: String,
+        start: Double,
+        listeningTitle: String?,
+        readableTitle: String? = nil
+    ) -> BookAlignmentRow {
+        BookAlignmentRow(
+            id: "\(trackID):\(markerID?.uuidString ?? "whole")",
+            order: 0,
+            matchState: readableTitle == nil ? .audioOnly : .paired,
+            readable: readableTitle.map { BookReadableChapterWindow(chapterKey: "Text/\($0).xhtml", title: $0) },
+            audio: BookAudioChapterWindow(
+                trackEntityID: trackID,
+                markerID: markerID,
+                title: title,
+                startSeconds: start
+            ),
+            listeningTitle: listeningTitle
         )
     }
 }

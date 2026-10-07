@@ -13,6 +13,9 @@ public struct BookAlignmentRow: Equatable, Hashable, Identifiable, Sendable {
     public let provenance: BookChapterMappingOrigin?
     public let readable: BookReadableChapterWindow?
     public let audio: BookAudioChapterWindow?
+    /// Title the shared player presents while the row's audio plays: the mapped ebook chapter's title,
+    /// else the file's own title, else the Book's. Nil without audio, or from servers that predate it.
+    public let listeningTitle: String?
 
     /// The persisted chapter mapping this row represents, when it pairs both sides.
     var chapterMapping: BookChapterAudioMapping? {
@@ -33,7 +36,8 @@ public struct BookAlignmentRow: Equatable, Hashable, Identifiable, Sendable {
         matchState: BookAlignmentMatchState,
         provenance: BookChapterMappingOrigin? = nil,
         readable: BookReadableChapterWindow? = nil,
-        audio: BookAudioChapterWindow? = nil
+        audio: BookAudioChapterWindow? = nil,
+        listeningTitle: String? = nil
     ) {
         self.id = id
         self.order = order
@@ -41,13 +45,14 @@ public struct BookAlignmentRow: Equatable, Hashable, Identifiable, Sendable {
         self.provenance = provenance
         self.readable = readable
         self.audio = audio
+        self.listeningTitle = listeningTitle
     }
 }
 
 extension BookAlignmentRow: Decodable {
     private enum CodingKeys: String, CodingKey {
         case id = "rowId"
-        case order, matchState, provenance, readable, audio
+        case order, matchState, provenance, readable, audio, listeningTitle
     }
 
     public init(from decoder: Decoder) throws {
@@ -58,5 +63,6 @@ extension BookAlignmentRow: Decodable {
         provenance = try container.decodeIfPresent(BookChapterMappingOrigin.self, forKey: .provenance)
         readable = try container.decodeIfPresent(BookReadableChapterWindow.self, forKey: .readable)
         audio = try container.decodeIfPresent(BookAudioChapterWindow.self, forKey: .audio)
+        listeningTitle = try container.decodeIfPresent(String.self, forKey: .listeningTitle)
     }
 }

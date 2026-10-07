@@ -65,25 +65,35 @@ public struct AudiobookPlaybackProjection: Equatable, Sendable {
         Self.totalDuration(of: tracks)
     }
 
-    /// This projection with each part's embedded chapters from the server alignment, whose audio
-    /// windows are the chapters the shared player steps through. Parts without them play whole.
+    /// This projection with the server alignment applied to its parts: each embedded chapter, and each
+    /// part that is a single window, takes the title the alignment says it plays under (the mapped
+    /// ebook chapter's title, else the file's own title, else the Book's). Servers that predate
+    /// listening titles still name a mapped window after its ebook chapter, as the chapter list does.
+    /// Parts without embedded chapters play whole.
     public func withChapters(from alignment: BookAlignmentResponse?) -> AudiobookPlaybackProjection {
-        var chaptersByTrack: [UUID: [MusicTrackChapter]] = [:]
-        for window in alignment?.rows.compactMap(\.audio) ?? [] {
-            guard let markerID = window.markerID else { continue }
-            chaptersByTrack[window.trackEntityID, default: []].append(
-                MusicTrackChapter(
-                    markerID: markerID,
-                    title: window.title,
-                    startSeconds: window.startSeconds,
-                    endSeconds: window.endSeconds
-                )
-            )
+        var windowsByTrack: [UUID: [(window: BookAudioChapterWindow, title: String)]] = [:]
+        for row in alignment?.rows ?? [] {
+            guard let window = row.audio else { continue }
+            let title = row.listeningTitle ?? row.readable?.title ?? window.title
+            windowsByTrack[window.trackEntityID, default: []].append((window, title))
         }
         return AudiobookPlaybackProjection(
             bookID: bookID,
             title: title,
-            tracks: tracks.map { track in chaptersByTrack[track.id].map { track.withChapters($0) } ?? track },
+            tracks: tracks.map { track in
+                guard let windows = windowsByTrack[track.id] else { return track }
+                let chapters = windows.compactMap { entry in
+                    entry.window.markerID.map { markerID in
+                        MusicTrackChapter(
+                            markerID: markerID,
+                            title: entry.title,
+                            startSeconds: entry.window.startSeconds,
+                            endSeconds: entry.window.endSeconds
+                        )
+                    }
+                }
+                return track.withChapters(chapters, title: windows.count == 1 ? windows[0].title : nil)
+            },
             preservesQueueOrder: preservesQueueOrder,
             supportsPlaybackRate: supportsPlaybackRate
         )
