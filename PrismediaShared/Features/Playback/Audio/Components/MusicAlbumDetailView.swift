@@ -9,6 +9,9 @@
         @State private var resolvedParentArtist: String?
         @State private var trackForCollection: MusicTrack?
         @State private var selectedSection = EntityDetailSectionID.details
+        #if os(iOS)
+            @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        #endif
         let detail: EntityDetail
         let preview: EntityLinkPreview?
         let collectionLoader: MusicCollectionQueueLoader?
@@ -112,12 +115,15 @@
                 systemImage: "music.note",
                 palette: $artworkPalette
             ) {
+                // Size class picks the page, so it stays put as an iPhone Duo turns
+                // or folds; the wide header sets its artwork beside the details only
+                // where they fit.
                 #if os(macOS)
                     wideContent
                 #else
-                    ViewThatFits(in: .horizontal) {
+                    if horizontalSizeClass == .regular {
                         wideContent
-                            .frame(minWidth: 680)
+                    } else {
                         compactContent
                     }
                 #endif
@@ -280,11 +286,13 @@
 
         private var wideAlbumHeader: some View {
             ViewThatFits(in: .horizontal) {
+                // The details ask for room by their buttons and facts rather than by
+                // the title's one-line width, so a long title still sits beside the art.
                 HStack(alignment: .bottom, spacing: PrismediaSpacing.extraExtraLarge) {
                     albumArtwork
                         .frame(width: 240, height: 240)
                     wideAlbumInformation(alignment: .leading)
-                        .frame(maxWidth: 560, alignment: .leading)
+                        .frame(minWidth: 240, idealWidth: 280, maxWidth: 560, alignment: .leading)
                     Spacer(minLength: 0)
                 }
 

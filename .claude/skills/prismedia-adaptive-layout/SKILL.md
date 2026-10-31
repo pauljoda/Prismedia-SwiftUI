@@ -73,7 +73,14 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **Regular-width detail headers put the poster beside the title**, and fall
   back to the stacked header through `ViewThatFits` when the column can't fit
   the title column (the five-star row) beside the poster, as on one side of a
-  folded Duo.
+  folded Duo. The album header works the same way.
+- **`ViewThatFits` measures ideal widths, and a title's ideal width is one
+  line.** Give a text column `minWidth`/`idealWidth` from what it really needs
+  (a rating row, a pair of buttons) or long titles always lose the wide
+  candidate. Never use `ViewThatFits` to choose a whole page; size class does
+  that (the album page once flipped at 680 pt as the open Duo turned).
+- **Phone-width fill buttons hug on regular width.** `MusicPlaybackButtons`
+  sizes Play and Shuffle to their labels there instead of stretching them.
 
 ## Gotchas we hit
 

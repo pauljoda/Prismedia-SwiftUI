@@ -74,6 +74,12 @@
             case .gallery, .image:
                 mode = ModeCatalog.images
                 destinationID = "images"
+            case .audioLibrary:
+                mode = ModeCatalog.audio
+                destinationID = "albums"
+            case .musicArtist:
+                mode = ModeCatalog.audio
+                destinationID = "artists"
             default:
                 return nil
             }

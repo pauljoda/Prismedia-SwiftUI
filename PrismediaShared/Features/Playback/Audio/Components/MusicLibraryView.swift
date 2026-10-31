@@ -203,10 +203,7 @@
 
         private func albumGrid(_ albums: [EntityThumbnail]) -> some View {
             LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: PrismediaSpacing.small),
-                    GridItem(.flexible(), spacing: PrismediaSpacing.small),
-                ],
+                columns: [GridItem(.adaptive(minimum: 150), spacing: PrismediaSpacing.small)],
                 alignment: .leading,
                 spacing: PrismediaSpacing.large
             ) {

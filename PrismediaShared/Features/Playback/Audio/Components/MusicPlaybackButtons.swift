@@ -3,6 +3,9 @@
 
     struct MusicPlaybackButtons: View {
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+        #if os(iOS)
+            @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        #endif
 
         let loadingMode: MusicQueueStartMode?
         let isDisabled: Bool
@@ -20,12 +23,23 @@
                         playButton
                         shuffleButton
                     }
+                    .fixedSize(horizontal: hugsLabels, vertical: false)
                 }
             }
             .font(.subheadline.weight(.semibold))
             .controlSize(.large)
             .frame(maxWidth: .infinity)
             .disabled(loadingMode != nil || isDisabled)
+        }
+
+        /// Regular width centres the pair at their labels' width instead of
+        /// stretching phone-width capsules across a wide page or an open iPhone Duo.
+        private var hugsLabels: Bool {
+            #if os(iOS)
+                horizontalSizeClass == .regular
+            #else
+                false
+            #endif
         }
 
         private var playButton: some View {
