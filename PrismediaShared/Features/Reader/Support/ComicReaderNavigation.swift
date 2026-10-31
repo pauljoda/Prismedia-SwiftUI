@@ -28,6 +28,23 @@ public enum ComicReaderNavigation {
         return [current]
     }
 
+    /// The pages a spread lays out from left to right in reading order, where
+    /// `nil` is a blank side. A lone page in a two-page layout keeps to its own
+    /// side of the gutter, the cover on the right and any later page on the left,
+    /// as in a printed book, so it never lies across iPhone Duo's fold; a
+    /// double-page image still spans both sides.
+    public static func spreadSlots(
+        index: Int,
+        total: Int,
+        options: ComicReaderOptions,
+        isDoublePage: (Int) -> Bool
+    ) -> [Int?] {
+        let pages = spread(index: index, total: total, options: options)
+        guard options.pageMode == .double, pages.count == 1, let page = pages.first, !isDoublePage(page)
+        else { return pages }
+        return page == 0 ? [nil, page] : [page, nil]
+    }
+
     public static func nextIndex(from index: Int, total: Int, options: ComicReaderOptions) -> Int {
         guard total > 0 else { return 0 }
         guard options.pageMode == .double else { return clamp(index + 1, total: total) }

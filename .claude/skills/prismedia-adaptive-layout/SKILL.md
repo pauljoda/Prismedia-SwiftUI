@@ -48,6 +48,9 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **Tabletop playback like Netflix.** Half closed on a table, the video takes
   the raised half and the overlay chrome becomes a persistent panel of large
   tiles on the flat half.
+- **Readers read like a book.** Open in landscape, every reader shows a left
+  and a right page; in portrait, one page. Folded like a book, the gutter
+  between the pages covers the fold, so no text or art lies across it.
 
 ## Pick the container by the content
 
@@ -57,6 +60,7 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 | Two related groups that both stay visible | `PrismediaArrangedPanes` (`ArrangementView`, split style) | Now Playing (player · queue), mini player (track · transport) |
 | A feed of cards | adaptive `LazyVGrid` | Library grids |
 | Media and its controls, half closed on a table | `onTabletopFoldChange`: media above the fold, a persistent panel below | Full-screen video (`VideoTabletopControlPanel`) |
+| Pages of a book | Two pages when wider than tall, one when taller; `onBookFoldChange` widens the gutter to the fold | EPUB (`EPUBReaderColumnLayout`), PDF (`PDFReaderSpread`), comics (`ComicPageMode.automatic`) |
 
 - `PrismediaArrangedPanes` is the one `ArrangementView` wrapper. Use it on
   regular width only. It falls back to two equal columns on the 27.0 SDK and
@@ -135,6 +139,26 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **The inner display won't rotate on request.** Fullscreen video forces
   landscape only on a compact-width phone window
   (`VideoFullscreenOrientationPolicy`).
+- **Readium ignores the column setting below 960 px.** ReadiumCSS applies
+  `--USER__colCount` only from 60em, so on the 951 pt open Duo two columns
+  never appeared. `EPUBReaderColumnLayout` sets the reading system properties
+  (`colWidth` as a floor, `colCount` as a maximum) instead; Readium fixes them
+  when the navigator is created, so a Columns change applies on reopen. Each
+  column carries the page gutter on both sides, which puts the gap on the
+  fold without measuring it.
+- **PDFKit page margins are in page points.** A fold-wide gap shrinks with
+  the fitted scale, so `PDFKitDocumentView` recomputes `pageBreakMargins` on
+  every `PDFViewScaleChanged`. Setting `scaleFactor` turns `autoScales` off,
+  and a new display mode leaves `scaleFactorForSizeToFit` stale until
+  `layoutDocumentView()`: lay out, scale, then turn auto scaling on.
+  `displaysAsBook` centres a lone cover across the fold, so spreads pair from
+  the first page instead.
+- **A lone page keeps to its side of the gutter.** In a two-page comic
+  layout the cover sits on the right and a last odd page on the left
+  (`ComicReaderNavigation.spreadSlots`); only double-page art spans both.
+- **Reader chrome overlays the pages.** It auto-hides after 2.8 s, but stays
+  up under `-prismedia-ui-testing`, so captures show the side bar over the
+  right page.
 - **Gate 27.1 APIs twice.** Both Xcodes ship the same Swift compiler, so use
   `#if os(iOS) && canImport(SwiftUICore, _version: 8.0.85)` plus
   `if #available(iOS 27.1, *)`, and keep the 27.0 build compiling.
@@ -153,6 +177,11 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
    - `PRISMEDIA_UI_TEST_MODE_ID` / `PRISMEDIA_UI_TEST_DESTINATION_ID` open a
      destination (`video`/`movies`); `PRISMEDIA_UI_TEST_ENTITY_ID` /
      `PRISMEDIA_UI_TEST_ENTITY_KIND` open a detail page.
+   - `PRISMEDIA_UI_TEST_OPEN_READER=1` opens a book's reader from its detail
+     page. With `PRISMEDIA_UI_TEST_ENTITY_KIND=book` the mock serves an EPUB
+     (`edededed-…`), a two-page PDF (`dfdfdfdf-…`) and a seven-page comic
+     (`cacacaca-…`); `PRISMEDIA_MOCK_COMIC_NO_COVER=1` on the mock opens the
+     comic on a two-page spread instead of its cover.
    - `PRISMEDIA_UI_TEST_MUSIC_TRACK_ID` and `…_TITLE` start a track;
      `PRISMEDIA_UI_TEST_SHOW_NOW_PLAYING=1` opens Now Playing and
      `PRISMEDIA_UI_TEST_COLLAPSE_MINI_PLAYER=1` collapses the mini player.

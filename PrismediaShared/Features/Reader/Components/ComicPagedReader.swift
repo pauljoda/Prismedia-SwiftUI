@@ -4,6 +4,9 @@ struct ComicPagedReader: View {
     let manifest: BookReaderManifest
     let currentIndex: Int
     let options: ComicReaderOptions
+    /// Width of the fold a two-page spread straddles, so the gutter between
+    /// the pages covers it; zero on a flat display.
+    var foldGap: CGFloat = 0
     let showingEndPage: Bool
     let counterText: String
     let pageCache: BookReaderPageCache
@@ -42,21 +45,31 @@ struct ComicPagedReader: View {
     }
 
     private var spread: some View {
-        let logicalIndexes = ComicReaderNavigation.spread(
+        let logicalSlots = ComicReaderNavigation.spreadSlots(
             index: currentIndex,
             total: manifest.pages.count,
-            options: options
+            options: options,
+            isDoublePage: { manifest.pages[$0].isDoublePage }
         )
-        let indexes = manifest.readingDirection == .rightToLeft
-            ? Array(logicalIndexes.reversed())
-            : logicalIndexes
+        let slots = manifest.readingDirection == .rightToLeft
+            ? Array(logicalSlots.reversed())
+            : logicalSlots
 
-        return HStack(spacing: PrismediaSpacing.small) {
-            ForEach(indexes, id: \.self) { index in
-                AuthenticatedComicPage(page: manifest.pages[index], cache: pageCache)
+        return HStack(spacing: max(PrismediaSpacing.small, foldGap)) {
+            ForEach(Array(slots.enumerated()), id: \.offset) { position, index in
+                if let index {
+                    AuthenticatedComicPage(
+                        page: manifest.pages[index],
+                        cache: pageCache,
+                        alignment: slots.count > 1 ? (position == 0 ? .trailing : .leading) : .center
+                    )
+                    .id(manifest.pages[index].id)
+                } else {
+                    Color.clear
+                }
             }
         }
-        .padding(.horizontal, logicalIndexes.count > 1 ? 12 : 0)
+        .padding(.horizontal, slots.count > 1 ? 12 : 0)
         .task(
             id: ComicReaderPreloadKey(
                 chapterIDs: manifest.chapters.map(\.id),

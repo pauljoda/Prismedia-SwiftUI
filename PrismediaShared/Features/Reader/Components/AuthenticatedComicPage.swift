@@ -4,6 +4,9 @@ struct AuthenticatedComicPage: View {
     let page: BookReaderPage
     let cache: BookReaderPageCache
     var fit = true
+    /// Where a fitted page sits in its slot; a spread pushes its two pages
+    /// together at the gutter.
+    var alignment: Alignment = .center
 
     @State private var failed = false
 
@@ -13,7 +16,7 @@ struct AuthenticatedComicPage: View {
                 platformImage(image)
                     .resizable()
                     .aspectRatio(contentMode: fit ? .fit : .fill)
-                    .frame(maxWidth: .infinity, maxHeight: fit ? .infinity : nil)
+                    .frame(maxWidth: .infinity, maxHeight: fit ? .infinity : nil, alignment: alignment)
                     .clipped()
             } else if failed {
                 ContentUnavailableView("Page Unavailable", systemImage: "photo.badge.exclamationmark")

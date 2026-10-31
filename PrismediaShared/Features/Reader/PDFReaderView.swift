@@ -21,6 +21,10 @@
         @State private var isSearching = false
         @State private var errorMessage: String?
         @State private var progressWriter: BookReaderProgressWriter
+        /// Landscape reads like an open book, a left and a right page; portrait shows one.
+        @State private var isLandscape = false
+        /// While iPhone Duo is folded like a book, the fold the spread's pages part around.
+        @State private var bookFold: CGRect?
 
         private let command: BookReaderCommand
         private let useCase: DocumentReaderUseCase
@@ -109,7 +113,9 @@
                             status: readerProgressStatus(for: document),
                             accessibilityPrefix: "pdf-reader",
                             canGoPrevious: currentPage > 0,
-                            canGoNext: currentPage < document.pageCount - 1,
+                            canGoNext: showsSpread
+                                ? PDFReaderSpread.hasNextPage(from: currentPage, pageCount: document.pageCount)
+                                : currentPage < document.pageCount - 1,
                             onOpenContents: openContents,
                             onPrevious: showPreviousPage,
                             onNext: showNextPage
@@ -130,8 +136,18 @@
                     highlightedSelection: selectedSelection,
                     isSwipeDownEnabled: canSwipeDownToDismiss,
                     onPageChanged: { currentPage = $0 },
-                    onSwipeDown: close
+                    onSwipeDown: close,
+                    showsSpread: showsSpread,
+                    spreadGap: bookFold?.width ?? 0,
+                    onSpreadStep: { step in step > 0 ? showNextPage() : showPreviousPage() }
                 )
+                // A spread spans the whole display, so the gap between its pages
+                // falls on the centre, where iPhone Duo folds.
+                .ignoresSafeArea(.container, edges: showsSpread ? .horizontal : [])
+                .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height } action: {
+                    isLandscape = $0
+                }
+                .onBookFoldChange { bookFold = $0 }
                 .accessibilityLabel("PDF reader")
                 .accessibilityValue("Page \(currentPage + 1) of \(document.pageCount)")
                 .accessibilityIdentifier("pdf-reader.page")
@@ -277,13 +293,26 @@
             )
         }
 
+        /// Two-page spreads in landscape on iOS, in either layout.
+        private var showsSpread: Bool {
+            #if os(iOS)
+                isLandscape
+            #else
+                false
+            #endif
+        }
+
         private func showPreviousPage() {
-            currentPage = max(0, currentPage - 1)
+            currentPage = showsSpread
+                ? PDFReaderSpread.previousPage(from: currentPage)
+                : max(0, currentPage - 1)
         }
 
         private func showNextPage() {
             guard let document else { return }
-            currentPage = min(document.pageCount - 1, currentPage + 1)
+            currentPage = showsSpread
+                ? PDFReaderSpread.nextPage(from: currentPage, pageCount: document.pageCount)
+                : min(document.pageCount - 1, currentPage + 1)
         }
 
         private func selectPage(_ pageIndex: Int) {

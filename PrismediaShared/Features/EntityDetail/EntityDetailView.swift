@@ -161,6 +161,11 @@ public struct EntityDetailView: View {
             if link.intent == .editReleaseDate {
                 presentReleaseDateEditor()
             }
+            #if DEBUG
+                if PrismediaUITestBootstrap.opensReader() {
+                    openReader(command: .resume)
+                }
+            #endif
         }
         .task(id: galleryConsumptionID) {
             guard let galleryConsumptionID else {

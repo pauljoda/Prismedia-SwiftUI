@@ -23,13 +23,14 @@ struct ComicReaderSettingsSheet: View {
                 if readerMode == .paged {
                     Section("Page Layout") {
                         Picker("Page Layout", selection: $pageOptions.pageMode) {
+                            Label("Automatic", systemImage: "book").tag(ComicPageMode.automatic)
                             Label("One Page", systemImage: "rectangle").tag(ComicPageMode.single)
                             Label("Two Pages", systemImage: "rectangle.split.2x1").tag(ComicPageMode.double)
                         }
                         .pickerStyle(.inline)
                         .labelsHidden()
 
-                        if pageOptions.pageMode == .double {
+                        if pageOptions.pageMode != .single {
                             Toggle("First Page Is Cover", isOn: $pageOptions.firstPageIsCover)
                         }
                     }

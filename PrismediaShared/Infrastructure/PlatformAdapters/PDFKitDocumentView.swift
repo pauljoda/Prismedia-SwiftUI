@@ -16,6 +16,13 @@
         let isSwipeDownEnabled: Bool
         let onPageChanged: @MainActor (Int) -> Void
         let onSwipeDown: @MainActor () -> Void
+        /// Two-page spreads, a left and a right page, while the reader is in landscape.
+        /// In the paged layout, swipes then step by spread through `onSpreadStep`.
+        var showsSpread = false
+        /// The gap between a spread's pages: wide enough to clear iPhone Duo's fold
+        /// while it is folded like a book, otherwise PDFKit's own page margins.
+        var spreadGap: CGFloat = 0
+        var onSpreadStep: (@MainActor (Int) -> Void)?
     }
 
     #if os(iOS)
@@ -52,10 +59,14 @@
         func makeView(context: Context) -> PDFView {
             let view = PDFView()
             view.displaysPageBreaks = true
-            configureLayout(in: view)
+            context.coordinator.recordDefaultPageMargins(of: view)
+            context.coordinator.showsSpread = showsSpread
+            context.coordinator.spreadGap = spreadGap
+            configureLayout(in: view, coordinator: context.coordinator)
             view.document = document
             context.coordinator.observe(view)
             context.coordinator.installDismissGesture(on: view)
+            context.coordinator.installSpreadSwipes(on: view)
             go(to: pageIndex, in: view)
             applyFitMode(in: view)
             return view
@@ -65,13 +76,19 @@
             coordinator.onPageChanged = onPageChanged
             coordinator.onSwipeDown = onSwipeDown
             coordinator.isSwipeDownEnabled = isSwipeDownEnabled
+            coordinator.onSpreadStep = onSpreadStep
             let documentChanged = view.document !== document
             if documentChanged { view.document = document }
 
-            let layoutChanged = coordinator.layoutMode != layoutMode
+            let layoutChanged =
+                coordinator.layoutMode != layoutMode
+                || coordinator.showsSpread != showsSpread
+                || coordinator.spreadGap != spreadGap
             if layoutChanged || documentChanged {
-                configureLayout(in: view)
                 coordinator.layoutMode = layoutMode
+                coordinator.showsSpread = showsSpread
+                coordinator.spreadGap = spreadGap
+                configureLayout(in: view, coordinator: coordinator)
             }
 
             let visiblePage = view.currentPage.map(document.index(for:))
@@ -94,7 +111,25 @@
             view.go(to: page)
         }
 
-        private func configureLayout(in view: PDFView) {
+        private func configureLayout(in view: PDFView, coordinator: Coordinator) {
+            view.displaysAsBook = false
+            #if os(iOS)
+                coordinator.updateSpreadMargins()
+            #endif
+            if showsSpread {
+                #if os(iOS)
+                    view.usePageViewController(false, withViewOptions: nil)
+                #endif
+                switch layoutMode {
+                case .paged:
+                    view.displayMode = .twoUp
+                    view.displayDirection = .horizontal
+                case .continuous:
+                    view.displayMode = .twoUpContinuous
+                    view.displayDirection = .vertical
+                }
+                return
+            }
             switch layoutMode {
             case .paged:
                 view.displayMode = .singlePage
@@ -114,14 +149,19 @@
         private func applyFitMode(in view: PDFView) {
             switch fitMode {
             case .page:
-                view.autoScales = true
+                // A new display mode (a spread after rotating) leaves the size-to-fit
+                // scale stale until the document view lays out again, and setting the
+                // scale turns auto scaling off, so lay out first and scale last.
+                view.layoutDocumentView()
                 view.scaleFactor = view.scaleFactorForSizeToFit
+                view.autoScales = true
             case .width:
                 view.autoScales = false
                 guard let page = view.currentPage, view.bounds.width > 0 else { return }
                 let pageWidth = page.bounds(for: .cropBox).width
                 guard pageWidth > 0 else { return }
-                let widthScale = view.bounds.width / pageWidth
+                let pagesAcross: CGFloat = showsSpread ? 2 : 1
+                let widthScale = (view.bounds.width - (showsSpread ? spreadGap : 0)) / (pageWidth * pagesAcross)
                 view.scaleFactor = min(max(widthScale, view.minScaleFactor), view.maxScaleFactor)
             }
         }
@@ -143,10 +183,17 @@
             var onPageChanged: @MainActor (Int) -> Void
             var onSwipeDown: @MainActor () -> Void
             var layoutMode: PDFReaderLayoutMode?
+            var showsSpread = false
+            var spreadGap: CGFloat = 0
+            var onSpreadStep: (@MainActor (Int) -> Void)?
             var fitRequestID: Int?
+            #if os(iOS)
+                private var defaultPageMargins = UIEdgeInsets.zero
+            #endif
             var highlightedSelection: PDFSelection?
             private weak var view: PDFView?
             private var observer: NSObjectProtocol?
+            private var scaleObserver: NSObjectProtocol?
 
             init(
                 isSwipeDownEnabled: Bool,
@@ -161,6 +208,7 @@
 
             isolated deinit {
                 if let observer { NotificationCenter.default.removeObserver(observer) }
+                if let scaleObserver { NotificationCenter.default.removeObserver(scaleObserver) }
             }
 
             func observe(_ view: PDFView) {
@@ -179,6 +227,13 @@
                         self.onPageChanged(document.index(for: page))
                     }
                 }
+                scaleObserver = NotificationCenter.default.addObserver(
+                    forName: Notification.Name.PDFViewScaleChanged,
+                    object: view,
+                    queue: .main
+                ) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.updateSpreadMargins() }
+                }
             }
 
             func installDismissGesture(on view: PDFView) {
@@ -194,7 +249,49 @@
                 #endif
             }
 
+            func recordDefaultPageMargins(of view: PDFView) {
+                #if os(iOS)
+                    defaultPageMargins = view.pageBreakMargins
+                #endif
+            }
+
+            /// Parts a spread's two pages by ``spreadGap`` on screen. Page margins are
+            /// in page points, so they follow the scale: rotating, refitting or zooming
+            /// changes the scale, and the margins with it.
+            func updateSpreadMargins() {
+                #if os(iOS)
+                    guard let view else { return }
+                    let gap = showsSpread && view.scaleFactor > 0 ? spreadGap / view.scaleFactor : 0
+                    var margins = defaultPageMargins
+                    margins.left = max(margins.left, gap / 2)
+                    margins.right = max(margins.right, gap / 2)
+                    guard abs(margins.left - view.pageBreakMargins.left) > 0.5
+                        || abs(margins.right - view.pageBreakMargins.right) > 0.5
+                    else { return }
+                    view.pageBreakMargins = margins
+                    view.layoutDocumentView()
+                #endif
+            }
+
+            /// Two-page spreads skip the page view controller, so horizontal swipes
+            /// page by spread themselves in the paged layout; they do nothing otherwise.
+            func installSpreadSwipes(on view: PDFView) {
+                #if os(iOS)
+                    for direction in [UISwipeGestureRecognizer.Direction.left, .right] {
+                        let swipe = UISwipeGestureRecognizer(target: self, action: #selector(handleSpreadSwipe(_:)))
+                        swipe.direction = direction
+                        swipe.cancelsTouchesInView = false
+                        view.addGestureRecognizer(swipe)
+                    }
+                #endif
+            }
+
             #if os(iOS)
+                @objc private func handleSpreadSwipe(_ gesture: UISwipeGestureRecognizer) {
+                    guard showsSpread, layoutMode == .paged else { return }
+                    onSpreadStep?(gesture.direction == .left ? 1 : -1)
+                }
+
                 @objc private func handleDismissGesture(_ gesture: UIPanGestureRecognizer) {
                     guard gesture.state == .ended,
                         isSwipeDownEnabled,

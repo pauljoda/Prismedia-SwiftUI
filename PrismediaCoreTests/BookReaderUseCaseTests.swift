@@ -126,6 +126,37 @@ final class BookReaderUseCaseTests: XCTestCase {
         XCTAssertLessThanOrEqual(metrics.maximumConcurrentRequests, 2)
     }
 
+    func testAutomaticComicLayoutShowsSpreadsOnlyWhenTheReaderIsWide() {
+        let automatic = ComicReaderOptions()
+
+        XCTAssertEqual(automatic.resolved(isWide: false).pageMode, .single)
+        XCTAssertEqual(
+            ComicReaderNavigation.spread(index: 1, total: 5, options: automatic.resolved(isWide: true)),
+            [1, 2]
+        )
+        XCTAssertEqual(ComicReaderOptions(pageMode: .single).resolved(isWide: true).pageMode, .single)
+        XCTAssertEqual(ComicReaderOptions(pageMode: .double).resolved(isWide: false).pageMode, .double)
+    }
+
+    func testLonePagesInATwoPageLayoutKeepToTheirSideOfTheGutter() {
+        let options = ComicReaderOptions(pageMode: .double, singlePageIndexes: [3])
+        let doublePage: (Int) -> Bool = { $0 == 3 }
+
+        func slots(_ index: Int) -> [Int?] {
+            ComicReaderNavigation.spreadSlots(index: index, total: 5, options: options, isDoublePage: doublePage)
+        }
+
+        XCTAssertEqual(slots(0), [nil, 0])
+        XCTAssertEqual(slots(1), [1, 2])
+        XCTAssertEqual(slots(3), [3])
+        XCTAssertEqual(slots(4), [4, nil])
+        XCTAssertEqual(
+            ComicReaderNavigation.spreadSlots(
+                index: 0, total: 5, options: ComicReaderOptions(pageMode: .single), isDoublePage: doublePage),
+            [0]
+        )
+    }
+
     private func makeManifest(pageCount: Int) -> BookReaderManifest {
         let installmentID = UUID()
         let installment = EntityDetail(

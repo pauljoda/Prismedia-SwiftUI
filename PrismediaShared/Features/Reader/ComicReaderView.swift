@@ -9,6 +9,8 @@
         @State private var currentIndex = 0
         @State private var readerMode: ReaderMode = .paged
         @State private var pageOptions = ComicReaderOptions()
+        @State private var isWideReader = false
+        @State private var bookFold: CGRect?
         @State private var chrome = ReaderChromeState()
         @State private var presentedSheet: ComicReaderSheet?
         @State private var isAdvancingChapter = false
@@ -91,6 +93,10 @@
                 Color.black.ignoresSafeArea()
                 content
                     .ignoresSafeArea()
+                    .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height } action: {
+                        isWideReader = $0
+                    }
+                    .onBookFoldChange { bookFold = $0 }
             }
             .foregroundStyle(PrismediaColor.onMedia)
             .toolbar {
@@ -157,7 +163,8 @@
                     ComicPagedReader(
                         manifest: manifest,
                         currentIndex: currentIndex,
-                        options: pageOptions,
+                        options: layoutOptions,
+                        foldGap: bookFold?.width ?? 0,
                         showingEndPage: showingEndPage,
                         counterText: counterText,
                         pageCache: pageCache,
@@ -168,6 +175,12 @@
                     )
                 }
             }
+        }
+
+        /// The reader's page options with Automatic settled for the reader's
+        /// shape, so a landscape reader pages through two-page spreads.
+        private var layoutOptions: ComicReaderOptions {
+            pageOptions.resolved(isWide: isWideReader)
         }
 
         private var manifest: BookReaderManifest? {
@@ -202,7 +215,7 @@
             let spread = ComicReaderNavigation.spread(
                 index: currentIndex,
                 total: manifest.pages.count,
-                options: readerMode == .webtoon ? ComicReaderOptions() : pageOptions
+                options: readerMode == .webtoon ? ComicReaderOptions() : layoutOptions
             )
             let positions = spread.compactMap(manifest.position(at:))
             guard let first = positions.first else { return "" }
@@ -277,7 +290,7 @@
             let visiblePages = ComicReaderNavigation.spread(
                 index: currentIndex,
                 total: manifest.pages.count,
-                options: pageOptions
+                options: layoutOptions
             )
             if visiblePages.last == manifest.pages.count - 1 {
                 currentIndex = manifest.pages.count
@@ -288,7 +301,7 @@
                 to: ComicReaderNavigation.nextIndex(
                     from: currentIndex,
                     total: manifest.pages.count,
-                    options: pageOptions
+                    options: layoutOptions
                 ))
         }
 
@@ -310,7 +323,7 @@
                 to: ComicReaderNavigation.previousIndex(
                     from: currentIndex,
                     total: manifest.pages.count,
-                    options: pageOptions
+                    options: layoutOptions
                 ))
         }
 

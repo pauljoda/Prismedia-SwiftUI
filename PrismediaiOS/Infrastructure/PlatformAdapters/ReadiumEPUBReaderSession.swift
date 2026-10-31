@@ -163,7 +163,10 @@
                 config: .init(
                     preferences: readiumPreferences(useDarkSystemTheme: useDarkSystemTheme),
                     preloadPreviousPositionCount: 2,
-                    preloadNextPositionCount: 6
+                    preloadNextPositionCount: 6,
+                    readiumCSSRSProperties: EPUBReaderColumnLayout.readingSystemProperties(
+                        for: preferences.columnCount
+                    )
                 )
             )
             controller.delegate = self

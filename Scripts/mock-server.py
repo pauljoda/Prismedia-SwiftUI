@@ -638,6 +638,12 @@ AUDIOBOOK["id"] = "abababab-abab-abab-abab-abababababab"
 ENTITIES.insert(-1, EPUB_BOOK)
 ENTITIES.insert(-1, PDF_BOOK)
 ENTITIES.insert(-1, AUDIOBOOK)
+COMIC_BOOK = thumb("c", "book", "Mock Comic")
+COMIC_BOOK["id"] = "cacacaca-caca-caca-caca-cacacacacaca"
+ENTITIES.insert(ENTITIES.index(EPUB_BOOK), COMIC_BOOK)
+COMIC_BOOK_ID = COMIC_BOOK["id"]
+COMIC_PAGE_COUNT = 7
+COMIC_COVER_ORDINAL = None if os.environ.get("PRISMEDIA_MOCK_COMIC_NO_COVER") else 0
 VIDEO_ALPHA_INDEX = len(LONG_MOVIES)
 VIDEO_BETA_INDEX = VIDEO_ALPHA_INDEX + 1
 MOVIE_ONE_INDEX = VIDEO_ALPHA_INDEX + 2
@@ -1224,6 +1230,17 @@ def build_entity_detail_response(entity_id):
             book_type, book_format = "novel", "epub"
         elif entity["id"] == AUDIOBOOK_ID:
             book_type, book_format = "novel", "audio"
+        elif entity["id"] == COMIC_BOOK_ID:
+            book_type, book_format = "comic", "cbz"
+            capabilities.append(
+                {
+                    "kind": "page-sequence",
+                    "pageCount": COMIC_PAGE_COUNT,
+                    "direction": "left-to-right",
+                    "defaultMode": "paged",
+                    "coverOrdinal": COMIC_COVER_ORDINAL,
+                }
+            )
         else:
             book_type, book_format = "document", "pdf"
         capabilities.append(
@@ -1317,7 +1334,7 @@ def build_entity_detail_response(entity_id):
         "parentEntityId": entity["parentEntityId"],
         "sortOrder": entity["sortOrder"],
         "hasSourceMedia": entity["kind"] in ("video", "movie", "video-episode", "image")
-        or entity["id"] in (EPUB_BOOK_ID, PDF_BOOK_ID, AUDIOBOOK_ID),
+        or entity["id"] in (EPUB_BOOK_ID, PDF_BOOK_ID, AUDIOBOOK_ID, COMIC_BOOK_ID),
         "capabilities": capabilities,
         "childrenByKind": child_groups,
         "relationships": relationships,
@@ -1335,6 +1352,8 @@ def build_book_detail_response(entity_id):
         response.update({"bookType": "novel", "format": "epub", "coverPageId": None})
     elif entity_id == AUDIOBOOK_ID:
         response.update({"bookType": "novel", "format": "audio", "coverPageId": None})
+    elif entity_id == COMIC_BOOK_ID:
+        response.update({"bookType": "comic", "format": "cbz", "coverPageId": None})
     else:
         response.update({"bookType": "document", "format": "pdf", "coverPageId": None})
     return response
@@ -1743,6 +1762,33 @@ class Handler(BaseHTTPRequestHandler):
             if image_media is not None:
                 contents, content_type = image_media
                 return self._send_media(contents, content_type)
+
+        if path == f"/api/entities/{COMIC_BOOK_ID}/reader-manifest":
+            return self._send(
+                200,
+                {
+                    "entityId": COMIC_BOOK_ID,
+                    "direction": "left-to-right",
+                    "defaultMode": "paged",
+                    "coverOrdinal": COMIC_COVER_ORDINAL,
+                    "pages": [
+                        {
+                            "ordinal": ordinal,
+                            "mimeType": "image/jpeg",
+                            "width": 600,
+                            "height": 900,
+                            "pageType": "front-cover" if ordinal == 0 else "story",
+                            "isDoublePage": False,
+                            "checksum": None,
+                        }
+                        for ordinal in range(COMIC_PAGE_COUNT)
+                    ],
+                },
+            )
+        if path.startswith(f"/api/entities/{COMIC_BOOK_ID}/reader-pages/"):
+            poster = os.path.join(IMAGE_FIXTURE_ROOT, "poster-petethecat.jpg")
+            with open(poster, "rb") as handle:
+                return self._send_binary(handle.read(), "image/jpeg")
 
         if path.startswith("/api/entities/") and path.endswith("/files/source"):
             entity_id = path.split("/")[3]
