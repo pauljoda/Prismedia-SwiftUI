@@ -6,6 +6,9 @@ struct PrismediaAccountMenu: View {
     let onOpenAccount: () -> Void
     let onOpenSettings: (() -> Void)?
     let onSignOut: () -> Void
+    /// A titled symbol instead of the initials avatar, so the menu can join a
+    /// vertical bar; a custom view stays in the horizontal bar above the content.
+    var usesSymbolLabel = false
 
     var body: some View {
         Menu {
@@ -37,11 +40,15 @@ struct PrismediaAccountMenu: View {
                 action: onSignOut
             )
         } label: {
-            Text(accountInitials)
-                .font(.caption.bold())
-                .foregroundStyle(PrismediaColor.onAccent.opacity(0.82))
-                .frame(width: 34, height: 34)
-                .background(PrismediaColor.accent.gradient, in: Circle())
+            if usesSymbolLabel {
+                Label("Account", systemImage: "person.crop.circle")
+            } else {
+                Text(accountInitials)
+                    .font(.caption.bold())
+                    .foregroundStyle(PrismediaColor.onAccent.opacity(0.82))
+                    .frame(width: 34, height: 34)
+                    .background(PrismediaColor.accent.gradient, in: Circle())
+            }
         }
         #if os(iOS) || os(macOS)
             .buttonStyle(.plain)

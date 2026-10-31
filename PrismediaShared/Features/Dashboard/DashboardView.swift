@@ -4,6 +4,7 @@ struct DashboardView: View {
     @Binding private var navigationPath: [EntityLink]
     @State private var snapshot = DashboardSnapshot()
     @State private var loadedRevision: Int?
+    @State private var prefersVerticalBars = false
     private let service: DashboardService
     private let detailDependencies: EntityDetailDependencies
     private let user: UserAccount
@@ -123,18 +124,25 @@ struct DashboardView: View {
                     }
                 #endif
 
+                // Where bars run down the side, the account menu becomes a symbol
+                // item on the shared glass so it joins them; elsewhere it stays the
+                // initials avatar.
                 ToolbarItem(placement: .primaryAction) {
                     PrismediaAccountMenu(
                         user: user,
                         allowsNsfwContent: $allowsNsfwContent,
                         onOpenAccount: onOpenAccount,
                         onOpenSettings: onOpenSettings,
-                        onSignOut: onSignOut
+                        onSignOut: onSignOut,
+                        usesSymbolLabel: prefersVerticalBars
                     )
                 }
                 #if os(iOS) || os(macOS)
-                    .sharedBackgroundVisibility(.hidden)
+                    .sharedBackgroundVisibility(prefersVerticalBars ? .automatic : .hidden)
                 #endif
+            }
+            .background {
+                PrismediaVerticalBarReader { prefersVerticalBars = $0 }
             }
             #if os(iOS)
                 .toolbarBackground(.hidden, for: .navigationBar)

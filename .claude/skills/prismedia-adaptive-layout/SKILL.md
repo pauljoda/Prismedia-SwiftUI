@@ -81,6 +81,16 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
   that (the album page once flipped at 680 pt as the open Duo turned).
 - **Phone-width fill buttons hug on regular width.** `MusicPlaybackButtons`
   sizes Play and Shuffle to their labels there instead of stretching them.
+- **Custom-view toolbar items switch to a symbol where bars run down the
+  side.** `PrismediaVerticalBarReader` reports the preference; the dashboard's
+  account menu then shows a titled symbol on the shared glass instead of the
+  initials avatar, so it joins the side bar.
+- **Shared files must not end in a top-level `#if os(...)` block.**
+  `ModernArchitectureGuardTests` treats that as a single-platform file; put a
+  platform-only private helper above the shared type.
+- **The mock server serves `/api/entities/shelf`**, so the dashboard has
+  Continue and Recent rails to look at. The iOS dashboard has no hero
+  (`showsHero` is off).
 
 ## Gotchas we hit
 

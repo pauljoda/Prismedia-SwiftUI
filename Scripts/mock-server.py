@@ -1722,7 +1722,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/videos/") and path.endswith("/subtitles/mock-vtt-en"):
             return self._send_text(200, MOCK_VTT_MARKUP_SUBTITLE, "text/vtt; charset=utf-8")
 
-        if path in ("/api/entities", "/api/collections"):
+        if path in ("/api/entities", "/api/entities/shelf", "/api/collections"):
             return self._send(200, build_entity_list_response(path, request_url.query))
 
         collection_parts = path.strip("/").split("/")
