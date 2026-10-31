@@ -19,6 +19,8 @@ struct PrismediaSidebarBrandView: View {
                 Text("PRISMEDIA")
                     .font(.system(.headline, design: .rounded, weight: .bold))
                     .tracking(1.5)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
 
                 if let subtitle {
                     Text(subtitle)

@@ -11,7 +11,14 @@
         @Environment(MusicPlaybackComposition.self) private var playback
         @State private var miniPlayerVisibility = MusicMiniPlayerVisibility()
         @State private var nowPlayingPresented = false
+        /// Regular width only: the bar collapsed to floating artwork in a corner.
+        @State private var miniPlayerIsCollapsed = false
+        @State private var collapsedMiniPlayerEdge = HorizontalEdge.trailing
+        /// True while the bar expands out of the floating artwork: it fades in
+        /// around the artwork flying back instead of sliding up from the bottom.
+        @State private var miniPlayerExpandsFromArtwork = false
         @Namespace private var nowPlayingTransitionNamespace
+        @Namespace private var miniPlayerArtworkNamespace
 
         private let content: Content
 
@@ -78,9 +85,29 @@
                 content
                     .environment(controller)
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        if showsMiniPlayer {
+                        if showsMiniPlayer, !miniPlayerIsCollapsed {
                             iPadMiniPlayer
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                                .transition(
+                                    miniPlayerExpandsFromArtwork
+                                        ? .opacity
+                                        : .move(edge: .bottom).combined(with: .opacity)
+                                )
+                        }
+                    }
+                    // The collapsed artwork floats in a corner and reserves no space.
+                    // The bar's artwork flies into it, so it appears without a
+                    // transition, and it fades out only so the bar's artwork has a
+                    // source to fly back from.
+                    .overlay(alignment: collapsedMiniPlayerEdge == .leading ? .bottomLeading : .bottomTrailing) {
+                        if showsMiniPlayer, miniPlayerIsCollapsed {
+                            IPadMusicMiniPlayerBubble(
+                                edge: $collapsedMiniPlayerEdge,
+                                artworkNamespace: miniPlayerArtworkNamespace,
+                                artworkPalette: playback.artworkPalette,
+                                onExpand: { setMiniPlayerCollapsed(false) }
+                            )
+                            .environment(controller)
+                            .transition(.asymmetric(insertion: .identity, removal: .opacity))
                         }
                     }
                     .animation(reduceMotion ? nil : .snappy, value: showsMiniPlayer)
@@ -116,13 +143,25 @@
             IPadMusicMiniPlayerView(
                 engine: engine,
                 artworkPalette: artworkPaletteBinding,
-                showNowPlaying: { nowPlayingPresented = true }
+                artworkNamespace: miniPlayerArtworkNamespace,
+                showNowPlaying: { nowPlayingPresented = true },
+                minimize: { setMiniPlayerCollapsed(true) }
             )
             .environment(controller)
             .matchedTransitionSource(
                 id: nowPlayingTransitionID,
                 in: nowPlayingTransitionNamespace
             )
+        }
+
+        /// Animated so the artwork moves between the bar and the corner as one piece.
+        private func setMiniPlayerCollapsed(_ isCollapsed: Bool) {
+            miniPlayerExpandsFromArtwork = !isCollapsed
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.45, extraBounce: 0.04)) {
+                miniPlayerIsCollapsed = isCollapsed
+            } completion: {
+                miniPlayerExpandsFromArtwork = false
+            }
         }
 
         private var engine: AVPlayerAudioPlaybackEngine { playback.engine }
@@ -144,6 +183,8 @@
                 let tracks = PrismediaUITestBootstrap.musicTracks()
                 guard !tracks.isEmpty else { return }
                 controller.play(tracks: tracks, queueMode: .ordered)
+                nowPlayingPresented = PrismediaUITestBootstrap.presentsNowPlaying()
+                miniPlayerIsCollapsed = PrismediaUITestBootstrap.collapsesMiniPlayer()
             }
         #endif
     }

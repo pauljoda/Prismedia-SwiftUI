@@ -80,6 +80,7 @@
                     onSubmit: { Task { await submitSearch() } }
                 )
             #else
+                .suppressesMusicMiniPlayerWhileSearching()
                 .searchable(text: $searchText, prompt: "Search \(configuration.title.lowercased())")
                 .onSubmit(of: .search) { Task { await submitSearch() } }
             #endif

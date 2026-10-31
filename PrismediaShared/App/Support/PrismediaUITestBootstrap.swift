@@ -209,6 +209,22 @@
                 && environment["PRISMEDIA_UI_TEST_DETAIL_SCROLL_BOTTOM"] == "1"
         }
 
+        static func presentsNowPlaying(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Bool {
+            arguments.contains("-prismedia-ui-testing")
+                && environment["PRISMEDIA_UI_TEST_SHOW_NOW_PLAYING"] == "1"
+        }
+
+        static func collapsesMiniPlayer(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Bool {
+            arguments.contains("-prismedia-ui-testing")
+                && environment["PRISMEDIA_UI_TEST_COLLAPSE_MINI_PLAYER"] == "1"
+        }
+
         static func disablesDashboardHeroAutoAdvance(
             arguments: [String] = CommandLine.arguments,
             environment: [String: String] = ProcessInfo.processInfo.environment

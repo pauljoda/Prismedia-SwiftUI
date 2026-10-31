@@ -12,8 +12,11 @@ struct PrismediaSidebarView: View {
             sidebarList
                 .listStyle(.plain)
         #else
+            // The shell's detail column carries the sidebar toggle, so it joins the
+            // side bar on iPhone Duo instead of sitting beside the brand.
             sidebarList
                 .listStyle(.sidebar)
+                .toolbar(removing: .sidebarToggle)
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
         #endif
     }

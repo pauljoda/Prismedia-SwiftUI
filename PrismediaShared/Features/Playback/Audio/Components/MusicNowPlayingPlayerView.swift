@@ -11,7 +11,6 @@
         let artworkFallbackSeed: String
         let artworkSystemImage: String
         let isActive: Bool
-        let onShowQueue: () -> Void
         let onNavigate: (EntityLink) -> Void
         let onAddToCollection: (() -> Void)?
 
@@ -24,7 +23,6 @@
             artworkFallbackSeed: String? = nil,
             artworkSystemImage: String = "music.note",
             isActive: Bool,
-            onShowQueue: @escaping () -> Void,
             onNavigate: @escaping (EntityLink) -> Void,
             onAddToCollection: (() -> Void)?
         ) {
@@ -36,50 +34,43 @@
             self.artworkFallbackSeed = artworkFallbackSeed ?? track.album ?? track.title
             self.artworkSystemImage = artworkSystemImage
             self.isActive = isActive
-            self.onShowQueue = onShowQueue
             self.onNavigate = onNavigate
             self.onAddToCollection = onAddToCollection
         }
 
         var body: some View {
             VStack(spacing: PrismediaSpacing.extraExtraLarge) {
-                Button(action: onShowQueue) {
-                    GeometryReader { geometry in
-                        let artworkSize = fittedArtworkSize(in: geometry.size)
+                // The artwork takes no gestures, so a swipe down from it dismisses Now
+                // Playing. The control bar's queue button shows the queue.
+                GeometryReader { geometry in
+                    let artworkSize = fittedArtworkSize(in: geometry.size)
 
-                        Color.clear
-                            .frame(width: artworkSize.width, height: artworkSize.height)
-                            .overlay {
-                                if isActive {
-                                    MusicNowPlayingArtwork(
-                                        track: track,
-                                        aspectRatio: artworkAspectRatio,
-                                        fallbackSeed: artworkFallbackSeed,
-                                        systemImage: artworkSystemImage
-                                    )
-                                    .matchedGeometryEffect(
-                                        id: "music.now-playing.artwork.\(track.id.uuidString)",
-                                        in: artworkNamespace,
-                                        properties: .frame,
-                                        anchor: .center,
-                                        isSource: artworkIsSource
-                                    )
-                                    .zIndex(1)
-                                    .shadow(color: .black.opacity(0.4), radius: 24, y: 16)
-                                }
+                    Color.clear
+                        .frame(width: artworkSize.width, height: artworkSize.height)
+                        .overlay {
+                            if isActive {
+                                MusicNowPlayingArtwork(
+                                    track: track,
+                                    aspectRatio: artworkAspectRatio,
+                                    fallbackSeed: artworkFallbackSeed,
+                                    systemImage: artworkSystemImage
+                                )
+                                .matchedGeometryEffect(
+                                    id: "music.now-playing.artwork.\(track.id.uuidString)",
+                                    in: artworkNamespace,
+                                    properties: .frame,
+                                    anchor: .center,
+                                    isSource: artworkIsSource
+                                )
+                                .zIndex(1)
+                                .shadow(color: .black.opacity(0.4), radius: 24, y: 16)
                             }
-                            .contentShape(Rectangle())
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .layoutPriority(1)
-                .buttonStyle(.plain)
-                .disabled(!isActive)
-                .accessibilityHidden(!isActive)
-                .accessibilityLabel("Show Queue")
-                .accessibilityHint("Shows the playing queue")
-                .simultaneousGesture(queueRevealGesture)
+                .accessibilityHidden(true)
 
                 metadata
                     .opacity(isActive ? 1 : 0)
@@ -110,15 +101,6 @@
             .padding(.horizontal, PrismediaSpacing.section)
         }
 
-        private var queueRevealGesture: some Gesture {
-            DragGesture(minimumDistance: 28)
-                .onEnded { value in
-                    let projectedDistance = min(value.translation.height, value.predictedEndTranslation.height)
-                    guard projectedDistance < -72 else { return }
-                    onShowQueue()
-                }
-        }
-
         private func fittedArtworkSize(in availableSize: CGSize) -> CGSize {
             let horizontalInset = PrismediaSpacing.section * 2
             let availableWidth = max(1, availableSize.width - horizontalInset)
@@ -135,7 +117,6 @@
                 track: MusicPreviewData.tracks[0],
                 artworkNamespace: artworkNamespace,
                 isActive: true,
-                onShowQueue: {},
                 onNavigate: { _ in },
                 onAddToCollection: {}
             )

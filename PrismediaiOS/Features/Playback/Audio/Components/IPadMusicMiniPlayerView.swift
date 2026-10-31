@@ -13,70 +13,121 @@
         @State private var isScrubbing = false
 
         let engine: AVPlayerAudioPlaybackEngine
+        /// Shared with the collapsed artwork, which this bar's artwork flies into.
+        let artworkNamespace: Namespace.ID
         let showNowPlaying: () -> Void
+        /// Collapses the bar to floating artwork in a corner.
+        let minimize: () -> Void
 
         init(
             engine: AVPlayerAudioPlaybackEngine,
             artworkPalette: Binding<ArtworkPalette?>,
-            showNowPlaying: @escaping () -> Void
+            artworkNamespace: Namespace.ID,
+            showNowPlaying: @escaping () -> Void,
+            minimize: @escaping () -> Void
         ) {
             self.engine = engine
             _artworkPalette = artworkPalette
+            self.artworkNamespace = artworkNamespace
             self.showNowPlaying = showNowPlaying
+            self.minimize = minimize
         }
 
+        /// One bar whose track and transport groups the system arranges side by
+        /// side, so on iPhone Duo each keeps to its own side of the fold.
         var body: some View {
             if let track = controller.currentTrack {
-                HStack(spacing: PrismediaSpacing.extraSmall) {
-                    shuffleButton
-                    previousButton
-                    playButton
-                    nextButton
-                    repeatButton
-
-                    Capsule()
-                        .fill(PrismediaColor.textMuted.opacity(0.28))
-                        .frame(width: PrismediaLayout.hairline, height: 28)
-                        .padding(.horizontal, PrismediaSpacing.extraSmall)
-                        .accessibilityHidden(true)
-
-                    trackButton(track)
-
-                    playbackTimeline(track)
-
-                    actionsButton(track)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, PrismediaSpacing.small)
-                .padding(.vertical, PrismediaSpacing.extraSmall)
-                .frame(maxWidth: 900)
-                .glassEffect(.regular, in: .capsule)
-                .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
-                .padding(.top, PrismediaSpacing.small)
-                .padding(.bottom, PrismediaSpacing.medium)
-                .onAppear(perform: synchronizeTimeline)
-                .onChange(of: engine.elapsedTime) {
-                    guard !isScrubbing else { return }
-                    synchronizeTimeline()
-                }
-                .onChange(of: track.id) { _, _ in
-                    actionsPresented = false
-                    synchronizeTimeline()
-                }
-                .sheet(item: $trackForCollection) { track in
-                    AddToCollectionSheet(
-                        items: [CollectionEntityReference(entityType: .audioTrack, entityID: track.id)]
-                    )
-                    .environment(environment)
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("music.mini-player")
+                // An arrangement has no height of its own, so a hidden copy of the
+                // transport sizes the bar and the arranged groups fill it.
+                transportGroup(track)
+                    .hidden()
+                    .overlay {
+                        PrismediaArrangedPanes {
+                            trackGroup(track)
+                                .padding(.trailing, PrismediaSpacing.medium)
+                        } secondary: {
+                            transportGroup(track)
+                                .padding(.leading, PrismediaSpacing.medium)
+                        }
+                    }
+                    .padding(.horizontal, PrismediaSpacing.small)
+                    .padding(.vertical, PrismediaSpacing.extraSmall)
+                    .glassEffect(.regular, in: .capsule)
+                    .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+                    .buttonStyle(.plain)
+                    .padding(.top, PrismediaSpacing.small)
+                    .padding(.bottom, PrismediaSpacing.medium)
+                    .onAppear(perform: synchronizeTimeline)
+                    .onChange(of: engine.elapsedTime) {
+                        guard !isScrubbing else { return }
+                        synchronizeTimeline()
+                    }
+                    .onChange(of: track.id) { _, _ in
+                        actionsPresented = false
+                        synchronizeTimeline()
+                    }
+                    .sheet(item: $trackForCollection) { track in
+                        AddToCollectionSheet(
+                            items: [CollectionEntityReference(entityType: .audioTrack, entityID: track.id)]
+                        )
+                        .environment(environment)
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("music.mini-player")
             }
         }
 
+        private func trackGroup(_ track: MusicTrack) -> some View {
+            HStack(spacing: PrismediaSpacing.extraSmall) {
+                transportButton(
+                    "Minimize Player",
+                    systemImage: "arrow.down.right.and.arrow.up.left",
+                    isDisabled: false,
+                    action: minimize
+                )
+                .accessibilityIdentifier("music.mini-player.minimize")
+                trackButton(track)
+                actionsButton(track)
+            }
+            .frame(maxWidth: .infinity)
+        }
+
+        /// Shuffle and repeat, then the timeline, give way first when the pane is narrow.
+        private func transportGroup(_ track: MusicTrack) -> some View {
+            ViewThatFits(in: .horizontal) {
+                transportControls(track, includesModes: true, includesTimeline: true)
+                transportControls(track, includesModes: false, includesTimeline: true)
+                transportControls(track, includesModes: false, includesTimeline: false)
+            }
+            .frame(maxWidth: .infinity)
+        }
+
+        private func transportControls(
+            _ track: MusicTrack,
+            includesModes: Bool,
+            includesTimeline: Bool
+        ) -> some View {
+            HStack(spacing: PrismediaSpacing.extraSmall) {
+                if includesModes { shuffleButton }
+                previousButton
+                playButton
+                nextButton
+                if includesModes { repeatButton }
+                if includesTimeline {
+                    playbackTimeline(track)
+                        .padding(.leading, PrismediaSpacing.extraSmall)
+                }
+            }
+        }
+
+        /// The times sit either side of the slider, so the row centres on the
+        /// transport buttons and its last element stays clear of the capsule's end.
         private func playbackTimeline(_ track: MusicTrack) -> some View {
             let duration = duration(for: track)
-            return VStack(spacing: 0) {
+            return HStack(spacing: PrismediaSpacing.small) {
+                Text(MusicPresentation.clockTime(scrubPosition))
+                    .accessibilityHidden(true)
+
                 Slider(
                     value: $scrubPosition,
                     in: 0...duration,
@@ -84,22 +135,19 @@
                 )
                 .controlSize(.mini)
                 .tint(accent)
+                .frame(minWidth: 72)
                 .accessibilityLabel("Playback Position")
                 .accessibilityValue(
                     "\(MusicPresentation.clockTime(scrubPosition)) of \(MusicPresentation.clockTime(duration))"
                 )
                 .accessibilityIdentifier("music.mini-player.timeline")
 
-                HStack {
-                    Text(MusicPresentation.clockTime(scrubPosition))
-                    Spacer(minLength: PrismediaSpacing.extraSmall)
-                    Text(MusicPresentation.clockTime(duration))
-                }
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(PrismediaColor.textMuted)
-                .accessibilityHidden(true)
+                Text(MusicPresentation.clockTime(duration))
+                    .accessibilityHidden(true)
             }
-            .frame(minWidth: 120, idealWidth: 170, maxWidth: 210)
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(PrismediaColor.textMuted)
+            .padding(.trailing, PrismediaSpacing.small)
         }
 
         private func actionsButton(_ track: MusicTrack) -> some View {
@@ -142,6 +190,10 @@
                         cornerRadius: PrismediaRadius.badge
                     )
                     .frame(width: 44, height: 44)
+                    .matchedGeometryEffect(
+                        id: IPadMusicMiniPlayerBubble.artworkTransitionID,
+                        in: artworkNamespace
+                    )
 
                     VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
                         Text(controller.entryTitle ?? track.title)
@@ -312,12 +364,15 @@
             @Previewable @State var controller = MusicPreviewData.controller()
             @Previewable @State var engine = AVPlayerAudioPlaybackEngine()
             @Previewable @State var artworkPalette: ArtworkPalette?
+            @Previewable @Namespace var artworkNamespace
 
             PreviewShell(signedIn: true) {
                 IPadMusicMiniPlayerView(
                     engine: engine,
                     artworkPalette: $artworkPalette,
-                    showNowPlaying: {}
+                    artworkNamespace: artworkNamespace,
+                    showNowPlaying: {},
+                    minimize: {}
                 )
                 .environment(controller)
             }

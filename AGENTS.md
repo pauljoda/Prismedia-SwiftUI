@@ -36,6 +36,13 @@
 - A custom `Button` or tap gesture that owns a `List` or `Form` row must expand its label to the full available width and define a rectangular content shape. Never rely on intrinsic text hit testing; regression tests should tap row whitespace. Native row-owning controls and nested inline actions are exempt.
 - Test Reduce Transparency, Increase Contrast, Reduce Motion, Dynamic Type, VoiceOver, the fixed dark appearance, window resizing, and platform input modes.
 
+## iPhone Duo
+
+- Load `.claude/skills/prismedia-adaptive-layout` before iOS layout work, with the `iphone-duo-*` skills it points to (platform guidance copied unmodified from mirzaaghazadeh/iphone-duo-skills; license in `.claude/reference/`). Record new layout lessons in `prismedia-adaptive-layout`, not in the upstream files.
+- The Duo layout needs the iOS 27.1 SDK (`DEVELOPER_DIR="/Applications/Xcode 27.1.app/Contents/Developer"` while `xcode-select` points at 27.0). Gate 27.1-only APIs with `#if os(iOS) && canImport(SwiftUICore, _version: 8.0.85)` plus `if #available(iOS 27.1, *)`, and keep the 27.0 build compiling.
+- Branch on `horizontalSizeClass`, never on idiom, orientation or measured width. Outer display: compact. Inner display: regular × regular in any orientation.
+- Two related groups that both stay visible on regular width go in `PrismediaArrangedPanes`. Nothing tappable sits on the fold, and every toolbar item has a title and a symbol so it can join the side bar.
+
 ## Previews
 
 - Keep each component's `#Preview` beside the component.

@@ -20,6 +20,15 @@ extension View {
     func suppressesMusicMiniPlayer() -> some View {
         modifier(MusicMiniPlayerSuppressionModifier())
     }
+
+    /// Hides the regular-width mini player while this view's search is active,
+    /// where the search field floats at the bottom of the content beside it.
+    /// Apply it to the content inside `.searchable`, where search state is visible.
+    func suppressesMusicMiniPlayerWhileSearching() -> some View {
+        background {
+            MusicMiniPlayerSearchSuppression()
+        }
+    }
 }
 
 #if DEBUG

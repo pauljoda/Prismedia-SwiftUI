@@ -15,6 +15,7 @@ struct EntityGridSearchModifier: ViewModifier {
                 )
             #else
                 content
+                    .suppressesMusicMiniPlayerWhileSearching()
                     .searchable(text: $text, prompt: "Search your library")
                     .onSubmit(of: .search, onSubmit)
             #endif

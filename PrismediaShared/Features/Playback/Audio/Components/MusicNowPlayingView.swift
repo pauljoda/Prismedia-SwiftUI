@@ -7,7 +7,13 @@
         @Environment(PrismediaAppEnvironment.self) private var environment
         @Environment(PrismediaAppRouter.self) private var router
         @Environment(MusicPlayerController.self) private var controller
+        #if os(iOS)
+            @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+        #endif
         @Namespace private var localArtworkNamespace
+        /// The queue pane's own artwork namespace while both panes show, so its
+        /// current-track artwork never pairs with the player's.
+        @Namespace private var queuePaneArtworkNamespace
 
         @State private var presentation = MusicNowPlayingPresentation.player
         @State private var queueShowsHistory = false
@@ -40,8 +46,22 @@
                         .navigationTitle("")
                         .prismediaInlineNavigationTitle()
                         .toolbar {
-                            ToolbarItem(placement: .principal) {
-                                dismissHandle
+                            // Regular width would centre the handle over the fold, so
+                            // the handle moves into the player pane and a close button
+                            // joins the side bar.
+                            if horizontalSizeClass == .regular {
+                                ToolbarItem(placement: .cancellationAction) {
+                                    PrismediaToolbarActionButton(
+                                        "Close Now Playing",
+                                        systemImage: "chevron.down",
+                                        action: closePlayer
+                                    )
+                                    .accessibilityIdentifier("music.close-player")
+                                }
+                            } else {
+                                ToolbarItem(placement: .principal) {
+                                    dismissHandle
+                                }
                             }
                         }
                         .toolbarBackground(.hidden, for: .navigationBar)
@@ -92,39 +112,94 @@
             .accessibilityIdentifier("music.now-playing")
         }
 
+        /// Compact width switches between the player and the queue. Regular width
+        /// shows both as panes the system arranges, on iPhone Duo one on each side
+        /// of the fold, so the queue never covers the player.
+        @ViewBuilder
         private func playerContent(_ track: MusicTrack) -> some View {
+            #if os(iOS)
+                if horizontalSizeClass == .regular {
+                    PrismediaArrangedPanes {
+                        VStack(spacing: 0) {
+                            dismissHandle
+                            playerView(track, isActive: true)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .layoutPriority(1)
+                            playbackControls(track, showsQueueButton: false)
+                        }
+                    } secondary: {
+                        queueView(
+                            track,
+                            isActive: true,
+                            pullsDownForHistory: false,
+                            artworkNamespace: queuePaneArtworkNamespace
+                        )
+                    }
+                } else {
+                    switchedContent(track)
+                }
+            #else
+                switchedContent(track)
+            #endif
+        }
+
+        private func switchedContent(_ track: MusicTrack) -> some View {
             VStack(spacing: 0) {
                 ZStack {
-                    MusicNowPlayingQueueView(
-                        currentTrack: track,
-                        artworkNamespace: artworkNamespace,
-                        artworkIsSource: artworkIsSource,
+                    queueView(
+                        track,
                         isActive: presentation == .queue,
-                        showsHistory: $queueShowsHistory,
-                        onShowPlayer: showPlayer,
-                        onNavigate: navigate,
-                        onAddToCollection: { trackForCollection = track }
+                        pullsDownForHistory: true,
+                        artworkNamespace: artworkNamespace
                     )
                     .allowsHitTesting(presentation == .queue)
 
-                    MusicNowPlayingPlayerView(
-                        track: track,
-                        title: controller.entryTitle ?? track.title,
-                        artworkNamespace: artworkNamespace,
-                        artworkIsSource: artworkIsSource,
-                        artworkAspectRatio: artworkAspectRatio,
-                        artworkFallbackSeed: controller.context?.playbackOwnerTitle,
-                        artworkSystemImage: artworkSystemImage,
-                        isActive: presentation == .player,
-                        onShowQueue: showQueue,
-                        onNavigate: navigate,
-                        onAddToCollection: { trackForCollection = track }
-                    )
-                    .allowsHitTesting(presentation == .player)
+                    playerView(track, isActive: presentation == .player)
+                        .allowsHitTesting(presentation == .player)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .layoutPriority(1)
 
+                playbackControls(track, showsQueueButton: true)
+            }
+        }
+
+        private func queueView(
+            _ track: MusicTrack,
+            isActive: Bool,
+            pullsDownForHistory: Bool,
+            artworkNamespace: Namespace.ID
+        ) -> some View {
+            MusicNowPlayingQueueView(
+                currentTrack: track,
+                artworkNamespace: artworkNamespace,
+                artworkIsSource: artworkIsSource,
+                isActive: isActive,
+                pullsDownForHistory: pullsDownForHistory,
+                showsHistory: $queueShowsHistory,
+                onShowPlayer: showPlayer,
+                onNavigate: navigate,
+                onAddToCollection: { trackForCollection = track }
+            )
+        }
+
+        private func playerView(_ track: MusicTrack, isActive: Bool) -> some View {
+            MusicNowPlayingPlayerView(
+                track: track,
+                title: controller.entryTitle ?? track.title,
+                artworkNamespace: artworkNamespace,
+                artworkIsSource: artworkIsSource,
+                artworkAspectRatio: artworkAspectRatio,
+                artworkFallbackSeed: controller.context?.playbackOwnerTitle,
+                artworkSystemImage: artworkSystemImage,
+                isActive: isActive,
+                onNavigate: navigate,
+                onAddToCollection: { trackForCollection = track }
+            )
+        }
+
+        private func playbackControls(_ track: MusicTrack, showsQueueButton: Bool) -> some View {
+            VStack(spacing: 0) {
                 MusicNowPlayingTransportView(
                     track: track,
                     engine: engine,
@@ -136,6 +211,7 @@
                 MusicNowPlayingControlBar(
                     presentation: presentation,
                     selectedTint: selectedTint,
+                    showsQueueButton: showsQueueButton,
                     onToggleQueue: toggleQueue
                 )
                 .padding(.top, PrismediaSpacing.small)
@@ -179,10 +255,6 @@
 
         private func toggleQueue() {
             setPresentation(presentation == .queue ? .player : .queue)
-        }
-
-        private func showQueue() {
-            setPresentation(.queue)
         }
 
         private func showPlayer() {

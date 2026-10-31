@@ -7,6 +7,7 @@ public struct PrismediaShellView: View {
     @Environment(PrismediaAppRouter.self) private var router
     @State private var isAccountPresented = false
     @State private var playbackPreferences = VideoPlaybackPreferences()
+    @State private var sidebarVisibility = NavigationSplitViewVisibility.all
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -122,7 +123,7 @@ public struct PrismediaShellView: View {
             onEntityMutated: { environment.entityDidMutate() }
         )
 
-        return NavigationSplitView {
+        return NavigationSplitView(columnVisibility: $sidebarVisibility) {
             PrismediaSidebarView(
                 sections: AppSidebarCatalog.sections(for: user),
                 selection: sidebarSelection(videoPlaybackSession: videoPlaybackSession)
@@ -136,6 +137,20 @@ public struct PrismediaShellView: View {
             )
             .id(router.selectedTab)
             .id(router.rootNavigationRevision)
+            #if os(iOS)
+                // The detail column's items join the side bar on iPhone Duo, so the
+                // sidebar toggle lives here instead of beside the sidebar's brand.
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        PrismediaToolbarActionButton(
+                            sidebarVisibility == .detailOnly ? "Show Sidebar" : "Hide Sidebar",
+                            systemImage: "sidebar.leading",
+                            action: toggleSidebar
+                        )
+                        .accessibilityIdentifier("shell.sidebar.toggle")
+                    }
+                }
+            #endif
         }
         .navigationSplitViewStyle(.balanced)
         .onAppear {
@@ -602,6 +617,12 @@ public struct PrismediaShellView: View {
         {
             videoPlaybackSession.inlinePlaybackWillNavigate()
             isAccountPresented = true
+        }
+    }
+
+    private func toggleSidebar() {
+        withAnimation {
+            sidebarVisibility = sidebarVisibility == .detailOnly ? .all : .detailOnly
         }
     }
 

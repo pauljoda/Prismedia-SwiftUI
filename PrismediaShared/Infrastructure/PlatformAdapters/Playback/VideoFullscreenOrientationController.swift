@@ -37,7 +37,8 @@
             guard !isFullscreenActive, !isDismissalPending else { return }
             guard
                 VideoFullscreenOrientationPolicy.forcesLandscape(
-                    isPad: UIDevice.current.userInterfaceIdiom == .pad
+                    isPad: UIDevice.current.userInterfaceIdiom == .pad,
+                    isCompactWidth: scene.traitCollection.horizontalSizeClass != .regular
                 )
             else {
                 onFallbackChanged?(false)

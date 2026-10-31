@@ -6,6 +6,8 @@
 
         let presentation: MusicNowPlayingPresentation
         let selectedTint: Color
+        /// False where the queue already shows beside the player.
+        var showsQueueButton = true
         let onToggleQueue: () -> Void
 
         var body: some View {
@@ -22,7 +24,9 @@
                 }
                 .frame(maxWidth: .infinity)
 
-                queueButton
+                if showsQueueButton {
+                    queueButton
+                }
             }
         }
 
