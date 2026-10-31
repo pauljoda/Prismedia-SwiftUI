@@ -11,9 +11,6 @@
             @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         #endif
         @Namespace private var localArtworkNamespace
-        /// The queue pane's own artwork namespace while both panes show, so its
-        /// current-track artwork never pairs with the player's.
-        @Namespace private var queuePaneArtworkNamespace
 
         @State private var presentation = MusicNowPlayingPresentation.player
         @State private var queueShowsHistory = false
@@ -114,7 +111,10 @@
 
         /// Compact width switches between the player and the queue. Regular width
         /// shows both as panes the system arranges, on iPhone Duo one on each side
-        /// of the fold, so the queue never covers the player.
+        /// of the fold: the artwork and title in one, the queue with the controls
+        /// beneath it in the other. Side by side that keeps the controls toward the
+        /// thumb; half closed on a table the artwork sits in the raised half and the
+        /// controls on the flat half.
         @ViewBuilder
         private func playerContent(_ track: MusicTrack) -> some View {
             #if os(iOS)
@@ -124,16 +124,18 @@
                             dismissHandle
                             playerView(track, isActive: true)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .layoutPriority(1)
-                            playbackControls(track, showsQueueButton: false)
                         }
                     } secondary: {
-                        queueView(
-                            track,
-                            isActive: true,
-                            pullsDownForHistory: false,
-                            artworkNamespace: queuePaneArtworkNamespace
-                        )
+                        VStack(spacing: 0) {
+                            queueView(
+                                track,
+                                isActive: true,
+                                isBesidePlayer: true,
+                                artworkNamespace: artworkNamespace
+                            )
+                            .frame(maxHeight: .infinity)
+                            playbackControls(track, showsQueueButton: false)
+                        }
                     }
                 } else {
                     switchedContent(track)
@@ -149,7 +151,7 @@
                     queueView(
                         track,
                         isActive: presentation == .queue,
-                        pullsDownForHistory: true,
+                        isBesidePlayer: false,
                         artworkNamespace: artworkNamespace
                     )
                     .allowsHitTesting(presentation == .queue)
@@ -167,7 +169,7 @@
         private func queueView(
             _ track: MusicTrack,
             isActive: Bool,
-            pullsDownForHistory: Bool,
+            isBesidePlayer: Bool,
             artworkNamespace: Namespace.ID
         ) -> some View {
             MusicNowPlayingQueueView(
@@ -175,7 +177,7 @@
                 artworkNamespace: artworkNamespace,
                 artworkIsSource: artworkIsSource,
                 isActive: isActive,
-                pullsDownForHistory: pullsDownForHistory,
+                isBesidePlayer: isBesidePlayer,
                 showsHistory: $queueShowsHistory,
                 onShowPlayer: showPlayer,
                 onNavigate: navigate,

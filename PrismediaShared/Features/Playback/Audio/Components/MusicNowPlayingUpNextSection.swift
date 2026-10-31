@@ -4,18 +4,44 @@
     struct MusicNowPlayingUpNextSection: View {
         let entries: [MusicQueueEntry]
         let contextTitle: String?
+        /// Shows History beside the heading, where no current-track header above carries it.
+        let onShowHistory: (() -> Void)?
         let onSelect: (MusicQueueEntry) -> Void
+
+        init(
+            entries: [MusicQueueEntry],
+            contextTitle: String?,
+            onShowHistory: (() -> Void)? = nil,
+            onSelect: @escaping (MusicQueueEntry) -> Void
+        ) {
+            self.entries = entries
+            self.contextTitle = contextTitle
+            self.onShowHistory = onShowHistory
+            self.onSelect = onSelect
+        }
 
         var body: some View {
             LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
-                    Text("Up Next")
-                        .font(.title3.bold())
-                        .accessibilityIdentifier("music.queue.up-next")
-                    if let contextTitle {
-                        Text("From \(contextTitle)")
-                            .font(.subheadline)
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraSmall) {
+                        Text("Up Next")
+                            .font(.title3.bold())
+                            .accessibilityIdentifier("music.queue.up-next")
+                        if let contextTitle {
+                            Text("From \(contextTitle)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if let onShowHistory {
+                        Button("History", action: onShowHistory)
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("music.queue.show-history")
                     }
                 }
 

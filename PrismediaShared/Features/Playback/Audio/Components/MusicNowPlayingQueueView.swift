@@ -10,9 +10,10 @@
         let artworkNamespace: Namespace.ID
         let artworkIsSource: Bool
         let isActive: Bool
-        /// Whether pulling the queue down opens the history. Off where the queue
-        /// shows beside the player, so the same swipe dismisses Now Playing.
-        let pullsDownForHistory: Bool
+        /// True where the queue shows beside the player, which already shows the
+        /// current track: the queue drops its current-track header, puts History
+        /// beside Up Next, and leaves a pull down to dismiss Now Playing.
+        let isBesidePlayer: Bool
         @Binding var showsHistory: Bool
         let onShowPlayer: () -> Void
         let onNavigate: (EntityLink) -> Void
@@ -23,7 +24,7 @@
             artworkNamespace: Namespace.ID,
             artworkIsSource: Bool = true,
             isActive: Bool,
-            pullsDownForHistory: Bool = true,
+            isBesidePlayer: Bool = false,
             showsHistory: Binding<Bool>,
             onShowPlayer: @escaping () -> Void,
             onNavigate: @escaping (EntityLink) -> Void,
@@ -33,7 +34,7 @@
             self.artworkNamespace = artworkNamespace
             self.artworkIsSource = artworkIsSource
             self.isActive = isActive
-            self.pullsDownForHistory = pullsDownForHistory
+            self.isBesidePlayer = isBesidePlayer
             _showsHistory = showsHistory
             self.onShowPlayer = onShowPlayer
             self.onNavigate = onNavigate
@@ -60,37 +61,46 @@
             .accessibilityIdentifier("music.queue")
         }
 
+        /// History beside Up Next, only where the current-track header that usually carries it is gone.
+        private var upNextHistoryAction: (() -> Void)? {
+            guard isBesidePlayer, !controller.queue.history.isEmpty else { return nil }
+            return { showHistory() }
+        }
+
         private var currentQueuePage: some View {
             VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
-                MusicNowPlayingCurrentTrackView(
-                    track: currentTrack,
-                    title: controller.entryTitle,
-                    artworkNamespace: artworkNamespace,
-                    artworkIsSource: artworkIsSource,
-                    showsContent: isActive,
-                    hasHistory: !controller.queue.history.isEmpty,
-                    onShowPlayer: onShowPlayer,
-                    onShowHistory: showHistory,
-                    onNavigate: onNavigate,
-                    onAddToCollection: onAddToCollection
-                )
-                .accessibilityAction(named: "Show History", showHistory)
+                if !isBesidePlayer {
+                    MusicNowPlayingCurrentTrackView(
+                        track: currentTrack,
+                        title: controller.entryTitle,
+                        artworkNamespace: artworkNamespace,
+                        artworkIsSource: artworkIsSource,
+                        showsContent: isActive,
+                        hasHistory: !controller.queue.history.isEmpty,
+                        onShowPlayer: onShowPlayer,
+                        onShowHistory: showHistory,
+                        onNavigate: onNavigate,
+                        onAddToCollection: onAddToCollection
+                    )
+                    .accessibilityAction(named: "Show History", showHistory)
+                }
 
                 ScrollView {
                     MusicNowPlayingUpNextSection(
                         entries: controller.upNextEntries,
                         contextTitle: controller.context?.playbackOwnerTitle ?? currentTrack.album,
+                        onShowHistory: upNextHistoryAction,
                         onSelect: controller.skipToUpcomingEntry
                     )
                     .opacity(isActive ? 1 : 0)
                     .padding(.bottom, PrismediaSpacing.large)
                 }
                 .scrollEdgeEffectStyle(.soft, for: .top)
-                .scrollBounceBehavior(pullsDownForHistory ? .always : .basedOnSize, axes: .vertical)
+                .scrollBounceBehavior(isBesidePlayer ? .basedOnSize : .always, axes: .vertical)
                 .onScrollGeometryChange(for: Bool.self) { geometry in
                     geometry.contentOffset.y < -geometry.contentInsets.top - 52
                 } action: { _, isPastThreshold in
-                    if isPastThreshold, pullsDownForHistory { historyPullIsArmed = true }
+                    if isPastThreshold, !isBesidePlayer { historyPullIsArmed = true }
                 }
                 .onScrollPhaseChange { oldPhase, newPhase in
                     guard oldPhase == .interacting || oldPhase == .tracking else { return }

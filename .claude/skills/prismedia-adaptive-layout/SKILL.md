@@ -80,10 +80,16 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
   `navigationSplitViewColumnWidth`, and the shell adds a Show/Hide Sidebar
   item to the detail. Applied outside the sidebar view, the removal let the
   column grow to its maximum width.
-- **A floating bar shares the bottom with search.** On regular width the
-  system search field floats at the bottom of the content, where the mini
-  player is. Searchable library screens call
-  `.suppressesMusicMiniPlayerWhileSearching()` inside `.searchable`.
+- **A floating bar shares the bottom with search.** iPhone Duo is a phone, so
+  even on regular width the system puts `.searchable` at the bottom, where the
+  mini player floats. `EntityGridSearchModifier` (also used by the music
+  library) places library search in the navigation bar drawer on regular
+  width, and `.suppressesMusicMiniPlayerWhileSearching()` hides the bar during
+  any search that still lands at the bottom.
+- **Stacked panes need their own content split.** Open in portrait, an
+  arrangement stacks its panes, so a pane that holds media plus controls gets
+  cramped. Now Playing splits looking (artwork, title) from touching (queue,
+  transport, controls) so both orientations and tabletop work.
 - **Gestures on media block swipe-to-dismiss.** A tap or drag on Now
   Playing's artwork stopped the cover's swipe down. Leave big media surfaces
   without gestures and put actions in buttons.

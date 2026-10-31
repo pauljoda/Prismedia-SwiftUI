@@ -73,17 +73,14 @@
                     Task { await applyControls(controls) }
                 }
             }
-            #if os(macOS)
-                .prismediaMacInlineSearch(
+            .modifier(
+                EntityGridSearchModifier(
+                    isEnabled: true,
                     text: $searchText,
                     prompt: "Search \(configuration.title.lowercased())",
                     onSubmit: { Task { await submitSearch() } }
                 )
-            #else
-                .suppressesMusicMiniPlayerWhileSearching()
-                .searchable(text: $searchText, prompt: "Search \(configuration.title.lowercased())")
-                .onSubmit(of: .search) { Task { await submitSearch() } }
-            #endif
+            )
             .task(id: searchText) {
                 try? await Task.sleep(for: .milliseconds(300))
                 guard !Task.isCancelled else { return }
