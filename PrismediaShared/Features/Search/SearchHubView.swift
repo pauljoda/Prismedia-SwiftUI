@@ -62,9 +62,7 @@ struct SearchHubView: View {
                             SearchHubSearchControls(
                                 filters: $filters,
                                 usesRegularLayout: usesRegularLayout
-                            ) {
-                                filtersPresented = true
-                            }
+                            )
 
                             SearchHubResultsView(
                                 expandedKinds: $expandedKinds,
@@ -121,29 +119,32 @@ struct SearchHubView: View {
                     }
                 }
             }
+            // Search attaches inside the stack, so the field joins this stack's bars
+            // in a split view's detail column too, not only as a tab.
+            #if os(iOS)
+                .searchable(
+                    text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Search"
+                )
+            #elseif os(tvOS)
+                .searchable(
+                    text: $searchText,
+                    prompt: "Search"
+                )
+            #endif
+            .onSubmit(of: .search) {
+                openTopResult()
+            }
         }
         .prismediaScreenBackground()
-        #if os(iOS)
-            .searchable(
-                text: $searchText,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Search"
-            )
-        #elseif os(macOS)
+        #if os(macOS)
             .prismediaMacToolbarSearch(
                 text: $searchText,
                 prompt: "Search",
                 onSubmit: openTopResult
             )
-        #else
-            .searchable(
-                text: $searchText,
-                prompt: "Search"
-            )
         #endif
-        .onSubmit(of: .search) {
-            openTopResult()
-        }
         .onKeyPress(.return) {
             guard isSearchActive, topSearchResult != nil else { return .ignored }
             openTopResult()
@@ -184,11 +185,12 @@ struct SearchHubView: View {
         horizontalSizeClass != .compact
     }
 
+    /// Only the Mac, whose toolbar search field is small, opens on a search landing.
+    /// iOS keeps the system search field above the Browse grid at every width, so
+    /// a wide page or an open iPhone Duo doesn't show a second field.
     private var usesDedicatedLanding: Bool {
         #if os(macOS)
             true
-        #elseif os(iOS)
-            horizontalSizeClass == .regular
         #else
             false
         #endif

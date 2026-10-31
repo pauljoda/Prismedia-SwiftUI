@@ -88,6 +88,11 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **Shared files must not end in a top-level `#if os(...)` block.**
   `ModernArchitectureGuardTests` treats that as a single-platform file; put a
   platform-only private helper above the shared type.
+- **Attach `.searchable` inside the `NavigationStack`.** Attached outside it,
+  the field showed as a tab's search but not in the split view's detail
+  column, which is why regular-width Search once carried a second, hand-made
+  field. iOS Search now uses the system field above the Browse grid at every
+  width; only the Mac keeps a search landing.
 - **The mock server serves `/api/entities/shelf`**, so the dashboard has
   Continue and Recent rails to look at. The iOS dashboard has no hero
   (`showsHero` is off).

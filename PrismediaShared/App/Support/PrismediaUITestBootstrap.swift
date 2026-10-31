@@ -36,6 +36,12 @@
         ) -> PrismediaAppRouter? {
             guard arguments.contains("-prismedia-ui-testing") else { return nil }
 
+            if environment["PRISMEDIA_UI_TEST_SEARCH"] == "1" {
+                let router = PrismediaAppRouter(initialSearchSelected: true)
+                router.searchText = environment["PRISMEDIA_UI_TEST_SEARCH_TEXT"] ?? ""
+                return router
+            }
+
             if let modeID = environment["PRISMEDIA_UI_TEST_MODE_ID"],
                 let mode = ModeCatalog.all.first(where: { $0.id == modeID })
             {

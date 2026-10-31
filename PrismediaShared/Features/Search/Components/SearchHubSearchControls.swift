@@ -4,30 +4,14 @@ struct SearchHubSearchControls: View {
     @Binding var filters: SearchHubFilterState
 
     let usesRegularLayout: Bool
-    let onPresentFilters: () -> Void
 
+    /// The toolbar's Filters button opens the filter sheet, so the controls here
+    /// cover the kinds to search and a summary of active filters.
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.small) {
-            HStack {
-                Text("Search In")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                Button(action: onPresentFilters) {
-                    Label(
-                        filters.isDefault
-                            ? "Filters"
-                            : "Filters (\(filters.activeFilterCount))",
-                        systemImage: filters.isDefault
-                            ? "line.3.horizontal.decrease"
-                            : "line.3.horizontal.decrease.circle.fill"
-                    )
-                }
-                .accessibilityHint("Shows rating, date, and entity-kind filters")
-                .accessibilityIdentifier("shell.search.filter-sheet")
-            }
+            Text("Search In")
+                .font(.headline)
+                .foregroundStyle(.primary)
 
             SearchHubKindSelector(filters: $filters, usesRegularLayout: usesRegularLayout)
 
@@ -73,8 +57,7 @@ struct SearchHubSearchControls: View {
 
         SearchHubSearchControls(
             filters: $filters,
-            usesRegularLayout: true,
-            onPresentFilters: {}
+            usesRegularLayout: true
         )
         .padding(PrismediaSpacing.extraLarge)
         .background(PrismediaBackdrop())
@@ -89,8 +72,7 @@ struct SearchHubSearchControls: View {
 
         SearchHubSearchControls(
             filters: $filters,
-            usesRegularLayout: false,
-            onPresentFilters: {}
+            usesRegularLayout: false
         )
         .padding(PrismediaSpacing.extraLarge)
         .background(PrismediaBackdrop())
@@ -101,8 +83,7 @@ struct SearchHubSearchControls: View {
 
         SearchHubSearchControls(
             filters: $filters,
-            usesRegularLayout: false,
-            onPresentFilters: {}
+            usesRegularLayout: false
         )
         .padding(PrismediaSpacing.extraLarge)
         .background(PrismediaBackdrop())
