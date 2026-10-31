@@ -51,6 +51,35 @@ public enum ReleaseCalendarDatePolicy {
         return (0..<42).compactMap { calendar.date(byAdding: .day, value: $0, to: gridStart) }
     }
 
+    /// The day the two-pane calendar lists beside the month. A day the person
+    /// picked stays while it is on the month's grid. Otherwise the month that
+    /// holds today shows the next day with releases from today, or today; any
+    /// other month shows its first day with releases, or its first day.
+    public static func focusedDay(
+        selected: Date?,
+        in month: Date,
+        today: Date,
+        releaseDays: [Date],
+        calendar: Calendar = .current
+    ) -> Date {
+        let gridDays = gridDays(containing: month, calendar: calendar)
+        if let selected, gridDays.contains(calendar.startOfDay(for: selected)) {
+            return calendar.startOfDay(for: selected)
+        }
+        guard let monthDays = monthInterval(containing: month, calendar: calendar) else {
+            return calendar.startOfDay(for: month)
+        }
+        let releaseDaysInMonth = releaseDays
+            .map { calendar.startOfDay(for: $0) }
+            .filter { $0 >= monthDays.start && $0 <= monthDays.end }
+            .sorted()
+        let startOfToday = calendar.startOfDay(for: today)
+        if startOfToday >= monthDays.start && startOfToday <= monthDays.end {
+            return releaseDaysInMonth.first { $0 >= startOfToday } ?? startOfToday
+        }
+        return releaseDaysInMonth.first ?? monthDays.start
+    }
+
     public static func gridInterval(containing date: Date, calendar: Calendar = .current) -> DateInterval? {
         let days = gridDays(containing: date, calendar: calendar)
         guard let first = days.first, let last = days.last else { return nil }

@@ -184,6 +184,27 @@ final class ReleaseTimingAndCalendarTests: XCTestCase {
         XCTAssertEqual(grouped[day]?.prefix(ReleaseCalendarDatePolicy.visibleDayEventLimit).count, 3)
     }
 
+    func testDayPaneFocusesThePickedDayOrTheNextReleaseDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        func day(_ month: Int, _ day: Int) -> Date {
+            calendar.date(from: DateComponents(year: 2026, month: month, day: day))!
+        }
+        let releaseDays = [day(10, 3), day(10, 12), day(10, 21)]
+
+        func focused(selected: Date? = nil, month: Date, today: Date) -> Date {
+            ReleaseCalendarDatePolicy.focusedDay(
+                selected: selected, in: month, today: today, releaseDays: releaseDays, calendar: calendar)
+        }
+
+        XCTAssertEqual(focused(month: day(10, 1), today: day(10, 5)), day(10, 12))
+        XCTAssertEqual(focused(month: day(10, 1), today: day(10, 25)), day(10, 25))
+        XCTAssertEqual(focused(month: day(10, 1), today: day(11, 2)), day(10, 3))
+        XCTAssertEqual(focused(month: day(12, 1), today: day(11, 2)), day(12, 1))
+        XCTAssertEqual(focused(selected: day(10, 8), month: day(10, 1), today: day(10, 5)), day(10, 8))
+        XCTAssertEqual(focused(selected: day(8, 8), month: day(10, 1), today: day(10, 5)), day(10, 12))
+    }
+
     func testReleaseCalendarPreloadsStableAdjacentMonthKeys() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

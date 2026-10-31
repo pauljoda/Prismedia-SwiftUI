@@ -29,7 +29,8 @@ import SwiftUI
                 }
             }
             .disabled(isDisabled)
-            .padding(PrismediaSpacing.large)
+            .padding(.horizontal, PrismediaSpacing.large)
+            .padding(.vertical, PrismediaSpacing.medium)
         }
 
         private var monthTitle: some View {

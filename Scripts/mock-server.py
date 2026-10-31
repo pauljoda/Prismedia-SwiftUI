@@ -1359,6 +1359,64 @@ def build_book_detail_response(entity_id):
     return response
 
 
+RELEASE_CALENDAR_DAYS = (
+    (3, "theatrical-release"),
+    (8, "theatrical-release"),
+    (8, "digital-release"),
+    (8, "air"),
+    (8, "physical-release"),
+    (12, "digital-release"),
+    (15, "air"),
+    (21, "streaming-release"),
+    (27, "theatrical-release"),
+    (28, "air"),
+)
+
+
+def build_release_calendar_response(query):
+    """Monitored releases spread over the month the requested grid shows."""
+    params = parse_qs(query)
+    start = params.get("start", [""])[0].split("-")
+    if len(start) != 3:
+        return []
+    year, month, day = (int(part) for part in start)
+    if day > 1:
+        month += 1
+        if month > 12:
+            year, month = year + 1, 1
+    days = list(RELEASE_CALENDAR_DAYS)
+    today = time.localtime()
+    if (today.tm_year, today.tm_mon) == (year, month):
+        days += [(today.tm_mday, "digital-release"), (today.tm_mday, "air")]
+    events = []
+    for index, (release_day, date_type) in enumerate(days):
+        movie = LONG_MOVIES[index % len(LONG_MOVIES)]
+        date = f"{year:04d}-{month:02d}-{release_day:02d}"
+        is_episode = date_type == "air"
+        events.append(
+            {
+                "entityId": movie["id"],
+                "monitorId": f"c0000000-0000-0000-{month:04d}-{index:012d}",
+                "acquisitionId": None,
+                "kind": "video-episode" if is_episode else "movie",
+                "title": f"Episode {index + 1}" if is_episode else movie["title"],
+                "parentEntityId": None,
+                "parentKind": "video-series" if is_episode else None,
+                "parentTitle": "Mock Series" if is_episode else None,
+                "dateType": date_type,
+                "value": date,
+                "date": date,
+                "precision": "day",
+                "acquisitionStatus": None,
+                "isSearchGate": index % 4 == 1,
+                "searchNotBefore": None,
+                "isSearchEligible": None,
+                "posterUrl": PUBLIC_POSTER_PATH,
+            }
+        )
+    return events
+
+
 def build_video_playback_plan_response(entity_id, audio_stream_index):
     """Build a native playback plan with a deterministic selectable audio pair."""
     selected_index = audio_stream_index if audio_stream_index in (1, 2) else 1
@@ -1694,6 +1752,9 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in ("/api/plugins", "/api/plugins/", "/api/identify/providers"):
             return self._send(200, [METADATA_PROVIDER])
+
+        if path == "/api/calendar/releases":
+            return self._send(200, build_release_calendar_response(request_url.query))
 
         if path == "/api/identify/queue":
             include_completed = parse_qs(request_url.query).get("includeCompleted") == ["true"]

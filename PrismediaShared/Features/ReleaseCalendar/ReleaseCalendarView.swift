@@ -12,7 +12,9 @@ import SwiftUI
         @State private var errorMessage: String?
         @State private var mediaFilter: EntityKind?
         @State private var milestoneFilter: EntityDateType?
-        @State private var selectedDay: ReleaseCalendarDaySelection?
+        /// The day picked in the month grid; the day pane lists its releases.
+        @State private var selectedDay: Date?
+        @State private var monthGridHeight: CGFloat = 0
         #if os(iOS)
             @GestureState private var isMonthSwipeActive = false
             @State private var eventActivationSuppressedUntil = Date.distantPast
@@ -48,15 +50,35 @@ import SwiftUI
                             Task { await load(forceRefresh: true) }
                         }
                     }
+                } else if usesDayPane {
+                    PrismediaArrangedPanes {
+                        VStack(spacing: 0) {
+                            monthHeader
+                            ScrollView {
+                                monthGrid
+                                    .padding(.horizontal, PrismediaSpacing.large)
+                                    .padding(.bottom, PrismediaSpacing.small)
+                            }
+                            .scrollBounceBehavior(.basedOnSize)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                                monthGridHeight = $0
+                            }
+                            .id(displayedMonthKey)
+                            .transition(monthTransition)
+                        }
+                    } secondary: {
+                        ReleaseCalendarDayPane(
+                            date: focusedDay,
+                            events: events(on: focusedDay),
+                            resolveAssetURL: resolveAssetURL,
+                            onOpen: open
+                        )
+                        .allowsHitTesting(calendarContentAllowsHitTesting)
+                    }
                 } else {
                     VStack(spacing: 0) {
-                        ReleaseCalendarMonthHeader(
-                            month: displayedMonth,
-                            isDisabled: pendingMonth != nil,
-                            onPrevious: { moveMonth(-1) },
-                            onNext: { moveMonth(1) }
-                        )
-                        monthPage
+                        monthHeader
+                        agendaList
                             .id(displayedMonthKey)
                             .transition(monthTransition)
                     }
@@ -72,72 +94,67 @@ import SwiftUI
             .task(id: displayedMonthKey) { await load(forceRefresh: false) }
             .task(id: pendingMonth) { await loadPendingMonth() }
             .refreshable { await load(forceRefresh: true) }
-            .sheet(item: $selectedDay) { selection in
-                ReleaseCalendarDaySheet(
-                    selection: selection,
-                    resolveAssetURL: resolveAssetURL,
-                    onOpen: open
-                )
-            }
         }
 
-        @ViewBuilder
-        private var monthPage: some View {
-            VStack(spacing: 0) {
-                if usesMonthGrid {
-                    ScrollView {
-                        monthGrid
-                            .padding(.horizontal, PrismediaSpacing.large)
-                            .padding(.bottom, PrismediaSpacing.extraLarge)
-                    }
+        private var monthHeader: some View {
+            ReleaseCalendarMonthHeader(
+                month: displayedMonth,
+                isDisabled: pendingMonth != nil,
+                onPrevious: { moveMonth(-1) },
+                onNext: { moveMonth(1) }
+            )
+        }
+
+        private var agendaList: some View {
+            List {
+                if agendaDays.isEmpty {
+                    ContentUnavailableView(
+                        "No Releases",
+                        systemImage: "calendar",
+                        description: Text("No monitored milestones match these filters.")
+                    )
+                    .accessibilityIdentifier("release-calendar.empty")
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 } else {
-                    List {
-                        if agendaDays.isEmpty {
-                            ContentUnavailableView(
-                                "No Releases",
-                                systemImage: "calendar",
-                                description: Text("No monitored milestones match these filters.")
-                            )
-                            .accessibilityIdentifier("release-calendar.empty")
-                            .frame(maxWidth: .infinity)
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                        } else {
-                            ForEach(agendaDays, id: \.self) { date in
-                                Section(date.formatted(date: .complete, time: .omitted)) {
-                                    ForEach(events(on: date)) { event in
-                                        ReleaseCalendarEventRow(
-                                            event: event,
-                                            resolveAssetURL: resolveAssetURL,
-                                            onOpen: { open(event) }
-                                        )
-                                        .allowsHitTesting(calendarContentAllowsHitTesting)
-                                        .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
-                                    }
-                                }
+                    ForEach(agendaDays, id: \.self) { date in
+                        Section(date.formatted(date: .complete, time: .omitted)) {
+                            ForEach(events(on: date)) { event in
+                                ReleaseCalendarEventRow(
+                                    event: event,
+                                    resolveAssetURL: resolveAssetURL,
+                                    onOpen: { open(event) }
+                                )
+                                .allowsHitTesting(calendarContentAllowsHitTesting)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                             }
                         }
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         }
 
         private var monthGrid: some View {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: PrismediaSpacing.small), count: 7), spacing: PrismediaSpacing.small) {
-                ForEach(weekdaySymbols, id: \.self) { symbol in
-                    Text(symbol).font(.caption.bold()).foregroundStyle(PrismediaColor.textSecondary)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
+                // Weekday initials repeat (two Ts and two Ss), so they're keyed by position.
+                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol)
+                        .font(.caption.bold())
+                        .foregroundStyle(PrismediaColor.textSecondary)
+                        .frame(height: Self.weekdayRowHeight)
                 }
                 ForEach(ReleaseCalendarDatePolicy.gridDays(containing: displayedMonth), id: \.self) { date in
-                    let dayEvents = events(on: date)
-                    ReleaseCalendarDayCell(
+                    ReleaseCalendarMonthDayCell(
                         date: date,
                         displayedMonth: displayedMonth,
-                        events: dayEvents,
-                        onOpen: open,
-                        onShowAll: { showAll(on: date, events: dayEvents) }
+                        events: events(on: date),
+                        isSelected: date == focusedDay,
+                        height: monthGridRowHeight,
+                        action: { select(date) }
                     )
                     .allowsHitTesting(calendarContentAllowsHitTesting)
                 }
@@ -195,12 +212,33 @@ import SwiftUI
             return Array(symbols[offset...] + symbols[..<offset])
         }
 
-        private var usesMonthGrid: Bool {
+        /// Regular width lists the selected day's releases beside a compact month
+        /// grid; compact width lists the month's releases by day.
+        private var usesDayPane: Bool {
             #if os(macOS)
                 true
             #else
                 horizontalSizeClass == .regular
             #endif
+        }
+
+        private static let weekdayRowHeight: CGFloat = 22
+
+        /// The grid's six weeks share the pane's height, between a compact row and
+        /// a comfortable one, so a whole month shows in half of a folded iPhone Duo;
+        /// a pane shorter than that scrolls.
+        private var monthGridRowHeight: CGFloat {
+            let available = (monthGridHeight - Self.weekdayRowHeight - PrismediaSpacing.small) / 6
+            return min(52, max(32, available.rounded(.down)))
+        }
+
+        private var focusedDay: Date {
+            ReleaseCalendarDatePolicy.focusedDay(
+                selected: selectedDay,
+                in: displayedMonth,
+                today: .now,
+                releaseDays: agendaDays
+            )
         }
 
         private func events(on date: Date) -> [ReleaseCalendarEvent] {
@@ -249,9 +287,9 @@ import SwiftUI
             #endif
         }
 
-        private func showAll(on date: Date, events: [ReleaseCalendarEvent]) {
+        private func select(_ date: Date) {
             guard eventActivationAllowed else { return }
-            selectedDay = ReleaseCalendarDaySelection(date: date, events: events)
+            selectedDay = date
         }
 
         private var monthNavigationAnimation: Animation {

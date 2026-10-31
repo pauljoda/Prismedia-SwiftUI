@@ -57,7 +57,7 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 | Content | Container | Prismedia screens |
 |---|---|---|
 | Destinations and a page | `NavigationSplitView`, `.balanced` (the wide shell) | App shell |
-| Two related groups that both stay visible | `PrismediaArrangedPanes` (`ArrangementView`, split style) | Now Playing (player · queue), mini player (track · transport) |
+| Two related groups that both stay visible | `PrismediaArrangedPanes` (`ArrangementView`, split style) | Now Playing (player · queue), mini player (track · transport), release calendar (month · day) |
 | A feed of cards | adaptive `LazyVGrid` | Library grids |
 | Media and its controls, half closed on a table | `onTabletopFoldChange`: media above the fold, a persistent panel below | Full-screen video (`VideoTabletopControlPanel`) |
 | Pages of a book | Two pages when wider than tall, one when taller; `onBookFoldChange` widens the gutter to the fold | EPUB (`EPUBReaderColumnLayout`), PDF (`PDFReaderSpread`), comics (`ComicPageMode.automatic`) |
@@ -139,6 +139,12 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **The inner display won't rotate on request.** Fullscreen video forces
   landscape only on a compact-width phone window
   (`VideoFullscreenOrientationPolicy`).
+- **A pane may be half a folded column.** Docked beside the sidebar on a
+  book-folded Duo, the detail column is about 390 × 670 pt and an
+  arrangement stacks its panes, so each gets roughly 300 pt. Size repeating
+  rows from the pane's measured height between a compact and a comfortable
+  row (the release calendar's weeks run 32–52 pt) and scroll only below
+  that.
 - **Readium ignores the column setting below 960 px.** ReadiumCSS applies
   `--USER__colCount` only from 60em, so on the 951 pt open Duo two columns
   never appeared. `EPUBReaderColumnLayout` sets the reading system properties
@@ -177,6 +183,9 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
    - `PRISMEDIA_UI_TEST_MODE_ID` / `PRISMEDIA_UI_TEST_DESTINATION_ID` open a
      destination (`video`/`movies`); `PRISMEDIA_UI_TEST_ENTITY_ID` /
      `PRISMEDIA_UI_TEST_ENTITY_KIND` open a detail page.
+   - `PRISMEDIA_UI_TEST_MODE_ID=manage` with
+     `PRISMEDIA_UI_TEST_DESTINATION_ID=release-calendar` opens the calendar;
+     the mock serves releases across the month, two of them today.
    - `PRISMEDIA_UI_TEST_OPEN_READER=1` opens a book's reader from its detail
      page. With `PRISMEDIA_UI_TEST_ENTITY_KIND=book` the mock serves an EPUB
      (`edededed-…`), a two-page PDF (`dfdfdfdf-…`) and a seven-page comic
