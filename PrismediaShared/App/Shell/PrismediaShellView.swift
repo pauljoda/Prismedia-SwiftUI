@@ -8,6 +8,8 @@ public struct PrismediaShellView: View {
     @State private var isAccountPresented = false
     @State private var playbackPreferences = VideoPlaybackPreferences()
     @State private var sidebarVisibility = NavigationSplitViewVisibility.all
+    /// The fold while iPhone Duo is folded like a book; the sidebar keeps to its side.
+    @State private var bookFold: CGRect?
     #if os(iOS)
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -126,7 +128,8 @@ public struct PrismediaShellView: View {
         return NavigationSplitView(columnVisibility: $sidebarVisibility) {
             PrismediaSidebarView(
                 sections: AppSidebarCatalog.sections(for: user),
-                selection: sidebarSelection(videoPlaybackSession: videoPlaybackSession)
+                selection: sidebarSelection(videoPlaybackSession: videoPlaybackSession),
+                foldedWidth: bookFold?.midX
             )
         } detail: {
             wideDetail(
@@ -153,6 +156,9 @@ public struct PrismediaShellView: View {
             #endif
         }
         .navigationSplitViewStyle(.balanced)
+        .onBookFoldChange { fold in
+            withAnimation { bookFold = fold }
+        }
         .onAppear {
             router.onWillOpenEntity = {
                 videoPlaybackSession.inlinePlaybackWillNavigate()

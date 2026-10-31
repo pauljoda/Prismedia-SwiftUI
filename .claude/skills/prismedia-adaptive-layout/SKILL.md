@@ -66,6 +66,14 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - Inside the shell's detail column a page is roughly phone-width beside the
   sidebar, so most pages stay one column there. An arrangement in a column
   that is taller than wide stacks its panes vertically.
+- **Folded like a book, the sidebar docks to the fold.** `NavigationSplitView`
+  doesn't rebalance on its own; the shell reads `onBookFoldChange` and gives
+  the sidebar the fold's `midX` as its width, so every detail-column page sits
+  on the right-hand side. Unfolding restores the 240 pt sidebar.
+- **Regular-width detail headers put the poster beside the title**, and fall
+  back to the stacked header through `ViewThatFits` when the column can't fit
+  the title column (the five-star row) beside the poster, as on one side of a
+  folded Duo.
 
 ## Gotchas we hit
 

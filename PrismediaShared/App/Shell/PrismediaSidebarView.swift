@@ -3,6 +3,9 @@ import SwiftUI
 struct PrismediaSidebarView: View {
     let sections: [AppSidebarSection]
     @Binding var selection: AppSidebarSelection?
+    /// While iPhone Duo is folded like a book, the width that ends the sidebar at
+    /// the fold, so the sidebar and the page each keep to one side.
+    var foldedWidth: CGFloat?
 
     @ViewBuilder
     var body: some View {
@@ -17,7 +20,11 @@ struct PrismediaSidebarView: View {
             sidebarList
                 .listStyle(.sidebar)
                 .toolbar(removing: .sidebarToggle)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
+                .navigationSplitViewColumnWidth(
+                    min: foldedWidth ?? 200,
+                    ideal: foldedWidth ?? 240,
+                    max: foldedWidth ?? 320
+                )
         #endif
     }
 
