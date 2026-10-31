@@ -16,6 +16,8 @@ import SwiftUI
         @Environment(\.verticalSizeClass) private var verticalSizeClass
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
         @State private var controlsVisible = true
+        @State private var isScrubbing = false
+        @State private var tabletopFold: CGRect?
         #if os(macOS)
             @State private var chromeActivityGeneration = 0
             @FocusState private var hasKeyboardFocus: Bool
@@ -24,6 +26,63 @@ import SwiftUI
         private var showsExpandedChrome: Bool { isExpanded || verticalSizeClass == .compact }
 
         var body: some View {
+            playerLayout
+                .contentShape(Rectangle())
+                .onTabletopFoldChange { tabletopFold = $0 }
+                #if os(iOS)
+                    .simultaneousGesture(fullscreenDismissGesture)
+                #endif
+                .task(id: autoHideTaskIdentity) { await scheduleAutoHide() }
+                .animation(.easeOut(duration: 0.18), value: controlsVisible)
+                .accessibilityIdentifier("video-player.surface")
+                #if os(macOS)
+                    .focusable(interactions: .edit)
+                    .focused($hasKeyboardFocus)
+                    .onAppear { hasKeyboardFocus = true }
+                    .onContinuousHover { phase in
+                        guard case .active = phase else { return }
+                        pointerMovedOverPlayer()
+                    }
+                    .onKeyPress(.space, action: togglePlaybackFromKeyboard)
+                    .onKeyPress(.leftArrow) { skipFromKeyboard(by: -10) }
+                    .onKeyPress(.rightArrow) { skipFromKeyboard(by: 10) }
+                    .onKeyPress(.escape, action: dismissFromKeyboard)
+                #endif
+        }
+
+        /// Half closed on a table, iPhone Duo's fold runs across the full-screen player:
+        /// the video takes the raised half and the controls become a panel that stays
+        /// on the flat half. Otherwise the controls overlay the video and hide.
+        @ViewBuilder
+        private var playerLayout: some View {
+            if let fold = tabletopFold, isExpanded, isInteractive {
+                VStack(spacing: 0) {
+                    videoStage(subtitleBottomInset: 0)
+                        .frame(height: max(0, fold.minY))
+                    Color.black
+                        .frame(height: fold.height)
+                        .accessibilityHidden(true)
+                    VideoTabletopControlPanel(
+                        controller: controller,
+                        title: title,
+                        trickplayPlaylistPath: trickplayPlaylistPath,
+                        trickplayFrameLoader: trickplayFrameLoader,
+                        onExitFullscreen: onFullscreen,
+                        onDismiss: onDismiss
+                    )
+                }
+            } else {
+                ZStack {
+                    videoStage(subtitleBottomInset: controlsVisible && showsExpandedChrome ? 16 : 0)
+
+                    chrome
+                        .opacity(controlsVisible || !isInteractive ? 1 : 0)
+                        .allowsHitTesting(controlsVisible || !isInteractive)
+                }
+            }
+        }
+
+        private func videoStage(subtitleBottomInset: CGFloat) -> some View {
             ZStack {
                 Color.black
                 VideoPlayerRenderSurface(controller: controller)
@@ -36,7 +95,7 @@ import SwiftUI
                     content: controller.activeSubtitleContent,
                     appearance: controller.subtitleAppearance,
                     player: controller.player,
-                    additionalBottomInset: controlsVisible && showsExpandedChrome ? 16 : 0
+                    additionalBottomInset: subtitleBottomInset
                 )
 
                 if isInteractive && (controller.isWaiting || controller.isAwaitingVideoFrame) {
@@ -51,39 +110,15 @@ import SwiftUI
                     .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("video-player.loading")
                 }
-
-                chrome
-                    .opacity(controlsVisible || !isInteractive ? 1 : 0)
-                    .allowsHitTesting(controlsVisible || !isInteractive)
-
             }
-            .contentShape(Rectangle())
-            #if os(iOS)
-                .simultaneousGesture(fullscreenDismissGesture)
-            #endif
-            .task(id: autoHideTaskIdentity) { await scheduleAutoHide() }
-            .animation(.easeOut(duration: 0.18), value: controlsVisible)
-            .accessibilityIdentifier("video-player.surface")
-            #if os(macOS)
-                .focusable(interactions: .edit)
-                .focused($hasKeyboardFocus)
-                .onAppear { hasKeyboardFocus = true }
-                .onContinuousHover { phase in
-                    guard case .active = phase else { return }
-                    pointerMovedOverPlayer()
-                }
-                .onKeyPress(.space, action: togglePlaybackFromKeyboard)
-                .onKeyPress(.leftArrow) { skipFromKeyboard(by: -10) }
-                .onKeyPress(.rightArrow) { skipFromKeyboard(by: 10) }
-                .onKeyPress(.escape, action: dismissFromKeyboard)
-            #endif
         }
 
+        /// Changes whenever the hide countdown should start over, including when a scrub ends.
         private var autoHideTaskIdentity: String {
             #if os(macOS)
-                "\(ObjectIdentifier(controller))-\(controller.isPlaying)-\(chromeActivityGeneration)"
+                "\(ObjectIdentifier(controller))-\(controller.isPlaying)-\(isScrubbing)-\(chromeActivityGeneration)"
             #else
-                "\(ObjectIdentifier(controller))-\(controller.isPlaying)"
+                "\(ObjectIdentifier(controller))-\(controller.isPlaying)-\(isScrubbing)"
             #endif
         }
 
@@ -218,7 +253,11 @@ import SwiftUI
                 VideoPlaybackTimeline(
                     controller: controller,
                     trickplayPlaylistPath: trickplayPlaylistPath,
-                    trickplayFrameLoader: trickplayFrameLoader
+                    trickplayFrameLoader: trickplayFrameLoader,
+                    onScrubbingChanged: { scrubbing in
+                        isScrubbing = scrubbing
+                        if scrubbing { controlsVisible = true }
+                    }
                 )
                 HStack {
                     Text(VideoPlaybackPresentation.clockTime(controller.currentTime))
@@ -359,7 +398,8 @@ import SwiftUI
             guard
                 VideoPlayerChromePolicy.shouldAutoHide(
                     isPlaying: controller.isPlaying,
-                    optionsPresented: false
+                    optionsPresented: false,
+                    isScrubbing: isScrubbing
                 )
             else {
                 controlsVisible = true
@@ -373,7 +413,8 @@ import SwiftUI
             guard !Task.isCancelled,
                 VideoPlayerChromePolicy.shouldAutoHide(
                     isPlaying: controller.isPlaying,
-                    optionsPresented: false
+                    optionsPresented: false,
+                    isScrubbing: isScrubbing
             )
             else { return }
             controlsVisible = false

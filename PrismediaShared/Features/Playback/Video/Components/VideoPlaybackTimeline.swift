@@ -7,6 +7,8 @@
         let controller: VideoPlaybackController
         var trickplayPlaylistPath: String?
         var trickplayFrameLoader: (any TrickplayFrameLoading)?
+        /// Reports when a scrub starts and ends, so the player keeps its chrome up meanwhile.
+        var onScrubbingChanged: ((Bool) -> Void)?
         @State private var previewTime: Double?
         @State private var trickplayFrames: [TrickplayPlaylist.Frame] = []
 
@@ -60,11 +62,13 @@
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
+                            if previewTime == nil { onScrubbingChanged?(true) }
                             previewTime = duration * max(0, min(1, value.location.x / width))
                         }
                         .onEnded { _ in
                             if let previewTime { controller.seek(to: previewTime) }
                             previewTime = nil
+                            onScrubbingChanged?(false)
                         }
                 )
             }

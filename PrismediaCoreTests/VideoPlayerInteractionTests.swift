@@ -23,6 +23,13 @@ final class VideoPlayerInteractionTests: XCTestCase {
                 optionsPresented: true
             )
         )
+        XCTAssertFalse(
+            VideoPlayerChromePolicy.shouldAutoHide(
+                isPlaying: true,
+                optionsPresented: false,
+                isScrubbing: true
+            )
+        )
     }
 
     func testDetailMarkerOnlySeeksTheVideoOwnedByTheVisibleDetail() {

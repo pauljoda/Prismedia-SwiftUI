@@ -45,6 +45,9 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
   right-edge bar, not beside the brand.
 - **Floating chrome never covers active input.** The mini player hides while
   a search field shares its spot.
+- **Tabletop playback like Netflix.** Half closed on a table, the video takes
+  the raised half and the overlay chrome becomes a persistent panel of large
+  tiles on the flat half.
 
 ## Pick the container by the content
 
@@ -53,6 +56,7 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 | Destinations and a page | `NavigationSplitView`, `.balanced` (the wide shell) | App shell |
 | Two related groups that both stay visible | `PrismediaArrangedPanes` (`ArrangementView`, split style) | Now Playing (player · queue), mini player (track · transport) |
 | A feed of cards | adaptive `LazyVGrid` | Library grids |
+| Media and its controls, half closed on a table | `onTabletopFoldChange`: media above the fold, a persistent panel below | Full-screen video (`VideoTabletopControlPanel`) |
 
 - `PrismediaArrangedPanes` is the one `ArrangementView` wrapper. Use it on
   regular width only. It falls back to two equal columns on the 27.0 SDK and
@@ -83,6 +87,15 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **Gestures on media block swipe-to-dismiss.** A tap or drag on Now
   Playing's artwork stopped the cover's swipe down. Leave big media surfaces
   without gestures and put actions in buttons.
+- **Tabletop is a fold that runs across the view.** `onTabletopFoldChange`
+  reports the division region while it is active and wider than tall, in the
+  view's own space with its clearance included; lay media out above
+  `fold.minY` and controls below `fold.maxY`. Book-fold and flat report nil,
+  so the overlay layout stays. The overlay arrangement style's `axes` option
+  exists but has no published docs, so the player reads the fold directly.
+- **Chrome stays while it's being used.** The player's auto-hide restarts
+  from `isScrubbing`; any new control that the person holds (a slider, a
+  drag) must suspend auto-hide the same way.
 - **The inner display won't rotate on request.** Fullscreen video forces
   landscape only on a compact-width phone window
   (`VideoFullscreenOrientationPolicy`).
