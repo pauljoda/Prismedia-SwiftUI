@@ -6,11 +6,13 @@ struct EntityGridFilterButton: View {
 
     var body: some View {
         Button(action: onPresent) {
-            Image(
-                systemName: activeFilterCount > 0
+            Label(
+                "Filters",
+                systemImage: activeFilterCount > 0
                     ? "line.3.horizontal.decrease.circle.fill"
                     : "line.3.horizontal.decrease.circle"
             )
+            .labelStyle(.iconOnly)
             .overlay(alignment: .topTrailing) {
                 if activeFilterCount > 0 {
                     Text(String(activeFilterCount))

@@ -34,6 +34,10 @@ public enum PrismediaLayout {
         public static let loadingImpactGlowRadius: CGFloat = 42
     #endif
     public static let readableContentWidth: CGFloat = 760
+    /// The narrowest page that splits into two scrolling panes, so each still
+    /// has phone-like room. The detail column beside the sidebar on the open
+    /// iPhone Duo (about 630 pt) stays one column; the whole display splits.
+    public static let paneSplitMinimumWidth: CGFloat = 800
     /// Minimum artwork-choice width before Dynamic Type scaling; captions remain below the image.
     public static let artworkChoiceMinimumWidth: CGFloat = 112
     public static let mediaContentWidth: CGFloat = 1_280
@@ -41,6 +45,8 @@ public enum PrismediaLayout {
     public static let backdropOverscan: CGFloat = 1.24
     public static let brandMark: CGFloat = 104
     public static let compactBrandMark: CGFloat = 72
+    /// The mark alone in its own pane, beside sign-in on a wide display.
+    public static let paneBrandMark: CGFloat = 160
     public static let televisionBrandMark: CGFloat = 148
     public static let televisionContentInset: CGFloat = 72
     /// Reserves an aligned summary band above a television detail page's browsing rail.

@@ -109,7 +109,8 @@ import SwiftUI
                             Button {
                                 dismiss()
                             } label: {
-                                Image(systemName: "xmark")
+                                Label("Close Identify", systemImage: "xmark")
+                                    .labelStyle(.iconOnly)
                             }
                             .disabled(phase.locksDismissal)
                             .accessibilityLabel("Close Identify")

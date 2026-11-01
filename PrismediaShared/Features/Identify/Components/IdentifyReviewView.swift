@@ -70,13 +70,15 @@ import SwiftUI
             if session.reviewableIDs.count > 1 {
                 ToolbarItemGroup {
                     Button(action: session.selectPrevious) {
-                        Image(systemName: "chevron.left")
+                        Label("Previous", systemImage: "chevron.left")
+                            .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("Previous")
                     .disabled(session.isMutatingQueue)
 
                     Button(action: session.selectNext) {
-                        Image(systemName: "chevron.right")
+                        Label("Next", systemImage: "chevron.right")
+                            .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("Next")
                     .disabled(session.isMutatingQueue)

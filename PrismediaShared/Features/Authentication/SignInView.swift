@@ -4,6 +4,7 @@ import SwiftUI
 /// and first-run administrator creation in one keyboard-safe flow.
 public struct SignInView: View {
     @Environment(PrismediaAppEnvironment.self) private var environment
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -73,34 +74,22 @@ public struct SignInView: View {
 
     private var compactPlatformBody: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                let compact = usesCompactLayout(availableHeight: geometry.size.height)
-
-                ZStack {
-                    PrismediaBackdrop()
-
-                    ScrollView {
-                        authenticationContent(compact: compact)
-                            .frame(maxWidth: SignInLayout.maximumFormWidth)
-                            .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
-                            .padding(
-                                .vertical,
-                                compact
-                                    ? PrismediaSpacing.extraLarge
-                                    : PrismediaSpacing.section
-                            )
-                            .frame(maxWidth: .infinity)
-                            .frame(
-                                minHeight: geometry.size.height,
-                                alignment: compact ? .top : .center
-                            )
+            Group {
+                if usesBrandPane {
+                    ZStack {
+                        PrismediaBackdrop()
+                        PrismediaArrangedPanes {
+                            brandPane
+                        } secondary: {
+                            formPane(showsBrand: false)
+                        }
                     }
-                    .scrollBounceBehavior(.basedOnSize)
-                    .prismediaKeyboardDismissal()
+                } else {
+                    ZStack {
+                        PrismediaBackdrop()
+                        formPane(showsBrand: true)
+                    }
                 }
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                bottomAction
             }
             .navigationTitle("")
             .prismediaInlineNavigationTitle()
@@ -114,7 +103,48 @@ public struct SignInView: View {
         }
     }
 
-    private func authenticationContent(compact: Bool) -> some View {
+    /// The form, scrolled within its pane and centred while it fits, with the
+    /// primary action pinned to the pane's bottom edge.
+    private func formPane(showsBrand: Bool) -> some View {
+        GeometryReader { geometry in
+            ScrollView {
+                authenticationContent(compact: usesCompactLayout, showsBrand: showsBrand)
+                    .frame(maxWidth: SignInLayout.maximumFormWidth)
+                    .padding(.horizontal, PrismediaSpacing.extraExtraLarge)
+                    .padding(
+                        .vertical,
+                        usesCompactLayout
+                            ? PrismediaSpacing.extraLarge
+                            : PrismediaSpacing.section
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(
+                        minHeight: geometry.size.height,
+                        alignment: usesCompactLayout ? .top : .center
+                    )
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .prismediaKeyboardDismissal()
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            bottomAction
+        }
+    }
+
+    /// The Prismedia mark on its own, beside the form on regular width.
+    private var brandPane: some View {
+        VStack(spacing: PrismediaSpacing.large) {
+            PrismediaBrandView(markSize: PrismediaLayout.paneBrandMark)
+            Text("PRISMEDIA")
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .tracking(3)
+                .foregroundStyle(PrismediaColor.textPrimary)
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func authenticationContent(compact: Bool, showsBrand: Bool) -> some View {
         VStack(
             alignment: .leading,
             spacing: compact
@@ -125,7 +155,8 @@ public struct SignInView: View {
                 title: title,
                 subtitle: subtitle,
                 serverName: state.serverDisplayName,
-                isCompact: compact
+                isCompact: compact,
+                showsBrand: showsBrand
             )
             SignInForm(
                 state: $state,
@@ -242,10 +273,18 @@ public struct SignInView: View {
         return false
     }
 
-    private func usesCompactLayout(availableHeight: CGFloat) -> Bool {
-        verticalSizeClass == .compact
-            || dynamicTypeSize.isAccessibilitySize
-            || availableHeight < SignInLayout.compactHeightThreshold
+    private var usesCompactLayout: Bool {
+        verticalSizeClass == .compact || dynamicTypeSize.isAccessibilitySize
+    }
+
+    /// Regular width gives the mark its own pane and the form the other, each
+    /// on its own side of iPhone Duo's fold.
+    private var usesBrandPane: Bool {
+        #if os(iOS)
+            horizontalSizeClass == .regular && verticalSizeClass == .regular
+        #else
+            false
+        #endif
     }
 
     private func advance() {

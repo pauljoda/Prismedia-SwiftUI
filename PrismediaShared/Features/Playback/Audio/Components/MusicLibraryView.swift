@@ -323,12 +323,14 @@
                     }
                     .disabled(controlsAreDefault)
                 } label: {
-                    Image(systemName: "line.3.horizontal.decrease")
+                    Label("Sort", systemImage: "line.3.horizontal.decrease")
+                        .labelStyle(.iconOnly)
                 }
                 Button {
                     filtersPresented = true
                 } label: {
-                    Image(systemName: "ellipsis")
+                    Label("Filters", systemImage: "ellipsis")
+                        .labelStyle(.iconOnly)
                 }
             }
         }

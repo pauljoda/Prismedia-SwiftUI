@@ -35,7 +35,8 @@
 
         private var selectAllButton: some View {
             Button(action: onSelectAll) {
-                Image(systemName: "checkmark.circle.fill")
+                Label("Select All", systemImage: "checkmark.circle.fill")
+                    .labelStyle(.iconOnly)
             }
             .accessibilityLabel("Select All")
             .disabled(isProcessing)
@@ -92,7 +93,8 @@
                     }
                 }
             } label: {
-                Image(systemName: "ellipsis")
+                Label("Selection Actions", systemImage: "ellipsis")
+                    .labelStyle(.iconOnly)
             }
             .accessibilityLabel("Selection Actions")
             .disabled(isProcessing)

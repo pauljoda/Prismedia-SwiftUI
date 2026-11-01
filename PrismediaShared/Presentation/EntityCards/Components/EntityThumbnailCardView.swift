@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct EntityThumbnailCardView: View {
     @Environment(\.entityThumbnailShowsText) private var showsThumbnailText
+    @Environment(\.entityListColumnCount) private var listColumnCount
     @ScaledMetric(relativeTo: .body) private var compactWidthScale: CGFloat = 1
 
     let item: EntityThumbnail
@@ -151,7 +152,7 @@ public struct EntityThumbnailCardView: View {
             artwork
                 .containerRelativeFrame(
                     .horizontal,
-                    count: item.thumbnailArtworkPresentation.isWide ? 3 : 4,
+                    count: (item.thumbnailArtworkPresentation.isWide ? 3 : 4) * listColumnCount,
                     span: 1,
                     spacing: PrismediaSpacing.medium
                 )

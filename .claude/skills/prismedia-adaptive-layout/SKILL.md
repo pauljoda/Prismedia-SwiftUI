@@ -11,13 +11,16 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 
 ## The rules
 
-- **Branch on `horizontalSizeClass` only.** The outer display is compact
+- **Branch on `horizontalSizeClass`.** The outer display is compact
   width (like any iPhone); the inner display is regular × regular in any
-  orientation and ignores the app's portrait-only mask. No idiom, orientation
-  or measured-width checks to pick a layout.
+  orientation and ignores the app's portrait-only mask. No idiom or
+  orientation checks to pick a layout. The one measured switch is
+  `PrismediaWidePanes`, which splits a page only when its space is wider than
+  tall and at least `PrismediaLayout.paneSplitMinimumWidth` (800 pt).
 - **Let containers size things.** A screen fills the space it gets: a
   split-view column, half of an arrangement, or the display less the side bar.
-  Don't add new content-width caps or breakpoints.
+  Don't add new content-width caps or breakpoints; shared thresholds live in
+  `PrismediaLayout`.
 - **Nothing tappable on the fold.** Media may cross the middle of the open
   display. Buttons, text fields, sliders and grabbers stay on one side, or a
   container places them.
@@ -25,7 +28,10 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
   or `NavigationSplitView` move to the side bar on the iOS 27.1 SDK. Every item
   needs a title and a symbol (`Label`, `Button(_:systemImage:)`,
   `PrismediaToolbarActionButton`). Hand-drawn bars and custom-view items stay
-  where they are.
+  where they are. Symbol-only menus and buttons use
+  `Label("Sort", systemImage: …).labelStyle(.iconOnly)`, never a bare
+  `Image`, so the side bar's overflow menu can name them; the same menus also
+  render inline in grid headers.
 - **State survives the fold.** Opening and closing swaps the tab shell for the
   sidebar shell. Navigation lives in `PrismediaAppRouter`, playback in its
   controllers and hosts above the shell, so neither resets.
@@ -57,7 +63,9 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 | Content | Container | Prismedia screens |
 |---|---|---|
 | Destinations and a page | `NavigationSplitView`, `.balanced` (the wide shell) | App shell |
-| Two related groups that both stay visible | `PrismediaArrangedPanes` (`ArrangementView`, split style) | Now Playing (player · queue), mini player (track · transport), release calendar (month · day) |
+| Two related groups that both stay visible | `PrismediaArrangedPanes` (`ArrangementView`, split style) | Now Playing (player · queue), mini player (track · transport), release calendar (month · day), sign-in (mark · form) |
+| A list and its selection, or two halves of one long page, when the page has room | `PrismediaWidePanes`: panes when wider than tall and ≥ 800 pt, otherwise the one-column view | Favorites (sections · grid), Stats (metrics · lists), entity detail (overview · sections) |
+| Rows of a list | `EntityThumbnailGrid` list mode: as many columns of ≥ 280 pt as fit; folded, one on each side of the fold | Library grids in list mode |
 | A feed of cards | adaptive `LazyVGrid` | Library grids |
 | Media and its controls, half closed on a table | `onTabletopFoldChange`: media above the fold, a persistent panel below | Full-screen video (`VideoTabletopControlPanel`) |
 | Pages of a book | Two pages when wider than tall, one when taller; `onBookFoldChange` widens the gutter to the fold | EPUB (`EPUBReaderColumnLayout`), PDF (`PDFReaderSpread`), comics (`ComicPageMode.automatic`) |
@@ -68,7 +76,10 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - Don't put an arrangement inside a `ScrollView` or `List`, or a split view
   inside an arrangement.
 - Inside the shell's detail column a page is roughly phone-width beside the
-  sidebar, so most pages stay one column there. An arrangement in a column
+  sidebar, so most pages stay one column there. Beside the open sidebar the
+  column is about 630 pt, which split into two ~300 pt panes looks cramped;
+  that is why `PrismediaWidePanes` waits for 800 pt, so its pages split only
+  with the sidebar hidden. An arrangement in a column
   that is taller than wide stacks its panes vertically.
 - **Folded like a book, the sidebar docks to the fold.** `NavigationSplitView`
   doesn't rebalance on its own; the shell reads `onBookFoldChange` and gives
@@ -165,6 +176,18 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **Reader chrome overlays the pages.** It auto-hides after 2.8 s, but stays
   up under `-prismedia-ui-testing`, so captures show the side bar over the
   right page.
+- **`containerRelativeFrame` resolves against the scroll view, not the
+  grid column.** List rows size their artwork as a fraction of the container,
+  so in two columns the artwork came out twice as big. The list grid passes
+  its column count down as `entityListColumnCount` and the card divides by it.
+- **An animated column change makes a lazy grid open part way down.** While
+  the sidebar slides to the fold the list's width changes frame by frame; the
+  switch from two columns to one landed mid-slide and the scroll view
+  followed a reflowed row down the list. `ScrollPosition(edge: .top)`,
+  `defaultScrollAnchor` and re-pinning the top all failed (re-sending the same
+  edge is a no-op, and a new one is ignored mid-reflow). Giving the grid a new
+  `.id` per column count and setting the width inside
+  `withTransaction(\.disablesAnimations, true)` fixed it.
 - **Gate 27.1 APIs twice.** Both Xcodes ship the same Swift compiler, so use
   `#if os(iOS) && canImport(SwiftUICore, _version: 8.0.85)` plus
   `if #available(iOS 27.1, *)`, and keep the 27.0 build compiling.
@@ -191,6 +214,11 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
      (`edededed-…`), a two-page PDF (`dfdfdfdf-…`) and a seven-page comic
      (`cacacaca-…`); `PRISMEDIA_MOCK_COMIC_NO_COVER=1` on the mock opens the
      comic on a two-page spread instead of its cover.
+   - `PRISMEDIA_UI_TEST_HIDE_SIDEBAR=1` starts the wide shell with the
+     sidebar hidden, for checking the full-width layouts.
+   - The mock serves favorites (movies, a series, an EPUB and a comic), Stats
+     top entities and recent events, and `POST /api/entities/thumbnails` for
+     their artwork. Favorites asks for kinds comma-joined (`kind=a,b`).
    - `PRISMEDIA_UI_TEST_MUSIC_TRACK_ID` and `…_TITLE` start a track;
      `PRISMEDIA_UI_TEST_SHOW_NOW_PLAYING=1` opens Now Playing and
      `PRISMEDIA_UI_TEST_COLLAPSE_MINI_PLAYER=1` collapses the mini player.

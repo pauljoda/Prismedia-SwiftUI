@@ -138,6 +138,15 @@ final class BookReaderUseCaseTests: XCTestCase {
         XCTAssertEqual(ComicReaderOptions(pageMode: .double).resolved(isWide: false).pageMode, .double)
     }
 
+    func testSpreadTapsTurnFromEachPagesOuterHalf() {
+        XCTAssertEqual(ComicReaderNavigation.tapZone(x: 300, width: 1000), .previous)
+        XCTAssertEqual(ComicReaderNavigation.tapZone(x: 300, width: 1000, showsSpread: true), .controls)
+        XCTAssertEqual(ComicReaderNavigation.tapZone(x: 200, width: 1000, showsSpread: true), .previous)
+        XCTAssertEqual(ComicReaderNavigation.tapZone(x: 800, width: 1000, showsSpread: true), .next)
+        XCTAssertEqual(ComicReaderNavigation.tapZone(x: 700, width: 1000), .next)
+        XCTAssertEqual(ComicReaderNavigation.tapZone(x: 700, width: 1000, showsSpread: true), .controls)
+    }
+
     func testLonePagesInATwoPageLayoutKeepToTheirSideOfTheGutter() {
         let options = ComicReaderOptions(pageMode: .double, singlePageIndexes: [3])
         let doublePage: (Int) -> Bool = { $0 == 3 }

@@ -7,7 +7,7 @@ public struct PrismediaShellView: View {
     @Environment(PrismediaAppRouter.self) private var router
     @State private var isAccountPresented = false
     @State private var playbackPreferences = VideoPlaybackPreferences()
-    @State private var sidebarVisibility = NavigationSplitViewVisibility.all
+    @State private var sidebarVisibility = PrismediaShellView.initialSidebarVisibility
     /// The fold while iPhone Duo is folded like a book; the sidebar keeps to its side.
     @State private var bookFold: CGRect?
     #if os(iOS)
@@ -16,6 +16,13 @@ public struct PrismediaShellView: View {
     #endif
 
     private let launchBrandNamespace: Namespace.ID?
+
+    private static var initialSidebarVisibility: NavigationSplitViewVisibility {
+        #if DEBUG
+            if PrismediaUITestBootstrap.hidesSidebar() { return .detailOnly }
+        #endif
+        return .all
+    }
 
     public init() {
         launchBrandNamespace = nil

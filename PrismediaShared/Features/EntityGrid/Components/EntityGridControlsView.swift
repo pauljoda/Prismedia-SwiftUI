@@ -94,7 +94,8 @@ struct EntityGridControlsView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "xmark")
+                        Label("Cancel", systemImage: "xmark")
+                            .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("Cancel")
                 }
@@ -102,7 +103,8 @@ struct EntityGridControlsView: View {
                     Button {
                         draft.filters = defaultFilters
                     } label: {
-                        Image(systemName: "arrow.counterclockwise")
+                        Label("Reset Filters", systemImage: "arrow.counterclockwise")
+                            .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("Reset Filters")
                     .disabled(draft.filters == defaultFilters)
@@ -112,7 +114,8 @@ struct EntityGridControlsView: View {
                         onApply(draft)
                         dismiss()
                     } label: {
-                        Image(systemName: "checkmark")
+                        Label("Apply Filters", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("Apply Filters")
                 }

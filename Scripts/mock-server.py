@@ -934,6 +934,8 @@ MOCK_AUDIO = build_mock_audio()
 ENTITIES[VIDEO_ALPHA_INDEX]["progress"] = 0.25
 ENTITIES[VIDEO_ALPHA_INDEX]["resumeSeconds"] = 15
 ENTITIES[MOVIE_ONE_INDEX]["rating"] = None
+for favorite in LONG_MOVIES[:6] + [ENTITIES[SERIES_INDEX], EPUB_BOOK, COMIC_BOOK]:
+    favorite["isFavorite"] = True
 ENTITIES[MOVIE_ONE_INDEX]["progress"] = 0.25
 ENTITIES[MOVIE_ONE_INDEX]["resumeSeconds"] = 15
 ENTITIES[MOVIE_TWO_INDEX]["accessCount"] = 1
@@ -1513,9 +1515,12 @@ def _filter_entities(indexed_items, parameters):
     query = _first_parameter(parameters, "query").strip().casefold()
 
     if kind:
-        indexed_items = [pair for pair in indexed_items if pair[1]["kind"] == kind]
+        kinds = set(kind.split(","))
+        indexed_items = [pair for pair in indexed_items if pair[1]["kind"] in kinds]
     if query:
         indexed_items = [pair for pair in indexed_items if query in pair[1]["title"].casefold()]
+    if _first_parameter(parameters, "favorite").casefold() == "true":
+        indexed_items = [pair for pair in indexed_items if pair[1].get("isFavorite")]
     status = _first_parameter(parameters, "status").casefold()
     if status == "in-progress":
         indexed_items = [pair for pair in indexed_items if (pair[1].get("progress") or 0) > 0]
@@ -1683,8 +1688,35 @@ class Handler(BaseHTTPRequestHandler):
                     "viewingSeconds": 0,
                     "readingSeconds": 0,
                     "listeningSeconds": 1_800,
-                    "topEntities": [],
-                    "recentEvents": [],
+                    "topEntities": [
+                        {
+                            "id": movie["id"],
+                            "kind": movie["kind"],
+                            "title": movie["title"],
+                            "coverUrl": movie["coverUrl"],
+                            "accessedCount": 6 - index,
+                            "completedCount": 1,
+                            "skippedCount": 0,
+                            "activeSeconds": 5_400 - index * 600,
+                            "firstEventAt": "2026-07-02T20:00:00Z",
+                            "lastEventAt": "2026-07-30T20:00:00Z",
+                        }
+                        for index, movie in enumerate(LONG_MOVIES[:5])
+                    ],
+                    "recentEvents": [
+                        {
+                            "id": f"e0000000-0000-0000-0000-{index:012d}",
+                            "entityId": movie["id"],
+                            "entityKind": movie["kind"],
+                            "entityTitle": movie["title"],
+                            "coverUrl": movie["coverUrl"],
+                            "kind": ("completed", "accessed", "skipped")[index % 3],
+                            "occurredAt": f"2026-07-{30 - index:02d}T20:00:00Z",
+                            "positionSeconds": None,
+                            "durationSeconds": None,
+                        }
+                        for index, movie in enumerate(LONG_MOVIES[:6])
+                    ],
                     "dailyEvents": [{
                         "date": "2026-07-31",
                         "accessedCount": 1,
@@ -2032,6 +2064,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == "/api/auth/logout":
             return self._send(204)
+
+        if urlsplit(self.path).path == "/api/entities/thumbnails":
+            requested = set(body.get("ids") or [])
+            return self._send(200, {"items": [item for item in ENTITIES if item["id"] in requested]})
 
         request_url = urlsplit(self.path)
 

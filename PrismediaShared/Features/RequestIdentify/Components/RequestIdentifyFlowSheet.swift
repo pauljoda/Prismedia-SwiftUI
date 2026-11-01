@@ -43,7 +43,8 @@ import SwiftUI
                             Button {
                                 dismiss()
                             } label: {
-                                Image(systemName: "xmark")
+                                Label("Close \(mode.title)", systemImage: "xmark")
+                                    .labelStyle(.iconOnly)
                             }
                             .disabled(phase.locksDismissal)
                             .accessibilityLabel("Close \(mode.title)")

@@ -5,15 +5,19 @@ struct SignInHeader: View {
     let subtitle: String
     let serverName: String?
     let isCompact: Bool
+    /// Off where the mark has its own pane beside the form.
+    var showsBrand = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-            PrismediaBrandView(
-                markSize: isCompact
-                    ? PrismediaLayout.compactBrandMark
-                    : PrismediaLayout.brandMark
-            )
-            .frame(maxWidth: .infinity)
+            if showsBrand {
+                PrismediaBrandView(
+                    markSize: isCompact
+                        ? PrismediaLayout.compactBrandMark
+                        : PrismediaLayout.brandMark
+                )
+                .frame(maxWidth: .infinity)
+            }
 
             Text(title)
                 .font(isCompact ? .title.bold() : .largeTitle.bold())

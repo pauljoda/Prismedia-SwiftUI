@@ -31,7 +31,8 @@ import SwiftUI
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: dismiss.callAsFunction) {
-                            Image(systemName: "xmark")
+                            Label("Close", systemImage: "xmark")
+                                .labelStyle(.iconOnly)
                         }
                         .accessibilityLabel("Close")
                     }

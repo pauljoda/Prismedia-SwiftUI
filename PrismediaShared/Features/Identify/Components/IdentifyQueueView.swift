@@ -50,7 +50,8 @@ import SwiftUI
                             showsReview = session.selectedItem != nil
                         }
                     } label: {
-                        Image(systemName: "rectangle.stack")
+                        Label("Review All", systemImage: "rectangle.stack")
+                            .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("Review All")
                     .disabled(session.reviewableIDs.isEmpty || isSelecting || session.isMutatingQueue)
@@ -65,7 +66,8 @@ import SwiftUI
                                 Task { await session.rejectSelected() }
                             }
                         } label: {
-                            Image(systemName: "ellipsis")
+                            Label("Selected Item Actions", systemImage: "ellipsis")
+                                .labelStyle(.iconOnly)
                         }
                         .accessibilityLabel("Selected Item Actions")
                         .disabled(session.isMutatingQueue)
@@ -127,7 +129,11 @@ import SwiftUI
                         }
                     }
                 } label: {
-                    Image(systemName: editMode.isEditing ? "checkmark" : "checkmark.circle")
+                    Label(
+                        editMode.isEditing ? "Done Selecting" : "Select Items",
+                        systemImage: editMode.isEditing ? "checkmark" : "checkmark.circle"
+                    )
+                    .labelStyle(.iconOnly)
                 }
                 .accessibilityLabel(editMode.isEditing ? "Done Selecting" : "Select Items")
                 .disabled(session.isMutatingQueue || session.queue.isEmpty)

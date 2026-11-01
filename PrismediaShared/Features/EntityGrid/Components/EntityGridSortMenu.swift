@@ -36,7 +36,8 @@ struct EntityGridSortMenu: View {
                 }
             }
         } label: {
-            Image(systemName: "arrow.up.arrow.down")
+            Label("Sort", systemImage: "arrow.up.arrow.down")
+                .labelStyle(.iconOnly)
         }
         .accessibilityLabel("Sort")
         .accessibilityIdentifier("entity.grid.sort")

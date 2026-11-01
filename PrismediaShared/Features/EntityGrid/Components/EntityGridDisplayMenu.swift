@@ -108,7 +108,8 @@ struct EntityGridDisplayMenu: View {
             }
             .disabled(preferencesAreDefault)
         } label: {
-            Image(systemName: displayMode.systemImage)
+            Label("Display Options", systemImage: displayMode.systemImage)
+                .labelStyle(.iconOnly)
         }
         .accessibilityLabel("Display options")
         .accessibilityValue(

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct EntityThumbnailGrid<ItemContent: View>: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var listWidth: CGFloat = 0
+    @State private var bookFold: CGRect?
 
     let items: [EntityThumbnail]
     let mediaSequence: EntityMediaSequence
@@ -31,9 +33,29 @@ struct EntityThumbnailGrid<ItemContent: View>: View {
     var body: some View {
         switch displayMode {
         case .list:
-            LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
-                itemsView
-            }
+            #if os(iOS)
+                LazyVGrid(columns: listColumns, alignment: .leading, spacing: PrismediaSpacing.medium) {
+                    itemsView
+                }
+                .environment(\.entityListColumnCount, effectiveListColumnCount)
+                // The width changes frame by frame while the sidebar slides. A
+                // new grid for each column count keeps the scroll view from
+                // following a reflowed row down the list, and swapping it
+                // without animation avoids cross-fading the two grids.
+                .id(effectiveListColumnCount)
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.width
+                } action: { width in
+                    withTransaction(\.disablesAnimations, true) {
+                        listWidth = width
+                    }
+                }
+                .onBookFoldChange { bookFold = $0 }
+            #else
+                LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
+                    itemsView
+                }
+            #endif
         case .feed:
             LazyVStack(alignment: .leading, spacing: PrismediaSpacing.medium) {
                 itemsView
@@ -57,6 +79,47 @@ struct EntityThumbnailGrid<ItemContent: View>: View {
                 .environment(\.entityMediaSequence, mediaSequence)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+    }
+
+    /// List rows in as many columns of at least ``listColumnMinimumWidth`` as
+    /// fit: one on a phone or beside the sidebar, two across a wide page, so a
+    /// row never stretches across iPhone Duo's open display.
+    private var listColumns: [GridItem] {
+        if let foldedListColumns {
+            return foldedListColumns
+        }
+
+        return Array(
+            repeating: GridItem(.flexible(), spacing: PrismediaSpacing.large, alignment: .top),
+            count: effectiveListColumnCount
+        )
+    }
+
+    /// Folded like a book, two list columns sit one on each side of the fold,
+    /// with the fold as their gutter, so no row's artwork lands on the hinge.
+    private var foldedListColumns: [GridItem]? {
+        guard effectiveListColumnCount == 2,
+              let bookFold,
+              bookFold.minX >= Self.listColumnMinimumWidth,
+              listWidth - bookFold.maxX >= Self.listColumnMinimumWidth
+        else {
+            return nil
+        }
+
+        return [
+            GridItem(.fixed(bookFold.minX), spacing: bookFold.width, alignment: .top),
+            GridItem(.fixed(listWidth - bookFold.maxX), alignment: .top)
+        ]
+    }
+
+    private var effectiveListColumnCount: Int {
+        dynamicTypeSize.isAccessibilitySize ? 1 : Self.listColumnCount(for: listWidth)
+    }
+
+    private static var listColumnMinimumWidth: CGFloat { 280 }
+
+    private static func listColumnCount(for width: CGFloat) -> Int {
+        max(1, Int((width + PrismediaSpacing.large) / (listColumnMinimumWidth + PrismediaSpacing.large)))
     }
 
     private var columns: [GridItem] {

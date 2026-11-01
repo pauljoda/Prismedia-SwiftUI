@@ -4,6 +4,7 @@ import SwiftUI
 public struct EntityDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.scenePhase) var scenePhase
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(PrismediaAppRouter.self) var router
     @Environment(\.videoPlaybackSession) var videoPlaybackSession
     #if os(iOS) || os(macOS)

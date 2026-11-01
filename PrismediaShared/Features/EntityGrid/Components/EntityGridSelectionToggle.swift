@@ -7,7 +7,11 @@ struct EntityGridSelectionToggle: View {
 
     var body: some View {
         let button = Button(action: onToggle) {
-            Image(systemName: isActive ? "checkmark" : "checkmark.circle")
+            Label(
+                isActive ? "Done Selecting" : "Select Items",
+                systemImage: isActive ? "checkmark" : "checkmark.circle"
+            )
+            .labelStyle(.iconOnly)
         }
         .disabled(isDisabled)
         .accessibilityLabel(isActive ? "Done Selecting" : "Select Items")

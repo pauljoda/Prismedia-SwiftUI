@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct FavoritesView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding private var navigationPath: NavigationPath
     @State private var snapshot = FavoritesSnapshot()
     @State private var loadedRevision: Int?
+    /// The kind whose grid shows beside the list on a wide display.
+    @State private var selectedSectionID: FavoritesSection.ID?
 
     private let service: FavoritesService
     private let gridLoader: any EntityGridLoading
@@ -38,10 +41,24 @@ struct FavoritesView: View {
                     PrismediaLoadingView("Loading favorites…")
 
                 case .content:
-                    FavoritesSectionsView(
-                        sections: snapshot.sections,
-                        onSelect: openSection
-                    )
+                    if usesSectionPanes {
+                        PrismediaWidePanes {
+                            FavoritesSectionList(
+                                sections: favoritedSections,
+                                selectedID: focusedSection?.id,
+                                onSelect: { selectedSectionID = $0.id }
+                            )
+                        } secondary: {
+                            if let focusedSection {
+                                sectionGrid(focusedSection.definition)
+                                    .id(focusedSection.id)
+                            }
+                        } combined: {
+                            sectionRails
+                        }
+                    } else {
+                        sectionRails
+                    }
 
                 case .empty:
                     ScrollView {
@@ -66,13 +83,7 @@ struct FavoritesView: View {
                 }
             }
             .navigationDestination(for: FavoritesSectionDefinition.self) { section in
-                FavoriteEntityGridView(
-                    section: section,
-                    loader: gridLoader,
-                    detailDependencies: detailDependencies,
-                    actionPolicy: actionPolicy,
-                    mutationService: mutationService
-                )
+                sectionGrid(section)
             }
             .prismediaEntityDestinations(dependencies: detailDependencies)
         }
@@ -83,6 +94,42 @@ struct FavoritesView: View {
             }
         }
         .accessibilityIdentifier("shell.favorites")
+    }
+
+    private var sectionRails: some View {
+        FavoritesSectionsView(
+            sections: snapshot.sections,
+            onSelect: openSection
+        )
+    }
+
+    private func sectionGrid(_ section: FavoritesSectionDefinition) -> some View {
+        FavoriteEntityGridView(
+            section: section,
+            loader: gridLoader,
+            detailDependencies: detailDependencies,
+            actionPolicy: actionPolicy,
+            mutationService: mutationService
+        )
+    }
+
+    /// Regular width lists the kinds beside the selected kind's grid wherever
+    /// the page is wider than tall; elsewhere each kind is a rail.
+    private var usesSectionPanes: Bool {
+        #if os(iOS)
+            horizontalSizeClass == .regular
+        #else
+            false
+        #endif
+    }
+
+    /// The kinds with at least one favorite; the rails hide empty kinds too.
+    private var favoritedSections: [FavoritesSection] {
+        snapshot.sections.filter { !$0.items.isEmpty }
+    }
+
+    private var focusedSection: FavoritesSection? {
+        favoritedSections.first { $0.id == selectedSectionID } ?? favoritedSections.first
     }
 
     private func openSection(_ definition: FavoritesSectionDefinition) {

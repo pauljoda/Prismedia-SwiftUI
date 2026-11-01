@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ConsumptionStatisticsView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding private var navigationPath: [EntityLink]
     @State private var snapshot = ConsumptionStatisticsSnapshot()
     @State private var timeframe = StatisticsTimeframe.year
@@ -29,15 +30,22 @@ struct ConsumptionStatisticsView: View {
             Group {
                 if snapshot.state == .idle || snapshot.state == .loading {
                     PrismediaLoadingView("Loading consumption history…")
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                } else if usesListPane, snapshot.state == .content, let response = snapshot.response {
+                    PrismediaWidePanes {
+                        statisticsColumn {
                             filters
                             summary
-                            stateContent
+                            activityCharts(response)
                         }
-                        .padding(PrismediaSpacing.large)
+                    } secondary: {
+                        statisticsColumn {
+                            entityLists(response)
+                        }
+                    } combined: {
+                        singleColumn
                     }
+                } else {
+                    singleColumn
                 }
             }
             .prismediaScreenBackground()
@@ -57,6 +65,46 @@ struct ConsumptionStatisticsView: View {
             }
         }
         .accessibilityIdentifier("shell.stats")
+    }
+
+    private var singleColumn: some View {
+        statisticsColumn {
+            filters
+            summary
+            stateContent
+        }
+    }
+
+    private func statisticsColumn<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                content()
+            }
+            .padding(PrismediaSpacing.large)
+        }
+    }
+
+    /// Regular width puts the top entities and recent events in their own pane
+    /// beside the metrics wherever the page is wider than tall.
+    private var usesListPane: Bool {
+        #if os(iOS)
+            horizontalSizeClass == .regular
+        #else
+            false
+        #endif
+    }
+
+    @ViewBuilder
+    private func activityCharts(_ response: ConsumptionStatisticsResponse) -> some View {
+        dailyActivity(response.dailyEvents)
+        kindBreakdown(response.kindBreakdown)
+        consumptionRhythm(response.rhythm)
+    }
+
+    @ViewBuilder
+    private func entityLists(_ response: ConsumptionStatisticsResponse) -> some View {
+        entityList(title: "Top Entities", entities: response.topEntities)
+        recentEvents(response.recentEvents)
     }
 
     private var filters: some View {
@@ -133,11 +181,8 @@ struct ConsumptionStatisticsView: View {
             }
         case .content:
             if let response = snapshot.response {
-                dailyActivity(response.dailyEvents)
-                kindBreakdown(response.kindBreakdown)
-                consumptionRhythm(response.rhythm)
-                entityList(title: "Top Entities", entities: response.topEntities)
-                recentEvents(response.recentEvents)
+                activityCharts(response)
+                entityLists(response)
             }
         }
     }

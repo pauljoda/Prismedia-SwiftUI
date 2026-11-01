@@ -237,6 +237,14 @@
                 && environment["PRISMEDIA_UI_TEST_OPEN_READER"] == "1"
         }
 
+        static func hidesSidebar(
+            arguments: [String] = CommandLine.arguments,
+            environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> Bool {
+            arguments.contains("-prismedia-ui-testing")
+                && environment["PRISMEDIA_UI_TEST_HIDE_SIDEBAR"] == "1"
+        }
+
         static func collapsesMiniPlayer(
             arguments: [String] = CommandLine.arguments,
             environment: [String: String] = ProcessInfo.processInfo.environment

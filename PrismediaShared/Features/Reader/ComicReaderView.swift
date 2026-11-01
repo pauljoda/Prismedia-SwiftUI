@@ -177,6 +177,17 @@
             }
         }
 
+        /// Whether two pages sit side by side right now.
+        private var showsSpread: Bool {
+            guard let manifest, !showingEndPage else { return false }
+            return ComicReaderNavigation.spreadSlots(
+                index: currentIndex,
+                total: manifest.pages.count,
+                options: layoutOptions,
+                isDoublePage: { manifest.pages[$0].isDoublePage }
+            ).count > 1
+        }
+
         /// The reader's page options with Automatic settled for the reader's
         /// shape, so a landscape reader pages through two-page spreads.
         private var layoutOptions: ComicReaderOptions {
@@ -345,7 +356,7 @@
         }
 
         private func handleTap(x: CGFloat, width: CGFloat) {
-            switch ComicReaderNavigation.tapZone(x: x, width: width) {
+            switch ComicReaderNavigation.tapZone(x: x, width: width, showsSpread: showsSpread) {
             case .previous:
                 manifest?.readingDirection == .rightToLeft ? goNext() : goPrevious()
             case .controls: contentTapped()

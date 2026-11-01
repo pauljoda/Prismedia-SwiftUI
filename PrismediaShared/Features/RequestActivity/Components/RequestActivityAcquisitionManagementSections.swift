@@ -357,7 +357,8 @@ import SwiftUI
                             lifecycleMenuButton(action)
                         }
                     } label: {
-                        Image(systemName: "ellipsis")
+                        Label("Acquisition Actions", systemImage: "ellipsis")
+                            .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("Acquisition Actions")
                     .disabled(isInteractionDisabled)

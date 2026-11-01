@@ -32,7 +32,8 @@ import SwiftUI
                     }
                 }
             } label: {
-                Image(systemName: "calendar.badge.clock")
+                Label("Milestone", systemImage: "calendar.badge.clock")
+                    .labelStyle(.iconOnly)
             }
             .accessibilityLabel("Milestone")
             .accessibilityValue(selection?.displayName ?? "All milestones")

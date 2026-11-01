@@ -1,11 +1,15 @@
 import Foundation
 
 public enum ComicReaderNavigation {
-    public static func tapZone(x: CGFloat, width: CGFloat) -> ComicTapZone {
+    /// Where a tap lands: thirds on a single page. On a two-page spread the
+    /// outer half of each page turns and the inner halves show the controls, so
+    /// the controls are reachable away from iPhone Duo's fold.
+    public static func tapZone(x: CGFloat, width: CGFloat, showsSpread: Bool = false) -> ComicTapZone {
         guard width > 0 else { return .controls }
         let ratio = x / width
-        if ratio < 1 / 3 { return .previous }
-        if ratio > 2 / 3 { return .next }
+        let turnShare: CGFloat = showsSpread ? 1 / 4 : 1 / 3
+        if ratio < turnShare { return .previous }
+        if ratio > 1 - turnShare { return .next }
         return .controls
     }
 

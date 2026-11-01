@@ -32,11 +32,13 @@ import SwiftUI
                     }
                 }
             } label: {
-                Image(
-                    systemName: selection == nil
+                Label(
+                    "Media Kind",
+                    systemImage: selection == nil
                         ? "line.3.horizontal.decrease.circle"
                         : "line.3.horizontal.decrease.circle.fill"
                 )
+                .labelStyle(.iconOnly)
             }
             .accessibilityLabel("Media kind")
             .accessibilityValue(selection?.displayLabel ?? "All media")
