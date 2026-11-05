@@ -13,6 +13,7 @@ public struct EntityReaderView: View {
     let initialEPUBUpdatedAt: Date?
     let epubProgressRanges: [EPUBReadingProgressRange]
     let readingReportFormat: BookReadingReportFormat
+    let preferencesStore: ReaderPreferencesStore
     let companionPlayer: MusicPlayerController?
     let findCurrentAudiobookReadingTarget: @MainActor () async -> BookReaderLocationTarget?
     let writeBarrier: BookReaderWriteBarrier?
@@ -29,6 +30,7 @@ public struct EntityReaderView: View {
         initialEPUBUpdatedAt: Date? = nil,
         epubProgressRanges: [EPUBReadingProgressRange] = [],
         readingReportFormat: BookReadingReportFormat = .legacyCursor,
+        preferencesStore: ReaderPreferencesStore = .standard,
         companionPlayer: MusicPlayerController? = nil,
         findCurrentAudiobookReadingTarget: @escaping @MainActor () async -> BookReaderLocationTarget? = { nil },
         writeBarrier: BookReaderWriteBarrier? = nil,
@@ -44,6 +46,7 @@ public struct EntityReaderView: View {
         self.initialEPUBUpdatedAt = initialEPUBUpdatedAt
         self.epubProgressRanges = epubProgressRanges
         self.readingReportFormat = readingReportFormat
+        self.preferencesStore = preferencesStore
         self.companionPlayer = companionPlayer
         self.findCurrentAudiobookReadingTarget = findCurrentAudiobookReadingTarget
         self.writeBarrier = writeBarrier
@@ -56,7 +59,12 @@ public struct EntityReaderView: View {
                 UnsupportedBookReaderView(message: "Books can be read in Prismedia on iPhone, iPad, or Mac.")
             #else
                 if selected.capability(EntityPageSequenceCapability.self) != nil {
-                    ComicReaderView(selected: selected, command: command, service: service)
+                    ComicReaderView(
+                        selected: selected,
+                        command: command,
+                        service: service,
+                        preferencesStore: preferencesStore
+                    )
                 } else {
                     switch BookReaderFormatPolicy.route(
                         for: selected.kind,
@@ -70,6 +78,7 @@ public struct EntityReaderView: View {
                             command: command,
                             service: service,
                             readingReportFormat: readingReportFormat,
+                            preferencesStore: preferencesStore,
                             writeBarrier: writeBarrier
                         )
                     case .epub:
@@ -106,7 +115,8 @@ public struct EntityReaderView: View {
         EntityReaderView(
             selected: ComicReaderPreviewData.installment,
             command: .read,
-            service: ComicReaderPreviewData.service
+            service: ComicReaderPreviewData.service,
+            preferencesStore: .disabled
         )
     }
 #endif

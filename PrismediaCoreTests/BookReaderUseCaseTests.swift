@@ -138,6 +138,15 @@ final class BookReaderUseCaseTests: XCTestCase {
         XCTAssertEqual(ComicReaderOptions(pageMode: .double).resolved(isWide: false).pageMode, .double)
     }
 
+    func testReadingDirectionChoiceOverridesTheRecordedDirection() {
+        XCTAssertTrue(ComicReadingDirection.automatic.readsRightToLeft(recorded: .rightToLeft))
+        XCTAssertFalse(ComicReadingDirection.automatic.readsRightToLeft(recorded: .leftToRight))
+        XCTAssertTrue(ComicReadingDirection.rightToLeft.readsRightToLeft(recorded: .leftToRight))
+        XCTAssertFalse(ComicReadingDirection.leftToRight.readsRightToLeft(recorded: .rightToLeft))
+        XCTAssertTrue(PDFReaderPageLayout.double.showsSpread(isWide: false))
+        XCTAssertFalse(PDFReaderPageLayout.automatic.showsSpread(isWide: false))
+    }
+
     func testSpreadTapsTurnFromEachPagesOuterHalf() {
         XCTAssertEqual(ComicReaderNavigation.tapZone(x: 300, width: 1000), .previous)
         XCTAssertEqual(ComicReaderNavigation.tapZone(x: 300, width: 1000, showsSpread: true), .controls)

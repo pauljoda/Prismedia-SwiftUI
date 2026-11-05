@@ -34,9 +34,11 @@ public struct BookReaderManifestResolver: Sendable {
         case .page(let index):
             initialIndex = index
         }
-        let next = try? await followingOrderedItem(after: selected)
+        let sequence = try? await orderedSequence(of: selected)
+        let next = try? await followingOrderedItem(after: selected, in: sequence)
         return BookReaderManifest(
             bookID: selected.id,
+            seriesID: sequence?.root.id,
             title: selected.title,
             chapters: [
                 BookReaderChapter(
@@ -55,7 +57,11 @@ public struct BookReaderManifestResolver: Sendable {
         )
     }
 
-    private func followingOrderedItem(after selected: EntityDetail) async throws -> BookChapterSummary? {
+    /// The ordered sequence an item belongs to and its outermost container, such as the
+    /// series above a comic's volumes; the item itself when no container holds it.
+    private func orderedSequence(
+        of selected: EntityDetail
+    ) async throws -> (capability: EntityOrderedSequenceCapability, root: EntityDetail)? {
         guard let sequence = selected.capability(EntityOrderedSequenceCapability.self),
             sequence.role == .item
         else { return nil }
@@ -69,6 +75,14 @@ public struct BookReaderManifestResolver: Sendable {
             root = parent
             parentID = parent.parentEntityID
         }
+        return (sequence, root)
+    }
+
+    private func followingOrderedItem(
+        after selected: EntityDetail,
+        in orderedSequence: (capability: EntityOrderedSequenceCapability, root: EntityDetail)?
+    ) async throws -> BookChapterSummary? {
+        guard let (sequence, root) = orderedSequence else { return nil }
 
         let items: [EntityThumbnail]
         if selected.parentEntityID == root.id {

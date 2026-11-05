@@ -4,6 +4,8 @@ struct ComicPagedReader: View {
     let manifest: BookReaderManifest
     let currentIndex: Int
     let options: ComicReaderOptions
+    /// Whether pages turn from right to left, so a spread lays its earlier page on the right.
+    var readsRightToLeft = false
     /// Width of the fold a two-page spread straddles, so the gutter between
     /// the pages covers it; zero on a flat display.
     var foldGap: CGFloat = 0
@@ -51,9 +53,7 @@ struct ComicPagedReader: View {
             options: options,
             isDoublePage: { manifest.pages[$0].isDoublePage }
         )
-        let slots = manifest.readingDirection == .rightToLeft
-            ? Array(logicalSlots.reversed())
-            : logicalSlots
+        let slots = readsRightToLeft ? Array(logicalSlots.reversed()) : logicalSlots
 
         return HStack(spacing: max(PrismediaSpacing.small, foldGap)) {
             ForEach(Array(slots.enumerated()), id: \.offset) { position, index in

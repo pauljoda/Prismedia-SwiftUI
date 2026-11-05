@@ -13,12 +13,13 @@
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("epub-reader.flow")
 
-                Picker("Columns", selection: $preferences.columnCount) {
+                Picker("Page Layout", selection: $preferences.columnCount) {
                     Text("Automatic").tag(EPUBReaderColumnCount.automatic)
-                    Text("One").tag(EPUBReaderColumnCount.one)
-                    Text("Two").tag(EPUBReaderColumnCount.two)
+                    Text("One Page").tag(EPUBReaderColumnCount.one)
+                    Text("Two Pages").tag(EPUBReaderColumnCount.two)
                 }
                 .disabled(preferences.flow == .scrolled)
+                .accessibilityIdentifier("epub-reader.page-layout")
 
                 Stepper(value: $preferences.pageMargins, in: 0.5...2.5, step: 0.1) {
                     LabeledContent(

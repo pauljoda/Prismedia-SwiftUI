@@ -18,6 +18,17 @@
         /// the font size.
         static let automaticColumnWidth: Double = 420
 
+        /// The columns a reader `width` points wide lays out under `columnCount`, as the
+        /// reading-system properties below resolve: Automatic fits up to two columns of
+        /// ``automaticColumnWidth``.
+        static func columns(for columnCount: EPUBReaderColumnCount, width: CGFloat) -> Int {
+            switch columnCount {
+            case .automatic: width >= automaticColumnWidth * 2 ? 2 : 1
+            case .one: 1
+            case .two: 2
+            }
+        }
+
         static func readingSystemProperties(for columnCount: EPUBReaderColumnCount) -> CSSRSProperties {
             switch columnCount {
             case .automatic:

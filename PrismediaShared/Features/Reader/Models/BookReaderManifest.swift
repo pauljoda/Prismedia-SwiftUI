@@ -2,6 +2,9 @@ import Foundation
 
 public struct BookReaderManifest: Hashable, Sendable {
     public let bookID: UUID
+    /// The entity the book's reader choices are kept under: the root of the ordered
+    /// sequence it belongs to, such as a comic series, or the book itself when it stands alone.
+    public let seriesID: UUID
     public let title: String
     public let chapters: [BookReaderChapter]
     public let tableOfContents: [BookChapterSummary]
@@ -17,6 +20,7 @@ public struct BookReaderManifest: Hashable, Sendable {
 
     public init(
         bookID: UUID,
+        seriesID: UUID? = nil,
         title: String,
         chapters: [BookReaderChapter],
         tableOfContents: [BookChapterSummary] = [],
@@ -29,6 +33,7 @@ public struct BookReaderManifest: Hashable, Sendable {
         completesAtManifestEnd: Bool? = nil
     ) {
         self.bookID = bookID
+        self.seriesID = seriesID ?? bookID
         self.title = title
         self.chapters = chapters
         self.tableOfContents = tableOfContents.isEmpty ? chapters.map(\.summary) : tableOfContents

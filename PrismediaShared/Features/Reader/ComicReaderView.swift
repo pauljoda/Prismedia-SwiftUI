@@ -20,15 +20,18 @@
         @State private var progressWriter: BookReaderProgressWriter
 
         private let useCase: BookReaderUseCase
+        private let preferencesStore: ReaderPreferencesStore
         private let onDismiss: () -> Void
 
         public init(
             selected: EntityDetail,
             command: BookReaderCommand,
             service: any BookReaderServicing,
+            preferencesStore: ReaderPreferencesStore = .standard,
             onDismiss: @escaping () -> Void = {}
         ) {
             useCase = BookReaderUseCase(selected: selected, command: command, service: service)
+            self.preferencesStore = preferencesStore
             _pageCache = State(initialValue: BookReaderPageCache(service: service))
             _progressWriter = State(initialValue: BookReaderProgressWriter(service: service))
             self.onDismiss = onDismiss
@@ -55,6 +58,10 @@
                 }
                 .onChange(of: presentedSheet) {
                     updateChromePin()
+                }
+                .onChange(of: pageOptions.readingDirection) { _, direction in
+                    guard let manifest else { return }
+                    preferencesStore.save(direction, seriesID: manifest.seriesID)
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
@@ -110,6 +117,7 @@
                     accessibilityPrefix: "comic-reader",
                     canGoPrevious: canGoPrevious,
                     canGoNext: canGoNext,
+                    readsRightToLeft: readsRightToLeft,
                     onOpenContents: openContents,
                     onPrevious: goPrevious,
                     onNext: goNext
@@ -164,6 +172,7 @@
                         manifest: manifest,
                         currentIndex: currentIndex,
                         options: layoutOptions,
+                        readsRightToLeft: readsRightToLeft,
                         foldGap: bookFold?.width ?? 0,
                         showingEndPage: showingEndPage,
                         counterText: counterText,
@@ -192,6 +201,14 @@
         /// shape, so a landscape reader pages through two-page spreads.
         private var layoutOptions: ComicReaderOptions {
             pageOptions.resolved(isWide: isWideReader)
+        }
+
+        /// Whether pages turn from right to left: the reader's choice for the series, or
+        /// the direction the library recorded for the comic.
+        private var readsRightToLeft: Bool {
+            pageOptions.readingDirection.readsRightToLeft(
+                recorded: manifest?.readingDirection ?? .leftToRight
+            )
         }
 
         private var manifest: BookReaderManifest? {
@@ -275,6 +292,7 @@
             screenState = .content(manifest)
             currentIndex = manifest.initialIndex
             readerMode = preservingMode ?? manifest.readerMode
+            pageOptions.readingDirection = preferencesStore.loadComicReadingDirection(seriesID: manifest.seriesID)
             pageOptions.firstPageIsCover = manifest.coverOrdinal == 0
             pageOptions.singlePageIndexes = Set(
                 manifest.pages.enumerated().compactMap { index, page in
@@ -357,20 +375,16 @@
 
         private func handleTap(x: CGFloat, width: CGFloat) {
             switch ComicReaderNavigation.tapZone(x: x, width: width, showsSpread: showsSpread) {
-            case .previous:
-                manifest?.readingDirection == .rightToLeft ? goNext() : goPrevious()
+            case .previous: readsRightToLeft ? goNext() : goPrevious()
             case .controls: contentTapped()
-            case .next:
-                manifest?.readingDirection == .rightToLeft ? goPrevious() : goNext()
+            case .next: readsRightToLeft ? goPrevious() : goNext()
             }
         }
 
         private func handleGesture(_ gesture: ComicReaderGesture) {
             switch gesture {
-            case .previous:
-                manifest?.readingDirection == .rightToLeft ? goNext() : goPrevious()
-            case .next:
-                manifest?.readingDirection == .rightToLeft ? goPrevious() : goNext()
+            case .previous: readsRightToLeft ? goNext() : goPrevious()
+            case .next: readsRightToLeft ? goPrevious() : goNext()
             case .dismiss: close()
             case .none: break
             }
@@ -541,7 +555,8 @@
             ComicReaderView(
                 selected: ComicReaderPreviewData.installment,
                 command: .read,
-                service: ComicReaderPreviewData.service
+                service: ComicReaderPreviewData.service,
+                preferencesStore: .disabled
             )
         }
     #endif

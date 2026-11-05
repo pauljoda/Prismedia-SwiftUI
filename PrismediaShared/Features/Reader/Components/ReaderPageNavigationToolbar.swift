@@ -6,6 +6,9 @@
         let accessibilityPrefix: String
         let canGoPrevious: Bool
         let canGoNext: Bool
+        /// Whether pages turn from right to left: the arrows then point the way the pages
+        /// go, so the left arrow turns to the next page.
+        var readsRightToLeft = false
         let onOpenContents: () -> Void
         let onPrevious: () -> Void
         let onNext: () -> Void
@@ -14,8 +17,13 @@
         var body: some ToolbarContent {
             #if os(iOS)
                 ToolbarItemGroup(placement: .bottomBar) {
-                    previousButton
-                    nextButton
+                    if readsRightToLeft {
+                        nextButton
+                        previousButton
+                    } else {
+                        previousButton
+                        nextButton
+                    }
                 }
 
                 ToolbarItem(placement: .status) {
@@ -23,25 +31,39 @@
                 }
             #else
                 ToolbarItemGroup(placement: .primaryAction) {
-                    previousButton
-                    progressStatus
-                    nextButton
+                    if readsRightToLeft {
+                        nextButton
+                        progressStatus
+                        previousButton
+                    } else {
+                        previousButton
+                        progressStatus
+                        nextButton
+                    }
                 }
             #endif
         }
 
         private var previousButton: some View {
-            Button("Previous page", systemImage: "chevron.left", action: onPrevious)
-                .prismediaToolbarActionLabelStyle()
-                .disabled(!canGoPrevious)
-                .accessibilityIdentifier("\(accessibilityPrefix).previous")
+            Button(
+                "Previous page",
+                systemImage: readsRightToLeft ? "chevron.right" : "chevron.left",
+                action: onPrevious
+            )
+            .prismediaToolbarActionLabelStyle()
+            .disabled(!canGoPrevious)
+            .accessibilityIdentifier("\(accessibilityPrefix).previous")
         }
 
         private var nextButton: some View {
-            Button("Next page", systemImage: "chevron.right", action: onNext)
-                .prismediaToolbarActionLabelStyle()
-                .disabled(!canGoNext)
-                .accessibilityIdentifier("\(accessibilityPrefix).next")
+            Button(
+                "Next page",
+                systemImage: readsRightToLeft ? "chevron.left" : "chevron.right",
+                action: onNext
+            )
+            .prismediaToolbarActionLabelStyle()
+            .disabled(!canGoNext)
+            .accessibilityIdentifier("\(accessibilityPrefix).next")
         }
 
         private var progressStatus: some View {

@@ -157,8 +157,24 @@
                 in: opened,
                 tableOfContentsLinks: tableOfContentsLinks
             )
+            publication = opened
+            install(
+                try makeNavigator(
+                    publication: opened,
+                    initialLocation: initialLocation,
+                    useDarkSystemTheme: useDarkSystemTheme
+                )
+            )
+            return tableOfContentsLinks.map(tableOfContentsItem)
+        }
+
+        private func makeNavigator(
+            publication: Publication,
+            initialLocation: Locator?,
+            useDarkSystemTheme: Bool
+        ) throws -> EPUBNavigatorViewController {
             let controller = try EPUBNavigatorViewController(
-                publication: opened,
+                publication: publication,
                 initialLocation: initialLocation,
                 config: .init(
                     preferences: readiumPreferences(useDarkSystemTheme: useDarkSystemTheme),
@@ -175,9 +191,12 @@
                     self?.recordUserInput()
                 }
             )
-            publication = opened
+            return controller
+        }
+
+        /// Shows a navigator in the host and follows the location it opened at.
+        private func install(_ controller: EPUBNavigatorViewController) {
             navigator = controller
-            let tableOfContents = tableOfContentsLinks.map(tableOfContentsItem)
             host.install(controller)
             // A saved paragraph is placed from the first reported location, after Readium has
             // positioned the chapter; placing it earlier would be undone by Readium's own scroll.
@@ -185,7 +204,6 @@
                 activeResourceKey = resourceKey(currentLocation.href)
                 updateLocation(currentLocation)
             }
-            return tableOfContents
         }
 
         private func cache(_ data: Data) throws -> URL {
@@ -244,8 +262,13 @@
         func apply(_ preferences: EPUBReaderPreferences, useDarkSystemTheme: Bool) {
             preferenceApplyGeneration &+= 1
             let generation = preferenceApplyGeneration
+            let pageLayoutChanged = preferences.columnCount != self.preferences.columnCount
             self.preferences = preferences
             preferencesStore.save(preferences)
+            if pageLayoutChanged {
+                Task { await relayoutPages(useDarkSystemTheme: useDarkSystemTheme) }
+                return
+            }
             let restoresParagraph = beginRestoreOfAcceptedParagraph()
             isSettlingPreferences = restoresParagraph
             navigator?.submitPreferences(readiumPreferences(useDarkSystemTheme: useDarkSystemTheme))
@@ -258,6 +281,33 @@
                 guard let currentLocation = navigator?.currentLocation else { return }
                 restorePendingParagraph(in: currentLocation)
             }
+        }
+
+        /// Lays the publication out again under the current page layout. Readium fixes its
+        /// reading-system column properties when a navigator is created, so a new navigator
+        /// takes over at the accepted location, restoring the paragraph when one is known.
+        private func relayoutPages(useDarkSystemTheme: Bool) async {
+            guard let publication, let navigator else { return }
+            let locator = navigator.currentLocation
+            let location = locator.flatMap(currentExactLocation(for:))
+            cancelExactLocationWork()
+            var destination = locator
+            if let location {
+                if let resolved = await resolvedLocator(location) {
+                    destination = resolved
+                }
+                if let destination {
+                    beginParagraphRestore(of: location, at: destination)
+                }
+            }
+            guard
+                let controller = try? makeNavigator(
+                    publication: publication,
+                    initialLocation: destination,
+                    useDarkSystemTheme: useDarkSystemTheme
+                )
+            else { return }
+            install(controller)
         }
 
         private func readiumPreferences(useDarkSystemTheme: Bool) -> EPUBPreferences {

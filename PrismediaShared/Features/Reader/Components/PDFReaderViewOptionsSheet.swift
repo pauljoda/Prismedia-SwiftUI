@@ -7,6 +7,7 @@
         @Environment(\.artworkPrimaryAccent) private var artworkPrimaryAccent
 
         @Binding var layoutMode: PDFReaderLayoutMode
+        @Binding var pageLayout: PDFReaderPageLayout
         let fitMode: PDFReaderFitMode
         let onSelectFitMode: (PDFReaderFitMode) -> Void
 
@@ -22,6 +23,19 @@
                         .pickerStyle(.inline)
                         .labelsHidden()
                     }
+
+                    #if os(iOS)
+                        Section("Page Layout") {
+                            Picker("Page Layout", selection: $pageLayout) {
+                                ForEach(PDFReaderPageLayout.allCases) { layout in
+                                    Label(layout.label, systemImage: layout.systemImage).tag(layout)
+                                }
+                            }
+                            .pickerStyle(.inline)
+                            .labelsHidden()
+                            .accessibilityIdentifier("pdf-reader.view-options.page-layout")
+                        }
+                    #endif
 
                     Section("Page Fit") {
                         ForEach(PDFReaderFitMode.allCases) { mode in
@@ -59,8 +73,10 @@
     #if DEBUG
         #Preview("PDF View Options") {
             @Previewable @State var layoutMode = PDFReaderLayoutMode.continuous
+            @Previewable @State var pageLayout = PDFReaderPageLayout.automatic
             PDFReaderViewOptionsSheet(
                 layoutMode: $layoutMode,
+                pageLayout: $pageLayout,
                 fitMode: .page,
                 onSelectFitMode: { _ in }
             )

@@ -644,6 +644,43 @@ ENTITIES.insert(ENTITIES.index(EPUB_BOOK), COMIC_BOOK)
 COMIC_BOOK_ID = COMIC_BOOK["id"]
 COMIC_PAGE_COUNT = 7
 COMIC_COVER_ORDINAL = None if os.environ.get("PRISMEDIA_MOCK_COMIC_NO_COVER") else 0
+COMIC_READING_DIRECTION = "right-to-left" if os.environ.get("PRISMEDIA_MOCK_COMIC_RTL") else "left-to-right"
+COMIC_NUMBERED_PAGES = bool(os.environ.get("PRISMEDIA_MOCK_COMIC_NUMBERED"))
+COMIC_PAGE_CACHE = {}
+
+
+def comic_page_bytes(ordinal):
+    """The poster as every comic page, stamped with its page number when asked, so a
+    capture shows which page landed on which side of a spread."""
+    poster = os.path.join(IMAGE_FIXTURE_ROOT, "poster-petethecat.jpg")
+    with open(poster, "rb") as handle:
+        contents = handle.read()
+    if not COMIC_NUMBERED_PAGES:
+        return contents
+    if ordinal in COMIC_PAGE_CACHE:
+        return COMIC_PAGE_CACHE[ordinal]
+    try:
+        import io
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        return contents
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+    draw = ImageDraw.Draw(image)
+    size = image.height // 4
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", size)
+    except OSError:
+        font = ImageFont.load_default()
+    label = str(ordinal + 1)
+    box = draw.textbbox((0, 0), label, font=font)
+    x = (image.width - (box[2] - box[0])) // 2
+    y = image.height - (box[3] - box[1]) - size // 2
+    draw.rectangle((x - size // 4, y - size // 8, x + box[2] - box[0] + size // 4, y + box[3] - box[1] + size // 4), fill="white")
+    draw.text((x, y), label, fill="black", font=font)
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=90)
+    COMIC_PAGE_CACHE[ordinal] = buffer.getvalue()
+    return COMIC_PAGE_CACHE[ordinal]
 VIDEO_ALPHA_INDEX = len(LONG_MOVIES)
 VIDEO_BETA_INDEX = VIDEO_ALPHA_INDEX + 1
 MOVIE_ONE_INDEX = VIDEO_ALPHA_INDEX + 2
@@ -1238,7 +1275,7 @@ def build_entity_detail_response(entity_id):
                 {
                     "kind": "page-sequence",
                     "pageCount": COMIC_PAGE_COUNT,
-                    "direction": "left-to-right",
+                    "direction": COMIC_READING_DIRECTION,
                     "defaultMode": "paged",
                     "coverOrdinal": COMIC_COVER_ORDINAL,
                 }
@@ -1861,7 +1898,7 @@ class Handler(BaseHTTPRequestHandler):
                 200,
                 {
                     "entityId": COMIC_BOOK_ID,
-                    "direction": "left-to-right",
+                    "direction": COMIC_READING_DIRECTION,
                     "defaultMode": "paged",
                     "coverOrdinal": COMIC_COVER_ORDINAL,
                     "pages": [
@@ -1879,9 +1916,9 @@ class Handler(BaseHTTPRequestHandler):
                 },
             )
         if path.startswith(f"/api/entities/{COMIC_BOOK_ID}/reader-pages/"):
-            poster = os.path.join(IMAGE_FIXTURE_ROOT, "poster-petethecat.jpg")
-            with open(poster, "rb") as handle:
-                return self._send_binary(handle.read(), "image/jpeg")
+            ordinal = path.rsplit("/", 1)[-1]
+            page = comic_page_bytes(int(ordinal) if ordinal.isdigit() else 0)
+            return self._send_binary(page, "image/jpeg")
 
         if path.startswith("/api/entities/") and path.endswith("/files/source"):
             entity_id = path.split("/")[3]

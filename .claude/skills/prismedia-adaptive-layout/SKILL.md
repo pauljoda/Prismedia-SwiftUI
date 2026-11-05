@@ -68,7 +68,7 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 | Rows of a list | `EntityThumbnailGrid` list mode: as many columns of ≥ 280 pt as fit; folded, one on each side of the fold | Library grids in list mode |
 | A feed of cards | adaptive `LazyVGrid` | Library grids |
 | Media and its controls, half closed on a table | `onTabletopFoldChange`: media above the fold, a persistent panel below | Full-screen video (`VideoTabletopControlPanel`) |
-| Pages of a book | Two pages when wider than tall, one when taller; `onBookFoldChange` widens the gutter to the fold | EPUB (`EPUBReaderColumnLayout`), PDF (`PDFReaderSpread`), comics (`ComicPageMode.automatic`) |
+| Pages of a book | Two pages when wider than tall, one when taller; `onBookFoldChange` widens the gutter to the fold; a Page Layout setting forces one or two | EPUB (`EPUBReaderColumnLayout`), PDF (`PDFReaderSpread`, `PDFReaderPageLayout`), comics (`ComicPageMode.automatic`) |
 
 - `PrismediaArrangedPanes` is the one `ArrangementView` wrapper. Use it on
   regular width only. It falls back to two equal columns on the 27.0 SDK and
@@ -173,6 +173,18 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **A lone page keeps to its side of the gutter.** In a two-page comic
   layout the cover sits on the right and a last odd page on the left
   (`ComicReaderNavigation.spreadSlots`); only double-page art spans both.
+  Reading right to left mirrors the spread, so a manga's cover sits on the
+  left, and the toolbar arrows point the way the pages turn.
+- **Comic reading direction is a per-series choice.** Automatic follows the
+  direction the library recorded; Left to Right / Right to Left override it
+  and persist under the manifest's `seriesID` (the ordered sequence's root)
+  in `ReaderPreferencesStore`, so every chapter of a manga reads the same way.
+- **A page-layout change rebuilds the EPUB navigator.** Readium's
+  reading-system column properties are fixed per navigator, so
+  `ReadiumEPUBReaderSession.apply` swaps in a new one at the accepted
+  location instead of waiting for a reopen. `ReaderSpreadSpine` shades the
+  gutter whenever two columns lay out (`EPUBReaderColumnLayout.columns`), so
+  the spread reads as an open book.
 - **Reader chrome overlays the pages.** It auto-hides after 2.8 s, but stays
   up under `-prismedia-ui-testing`, so captures show the side bar over the
   right page.
@@ -213,7 +225,8 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
      page. With `PRISMEDIA_UI_TEST_ENTITY_KIND=book` the mock serves an EPUB
      (`edededed-…`), a two-page PDF (`dfdfdfdf-…`) and a seven-page comic
      (`cacacaca-…`); `PRISMEDIA_MOCK_COMIC_NO_COVER=1` on the mock opens the
-     comic on a two-page spread instead of its cover.
+     comic on a two-page spread instead of its cover, and
+     `PRISMEDIA_MOCK_COMIC_RTL=1` records it as reading right to left.
    - `PRISMEDIA_UI_TEST_HIDE_SIDEBAR=1` starts the wide shell with the
      sidebar hidden, for checking the full-width layouts.
    - The mock serves favorites (movies, a series, an EPUB and a comic), Stats

@@ -34,6 +34,20 @@ struct ComicReaderSettingsSheet: View {
                             Toggle("First Page Is Cover", isOn: $pageOptions.firstPageIsCover)
                         }
                     }
+
+                    Section("Reading Direction") {
+                        Picker("Reading Direction", selection: $pageOptions.readingDirection) {
+                            Label("Automatic", systemImage: "arrow.left.and.right")
+                                .tag(ComicReadingDirection.automatic)
+                            Label("Left to Right", systemImage: "arrow.right")
+                                .tag(ComicReadingDirection.leftToRight)
+                            Label("Right to Left", systemImage: "arrow.left")
+                                .tag(ComicReadingDirection.rightToLeft)
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                        .accessibilityIdentifier("comic-reader.settings.reading-direction")
+                    }
                 }
             }
             .prismediaScreenBackground(palette: artworkPalette)

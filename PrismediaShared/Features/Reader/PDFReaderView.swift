@@ -9,6 +9,7 @@
         @State private var document: PDFDocument?
         @State private var currentPage = 0
         @State private var layoutMode: PDFReaderLayoutMode
+        @State private var pageLayout: PDFReaderPageLayout
         @State private var fitMode = PDFReaderFitMode.page
         @State private var fitRequestID = 0
         @State private var outlineItems: [PDFReaderOutlineItem] = []
@@ -21,24 +22,28 @@
         @State private var isSearching = false
         @State private var errorMessage: String?
         @State private var progressWriter: BookReaderProgressWriter
-        /// Landscape reads like an open book, a left and a right page; portrait shows one.
-        @State private var isLandscape = false
+        /// Wider than tall, the reader reads like an open book, a left and a right page.
+        @State private var isWideReader = false
         /// While iPhone Duo is folded like a book, the fold the spread's pages part around.
         @State private var bookFold: CGRect?
 
         private let command: BookReaderCommand
         private let useCase: DocumentReaderUseCase
         private let readingReportFormat: BookReadingReportFormat
+        private let preferencesStore: ReaderPreferencesStore
 
         public init(
             book: EntityDetail,
             command: BookReaderCommand,
             service: any BookReaderServicing,
             readingReportFormat: BookReadingReportFormat = .legacyCursor,
+            preferencesStore: ReaderPreferencesStore = .standard,
             writeBarrier: BookReaderWriteBarrier? = nil
         ) {
             self.command = command
             self.readingReportFormat = readingReportFormat
+            self.preferencesStore = preferencesStore
+            _pageLayout = State(initialValue: preferencesStore.loadPDFPageLayout())
             let readerUseCase = DocumentReaderUseCase(book: book, service: service)
             useCase = readerUseCase
             _layoutMode = State(
@@ -63,6 +68,7 @@
                 }
                 .onChange(of: currentPage) { _, _ in saveProgress() }
                 .onChange(of: layoutMode) { _, _ in saveProgress() }
+                .onChange(of: pageLayout) { _, layout in preferencesStore.save(layout) }
                 .onChange(of: searchQuery) { _, query in
                     guard query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     searchMatches = []
@@ -145,7 +151,7 @@
                 // falls on the centre, where iPhone Duo folds.
                 .ignoresSafeArea(.container, edges: showsSpread ? .horizontal : [])
                 .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height } action: {
-                    isLandscape = $0
+                    isWideReader = $0
                 }
                 .onBookFoldChange { bookFold = $0 }
                 .accessibilityLabel("PDF reader")
@@ -262,6 +268,7 @@
             case .viewOptions:
                 PDFReaderViewOptionsSheet(
                     layoutMode: $layoutMode,
+                    pageLayout: $pageLayout,
                     fitMode: fitMode,
                     onSelectFitMode: requestFit
                 )
@@ -293,10 +300,11 @@
             )
         }
 
-        /// Two-page spreads in landscape on iOS, in either layout.
+        /// Two-page spreads on iOS, in either layout: by the reader's shape under
+        /// Automatic, or as the page layout setting says.
         private var showsSpread: Bool {
             #if os(iOS)
-                isLandscape
+                pageLayout.showsSpread(isWide: isWideReader)
             #else
                 false
             #endif
@@ -399,7 +407,12 @@
                 childrenByKind: [],
                 relationships: []
             )
-            PDFReaderView(book: book, command: .read, service: ComicReaderPreviewData.service)
+            PDFReaderView(
+                book: book,
+                command: .read,
+                service: ComicReaderPreviewData.service,
+                preferencesStore: .disabled
+            )
         }
     #endif
 #endif
