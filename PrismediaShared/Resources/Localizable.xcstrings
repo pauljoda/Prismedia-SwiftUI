@@ -322,9 +322,6 @@
     "%lld%%" : {
 
     },
-    "+%lld more" : {
-
-    },
     "−%@" : {
 
     },
@@ -858,6 +855,9 @@
     "Close Identify" : {
 
     },
+    "Close Now Playing" : {
+
+    },
     "Close reader" : {
 
     },
@@ -871,9 +871,6 @@
 
     },
     "COLLECTION" : {
-
-    },
-    "Columns" : {
 
     },
     "Comic page, %@" : {
@@ -1216,6 +1213,9 @@
     "Display options" : {
 
     },
+    "Display Options" : {
+
+    },
     "Done" : {
 
     },
@@ -1241,6 +1241,9 @@
 
     },
     "Downloaded Files" : {
+
+    },
+    "Drag to move it to the other side" : {
 
     },
     "Each audio chapter is paired with the next readable chapter. Check every pair: saved pairs link reading and listening exactly as listed." : {
@@ -1421,9 +1424,6 @@
     "Filters" : {
 
     },
-    "Filters (%lld)" : {
-
-    },
     "Filters cues using all entered words" : {
 
     },
@@ -1521,6 +1521,9 @@
 
     },
     "Hide Player" : {
+
+    },
+    "Hide Sidebar" : {
 
     },
     "History" : {
@@ -1695,6 +1698,9 @@
 
     },
     "Leading" : {
+
+    },
+    "Left to Right" : {
 
     },
     "Letter Spacing" : {
@@ -1952,6 +1958,9 @@
     "Media kind" : {
 
     },
+    "Media Kind" : {
+
+    },
     "Media Types" : {
 
     },
@@ -2025,6 +2034,9 @@
 
     },
     "Move" : {
+
+    },
+    "Move to Other Side" : {
 
     },
     "Movies, series, and the collections you love—ready for the biggest screen in the house." : {
@@ -2743,6 +2755,9 @@
     "Reading and listening are tracked separately." : {
 
     },
+    "Reading Direction" : {
+
+    },
     "Reading estimated from where you stopped listening." : {
 
     },
@@ -3067,6 +3082,9 @@
     "Rewind gestures" : {
 
     },
+    "Right to Left" : {
+
+    },
     "Role" : {
 
     },
@@ -3328,16 +3346,6 @@
     "Show %lld More" : {
 
     },
-    "Show all %lld releases on %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Show all %1$lld releases on %2$@"
-          }
-        }
-      }
-    },
     "Show Details" : {
 
     },
@@ -3365,7 +3373,13 @@
     "Show Password" : {
 
     },
+    "Show Player, %@" : {
+
+    },
     "Show Queue" : {
+
+    },
+    "Show Sidebar" : {
 
     },
     "Show Text Below Thumbnails" : {
@@ -3405,9 +3419,6 @@
 
     },
     "Shows the full Now Playing view" : {
-
-    },
-    "Shows the playing queue" : {
 
     },
     "Sign Out" : {
@@ -3702,9 +3713,6 @@
 
     },
     "Turns on monitoring for this item" : {
-
-    },
-    "Two" : {
 
     },
     "Two Pages" : {

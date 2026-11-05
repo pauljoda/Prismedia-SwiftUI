@@ -128,6 +128,10 @@
                     chrome.isVisible ? .visible : .hidden,
                     for: .navigationBar, .bottomBar
                 )
+                // The pages fill the display, so the status bar and home indicator leave
+                // with the chrome and come back when a tap brings it up.
+                .statusBarHidden(!chrome.isVisible)
+                .persistentSystemOverlays(chrome.isVisible ? .automatic : .hidden)
             #else
                 .toolbarVisibility(chrome.isVisible ? .visible : .hidden)
             #endif
