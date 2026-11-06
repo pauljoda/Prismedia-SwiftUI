@@ -23,10 +23,6 @@
         @State private var hasSignaledReady = false
         @State private var chrome = ReaderChromeState()
         @State private var chromeTask: Task<Void, Never>?
-        /// The reader's width, which with the page layout decides whether two pages show.
-        @State private var readerWidth: CGFloat = 0
-        /// While iPhone Duo is folded like a book, the fold the spread's gutter covers.
-        @State private var bookFold: CGRect?
 
         private let bookID: UUID
         private let bookmarkStore: any EPUBBookmarkStoring
@@ -181,13 +177,6 @@
                     .accessibilityValue(exactLocation)
                 #endif
 
-                if showsSpreadSpine {
-                    ReaderSpreadSpine(
-                        foldWidth: bookFold?.width ?? 0,
-                        onDarkPages: readsOnDarkPages
-                    )
-                }
-
                 if isLoading {
                     PrismediaLoadingView("Opening EPUB…")
                 } else if let errorMessage {
@@ -201,26 +190,6 @@
                         }
                     }
                 }
-            }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
-                readerWidth = $0
-            }
-            .onBookFoldChange { bookFold = $0 }
-        }
-
-        /// Two pages lie side by side, so the gutter between them reads as a book's spine.
-        private var showsSpreadSpine: Bool {
-            !isLoading
-                && errorMessage == nil
-                && preferences.flow == .paged
-                && EPUBReaderColumnLayout.columns(for: preferences.columnCount, width: readerWidth) == 2
-        }
-
-        private var readsOnDarkPages: Bool {
-            switch preferences.theme {
-            case .system: colorScheme == .dark
-            case .dark: true
-            case .paper, .light, .sepia, .gray: false
             }
         }
 

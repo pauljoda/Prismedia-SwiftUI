@@ -182,9 +182,8 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
 - **A page-layout change rebuilds the EPUB navigator.** Readium's
   reading-system column properties are fixed per navigator, so
   `ReadiumEPUBReaderSession.apply` swaps in a new one at the accepted
-  location instead of waiting for a reopen. `ReaderSpreadSpine` shades the
-  gutter whenever two columns lay out (`EPUBReaderColumnLayout.columns`), so
-  the spread reads as an open book.
+  location instead of waiting for a reopen. The two columns are the two
+  pages; no drawn spine (one was tried and removed as a fake seam).
 - **Reader chrome overlays the pages.** It auto-hides after 2.8 s, but stays
   up under `-prismedia-ui-testing`, so captures show the side bar over the
   right page.
