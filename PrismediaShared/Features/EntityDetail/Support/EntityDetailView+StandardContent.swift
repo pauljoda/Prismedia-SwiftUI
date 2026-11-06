@@ -87,6 +87,8 @@ extension EntityDetailView {
     /// One column on compact width and wherever the page is narrow or tall;
     /// on a wide regular-width page, the overview and progress in one pane and
     /// the sections in the other, each on its own side of iPhone Duo's fold.
+    /// The columns are plain stacks: each holds a couple of views, so laziness
+    /// buys nothing, and a lazy stack's size estimates shift as content loads.
     @ViewBuilder
     private func detailLayout(
         _ detail: EntityDetail,
@@ -99,7 +101,7 @@ extension EntityDetailView {
             if horizontalSizeClass == .regular {
                 PrismediaWidePanes {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 0) {
                             overview(
                                 detail,
                                 presentation: presentation,
@@ -116,7 +118,7 @@ extension EntityDetailView {
                     }
                 } secondary: {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
+                        VStack(alignment: .leading, spacing: PrismediaSpacing.extraExtraLarge) {
                             sections(detail, presentation: presentation)
                             if selectedSection == .details {
                                 mainSupplementView(for: detail)
@@ -163,7 +165,7 @@ extension EntityDetailView {
         playbackOwnerLink: EntityLink?
     ) -> some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 overview(
                     detail,
                     presentation: presentation,

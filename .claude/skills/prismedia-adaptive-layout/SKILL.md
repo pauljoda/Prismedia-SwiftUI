@@ -199,6 +199,15 @@ work in Crest and Kairos. `AGENTS.md` › iPhone Duo has the short version.
   edge is a no-op, and a new one is ignored mid-reflow). Giving the grid a new
   `.id` per column count and setting the width inside
   `withTransaction(\.disablesAnimations, true)` fixed it.
+- **No lazy stack nested in a scrolling page.** The book page's chapter list
+  was a `LazyVStack` inside the page's `ScrollView`; its height was an
+  estimate that changed by a thousand points as rows loaded and unloaded
+  whenever it scrolled into view, and every change snapped the page to the
+  top, so a 105-chapter book could never be scrolled past it. Lists inside a
+  page are plain `VStack`s (`BookChapterListSection`), and so are the page's
+  own columns (`EntityDetailView+StandardContent`), which hold two or three
+  views and gained nothing from laziness. Grids of uniform cells
+  (`EntityThumbnailGrid`) estimate consistently and may stay lazy.
 - **Gate 27.1 APIs twice.** Both Xcodes ship the same Swift compiler, so use
   `#if os(iOS) && canImport(SwiftUICore, _version: 8.0.85)` plus
   `if #available(iOS 27.1, *)`, and keep the 27.0 build compiling.

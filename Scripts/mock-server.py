@@ -646,6 +646,17 @@ COMIC_PAGE_COUNT = 7
 COMIC_COVER_ORDINAL = None if os.environ.get("PRISMEDIA_MOCK_COMIC_NO_COVER") else 0
 COMIC_READING_DIRECTION = "right-to-left" if os.environ.get("PRISMEDIA_MOCK_COMIC_RTL") else "left-to-right"
 COMIC_NUMBERED_PAGES = bool(os.environ.get("PRISMEDIA_MOCK_COMIC_NUMBERED"))
+# A poster on the EPUB book and a long description, so regular-width detail pages take the
+# side-by-side header with a truncated summary, as a real library's books do.
+RICH_BOOK_DETAIL = bool(os.environ.get("PRISMEDIA_MOCK_RICH_BOOK"))
+LONG_DESCRIPTION = (
+    "The future of the Seven Kingdoms hangs in the balance once again, beset by newly emerging "
+    "threats from every direction. In the east, a queen rules with her three dragons over a city "
+    "built on dust and death, while enemies gather around her. In the north, a young commander "
+    "faces the greatest challenge of his life as he tries to hold a crumbling wall against the "
+    "cold. And across the narrow sea, old claims and older grudges are stirring once more, as "
+    "every great house moves its pieces across a board that is about to be overturned."
+)
 COMIC_PAGE_CACHE = {}
 
 
@@ -986,6 +997,10 @@ for artwork_entity in (
     artwork_entity["coverUrl"] = PUBLIC_POSTER_PATH
     artwork_entity["coverThumbUrl"] = artwork_entity["coverUrl"]
 
+if RICH_BOOK_DETAIL:
+    EPUB_BOOK["coverUrl"] = PUBLIC_POSTER_PATH
+    EPUB_BOOK["coverThumbUrl"] = PUBLIC_POSTER_PATH
+
 ENTITIES[MOVIE_ONE_INDEX]["hoverImages"] = [
     {
         "entityId": ENTITIES[MOVIE_ONE_INDEX]["id"],
@@ -1243,7 +1258,9 @@ def build_entity_detail_response(entity_id):
     capabilities = [
         {
             "kind": "description",
-            "value": f"Native detail fixture for {entity['title']}.",
+            "value": LONG_DESCRIPTION
+            if RICH_BOOK_DETAIL and entity["kind"] == "book"
+            else f"Native detail fixture for {entity['title']}.",
         },
         {
             "kind": "images",

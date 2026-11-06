@@ -20,7 +20,7 @@ struct BookChapterListSection: View {
     @ViewBuilder
     var body: some View {
         if isLoading || errorMessage != nil || !chapters.isEmpty {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 #if os(tvOS)
                     Button {
                         isExpanded.toggle()
@@ -104,7 +104,9 @@ struct BookChapterListSection: View {
                     )
                 }
 
-                LazyVStack(spacing: 0) {
+                // Laid out eagerly: a lazy stack nested in the page's scroll view re-estimates
+                // its height as rows load and unload, and every change snaps the page to the top.
+                VStack(spacing: 0) {
                     ForEach(chapters) { chapter in
                         BookChapterRow(
                             chapter: chapter,
